@@ -2,7 +2,7 @@ module github.com/Software-Automation-Holdings-LLC/sdk/zyins
 
 go 1.25.0
 
-require github.com/Software-Automation-Holdings-LLC/sdk/core v0.2.1
+require github.com/Software-Automation-Holdings-LLC/sdk/core v0.2.2
 
 require (
 	connectrpc.com/connect v1.19.2
