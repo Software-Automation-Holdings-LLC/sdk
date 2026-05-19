@@ -1,0 +1,68 @@
+{
+    "name": "@software-automation-holdings-llc/sdk",
+    "version": "0.3.1",
+    "description": "Unified TypeScript SDK for the ISA platform APIs (zyins, rapidsign, proxy).",
+    "license": "Apache-2.0",
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/Software-Automation-Holdings-LLC/sdk.git",
+        "directory": "packages/ts"
+    },
+    "type": "module",
+    "main": "./dist/index.js",
+    "module": "./dist/index.js",
+    "types": "./dist/index.d.ts",
+    "sideEffects": false,
+    "exports": {
+        ".": {
+            "types": "./dist/index.d.ts",
+            "import": "./dist/index.js"
+        },
+        "./zyins/react": {
+            "types": "./dist/zyins/react/useZyIns.d.ts",
+            "import": "./dist/zyins/react/useZyIns.js"
+        },
+        "./zyins/vue": {
+            "types": "./dist/zyins/vue/useZyIns.d.ts",
+            "import": "./dist/zyins/vue/useZyIns.js"
+        }
+    },
+    "files": [
+        "dist",
+        "README.md",
+        "MIGRATION.md"
+    ],
+    "scripts": {
+        "build": "tsc -p tsconfig.json",
+        "typecheck": "tsc --noEmit",
+        "test": "vitest run",
+        "test:watch": "vitest"
+    },
+    "engines": {
+        "node": ">=20"
+    },
+    "publishConfig": {
+        "registry": "https://npm.pkg.github.com",
+        "access": "restricted"
+    },
+    "peerDependencies": {
+        "react": "^18.0.0 || ^19.0.0",
+        "vue": "^3.0.0"
+    },
+    "peerDependenciesMeta": {
+        "react": {
+            "optional": true
+        },
+        "vue": {
+            "optional": true
+        }
+    },
+    "devDependencies": {
+        "@types/node": "^20.11.0",
+        "@types/react": "^18.3.0",
+        "react": "^18.3.0",
+        "typescript": "^5.5.4",
+        "vitest": "^1.6.0",
+        "vue": "^3.4.0"
+    }
+}

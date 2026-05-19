@@ -1,0 +1,120 @@
+{
+    "compressionFixtures": [
+        {
+            "input": "",
+            "body": "H4sIAAAAAAAAEwMAAAAAAAAAAAA="
+        },
+        {
+            "input": "a",
+            "body": "H4sIAAAAAAAAE0sEAEO+t+gBAAAA"
+        },
+        {
+            "input": "hello",
+            "body": "H4sIAAAAAAAAE8tIzcnJBwCGphA2BQAAAA=="
+        },
+        {
+            "input": "Hello, World!",
+            "body": "H4sIAAAAAAAAE/NIzcnJ11EIzy/KSVEEANDDSuwNAAAA"
+        },
+        {
+            "input": "The quick brown fox jumps over the lazy dog",
+            "body": "H4sIAAAAAAAAEwvJSFUoLM1MzlZIKsovz1NIy69QyCrNLShWyC9LLVIoyUhVyEmsqlRIyU8HADmjT0ErAAAA"
+        },
+        {
+            "input": "{\"hello\":\"world\",\"nested\":{\"k\":1,\"v\":[1,2,3]}}",
+            "body": "H4sIAAAAAAAAE6tWykjNyclXslIqzy/KSVHSUcpLLS5JTVGyqlbKVrIy1FEqU7KKNtQx0jGOra0FAJriAkIuAAAA"
+        },
+        {
+            "input": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+            "body": "H4sIAAAAAAAAE6uooD0AAI9dDl5kAAAA"
+        },
+        {
+            "input": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+            "body": "H4sIAAAAAAAAE6uoGAWjYBQMdwAA5slBO+gDAAA="
+        },
+        {
+            "input": "mixed 123 !@#$%^&*() ABCxyz",
+            "body": "H4sIAAAAAAAAE8vNrEhNUTA0MlZQdFBWUY1T09LQVHB0cq6orAIABYr4pBsAAAA="
+        },
+        {
+            "input": "unicode: café 日本語 🎉",
+            "body": "H4sIAAAAAAAAEyvNy0zOT0m1UkhOTDu8UuHZ9KXP5qx5sWqewof5fZ0AyaV6px0AAAA="
+        },
+        {
+            "input": "<html><body><h1>Test</h1></body></html>",
+            "body": "H4sIAAAAAAAAE7PJKMnNsbNJyk+ptLPJMLQLSS0usdHPMLSz0YeI6YMVAABLs+tOJwAAAA=="
+        },
+        {
+            "input": "line1\nline2\r\nline3\tcol",
+            "body": "H4sIAAAAAAAAE8vJzEs15MrJzEs14gVTxpzJ+TkA9H5RQBYAAAA="
+        }
+    ],
+    "obfuscationFixtures": [
+        {
+            "input": "",
+            "obfuscated": "",
+            "isObfuscated": false,
+            "isObfuscatedOriginal": false
+        },
+        {
+            "input": "a",
+            "obfuscated": "Ë",
+            "isObfuscated": true,
+            "isObfuscatedOriginal": false
+        },
+        {
+            "input": "Hello, World!",
+            "obfuscated": "âÏÆÆÅýÅØÆÎ",
+            "isObfuscated": true,
+            "isObfuscatedOriginal": false
+        },
+        {
+            "input": "The quick brown fox",
+            "obfuscated": "þÂÏÛßÃÉÁÈØÅÝÄÌÅÒ",
+            "isObfuscated": true,
+            "isObfuscatedOriginal": false
+        },
+        {
+            "input": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+            "obfuscated": "ÒÒÒÒÒÒÒÒÒÒÒÒÒÒÒÒÒÒÒÒÒÒÒÒÒÒÒÒÒÒÒÒÒÒÒÒÒÒÒÒÒÒÒÒÒÒÒÒÒÒÒÒÒÒÒÒÒÒÒÒÒÒÒÒÒÒÒÒÒÒÒÒÒÒÒÒÒÒÒÒÒÒÒÒÒÒÒÒÒÒÒÒÒÒÒÒÒÒÒÒ",
+            "isObfuscated": true,
+            "isObfuscatedOriginal": false
+        },
+        {
+            "input": "pk_live_01HXYZABC123DEFGHJKMNPQRS",
+            "obfuscated": "ÚÁõÆÃÜÏõâòóðëèéîïìíâàáçäúûøù",
+            "isObfuscated": true,
+            "isObfuscatedOriginal": false
+        },
+        {
+            "input": "{\"k\":\"v\",\"n\":42}",
+            "obfuscated": "ÑÁÜÄ×",
+            "isObfuscated": true,
+            "isObfuscatedOriginal": false
+        },
+        {
+            "input": "0123456789",
+            "obfuscated": "",
+            "isObfuscated": true,
+            "isObfuscatedOriginal": false
+        },
+        {
+            "input": "!@#$%^&*()_+-=",
+            "obfuscated": "êôõ",
+            "isObfuscated": true,
+            "isObfuscatedOriginal": false
+        },
+        {
+            "input": "mixed ABCdef 123",
+            "obfuscated": "ÇÃÒÏÎëèéÎÏÌ",
+            "isObfuscated": true,
+            "isObfuscatedOriginal": false
+        },
+        {
+            "input": "café 日本語",
+            "obfuscated": "ÉËÌC敏枆訴",
+            "isObfuscated": true,
+            "isObfuscatedOriginal": false
+        }
+    ]
+}

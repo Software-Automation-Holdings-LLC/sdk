@@ -1,0 +1,1 @@
+{"version":3,"file":"decompress.d.ts","sourceRoot":"","sources":["../../../src/rapidsign/internal/decompress.ts"],"names":[],"mappings":"AAAA;;;;;;;;;;;GAWG;AAIH,0DAA0D;AAC1D,MAAM,MAAM,YAAY,GAAG,CAAC,OAAO,EAAE,UAAU,KAAK,MAAM,CAAC;AAE3D,yDAAyD;AACzD,eAAO,MAAM,mBAAmB,EAAE,YAA+C,CAAC;AAElF;;;;GAIG;AACH,wBAAgB,gBAAgB,CAC9B,MAAM,EAAE,MAAM,EACd,YAAY,GAAE,YAAkC,GAC/C,MAAM,CAGR"}

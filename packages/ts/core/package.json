@@ -1,0 +1,34 @@
+{
+  "name": "@isa-sdk/core",
+  "version": "0.0.0",
+  "description": "ISA Platform shared types client (api.isa.v1: ProblemDetails, ErrorCode, Scope, HealthService). Generated; do not hand-edit.",
+  "license": "UNLICENSED",
+  "homepage": "https://github.com/Software-Automation-Holdings-LLC/sdk",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "files": ["dist"],
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./api/isa/v1/*": {
+      "types": "./dist/api/isa/v1/*.d.ts",
+      "import": "./dist/api/isa/v1/*.js"
+    },
+    "./google/api/*": {
+      "types": "./dist/google/api/*.d.ts",
+      "import": "./dist/google/api/*.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json"
+  },
+  "dependencies": {
+    "@bufbuild/protobuf": "^2.2.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.6.3"
+  }
+}

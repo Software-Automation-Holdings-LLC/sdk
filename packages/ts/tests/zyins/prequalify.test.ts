@@ -1,0 +1,142 @@
+import { describe, expect, it } from 'vitest';
+import { ZyInsClient } from '../../src/zyins/client';
+import type { Transport, TransportRequest } from '../../src/zyins/transport';
+import { PrequalifyError, RateLimitedError } from '../../src/zyins/errors';
+import {
+  TEST_APPLICANT,
+  TEST_AUTH,
+  TEST_COVERAGE,
+  TEST_PRODUCTS,
+  FIXED_CLOCK,
+} from './fixtures';
+
+interface CapturedCall {
+  request: TransportRequest;
+}
+
+function recordingTransport(response: { status: number; body: string }): {
+  transport: Transport;
+  calls: CapturedCall[];
+} {
+  const calls: CapturedCall[] = [];
+  const transport: Transport = async (request) => {
+    calls.push({ request });
+    return { status: response.status, body: response.body, headers: {} };
+  };
+  return { transport, calls };
+}
+
+describe('ZyInsClient.prequalify', () => {
+  it('hits /v1/prequalify with the License HMAC headers', async () => {
+    const { transport, calls } = recordingTransport({
+      status: 200,
+      body: JSON.stringify({
+        plans: [
+          { brand: 'colonial-penn', tier: 'preferred', monthly_premium: 42, face_value: 100_000, product_token: 'colonial-penn.final-expense' },
+        ],
+        request_id: 'req_test_1',
+      }),
+    });
+    const client = new ZyInsClient({
+      auth: TEST_AUTH,
+      baseUrl: 'https://test.example',
+      transport,
+      clock: FIXED_CLOCK,
+    });
+    const result = await client.prequalify({
+      applicant: TEST_APPLICANT,
+      coverage: TEST_COVERAGE,
+      products: TEST_PRODUCTS,
+    });
+    expect(result.plans).toHaveLength(1);
+    expect(result.plans[0]?.brand).toBe('colonial-penn');
+    expect(result.requestId).toBe('req_test_1');
+    expect(calls).toHaveLength(1);
+    const call = calls[0]!;
+    expect(call.request.url).toBe('https://test.example/v1/prequalify');
+    expect(call.request.method).toBe('POST');
+    expect(call.request.headers['X-Device-ID']).toBe('device-xyz-123');
+    expect(call.request.headers['Authorization']).toMatch(/^License /);
+    expect(call.request.headers['Idempotency-Key']).toMatch(/^[0-9a-f]{64}$/);
+  });
+
+  it('derives a stable idempotency key for the same logical request', async () => {
+    const { transport: t1, calls: c1 } = recordingTransport({
+      status: 200,
+      body: JSON.stringify({ plans: [], request_id: 'r1' }),
+    });
+    const client1 = new ZyInsClient({
+      auth: TEST_AUTH,
+      baseUrl: 'https://test.example',
+      transport: t1,
+      clock: FIXED_CLOCK,
+    });
+    await client1.prequalify({
+      applicant: TEST_APPLICANT,
+      coverage: TEST_COVERAGE,
+      products: TEST_PRODUCTS,
+    });
+    const { transport: t2, calls: c2 } = recordingTransport({
+      status: 200,
+      body: JSON.stringify({ plans: [], request_id: 'r2' }),
+    });
+    const client2 = new ZyInsClient({
+      auth: TEST_AUTH,
+      baseUrl: 'https://test.example',
+      transport: t2,
+      clock: FIXED_CLOCK,
+    });
+    await client2.prequalify({
+      applicant: TEST_APPLICANT,
+      coverage: TEST_COVERAGE,
+      products: TEST_PRODUCTS,
+    });
+    expect(c1[0]!.request.headers['Idempotency-Key']).toBe(
+      c2[0]!.request.headers['Idempotency-Key'],
+    );
+  });
+
+  it('maps ProblemDetails 400 to PrequalifyError(validation_error)', async () => {
+    const { transport } = recordingTransport({
+      status: 400,
+      body: JSON.stringify({
+        type: 'https://docs.isa.example/errors/validation',
+        title: 'Validation failed',
+        status: 400,
+        code: 'validation_error',
+        detail: 'applicant.dob is required',
+        param: 'applicant.dob',
+      }),
+    });
+    const client = new ZyInsClient({
+      auth: TEST_AUTH,
+      baseUrl: 'https://test.example',
+      transport,
+      clock: FIXED_CLOCK,
+    });
+    await expect(
+      client.prequalify({
+        applicant: TEST_APPLICANT,
+        coverage: TEST_COVERAGE,
+        products: TEST_PRODUCTS,
+      }),
+    ).rejects.toBeInstanceOf(PrequalifyError);
+  });
+
+  it('maps 429 to RateLimitedError', async () => {
+    const { transport } = recordingTransport({ status: 429, body: 'slow down' });
+    const client = new ZyInsClient({
+      auth: TEST_AUTH,
+      baseUrl: 'https://test.example',
+      transport,
+      clock: FIXED_CLOCK,
+    });
+    await expect(
+      client.prequalify({
+        applicant: TEST_APPLICANT,
+        coverage: TEST_COVERAGE,
+        products: TEST_PRODUCTS,
+      }),
+    ).rejects.toBeInstanceOf(RateLimitedError);
+  });
+});

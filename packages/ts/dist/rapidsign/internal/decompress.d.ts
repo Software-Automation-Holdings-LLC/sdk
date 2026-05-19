@@ -1,0 +1,23 @@
+/**
+ * Gzip decompression facade.
+ *
+ * The wire protocol always ships signed PDFs as gzip + base64. `download()`
+ * always returns decompressed bytes — inflation is invisible. We use
+ * `node:zlib`'s `gunzipSync` rather than the platform `DecompressionStream`
+ * because RapidSign's SDK is intentionally a Node-only, server-to-server
+ * client (per ADR-019 the surface is bearer-only with no CORS exposure).
+ *
+ * The facade is injectable via `Decompressor`; tests substitute a stub so
+ * they exercise the surrounding wire-decoding logic without a live zlib.
+ */
+/** A function that gunzips bytes. Pluggable for tests. */
+export type Decompressor = (gzipped: Uint8Array) => Buffer;
+/** Default decompressor uses Node's synchronous zlib. */
+export declare const defaultDecompressor: Decompressor;
+/**
+ * Decode a base64 gzip payload to a fresh Buffer. The base64 alphabet is
+ * the standard one (RFC 4648 §4); URL-safe alphabets are not produced by
+ * the server.
+ */
+export declare function decodeGzipBase64(base64: string, decompressor?: Decompressor): Buffer;
+//# sourceMappingURL=decompress.d.ts.map
