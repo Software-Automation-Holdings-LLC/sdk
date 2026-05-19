@@ -1,0 +1,85 @@
+[build-system]
+requires = ["hatchling>=1.24"]
+build-backend = "hatchling.build"
+
+[project]
+name = "sah-sdk"
+version = "0.3.0"
+description = "Unified Python SDK for ISA APIs (zyins, rapidsign, proxy)."
+readme = "README.md"
+license = { text = "Apache-2.0" }
+requires-python = ">=3.10"
+authors = [{ name = "Software Automation Holdings, LLC" }]
+keywords = ["isa", "zyins", "rapidsign", "insurance", "sdk"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: Apache Software License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Typing :: Typed",
+]
+dependencies = [
+    "httpx>=0.27",
+    "pydantic>=2.6",
+    "libcst>=1.4",
+]
+
+[project.urls]
+Homepage = "https://github.com/Software-Automation-Holdings-LLC/isa-platform"
+Source = "https://github.com/Software-Automation-Holdings-LLC/isa-platform"
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0",
+    "pytest-asyncio>=0.23",
+    "respx>=0.21",
+    "mypy>=1.10",
+    "ruff>=0.5",
+    "build>=1.2",
+    "libcst>=1.4",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/sah_sdk"]
+
+[tool.hatch.envs.default]
+features = ["dev"]
+
+[tool.hatch.envs.default.scripts]
+test = "pytest -q {args:tests}"
+lint = ["ruff check src tests", "mypy src"]
+fmt = "ruff format src tests"
+
+[tool.isort]
+profile = "black"
+line_length = 100
+known_first_party = ["sah_sdk"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP", "N", "RUF", "SIM"]
+ignore = ["E501"]
+
+[tool.mypy]
+python_version = "3.10"
+strict = true
+warn_unused_ignores = true
+plugins = ["pydantic.mypy"]
+
+[[tool.mypy.overrides]]
+module = "respx.*"
+ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+markers = [
+    "integration: hits a live ZyINS endpoint; requires ZYINS_TEST_TOKEN env var",
+]
