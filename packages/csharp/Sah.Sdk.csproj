@@ -12,7 +12,7 @@
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
     <RootNamespace>Sah.Sdk</RootNamespace>
     <!-- Version is rewritten at publish time by sdk-pin-csharp-deps.py. -->
-    <Version>0.3.1</Version>
+    <Version>0.3.2</Version>
     <PackageId>Sah.Sdk</PackageId>
     <Authors>Software Automation Holdings, LLC</Authors>
     <Company>Software Automation Holdings, LLC</Company>
