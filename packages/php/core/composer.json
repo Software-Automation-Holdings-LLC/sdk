@@ -1,0 +1,16 @@
+{
+    "name": "isa-sdk/core",
+    "description": "ISA Platform shared types client (api.isa.v1: ProblemDetails, ErrorCode, Scope, HealthService). Generated; do not hand-edit.",
+    "type": "library",
+    "license": "proprietary",
+    "homepage": "https://github.com/Software-Automation-Holdings-LLC/sdk",
+    "require": {
+        "php": ">=8.1",
+        "google/protobuf": "^4.0"
+    },
+    "autoload": {
+        "psr-4": {
+            "Sah\\Isa\\Api\\V1\\": "Sah/Isa/Api/V1/"
+        }
+    }
+}

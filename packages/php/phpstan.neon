@@ -1,0 +1,41 @@
+parameters:
+    level: max
+    paths:
+        - src
+        - tests
+    treatPhpDocTypesAsCertain: false
+    reportUnmatchedIgnoredErrors: false
+    ignoreErrors:
+        # Tests intentionally pass loosely-typed fixture arrays; production
+        # src/ paths remain bound by the level: max iterable-type check.
+        -
+            identifier: missingType.iterableValue
+            path: tests/*
+        # PHPUnit's CoversClass attribute is marked IS_REPEATABLE at the
+        # attribute-class level but older phpstan stubs read it as
+        # non-repeatable; safe to suppress in test code.
+        - '#Attribute class PHPUnit\\Framework\\Attributes\\CoversClass is not repeatable#'
+        # Tests routinely round-trip through json_decode; assertions in the
+        # test verify shape explicitly so static narrowing isn't useful.
+        -
+            message: '#Cannot access offset .* on mixed\.#'
+            path: tests/*
+        -
+            message: '#Cannot cast mixed to (int|string)\.#'
+            path: tests/*
+        -
+            message: '#expects array\|ArrayAccess<\(int\|string\), mixed>, mixed given\.#'
+            path: tests/*
+        # Anonymous capture properties in core transport tests are written
+        # by the test scenario and asserted indirectly via the side effect
+        # it produces; the "never read" warning here is a stylistic check
+        # PHPStan can't satisfy without breaking the test.
+        -
+            message: '#is never read, only written\.#'
+            path: tests/Core/*
+        # The core Sleeper test fake intentionally exposes a `$calls` log
+        # via a dynamic property on the interface alias; PHPStan can't see
+        # that an anonymous class implementing Sleeper carries it.
+        -
+            message: '#Access to an undefined property Sah\\Sdk\\Core\\Sleeper::\$calls\.#'
+            path: tests/Core/RetryClientTest.php

@@ -1,0 +1,31 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Sah\Sdk\Proxy;
+
+/**
+ * Default UUIDv4-shaped idempotency key source.
+ *
+ * Uses `random_bytes(16)` directly so the proxy package adds no new
+ * runtime dependencies beyond Guzzle. Output matches the canonical
+ * UUIDv4 string form per RFC 4122.
+ */
+final class RandomIdempotencyKeySource implements IdempotencyKeySource
+{
+    public function next(): string
+    {
+        $bytes = random_bytes(16);
+        $bytes[6] = chr((ord($bytes[6]) & 0x0f) | 0x40); // version 4
+        $bytes[8] = chr((ord($bytes[8]) & 0x3f) | 0x80); // variant 10xx
+        $hex = bin2hex($bytes);
+        return sprintf(
+            '%s-%s-%s-%s-%s',
+            substr($hex, 0, 8),
+            substr($hex, 8, 4),
+            substr($hex, 12, 4),
+            substr($hex, 16, 4),
+            substr($hex, 20, 12),
+        );
+    }
+}

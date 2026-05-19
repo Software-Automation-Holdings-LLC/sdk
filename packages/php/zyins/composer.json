@@ -1,0 +1,29 @@
+{
+    "name": "isa-sdk/zyins",
+    "description": "ZyINS Unified API client (api.zyins.v1). Generated; do not hand-edit.",
+    "type": "library",
+    "license": "proprietary",
+    "homepage": "https://github.com/Software-Automation-Holdings-LLC/sdk",
+    "repositories": [
+        {
+            "type": "path",
+            "url": "../core",
+            "options": {
+                "symlink": false,
+                "versions": {
+                    "isa-sdk/core": "0.0.0-dev"
+                }
+            }
+        }
+    ],
+    "require": {
+        "php": ">=8.1",
+        "google/protobuf": "^4.0",
+        "isa-sdk/core": "0.0.0-dev"
+    },
+    "autoload": {
+        "psr-4": {
+            "Sah\\ZyINS\\Api\\V1\\": "Sah/ZyINS/Api/V1/"
+        }
+    }
+}
