@@ -1,0 +1,44 @@
+<?xml version="1.0"?>
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <!-- Dual-target: netstandard2.0 for .NET Framework / Unity / older
+         consumers, net8.0 for modern. The sdk-pin-csharp-deps.py
+         publish-time script re-asserts this; locally we ship the dual
+         target so `dotnet test` mirrors CI. -->
+    <TargetFrameworks>netstandard2.0;net8.0</TargetFrameworks>
+    <LangVersion>12.0</LangVersion>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <RootNamespace>Sah.Sdk</RootNamespace>
+    <!-- Version is rewritten at publish time by sdk-pin-csharp-deps.py. -->
+    <Version>0.3.1</Version>
+    <PackageId>Sah.Sdk</PackageId>
+    <Authors>Software Automation Holdings, LLC</Authors>
+    <Company>Software Automation Holdings, LLC</Company>
+    <Description>Unified C# SDK for ISA APIs (zyins underwriting, rapidsign document workflow, proxy transport-signing, webhooks). One package, sub-namespaces per product per SDK_DESIGN.md &#xA7;0 consolidation.</Description>
+    <PackageProjectUrl>https://github.com/Software-Automation-Holdings-LLC/isa-platform</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/Software-Automation-Holdings-LLC/isa-platform</RepositoryUrl>
+    <PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
+    <PackageTags>isa;sah;zyins;rapidsign;insurance;sdk;underwriting</PackageTags>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <NoWarn>$(NoWarn);1591</NoWarn>
+  </PropertyGroup>
+  <!-- Tests live under tests/ but the default glob would compile them
+       into the library assembly. Exclude. -->
+  <ItemGroup>
+    <Compile Remove="tests/**/*.cs"/>
+    <None Remove="tests/**/*"/>
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="Google.Protobuf" Version="3.28.3"/>
+    <!-- google.api.* messages referenced by buf-generated wire types
+         are runtime types from Google.Api.CommonProtos. -->
+    <PackageReference Include="Google.Api.CommonProtos" Version="2.16.0"/>
+  </ItemGroup>
+  <!-- System.Text.Json is in-box on net6.0+. On netstandard2.0 we must
+       pull it in explicitly, which also brings Nodes + Serialization. -->
+  <ItemGroup Condition="'$(TargetFramework)' == 'netstandard2.0'">
+    <PackageReference Include="System.Text.Json" Version="8.0.5"/>
+  </ItemGroup>
+</Project>
