@@ -210,6 +210,36 @@ var (
 	}
 )
 
+// WithLicenseCredential is the explicit-credential counterpart to
+// [WithLicense]. The env-reading factory delegates to this one after it
+// resolves the keycode and email from the environment.
+//
+// Example:
+//
+//	opt := zyins.WithLicenseCredential(zyins.LicenseCredential{
+//	    Keycode: "ABC-123-XYZ",
+//	    Email:   "agent@example.com",
+//	})
+//	client, err := zyins.NewClient(opt)
+func WithLicenseCredential(cred LicenseCredential) Option {
+	return withLicenseCredential(cred)
+}
+
+// WithSessionCredential is the explicit-credential counterpart to
+// [WithSession]. The env-reading factory delegates to this one after it
+// resolves the session id and secret from the environment.
+//
+// Example:
+//
+//	opt := zyins.WithSessionCredential(zyins.SessionCredential{
+//	    SessionID:     "ses_01H…",
+//	    SessionSecret: "…",
+//	})
+//	client, err := zyins.NewClient(opt)
+func WithSessionCredential(cred SessionCredential) Option {
+	return withSessionCredential(cred)
+}
+
 // withLicenseCredential returns an Option that stashes the credential
 // on the options block. NewClient rejects it with errLicenseTransportPending
 // until the License transport ships; structuring it this way means the

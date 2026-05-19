@@ -4,6 +4,7 @@ import (
 	"context"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"strings"
 	"sync"
 	"testing"
@@ -121,5 +122,31 @@ func TestRedactBody_EmptyReturnsEmpty(t *testing.T) {
 	t.Parallel()
 	if got := redactBody(nil); got != "" {
 		t.Errorf("nil body should be empty; got %q", got)
+	}
+}
+
+func TestSanitizeLogField_StripsLineBreaks(t *testing.T) {
+	t.Parallel()
+	got := sanitizeLogField("line1\nline2\rline3")
+	if strings.Contains(got, "\n") || strings.Contains(got, "\r") {
+		t.Errorf("sanitizeLogField must remove line breaks; got %q", got)
+	}
+	if got != "line1line2line3" {
+		t.Errorf("unexpected sanitized value: %q", got)
+	}
+}
+
+func TestSafeURLForLog_StripsQueryAndUserinfo(t *testing.T) {
+	t.Parallel()
+	raw, err := url.Parse("https://user:secret@api.example.com/v1/prequalify?token=abc&state=TX")
+	if err != nil {
+		t.Fatalf("url.Parse: %v", err)
+	}
+	got := safeURLForLog(raw)
+	if strings.Contains(got, "secret") || strings.Contains(got, "token=abc") {
+		t.Errorf("log URL must not include credentials or query; got %q", got)
+	}
+	if !strings.Contains(got, "api.example.com/v1/prequalify") {
+		t.Errorf("log URL should retain host and path; got %q", got)
 	}
 }

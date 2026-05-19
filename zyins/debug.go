@@ -14,6 +14,7 @@ import (
 	"io"
 	"log/slog"
 	"net/http"
+	"net/url"
 	"os"
 	"strings"
 )
@@ -96,8 +97,8 @@ type debugDoer struct {
 func (d *debugDoer) Do(req *http.Request) (*http.Response, error) {
 	if d.logger != nil {
 		d.logger.Debug("zyins.request",
-			"method", req.Method,
-			"url", req.URL.String(),
+			"method", sanitizeLogField(req.Method),
+			"url", safeURLForLog(req.URL),
 			"headers", redactHeaders(req.Header),
 			"body", snapshotRequestBody(req),
 		)
@@ -105,7 +106,7 @@ func (d *debugDoer) Do(req *http.Request) (*http.Response, error) {
 	resp, err := d.inner.Do(req)
 	if err != nil {
 		if d.logger != nil {
-			d.logger.Debug("zyins.response.error", "err", err.Error())
+			d.logger.Debug("zyins.response.error", "err", sanitizeLogField(err.Error()))
 		}
 		return nil, err
 	}
@@ -115,13 +116,30 @@ func (d *debugDoer) Do(req *http.Request) (*http.Response, error) {
 			"status", resp.StatusCode,
 			"headers", redactHeaders(resp.Header),
 			"body", redactBody(bodyBytes),
-			"request_id", resp.Header.Get("X-Request-Id"),
+			"request_id", sanitizeLogField(resp.Header.Get("X-Request-Id")),
 		)
 		if replaced != nil {
 			resp.Body = replaced
 		}
 	}
 	return resp, nil
+}
+
+// sanitizeLogField strips line breaks from user-influenced values before
+// they are written to logs, preventing forged log entries (CWE-117).
+func sanitizeLogField(s string) string {
+	s = strings.ReplaceAll(s, "\n", "")
+	return strings.ReplaceAll(s, "\r", "")
+}
+
+// safeURLForLog returns a log-safe URL with credentials, query, and
+// fragment removed so user-controlled query values cannot reach logs.
+func safeURLForLog(u *url.URL) string {
+	if u == nil {
+		return ""
+	}
+	scrubbed := &url.URL{Scheme: u.Scheme, Host: u.Host, Path: u.Path}
+	return scrubbed.Redacted()
 }
 
 // redactHeaders returns a flat key=value slice safe to ship into the
@@ -134,7 +152,7 @@ func redactHeaders(h http.Header) map[string]string {
 			out[k] = redactedPlaceholder
 			continue
 		}
-		out[k] = strings.Join(v, ",")
+		out[k] = sanitizeLogField(strings.Join(v, ","))
 	}
 	return out
 }
@@ -149,7 +167,7 @@ func snapshotRequestBody(req *http.Request) string {
 	buf, err := io.ReadAll(req.Body)
 	_ = req.Body.Close()
 	if err != nil {
-		return "<failed to read request body: " + err.Error() + ">"
+		return sanitizeLogField("<failed to read request body: " + err.Error() + ">")
 	}
 	req.Body = io.NopCloser(bytes.NewReader(buf))
 	return redactBody(buf)
@@ -165,7 +183,7 @@ func snapshotResponseBody(resp *http.Response) ([]byte, io.ReadCloser) {
 	buf, err := io.ReadAll(resp.Body)
 	_ = resp.Body.Close()
 	if err != nil {
-		return []byte("<failed to read response body: " + err.Error() + ">"), nil
+		return []byte(sanitizeLogField("<failed to read response body: " + err.Error() + ">")), nil
 	}
 	return buf, io.NopCloser(bytes.NewReader(buf))
 }
@@ -179,18 +197,18 @@ func redactBody(body []byte) string {
 		return ""
 	}
 	if !looksLikeJSON(body) {
-		return truncate(string(body))
+		return sanitizeLogField(truncate(string(body)))
 	}
 	var raw any
 	if err := json.Unmarshal(body, &raw); err != nil {
-		return truncate(string(body))
+		return sanitizeLogField(truncate(string(body)))
 	}
 	redacted := redactJSONValue(raw)
 	out, err := json.Marshal(redacted)
 	if err != nil {
-		return truncate(string(body))
+		return sanitizeLogField(truncate(string(body)))
 	}
-	return truncate(string(out))
+	return sanitizeLogField(truncate(string(out)))
 }
 
 // redactJSONValue walks a parsed JSON value and replaces sensitive
