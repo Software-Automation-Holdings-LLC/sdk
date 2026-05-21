@@ -73,40 +73,43 @@ internal sealed class LicenseSigner : IRequestSigner
     }
 }
 
-/// <summary>Apply <c>Authorization: Session &lt;sessionId&gt;</c> + <c>X-Session-Signature</c>
-/// headers. Mirrors <see cref="LicenseSigner"/> but for short-lived browser sessions.</summary>
-internal sealed class SessionSigner : IRequestSigner
+/// <summary>Apply the canonical four-header session-auth bundle
+/// (<c>Authorization: Bearer …</c> + <c>X-Isa-Session-Id</c> +
+/// <c>X-Isa-Timestamp</c> + <c>X-Isa-Signature</c>) to every outbound
+/// request. The signing primitive lives in
+/// <see cref="Sah.Sdk.Core.SignRequest"/>; this adapter just plumbs the
+/// session credential through and lets the canonical helper compute the
+/// bytes.</summary>
+internal sealed class SessionRequestSigner : IRequestSigner
 {
-    private const string AuthorizationHeader = "Authorization";
-    private const string SessionSigHeader = "X-Session-Signature";
-    private const string SessionPrefix = "Session ";
-
     private readonly string _sessionId;
     private readonly string _sessionSecret;
+    private readonly IClock _clock;
 
-    public SessionSigner(string sessionId, string sessionSecret)
+    public SessionRequestSigner(string sessionId, string sessionSecret, IClock? clock = null)
     {
         if (string.IsNullOrWhiteSpace(sessionId)) throw new ArgumentException("sessionId must be non-empty", nameof(sessionId));
-        if (sessionSecret is null) throw new ArgumentNullException(nameof(sessionSecret));
+        if (string.IsNullOrEmpty(sessionSecret)) throw new ArgumentException("sessionSecret must be non-empty", nameof(sessionSecret));
         _sessionId = sessionId;
         _sessionSecret = sessionSecret;
+        _clock = clock ?? SystemClock.Instance;
     }
 
     public TransportRequest Sign(TransportRequest request)
     {
         var headers = CompatHeaders.Copy(request.Headers);
-        headers[AuthorizationHeader] = SessionPrefix + _sessionId;
-        headers[SessionSigHeader] = ComputeSignature(request);
+        var signed = Sah.Sdk.Core.SignRequest.Sign(
+            method: request.Method.ToString().ToUpperInvariant(),
+            path: request.Url.PathAndQuery,
+            body: request.Body ?? string.Empty,
+            sessionId: _sessionId,
+            sessionSecret: _sessionSecret,
+            clock: _clock);
+        foreach (var kv in signed.AsDictionary())
+        {
+            headers[kv.Key] = kv.Value;
+        }
         return request with { Headers = headers };
-    }
-
-    private string ComputeSignature(TransportRequest request)
-    {
-        var canonical = $"{request.Method.ToString().ToUpperInvariant()}\n{request.Url.AbsolutePath}\n{request.Body ?? string.Empty}";
-        var key = System.Text.Encoding.UTF8.GetBytes(_sessionSecret);
-        using var hmac = new System.Security.Cryptography.HMACSHA256(key);
-        var sig = hmac.ComputeHash(System.Text.Encoding.UTF8.GetBytes(canonical));
-        return CompatHex.ToLowerHex(sig);
     }
 }
 
@@ -144,6 +147,8 @@ public sealed class ZyInsClient
 
     private readonly OperationContext _ctx;
 
+    internal OperationContext Context => _ctx;
+
     /// <summary>Prequalification operations.</summary>
     public PrequalifySubClient Prequalify { get; }
 
@@ -158,6 +163,33 @@ public sealed class ZyInsClient
 
     /// <summary>Usage / billing data.</summary>
     public UsageSubClient Usage { get; }
+
+    /// <summary>Public BPP license-lifecycle operations (Check, Deactivate).
+    /// Targets the proto-backed `/v1/licenses/*` surface.</summary>
+    public LicensesSubClient Licenses { get; }
+
+    /// <summary>Platform readiness probe (`/ready`).</summary>
+    public HealthSubClient Health { get; }
+
+    /// <summary>Whitelabel branding lookup (`GET /v1/branding`).</summary>
+    public BrandingSubClient Branding { get; }
+
+    /// <summary>Per-license preferences document (`GET` / `POST /v1/preferences`).</summary>
+    public PreferencesSubClient Preferences { get; }
+
+    /// <summary>Case create + share. Targets `POST /v1/case` and the
+    /// `POST /v1/email/enqueue` case-share helper.</summary>
+    public CasesSubClient Cases { get; }
+
+    /// <summary>Transactional email enqueue (`POST /v1/email/enqueue`).</summary>
+    public EmailSubClient Email { get; }
+
+    /// <summary>Non-credentialed carrier-logo lookup (`/v1/logo/{carrier}`).</summary>
+    public LogosSubClient Logos { get; }
+
+    /// <summary>Shared credential state for license-mode clients. Null when
+    /// the client was constructed in bearer or session mode.</summary>
+    internal IsaCredentialState? CredentialState { get; }
 
     /// <summary>One-line construction: <c>new ZyInsClient(token)</c>.</summary>
     public ZyInsClient(string token, string? baseUrl = null, TimeSpan? timeout = null)
@@ -184,10 +216,24 @@ public sealed class ZyInsClient
         Datasets = new DatasetsSubClient(_ctx);
         ReferenceData = new ReferenceDataSubClient(_ctx);
         Usage = new UsageSubClient(_ctx);
+        Licenses = new LicensesSubClient(_ctx);
+        Health = new HealthSubClient(_ctx);
+        Branding = new BrandingSubClient(_ctx);
+        Preferences = new PreferencesSubClient(_ctx);
+        Email = new EmailSubClient(_ctx);
+        Cases = new CasesSubClient(_ctx, Email);
+        Logos = new LogosSubClient(_ctx);
     }
 
     /// <summary>Internal constructor that accepts a pre-built signer (used by the License/Session factories).</summary>
     internal ZyInsClient(ZyInsClientOptions options, IRequestSigner signer)
+        : this(options, signer, state: null) { }
+
+    /// <summary>Internal constructor accepting a signer plus an optional credential
+    /// state. License-mode factories pass the shared state so the
+    /// <see cref="LicensesSubClient"/> can auto-stash the license key on
+    /// successful activation.</summary>
+    internal ZyInsClient(ZyInsClientOptions options, IRequestSigner signer, IsaCredentialState? state)
     {
         if (options is null) throw new ArgumentNullException(nameof(options));
         if (signer is null) throw new ArgumentNullException(nameof(signer));
@@ -196,12 +242,20 @@ public sealed class ZyInsClient
         var baseUrl = options.BaseUrl ?? DefaultBaseUrl;
 
         _ctx = new OperationContext(new Uri(baseUrl), signer, transport, clock, options.Logger ?? DebugLogger.Default);
+        CredentialState = state;
 
         Prequalify = new PrequalifySubClient(_ctx);
         Quote = new QuoteSubClient(_ctx);
         Datasets = new DatasetsSubClient(_ctx);
         ReferenceData = new ReferenceDataSubClient(_ctx);
         Usage = new UsageSubClient(_ctx);
+        Licenses = new LicensesSubClient(_ctx, state);
+        Health = new HealthSubClient(_ctx);
+        Branding = new BrandingSubClient(_ctx);
+        Preferences = new PreferencesSubClient(_ctx);
+        Email = new EmailSubClient(_ctx);
+        Cases = new CasesSubClient(_ctx, Email);
+        Logos = new LogosSubClient(_ctx);
     }
 
     /// <summary>Begin a fluent builder for the advanced configuration path.</summary>

@@ -57,6 +57,28 @@ public sealed class PrequalifySubClient
         var (data, raw) = await HttpDispatcher.PostJsonRawAsync<PrequalifyInput, PrequalifyResult>(_ctx, Path, input, ct).ConfigureAwait(false);
         return (data, RawResponse.FromTransport(raw, new Uri(_ctx.BaseUrl, Path)));
     }
+
+    /// <summary>Raw-blob variant of <see cref="RunAsync"/>. Accepts a pre-encoded
+    /// prequalify payload (the wire shape produced by bpp2.0's <c>prepEncObj</c> /
+    /// <c>prepEncObjV2</c> encoders) verbatim and reuses the rest of the
+    /// prequalify transport — auth headers, idempotency-key derivation, error
+    /// funnel, response parsing.
+    ///
+    /// The server accepts both the typed and legacy-blob shapes on the same
+    /// <c>/v1/prequalify</c> path. This entry point exists so consumers do not
+    /// have to restructure their encoder to take advantage of the SDK transport.
+    /// </summary>
+    /// <param name="encodedPayload">The pre-encoded prequalify payload. Serialized
+    /// to JSON verbatim and sent as the request body.</param>
+    /// <param name="ct">Cancellation token.</param>
+    public Task<PrequalifyResult> LegacyBlobAsync(
+        IReadOnlyDictionary<string, object?> encodedPayload,
+        CancellationToken ct = default)
+    {
+        if (encodedPayload is null) throw new ArgumentNullException(nameof(encodedPayload));
+        return HttpDispatcher.PostJsonAsync<IReadOnlyDictionary<string, object?>, PrequalifyResult>(
+            _ctx, Path, encodedPayload, ct);
+    }
 }
 
 /// <summary>Sub-client for quoting operations.</summary>

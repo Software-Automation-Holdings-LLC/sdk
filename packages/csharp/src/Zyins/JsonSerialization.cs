@@ -96,4 +96,20 @@ internal static class ZyInsJson
             throw new JsonException($"deserialize of {typeof(T).Name}: body produced null");
         return result;
     }
+
+    public static T DeserializeEnvelope<T>(string body, string context)
+    {
+        using var doc = JsonDocument.Parse(body);
+        if (doc.RootElement.ValueKind == JsonValueKind.Object
+            && doc.RootElement.TryGetProperty("data", out var data))
+        {
+            if (data.ValueKind == JsonValueKind.Null)
+                throw new JsonException($"{context}: envelope data was null");
+            var result = data.Deserialize<T>(Options);
+            if (result is null)
+                throw new JsonException($"{context}: envelope data produced null");
+            return result;
+        }
+        return Deserialize<T>(body);
+    }
 }

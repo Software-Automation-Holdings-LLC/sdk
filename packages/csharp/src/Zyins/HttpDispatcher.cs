@@ -49,6 +49,29 @@ internal static class HttpDispatcher
         return await DispatchAsync<TResponse>(ctx, request, ct).ConfigureAwait(false);
     }
 
+    /// <summary>Issue a POST and parse either a bare body or ADR-012 envelope.</summary>
+    public static async Task<TResponse> PostJsonEnvelopeAsync<TRequest, TResponse>(
+        OperationContext ctx,
+        string path,
+        TRequest body,
+        string context,
+        CancellationToken ct = default)
+    {
+        var url = BuildUrl(ctx.BaseUrl, path, query: null);
+        var json = ZyInsJson.Serialize(body);
+        var request = new TransportRequest(
+            HttpVerb.Post,
+            url,
+            new Dictionary<string, string>
+            {
+                [AcceptHeader] = JsonMediaType,
+                [ContentTypeHeader] = JsonMediaType,
+            },
+            Body: json);
+        var (rawBody, _) = await DispatchRawAsync(ctx, request, ct).ConfigureAwait(false);
+        return ZyInsJson.DeserializeEnvelope<TResponse>(rawBody, context);
+    }
+
     private static async Task<TResponse> DispatchAsync<TResponse>(
         OperationContext ctx,
         TransportRequest request,

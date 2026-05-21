@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "dgSpecHash": "4U3rMnaRUzA=",
+  "dgSpecHash": "Mni/QcBbD9w=",
   "success": true,
   "projectFilePath": "/home/runner/work/isa-platform/isa-platform/mirror/packages/csharp/tests/Sah.Sdk.Tests.csproj",
   "expectedPackageFiles": [
@@ -15,6 +15,7 @@
     "/home/runner/.nuget/packages/newtonsoft.json/13.0.1/newtonsoft.json.13.0.1.nupkg.sha512",
     "/home/runner/.nuget/packages/system.diagnostics.eventlog/6.0.0/system.diagnostics.eventlog.6.0.0.nupkg.sha512",
     "/home/runner/.nuget/packages/system.reflection.metadata/1.6.0/system.reflection.metadata.1.6.0.nupkg.sha512",
+    "/home/runner/.nuget/packages/validation/2.6.68/validation.2.6.68.nupkg.sha512",
     "/home/runner/.nuget/packages/xunit/2.9.2/xunit.2.9.2.nupkg.sha512",
     "/home/runner/.nuget/packages/xunit.abstractions/2.0.3/xunit.abstractions.2.0.3.nupkg.sha512",
     "/home/runner/.nuget/packages/xunit.analyzers/1.16.0/xunit.analyzers.1.16.0.nupkg.sha512",
@@ -22,7 +23,8 @@
     "/home/runner/.nuget/packages/xunit.core/2.9.2/xunit.core.2.9.2.nupkg.sha512",
     "/home/runner/.nuget/packages/xunit.extensibility.core/2.9.2/xunit.extensibility.core.2.9.2.nupkg.sha512",
     "/home/runner/.nuget/packages/xunit.extensibility.execution/2.9.2/xunit.extensibility.execution.2.9.2.nupkg.sha512",
-    "/home/runner/.nuget/packages/xunit.runner.visualstudio/2.8.2/xunit.runner.visualstudio.2.8.2.nupkg.sha512"
+    "/home/runner/.nuget/packages/xunit.runner.visualstudio/2.8.2/xunit.runner.visualstudio.2.8.2.nupkg.sha512",
+    "/home/runner/.nuget/packages/xunit.skippablefact/1.5.61/xunit.skippablefact.1.5.61.nupkg.sha512"
   ],
   "logs": []
 }

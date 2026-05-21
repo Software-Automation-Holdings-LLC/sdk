@@ -2986,6 +2986,25 @@
             expire.
             </summary>
         </member>
+        <member name="F:IsaSdk.ZyINS.Api.V1.CreateTokenResponse.PreviousTokenRevokesAtFieldNumber">
+            <summary>Field number for the "previous_token_revokes_at" field.</summary>
+        </member>
+        <member name="P:IsaSdk.ZyINS.Api.V1.CreateTokenResponse.PreviousTokenRevokesAt">
+            <summary>
+            RFC 3339 timestamp at which the *previous* token is scheduled to
+            revoke. Populated only on Rotate responses with a non-zero grace
+            window; empty on Create or immediate revocation. Task #117.
+            </summary>
+        </member>
+        <member name="F:IsaSdk.ZyINS.Api.V1.CreateTokenResponse.PreviousTokenIdFieldNumber">
+            <summary>Field number for the "previous_token_id" field.</summary>
+        </member>
+        <member name="P:IsaSdk.ZyINS.Api.V1.CreateTokenResponse.PreviousTokenId">
+            <summary>
+            Identifier of the *previous* token (the one being rotated).
+            Populated only on Rotate responses; empty on Create. Task #117.
+            </summary>
+        </member>
         <member name="T:IsaSdk.ZyINS.Api.V1.GetTokenRequest">
             <summary>
             GetTokenRequest identifies a token by its database ID.
@@ -3076,7 +3095,8 @@
         <member name="T:IsaSdk.ZyINS.Api.V1.RotateTokenRequest">
             <summary>
             RotateTokenRequest targets an existing token; the server issues a new
-            token with the same scopes and revokes the old one.
+            token with the same scopes and schedules the old one for revocation
+            after a grace window.
             </summary>
         </member>
         <member name="F:IsaSdk.ZyINS.Api.V1.RotateTokenRequest.TokenIdFieldNumber">
@@ -3084,7 +3104,9 @@
         </member>
         <member name="P:IsaSdk.ZyINS.Api.V1.RotateTokenRequest.TokenId">
             <summary>
-            Identifier of the token to rotate.
+            Identifier of the token to rotate. May be supplied as the
+            path parameter on `/v1/tokens/{token_id}/rotate` or in the
+            request body on the legacy `/v1/tokens/rotate` binding.
             </summary>
         </member>
         <member name="F:IsaSdk.ZyINS.Api.V1.RotateTokenRequest.ExpiresInDaysFieldNumber">
@@ -3095,6 +3117,27 @@
             Expiry for the replacement token in days. Zero or absent keeps the
             original expiry policy.
             </summary>
+        </member>
+        <member name="F:IsaSdk.ZyINS.Api.V1.RotateTokenRequest.GracePeriodSecondsFieldNumber">
+            <summary>Field number for the "grace_period_seconds" field.</summary>
+        </member>
+        <member name="P:IsaSdk.ZyINS.Api.V1.RotateTokenRequest.GracePeriodSeconds">
+             <summary>
+             Seconds the old token remains active after rotation before the
+             sweeper revokes it. Absent applies the default 2,592,000 (30
+             days). Range 0 to 7,776,000 (90 days). Explicit 0 revokes the old
+             token immediately; the new token still ships in the response.
+            
+             Task #117 + #118: handler stamps `revokes_at = now() +
+             grace_period_seconds`; the sweeper Lambda flips status to
+             `revoked` when the deadline elapses.
+             </summary>
+        </member>
+        <member name="P:IsaSdk.ZyINS.Api.V1.RotateTokenRequest.HasGracePeriodSeconds">
+            <summary>Gets whether the "grace_period_seconds" field is set</summary>
+        </member>
+        <member name="M:IsaSdk.ZyINS.Api.V1.RotateTokenRequest.ClearGracePeriodSeconds">
+            <summary>Clears the value of the "grace_period_seconds" field</summary>
         </member>
         <member name="T:IsaSdk.ZyINS.Api.V1.TokenDetail">
             <summary>
@@ -3210,6 +3253,997 @@
             RFC 3339 timestamp of the most recent authenticated request made
             with this token. Empty string if the token has never been used.
             </summary>
+        </member>
+        <member name="F:IsaSdk.ZyINS.Api.V1.TokenDetail.RevokesAtFieldNumber">
+            <summary>Field number for the "revokes_at" field.</summary>
+        </member>
+        <member name="P:IsaSdk.ZyINS.Api.V1.TokenDetail.RevokesAt">
+            <summary>
+            RFC 3339 timestamp at which the sweeper will revoke this token.
+            Set when the token has been replaced via Rotate but its grace
+            window has not yet elapsed. Empty string when no rotation is
+            pending. Task #117 + #118.
+            </summary>
+        </member>
+        <member name="T:Sah.Sdk.Account.AccountNamespace">
+            <summary>Top-level `isa.Account.*` namespace.</summary>
+        </member>
+        <member name="P:Sah.Sdk.Account.AccountNamespace.Branding">
+            <summary>`isa.Account.Branding` — whitelabel lookup.</summary>
+        </member>
+        <member name="P:Sah.Sdk.Account.AccountNamespace.Preferences">
+            <summary>`isa.Account.Preferences` — scoped settings document.</summary>
+        </member>
+        <member name="P:Sah.Sdk.Account.AccountNamespace.Cases">
+            <summary>`isa.Account.Cases` — case CRUD + share.</summary>
+        </member>
+        <member name="P:Sah.Sdk.Account.AccountNamespace.Email">
+            <summary>`isa.Account.Email` — transactional email enqueue.</summary>
+        </member>
+        <member name="P:Sah.Sdk.Account.AccountNamespace.ReferenceData">
+            <summary>`isa.Account.ReferenceData` — engine reference-data lookups.</summary>
+        </member>
+        <member name="M:Sah.Sdk.Account.AccountNamespace.FromZyInsClient(Sah.Sdk.Zyins.ZyInsClient)">
+            <summary>Bridge between <see cref="T:Sah.Sdk.Isa"/> and the per-license
+            Account surface. License-mode clients return a live namespace; other
+            identities return a stub whose first method throws
+            <see cref="T:Sah.Sdk.Core.IsaConfigException"/>.</summary>
+        </member>
+        <member name="T:Sah.Sdk.Account.AccountContext">
+            <summary>Per-operation context shared by every Account sub-client. Wraps
+            the underlying <see cref="T:Sah.Sdk.Zyins.ZyInsClient"/> dispatcher and the shared
+            credential state.</summary>
+        </member>
+        <member name="P:Sah.Sdk.Account.AccountContext.Op">
+            <summary>Operation context handed to <see cref="T:Sah.Sdk.Zyins.HttpDispatcher"/>.</summary>
+        </member>
+        <member name="P:Sah.Sdk.Account.AccountContext.State">
+            <summary>Shared credential state — needed for snapshot when the
+            sub-client wants to surface scope/email/order.</summary>
+        </member>
+        <member name="P:Sah.Sdk.Account.AccountContext.StubMessage">
+            <summary>Error message to surface when the namespace was constructed
+            without a valid identity (bearer / session). Null on live contexts.</summary>
+        </member>
+        <member name="T:Sah.Sdk.Account.BrandingDetail">
+            <summary>Whitelabel detail returned by <see cref="M:Sah.Sdk.Account.AccountBranding.LookupAsync(System.Threading.CancellationToken)"/>.</summary>
+        </member>
+        <member name="P:Sah.Sdk.Account.BrandingDetail.ImoName">
+            <summary>Display name of the agency.</summary>
+        </member>
+        <member name="P:Sah.Sdk.Account.BrandingDetail.ImoLogo">
+            <summary>Absolute URL to the agency logo.</summary>
+        </member>
+        <member name="P:Sah.Sdk.Account.BrandingDetail.PrimaryColor">
+            <summary>Primary brand color (hex).</summary>
+        </member>
+        <member name="P:Sah.Sdk.Account.BrandingDetail.NavColor">
+            <summary>Header background color (hex).</summary>
+        </member>
+        <member name="P:Sah.Sdk.Account.BrandingDetail.BgColor">
+            <summary>Body / content background color (hex).</summary>
+        </member>
+        <member name="P:Sah.Sdk.Account.BrandingDetail.ButtonColor">
+            <summary>Button background color (hex).</summary>
+        </member>
+        <member name="P:Sah.Sdk.Account.BrandingDetail.ActiveButtonColor">
+            <summary>Active-state button color (hex).</summary>
+        </member>
+        <member name="P:Sah.Sdk.Account.BrandingDetail.HeaderTextColor">
+            <summary>Header text color (hex).</summary>
+        </member>
+        <member name="P:Sah.Sdk.Account.BrandingDetail.HideAffiliateLeads">
+            <summary>When true, affiliate-lead capture UI is hidden.</summary>
+        </member>
+        <member name="P:Sah.Sdk.Account.BrandingDetail.PreventProductSelection">
+            <summary>When true, product-selection UI is hidden.</summary>
+        </member>
+        <member name="P:Sah.Sdk.Account.BrandingDetail.DefaultSettings">
+            <summary>Opaque per-agency defaults document (JSON or URL-encoded form).</summary>
+        </member>
+        <member name="T:Sah.Sdk.Account.AccountBranding">
+            <summary>`isa.Account.Branding` facade.</summary>
+        </member>
+        <member name="M:Sah.Sdk.Account.AccountBranding.LookupAsync(System.Threading.CancellationToken)">
+            <summary>Fetch the whitelabel branding for the caller's license.
+            Returns an empty <see cref="T:Sah.Sdk.Account.BrandingDetail"/> when no row exists.</summary>
+        </member>
+        <member name="M:Sah.Sdk.Account.AccountBranding.LookupAsync(System.String,System.Threading.CancellationToken)">
+            <summary>Fetch the whitelabel branding with an optional per-vendor
+            source override (e.g. <c>"mountain-life"</c>). The source value is
+            forwarded as a query parameter; the server-side allowlist applies.</summary>
+        </member>
+        <member name="T:Sah.Sdk.Account.CaseCreateRequest">
+            <summary>Inputs for <see cref="M:Sah.Sdk.Account.AccountCases.CreateAsync(Sah.Sdk.Account.CaseCreateRequest,System.Threading.CancellationToken)"/>. <c>Input</c> is
+            polymorphic at the wire — a structured object is converted to XML
+            server-side; a raw XML string is forwarded verbatim.</summary>
+        </member>
+        <member name="P:Sah.Sdk.Account.CaseCreateRequest.Input">
+            <summary>Quote input — structured payload or raw XML string. Required.</summary>
+        </member>
+        <member name="P:Sah.Sdk.Account.CaseCreateRequest.Results">
+            <summary>Optional quote results payload.</summary>
+        </member>
+        <member name="P:Sah.Sdk.Account.CaseCreateRequest.Products">
+            <summary>Optional product selection (list of product identifiers).</summary>
+        </member>
+        <member name="T:Sah.Sdk.Account.CaseCreateResult">
+            <summary>Result of <see cref="M:Sah.Sdk.Account.AccountCases.CreateAsync(Sah.Sdk.Account.CaseCreateRequest,System.Threading.CancellationToken)"/>.</summary>
+        </member>
+        <member name="P:Sah.Sdk.Account.CaseCreateResult.Hash">
+            <summary>Content-addressed case identifier.</summary>
+        </member>
+        <member name="P:Sah.Sdk.Account.CaseCreateResult.Url">
+            <summary>Absolute share URL for the case viewer.</summary>
+        </member>
+        <member name="P:Sah.Sdk.Account.CaseCreateResult.Readonly">
+            <summary>True when the case was created by another license (read-only here).</summary>
+        </member>
+        <member name="P:Sah.Sdk.Account.CaseCreateResult.CreatedAt">
+            <summary>RFC 3339 timestamp the case was first created.</summary>
+        </member>
+        <member name="T:Sah.Sdk.Account.CaseSummary">
+            <summary>A case as returned by <c>GetAsync</c> / <c>ListAsync</c>.</summary>
+        </member>
+        <member name="P:Sah.Sdk.Account.CaseSummary.Hash">
+            <summary>Content-addressed case identifier.</summary>
+        </member>
+        <member name="P:Sah.Sdk.Account.CaseSummary.Url">
+            <summary>Absolute share URL.</summary>
+        </member>
+        <member name="P:Sah.Sdk.Account.CaseSummary.Readonly">
+            <summary>True when the caller does not own the case.</summary>
+        </member>
+        <member name="P:Sah.Sdk.Account.CaseSummary.CreatedAt">
+            <summary>RFC 3339 timestamp.</summary>
+        </member>
+        <member name="P:Sah.Sdk.Account.CaseSummary.Input">
+            <summary>Optional original input (server returns when caller owns the case).</summary>
+        </member>
+        <member name="P:Sah.Sdk.Account.CaseSummary.Results">
+            <summary>Optional results payload.</summary>
+        </member>
+        <member name="P:Sah.Sdk.Account.CaseSummary.Products">
+            <summary>Optional product selection.</summary>
+        </member>
+        <member name="T:Sah.Sdk.Account.CaseEmailRequest">
+            <summary>Inputs for <see cref="M:Sah.Sdk.Account.AccountCases.EmailAsync(Sah.Sdk.Account.CaseEmailRequest,System.Threading.CancellationToken)"/>.</summary>
+        </member>
+        <member name="P:Sah.Sdk.Account.CaseEmailRequest.CaseId">
+            <summary>Case identifier (hash).</summary>
+        </member>
+        <member name="P:Sah.Sdk.Account.CaseEmailRequest.To">
+            <summary>Recipient email.</summary>
+        </member>
+        <member name="T:Sah.Sdk.Account.CaseEmailResult">
+            <summary>Result of <see cref="M:Sah.Sdk.Account.AccountCases.EmailAsync(Sah.Sdk.Account.CaseEmailRequest,System.Threading.CancellationToken)"/>.</summary>
+        </member>
+        <member name="P:Sah.Sdk.Account.CaseEmailResult.Queued">
+            <summary>True when the email was queued.</summary>
+        </member>
+        <member name="T:Sah.Sdk.Account.AccountCases">
+            <summary>`isa.Account.Cases` facade.</summary>
+        </member>
+        <member name="M:Sah.Sdk.Account.AccountCases.CreateAsync(Sah.Sdk.Account.CaseCreateRequest,System.Threading.CancellationToken)">
+            <summary>Create a shareable case from quote input + results + products.</summary>
+        </member>
+        <member name="M:Sah.Sdk.Account.AccountCases.GetAsync(System.String,System.Threading.CancellationToken)">
+            <summary>Retrieve a single case by hash.</summary>
+        </member>
+        <member name="M:Sah.Sdk.Account.AccountCases.ListAsync(System.Threading.CancellationToken)">
+            <summary>List all cases visible to the caller.</summary>
+        </member>
+        <member name="M:Sah.Sdk.Account.AccountCases.EmailAsync(Sah.Sdk.Account.CaseEmailRequest,System.Threading.CancellationToken)">
+            <summary>Email a case PDF / artifact to a recipient.</summary>
+        </member>
+        <member name="T:Sah.Sdk.Account.EmailAttachment">
+            <summary>One attachment in an email-enqueue request.</summary>
+        </member>
+        <member name="P:Sah.Sdk.Account.EmailAttachment.Filename">
+            <summary>Attachment filename.</summary>
+        </member>
+        <member name="P:Sah.Sdk.Account.EmailAttachment.Content">
+            <summary>Base64-encoded content. Caller encodes; SDK passes through.</summary>
+        </member>
+        <member name="T:Sah.Sdk.Account.EmailEnqueueRequest">
+            <summary>Inputs for <see cref="M:Sah.Sdk.Account.AccountEmail.EnqueueAsync(Sah.Sdk.Account.EmailEnqueueRequest,System.Threading.CancellationToken)"/>.</summary>
+        </member>
+        <member name="P:Sah.Sdk.Account.EmailEnqueueRequest.To">
+            <summary>Recipient address(es). The single string overload uses
+            <see cref="P:Sah.Sdk.Account.EmailEnqueueRequest.ToList"/> with one entry; populate either field, not both.</summary>
+        </member>
+        <member name="P:Sah.Sdk.Account.EmailEnqueueRequest.ToList">
+            <summary>Multiple recipients (server treats as a multi-send).</summary>
+        </member>
+        <member name="P:Sah.Sdk.Account.EmailEnqueueRequest.Subject">
+            <summary>Email subject line.</summary>
+        </member>
+        <member name="P:Sah.Sdk.Account.EmailEnqueueRequest.Body">
+            <summary>Body — server treats as HTML when content looks like HTML, else text.</summary>
+        </member>
+        <member name="P:Sah.Sdk.Account.EmailEnqueueRequest.Attachments">
+            <summary>Optional attachments (each Content is pre-base64-encoded by caller).</summary>
+        </member>
+        <member name="P:Sah.Sdk.Account.EmailEnqueueRequest.ToWire">
+            <summary>Wire field — set by the SDK from <see cref="P:Sah.Sdk.Account.EmailEnqueueRequest.To"/> or <see cref="P:Sah.Sdk.Account.EmailEnqueueRequest.ToList"/>.</summary>
+        </member>
+        <member name="T:Sah.Sdk.Account.EmailEnqueueResult">
+            <summary>Result of <see cref="M:Sah.Sdk.Account.AccountEmail.EnqueueAsync(Sah.Sdk.Account.EmailEnqueueRequest,System.Threading.CancellationToken)"/>.</summary>
+        </member>
+        <member name="P:Sah.Sdk.Account.EmailEnqueueResult.Status">
+            <summary>Normalized to <c>"queued"</c> on success.</summary>
+        </member>
+        <member name="T:Sah.Sdk.Account.AccountEmail">
+            <summary>`isa.Account.Email` facade.</summary>
+        </member>
+        <member name="M:Sah.Sdk.Account.AccountEmail.EnqueueAsync(Sah.Sdk.Account.EmailEnqueueRequest,System.Threading.CancellationToken)">
+            <summary>Enqueue a transactional email.</summary>
+        </member>
+        <member name="T:Sah.Sdk.Account.PreferencesDocument">
+            <summary>Opaque preferences document — keys and values are caller-defined.</summary>
+        </member>
+        <member name="P:Sah.Sdk.Account.PreferencesDocument.Prefs">
+            <summary>Document body.</summary>
+        </member>
+        <member name="T:Sah.Sdk.Account.PreferencesLookupResult">
+            <summary>Result of <see cref="M:Sah.Sdk.Account.AccountPreferences.LookupAsync(System.String,System.Threading.CancellationToken)"/>.</summary>
+        </member>
+        <member name="P:Sah.Sdk.Account.PreferencesLookupResult.Prefs">
+            <summary>Document body.</summary>
+        </member>
+        <member name="T:Sah.Sdk.Account.PreferencesSetRequest">
+            <summary>Input for <see cref="M:Sah.Sdk.Account.AccountPreferences.SetAsync(Sah.Sdk.Account.PreferencesSetRequest,System.Threading.CancellationToken)"/>.</summary>
+        </member>
+        <member name="P:Sah.Sdk.Account.PreferencesSetRequest.Scope">
+            <summary>Partition key matching the corresponding lookup. Required.</summary>
+        </member>
+        <member name="P:Sah.Sdk.Account.PreferencesSetRequest.Prefs">
+            <summary>Document to upsert.</summary>
+        </member>
+        <member name="T:Sah.Sdk.Account.PreferencesSetResult">
+            <summary>Result of <see cref="M:Sah.Sdk.Account.AccountPreferences.SetAsync(Sah.Sdk.Account.PreferencesSetRequest,System.Threading.CancellationToken)"/>.</summary>
+        </member>
+        <member name="P:Sah.Sdk.Account.PreferencesSetResult.Ok">
+            <summary>True on successful upsert.</summary>
+        </member>
+        <member name="T:Sah.Sdk.Account.AccountPreferences">
+            <summary>`isa.Account.Preferences` facade.</summary>
+        </member>
+        <member name="M:Sah.Sdk.Account.AccountPreferences.LookupAsync(System.String,System.Threading.CancellationToken)">
+            <summary>Fetch the preferences document for the supplied scope.</summary>
+        </member>
+        <member name="M:Sah.Sdk.Account.AccountPreferences.SetAsync(Sah.Sdk.Account.PreferencesSetRequest,System.Threading.CancellationToken)">
+            <summary>Upsert the preferences document for the supplied scope.</summary>
+        </member>
+        <member name="T:Sah.Sdk.Account.ReferenceDataRequest">
+            <summary>Inputs for <see cref="M:Sah.Sdk.Account.AccountReferenceData.GetAsync(Sah.Sdk.Account.ReferenceDataRequest,System.Threading.CancellationToken)"/>.</summary>
+        </member>
+        <member name="P:Sah.Sdk.Account.ReferenceDataRequest.Scope">
+            <summary>Server-side dispatcher key.</summary>
+        </member>
+        <member name="P:Sah.Sdk.Account.ReferenceDataRequest.Dataset">
+            <summary>Required when <c>Scope == "dataset"</c>. Names the dataset to fetch.</summary>
+        </member>
+        <member name="P:Sah.Sdk.Account.ReferenceDataRequest.Payload">
+            <summary>Optional caller-supplied filters / parameters; forwarded as the POST body.</summary>
+        </member>
+        <member name="T:Sah.Sdk.Account.ReferenceDataResult">
+            <summary>Response shape — opaque to the SDK. Common case is a
+            <c>{ datasets: { ... } }</c> envelope; some scopes return a flat record.</summary>
+        </member>
+        <member name="P:Sah.Sdk.Account.ReferenceDataResult.Data">
+            <summary>The verbatim response body keyed by field name.</summary>
+        </member>
+        <member name="T:Sah.Sdk.Account.ReferenceDataOptions">
+            <summary>Optional shape (mirrors the TS `opts`). Reserved for future
+            per-call knobs (cache TTL, partial fetch); currently unused.</summary>
+        </member>
+        <member name="T:Sah.Sdk.Account.AccountReferenceData">
+            <summary>`isa.Account.ReferenceData` facade.</summary>
+        </member>
+        <member name="M:Sah.Sdk.Account.AccountReferenceData.GetAsync(Sah.Sdk.Account.ReferenceDataRequest,System.Threading.CancellationToken)">
+            <summary>Fetch reference data per the supplied scope.</summary>
+        </member>
+        <member name="M:Sah.Sdk.Account.AccountReferenceData.GetAsync(Sah.Sdk.Account.ReferenceDataRequest,Sah.Sdk.Account.ReferenceDataOptions,System.Threading.CancellationToken)">
+            <summary>Fetch with optional per-call options (reserved).</summary>
+        </member>
+        <member name="T:Sah.Sdk.Catalog.ProductCarrierMetadata">
+            <summary>Public metadata for a single carrier. Today's catalog does not
+            expose per-carrier licensure data; <c>States</c> is intentionally omitted.</summary>
+        </member>
+        <member name="M:Sah.Sdk.Catalog.ProductCarrierMetadata.#ctor(System.String,System.Collections.Generic.IReadOnlyList{Sah.Sdk.Catalog.Product})">
+            <summary>Public metadata for a single carrier. Today's catalog does not
+            expose per-carrier licensure data; <c>States</c> is intentionally omitted.</summary>
+        </member>
+        <member name="T:Sah.Sdk.Catalog.ProductCarriers">
+            <summary>Catalog API for carriers.</summary>
+        </member>
+        <member name="M:Sah.Sdk.Catalog.ProductCarriers.Values">
+            <summary>Every carrier slug.</summary>
+        </member>
+        <member name="M:Sah.Sdk.Catalog.ProductCarriers.Metadata(System.String)">
+            <summary>Metadata lookup for a carrier slug. Case-insensitive.</summary>
+        </member>
+        <member name="T:Sah.Sdk.Catalog.ConditionCategoryMetadata">
+            <summary>Public metadata for a condition category.</summary>
+        </member>
+        <member name="M:Sah.Sdk.Catalog.ConditionCategoryMetadata.#ctor(System.String,System.Collections.Generic.IReadOnlyList{System.String})">
+            <summary>Public metadata for a condition category.</summary>
+        </member>
+        <member name="T:Sah.Sdk.Catalog.ConditionCategories">
+            <summary>Categories partition the canonical condition list into clinically
+            related groups. The engine's reference data does not currently expose a
+            stable category taxonomy; the catalog is intentionally empty today.</summary>
+        </member>
+        <member name="M:Sah.Sdk.Catalog.ConditionCategories.Values">
+            <summary>Every category name. Empty today.</summary>
+        </member>
+        <member name="M:Sah.Sdk.Catalog.ConditionCategories.Metadata(System.String)">
+            <summary>Metadata lookup; throws on unknown category.</summary>
+        </member>
+        <member name="T:Sah.Sdk.Catalog.CatalogErrorCode">
+            <summary>Stable wire-form error codes mirroring <c>api.isa.v1.ErrorCode</c>.
+            Named <c>CatalogErrorCode</c> to avoid clashing with the legacy
+            <see cref="T:Sah.Sdk.Core.ErrorCode"/> already shipped at v0.3.x.</summary>
+        </member>
+        <member name="F:Sah.Sdk.Catalog.CatalogErrorCode.BadGateway">
+            <summary>Upstream dependency returned an unusable response.</summary>
+        </member>
+        <member name="F:Sah.Sdk.Catalog.CatalogErrorCode.Conflict">
+            <summary>State conflict (e.g. already activated, already revoked, document already signed).</summary>
+        </member>
+        <member name="F:Sah.Sdk.Catalog.CatalogErrorCode.Forbidden">
+            <summary>Authenticated but lacking scope for this operation.</summary>
+        </member>
+        <member name="F:Sah.Sdk.Catalog.CatalogErrorCode.GatewayTimeout">
+            <summary>Upstream dependency did not respond within the budget.</summary>
+        </member>
+        <member name="F:Sah.Sdk.Catalog.CatalogErrorCode.InternalError">
+            <summary>Unhandled server fault. Request ID identifies the log entry.</summary>
+        </member>
+        <member name="F:Sah.Sdk.Catalog.CatalogErrorCode.InvalidToken">
+            <summary>Bearer token or license signature does not validate.</summary>
+        </member>
+        <member name="F:Sah.Sdk.Catalog.CatalogErrorCode.LicenseLocked">
+            <summary>License is locked (too many device registrations or admin action).</summary>
+        </member>
+        <member name="F:Sah.Sdk.Catalog.CatalogErrorCode.MethodNotAllowed">
+            <summary>HTTP method not allowed on this path.</summary>
+        </member>
+        <member name="F:Sah.Sdk.Catalog.CatalogErrorCode.NotFound">
+            <summary>Resource does not exist or is not visible to the caller.</summary>
+        </member>
+        <member name="F:Sah.Sdk.Catalog.CatalogErrorCode.NotImplemented">
+            <summary>Capability not yet implemented (e.g. PDF renderer not configured).</summary>
+        </member>
+        <member name="F:Sah.Sdk.Catalog.CatalogErrorCode.RateLimitExceeded">
+            <summary>Rate limit exceeded. `Retry-After` header is set.</summary>
+        </member>
+        <member name="F:Sah.Sdk.Catalog.CatalogErrorCode.ServiceUnavailable">
+            <summary>Service is intentionally unavailable (draining, maintenance).</summary>
+        </member>
+        <member name="F:Sah.Sdk.Catalog.CatalogErrorCode.TokenExpired">
+            <summary>Bearer token or license has expired. Client should refresh.</summary>
+        </member>
+        <member name="F:Sah.Sdk.Catalog.CatalogErrorCode.Unauthorized">
+            <summary>Authentication required or credentials invalid.</summary>
+        </member>
+        <member name="F:Sah.Sdk.Catalog.CatalogErrorCode.ValidationError">
+            <summary>Request body failed schema or domain validation. `param` is set.</summary>
+        </member>
+        <member name="T:Sah.Sdk.Catalog.ErrorAdviceCodes">
+            <summary>Machine-readable next-action identifiers per wire-form error code.</summary>
+        </member>
+        <member name="M:Sah.Sdk.Catalog.ErrorAdviceCodes.Get(Sah.Sdk.Catalog.CatalogErrorCode)">
+            <summary>Get the advice identifier for an error code.</summary>
+        </member>
+        <member name="T:Sah.Sdk.Catalog.ErrorDocUrls">
+            <summary>Doc URL per error code.</summary>
+        </member>
+        <member name="M:Sah.Sdk.Catalog.ErrorDocUrls.Get(Sah.Sdk.Catalog.CatalogErrorCode)">
+            <summary>Get the documentation URL for an error code.</summary>
+        </member>
+        <member name="T:Sah.Sdk.Catalog.MedicationUseMetadata">
+            <summary>Public metadata for a single medication use (indication).</summary>
+        </member>
+        <member name="M:Sah.Sdk.Catalog.MedicationUseMetadata.#ctor(System.String,System.Collections.Generic.IReadOnlyList{System.String})">
+            <summary>Public metadata for a single medication use (indication).</summary>
+        </member>
+        <member name="T:Sah.Sdk.Catalog.MedicationUses">
+            <summary>Catalog API for medication uses.</summary>
+        </member>
+        <member name="M:Sah.Sdk.Catalog.MedicationUses.Values">
+            <summary>Every use name, sorted alphabetically.</summary>
+        </member>
+        <member name="M:Sah.Sdk.Catalog.MedicationUses.Metadata(System.String)">
+            <summary>Metadata lookup; throws on unknown use.</summary>
+        </member>
+        <member name="T:Sah.Sdk.Catalog.Product">
+            <summary>Product slug enum. Each member's wire value is the canonical product
+            identifier the platform uses in URLs and reference-data lookups.</summary>
+        </member>
+        <member name="F:Sah.Sdk.Catalog.Product.FexAetnaAccendo">
+            <summary>Aetna Accendo (fex-aetna-accendo).</summary>
+        </member>
+        <member name="F:Sah.Sdk.Catalog.Product.FexAetnaProtectionSeries">
+            <summary>Aetna Protection Series (fex-aetna-protection-series).</summary>
+        </member>
+        <member name="F:Sah.Sdk.Catalog.Product.FexAflacFinalExpense">
+            <summary>Aflac Final Expense (fex-aflac-final-expense).</summary>
+        </member>
+        <member name="F:Sah.Sdk.Catalog.Product.FexAmericanAmicableClearChoice">
+            <summary>American Amicable Clear Choice (fex-american-amicable-clear-choice).</summary>
+        </member>
+        <member name="F:Sah.Sdk.Catalog.Product.FexAmericanAmicableDignitySolutions">
+            <summary>American Amicable Dignity Solutions (fex-american-amicable-dignity-solutions).</summary>
+        </member>
+        <member name="F:Sah.Sdk.Catalog.Product.FexAmericanAmicableGoldenSolution">
+            <summary>American Amicable Golden Solution (fex-american-amicable-golden-solution).</summary>
+        </member>
+        <member name="F:Sah.Sdk.Catalog.Product.FexAmericanAmicableInnovativeSolutions">
+            <summary>American Amicable Innovative Solutions (fex-american-amicable-innovative-solutions).</summary>
+        </member>
+        <member name="F:Sah.Sdk.Catalog.Product.FexAmericanAmicablePlatinumSolutionLegacyPlan">
+            <summary>American Amicable Platinum Solution Legacy Plan (fex-american-amicable-platinum-solution-legacy-plan).</summary>
+        </member>
+        <member name="F:Sah.Sdk.Catalog.Product.FexAmericanAmicableSeniorChoice">
+            <summary>American Amicable Senior Choice (fex-american-amicable-senior-choice).</summary>
+        </member>
+        <member name="F:Sah.Sdk.Catalog.Product.FexAmericanAmicableTribute">
+            <summary>American Amicable Tribute (fex-american-amicable-tribute).</summary>
+        </member>
+        <member name="F:Sah.Sdk.Catalog.Product.FexAmericanHomeLifeGuidestar">
+            <summary>American Home Life Guidestar (fex-american-home-life-guidestar).</summary>
+        </member>
+        <member name="F:Sah.Sdk.Catalog.Product.FexAmericanHomeLifePatriotSeries">
+            <summary>American Home Life Patriot Series (fex-american-home-life-patriot-series).</summary>
+        </member>
+        <member name="F:Sah.Sdk.Catalog.Product.FexAmericoEaglePremier">
+            <summary>Americo Eagle Premier (fex-americo-eagle-premier).</summary>
+        </member>
+        <member name="F:Sah.Sdk.Catalog.Product.FexBaltimoreLifeIprovide">
+            <summary>Baltimore Life iProvide (fex-baltimore-life-iprovide).</summary>
+        </member>
+        <member name="F:Sah.Sdk.Catalog.Product.FexBaltimoreLifeSilverGuard">
+            <summary>Baltimore Life Silver Guard (fex-baltimore-life-silver-guard).</summary>
+        </member>
+        <member name="F:Sah.Sdk.Catalog.Product.FexBetterlifeFinalExpense">
+            <summary>BetterLife Final Expense (fex-betterlife-final-expense).</summary>
+        </member>
+        <member name="F:Sah.Sdk.Catalog.Product.FexCentrianLivingLegacy">
+            <summary>Centrian Living Legacy (fex-centrian-living-legacy).</summary>
+        </member>
+        <member name="F:Sah.Sdk.Catalog.Product.FexCicaLifeSuperiorChoice">
+            <summary>CICA Life Superior Choice (fex-cica-life-superior-choice).</summary>
+        </member>
+        <member name="F:Sah.Sdk.Catalog.Product.FexCignaIndividualWholeLife">
+            <summary>Cigna Individual Whole Life (fex-cigna-individual-whole-life).</summary>
+        </member>
+        <member name="F:Sah.Sdk.Catalog.Product.FexCombinedGenerationalLife">
+            <summary>Combined Generational Life (fex-combined-generational-life).</summary>
+        </member>
+        <member name="F:Sah.Sdk.Catalog.Product.FexCorebridgeGiwl">
+            <summary>Corebridge GIWL (fex-corebridge-giwl).</summary>
+        </member>
+        <member name="F:Sah.Sdk.Catalog.Product.FexCorebridgeSimplinowLegacy">
+            <summary>Corebridge SimpliNow Legacy (fex-corebridge-simplinow-legacy).</summary>
+        </member>
+        <member name="F:Sah.Sdk.Catalog.Product.FexEmcEasylife">
+            <summary>EMC EasyLife (fex-emc-easylife).</summary>
+        </member>
+        <member name="F:Sah.Sdk.Catalog.Product.FexEverestIaAmericanAdvantage50Plus">
+            <summary>Everest IA American Advantage 50 Plus (fex-everest-ia-american-advantage-50-plus).</summary>
+        </member>
+        <member name="F:Sah.Sdk.Catalog.Product.FexFamilyBenefitLifeGoldenEagle">
+            <summary>Family Benefit Life Golden Eagle (fex-family-benefit-life-golden-eagle).</summary>
+        </member>
+        <member name="F:Sah.Sdk.Catalog.Product.FexFidelityLifeRapidecision">
+            <summary>Fidelity Life RAPIDecision (fex-fidelity-life-rapidecision).</summary>
+        </member>
+        <member name="F:Sah.Sdk.Catalog.Product.FexFidelityLifeRapidecisionSeniorLife">
+            <summary>Fidelity Life RAPIDecision Senior Life (fex-fidelity-life-rapidecision-senior-life).</summary>
+        </member>
+        <member name="F:Sah.Sdk.Catalog.Product.FexFirstGuarantyInsuranceSecurityCare">
+            <summary>First Guaranty Insurance Security Care (fex-first-guaranty-insurance-security-care).</summary>
+        </member>
+        <member name="F:Sah.Sdk.Catalog.Product.FexForestersPlanRight">
+            <summary>Foresters Plan Right (fex-foresters-plan-right).</summary>
+        </member>
+        <member name="F:Sah.Sdk.Catalog.Product.FexGerberLife">
+            <summary>Gerber Life (fex-gerber-life).</summary>
+        </member>
+        <member name="F:Sah.Sdk.Catalog.Product.FexGpmLifeSecureMark">
+            <summary>GPM Life Secure Mark (fex-gpm-life-secure-mark).</summary>
+        </member>
+        <member name="F:Sah.Sdk.Catalog.Product.FexGtlHeritagePlan">
+            <summary>GTL Heritage Plan (fex-gtl-heritage-plan).</summary>
+        </member>
+        <member name="F:Sah.Sdk.Catalog.Product.FexIllinoisMutualPathProtectorPlus">
+            <summary>Illinois Mutual Path Protector Plus (fex-illinois-mutual-path-protector-plus).</summary>
+        </member>
+        <member name="F:Sah.Sdk.Catalog.Product.FexKskjFinalExpense">
+            <summary>KSKJ Final Expense (fex-kskj-final-expense).</summary>
+        </member>
+        <member name="F:Sah.Sdk.Catalog.Product.FexLibertyBankersSimpl">
+            <summary>Liberty Bankers Simpl (fex-liberty-bankers-simpl).</summary>
+        </member>
+        <member name="F:Sah.Sdk.Catalog.Product.FexLifeShieldSurvivor">
+            <summary>Life Shield Survivor (fex-life-shield-survivor).</summary>
+        </member>
+        <member name="F:Sah.Sdk.Catalog.Product.FexManhattanLifeSecureAdvantage">
+            <summary>Manhattan Life Secure Advantage (fex-manhattan-life-secure-advantage).</summary>
+        </member>
+        <member name="F:Sah.Sdk.Catalog.Product.FexMutualOfOmahaLivingPromise">
+            <summary>Mutual of Omaha Living Promise (fex-mutual-of-omaha-living-promise).</summary>
+        </member>
+        <member name="F:Sah.Sdk.Catalog.Product.FexNewbridgeFinalExpense">
+            <summary>Newbridge Final Expense (fex-newbridge-final-expense).</summary>
+        </member>
+        <member name="F:Sah.Sdk.Catalog.Product.FexOccidentalLifeClearChoice">
+            <summary>Occidental Life Clear Choice (fex-occidental-life-clear-choice).</summary>
+        </member>
+        <member name="F:Sah.Sdk.Catalog.Product.FexOccidentalLifeDignitySolutions">
+            <summary>Occidental Life Dignity Solutions (fex-occidental-life-dignity-solutions).</summary>
+        </member>
+        <member name="F:Sah.Sdk.Catalog.Product.FexOccidentalLifeGoldenSolution">
+            <summary>Occidental Life Golden Solution (fex-occidental-life-golden-solution).</summary>
+        </member>
+        <member name="F:Sah.Sdk.Catalog.Product.FexOccidentalLifeInnovativeSolutions">
+            <summary>Occidental Life Innovative Solutions (fex-occidental-life-innovative-solutions).</summary>
+        </member>
+        <member name="F:Sah.Sdk.Catalog.Product.FexOccidentalLifePlatinumSolutionLegacyPlan">
+            <summary>Occidental Life Platinum Solution Legacy Plan (fex-occidental-life-platinum-solution-legacy-plan).</summary>
+        </member>
+        <member name="F:Sah.Sdk.Catalog.Product.FexOccidentalLifeSeniorChoice">
+            <summary>Occidental Life Senior Choice (fex-occidental-life-senior-choice).</summary>
+        </member>
+        <member name="F:Sah.Sdk.Catalog.Product.FexOccidentalLifeTribute">
+            <summary>Occidental Life Tribute (fex-occidental-life-tribute).</summary>
+        </member>
+        <member name="F:Sah.Sdk.Catalog.Product.FexOxfordLifeSimplifiedIssue">
+            <summary>Oxford Life Simplified Issue (fex-oxford-life-simplified-issue).</summary>
+        </member>
+        <member name="F:Sah.Sdk.Catalog.Product.FexPekinWholeLife">
+            <summary>Pekin Whole Life (fex-pekin-whole-life).</summary>
+        </member>
+        <member name="F:Sah.Sdk.Catalog.Product.FexPioneerAmericanIndependentAmerican">
+            <summary>Pioneer American Independent American (fex-pioneer-american-independent-american).</summary>
+        </member>
+        <member name="F:Sah.Sdk.Catalog.Product.FexPioneerAmericanNorthstarLegacy">
+            <summary>Pioneer American NorthStar Legacy (fex-pioneer-american-northstar-legacy).</summary>
+        </member>
+        <member name="F:Sah.Sdk.Catalog.Product.FexRoyalArcanumGraded">
+            <summary>Royal Arcanum Graded (fex-royal-arcanum-graded).</summary>
+        </member>
+        <member name="F:Sah.Sdk.Catalog.Product.FexRoyalArcanumSimplifiedIssue">
+            <summary>Royal Arcanum Simplified Issue (fex-royal-arcanum-simplified-issue).</summary>
+        </member>
+        <member name="F:Sah.Sdk.Catalog.Product.FexRoyalNeighborsEnsuredLegacy">
+            <summary>Royal Neighbors Ensured Legacy (fex-royal-neighbors-ensured-legacy).</summary>
+        </member>
+        <member name="F:Sah.Sdk.Catalog.Product.FexSUsaGoldenPromise">
+            <summary>S.USA Golden Promise (fex-s.usa-golden-promise).</summary>
+        </member>
+        <member name="F:Sah.Sdk.Catalog.Product.FexSbliLivingLegacy">
+            <summary>SBLI Living Legacy (fex-sbli-living-legacy).</summary>
+        </member>
+        <member name="F:Sah.Sdk.Catalog.Product.FexSecuricoLifeFinalExpense">
+            <summary>Securico Life Final Expense (fex-securico-life-final-expense).</summary>
+        </member>
+        <member name="F:Sah.Sdk.Catalog.Product.FexSecurityNationalSimpleSecurity">
+            <summary>Security National Simple Security (fex-security-national-simple-security).</summary>
+        </member>
+        <member name="F:Sah.Sdk.Catalog.Product.FexSeniorLifeWholeLife">
+            <summary>Senior Life Whole Life (fex-senior-life-whole-life).</summary>
+        </member>
+        <member name="F:Sah.Sdk.Catalog.Product.FexSentinelSecurityNewVantage">
+            <summary>Sentinel Security New Vantage (fex-sentinel-security-new-vantage).</summary>
+        </member>
+        <member name="F:Sah.Sdk.Catalog.Product.FexSonsOfNorwayLegacySure">
+            <summary>Sons of Norway Legacy Sure (fex-sons-of-norway-legacy-sure).</summary>
+        </member>
+        <member name="F:Sah.Sdk.Catalog.Product.FexSonsOfNorwayWholeLife">
+            <summary>Sons of Norway Whole Life (fex-sons-of-norway-whole-life).</summary>
+        </member>
+        <member name="F:Sah.Sdk.Catalog.Product.FexTransamericaFeExpressSolution">
+            <summary>TransAmerica FE Express Solution (fex-transamerica-fe-express-solution).</summary>
+        </member>
+        <member name="F:Sah.Sdk.Catalog.Product.FexTransamericaSolution">
+            <summary>TransAmerica Solution (fex-transamerica-solution).</summary>
+        </member>
+        <member name="F:Sah.Sdk.Catalog.Product.FexTrinityGoldenEagle">
+            <summary>Trinity Golden Eagle (fex-trinity-golden-eagle).</summary>
+        </member>
+        <member name="F:Sah.Sdk.Catalog.Product.FexUnitedFarmAndFamilyWholeLife">
+            <summary>United Farm And Family Whole Life (fex-united-farm-and-family-whole-life).</summary>
+        </member>
+        <member name="F:Sah.Sdk.Catalog.Product.FexUnitedHomeLifeWholeLife">
+            <summary>United Home Life Whole Life (fex-united-home-life-whole-life).</summary>
+        </member>
+        <member name="F:Sah.Sdk.Catalog.Product.MedsupAetnaAccendoMedsup">
+            <summary>Aetna Accendo Medicare Supplement (medsup-aetna-accendo-medsup).</summary>
+        </member>
+        <member name="F:Sah.Sdk.Catalog.Product.MedsupAetnaMedsup">
+            <summary>Aetna Medicare Supplement (medsup-aetna-medsup).</summary>
+        </member>
+        <member name="F:Sah.Sdk.Catalog.Product.MedsupManhattanLifeMedsup">
+            <summary>Manhattan Life Medicare Supplement (medsup-manhattan-life-medsup).</summary>
+        </member>
+        <member name="F:Sah.Sdk.Catalog.Product.MedsupMutualOfOmahaMedsup">
+            <summary>Mutual of Omaha Medicare Supplement (medsup-mutual-of-omaha-medsup).</summary>
+        </member>
+        <member name="F:Sah.Sdk.Catalog.Product.PreneedBetterlifeSinglePremium">
+            <summary>BetterLife Single Premium (preneed-betterlife-single-premium).</summary>
+        </member>
+        <member name="F:Sah.Sdk.Catalog.Product.PreneedGlobalAtlanticSimpleProtectionPlan">
+            <summary>Global Atlantic Simple Protection Plan (preneed-global-atlantic-simple-protection-plan).</summary>
+        </member>
+        <member name="F:Sah.Sdk.Catalog.Product.TermAmericanAmicableEasyTerm">
+            <summary>American Amicable Easy Term (term-american-amicable-easy-term).</summary>
+        </member>
+        <member name="F:Sah.Sdk.Catalog.Product.TermAmericanAmicableHomeProtector">
+            <summary>American Amicable Home Protector (term-american-amicable-home-protector).</summary>
+        </member>
+        <member name="F:Sah.Sdk.Catalog.Product.TermAmericanAmicableTermMadeSimple">
+            <summary>American Amicable Term Made Simple (term-american-amicable-term-made-simple).</summary>
+        </member>
+        <member name="F:Sah.Sdk.Catalog.Product.TermAmericoHmsPlus">
+            <summary>Americo HMS PLUS (term-americo-hms-plus).</summary>
+        </member>
+        <member name="F:Sah.Sdk.Catalog.Product.TermAmeritasFlxLivingBenefitsTerm">
+            <summary>Ameritas FLX Living Benefits Term (term-ameritas-flx-living-benefits-term).</summary>
+        </member>
+        <member name="F:Sah.Sdk.Catalog.Product.TermAmeritasValuePlusTerm">
+            <summary>Ameritas Value Plus Term (term-ameritas-value-plus-term).</summary>
+        </member>
+        <member name="F:Sah.Sdk.Catalog.Product.TermBannerOpterm">
+            <summary>Banner OPTerm (term-banner-opterm).</summary>
+        </member>
+        <member name="F:Sah.Sdk.Catalog.Product.TermCorebridgeSelectATerm">
+            <summary>Corebridge Select A Term (term-corebridge-select-a-term).</summary>
+        </member>
+        <member name="F:Sah.Sdk.Catalog.Product.TermFidelityLifeInstabrainTerm">
+            <summary>Fidelity Life InstaBrain Term (term-fidelity-life-instabrain-term).</summary>
+        </member>
+        <member name="F:Sah.Sdk.Catalog.Product.TermFidelityLifeInstaterm">
+            <summary>Fidelity Life InstaTerm (term-fidelity-life-instaterm).</summary>
+        </member>
+        <member name="F:Sah.Sdk.Catalog.Product.TermForestersStrongFoundation">
+            <summary>Foresters Strong Foundation (term-foresters-strong-foundation).</summary>
+        </member>
+        <member name="F:Sah.Sdk.Catalog.Product.TermForestersYourTerm">
+            <summary>Foresters Your Term (term-foresters-your-term).</summary>
+        </member>
+        <member name="F:Sah.Sdk.Catalog.Product.TermForestersYourTermNonMedical">
+            <summary>Foresters Your Term Non Medical (term-foresters-your-term-non-medical).</summary>
+        </member>
+        <member name="F:Sah.Sdk.Catalog.Product.TermGpmQMark">
+            <summary>GPM Q Mark (term-gpm-q-mark).</summary>
+        </member>
+        <member name="F:Sah.Sdk.Catalog.Product.TermGtlTurboTerm">
+            <summary>GTL Turbo Term (term-gtl-turbo-term).</summary>
+        </member>
+        <member name="F:Sah.Sdk.Catalog.Product.TermHeroLifeTerm">
+            <summary>Hero Life Term (term-hero-life-term).</summary>
+        </member>
+        <member name="F:Sah.Sdk.Catalog.Product.TermJohnHancockSimpleTermWithVitality">
+            <summary>John Hancock Simple Term with Vitality (term-john-hancock-simple-term-with-vitality).</summary>
+        </member>
+        <member name="F:Sah.Sdk.Catalog.Product.TermKansasCityLifeSignatureTermExpress">
+            <summary>Kansas City Life Signature Term Express (term-kansas-city-life-signature-term-express).</summary>
+        </member>
+        <member name="F:Sah.Sdk.Catalog.Product.TermLincolnLifeelements">
+            <summary>Lincoln LifeElements (term-lincoln-lifeelements).</summary>
+        </member>
+        <member name="F:Sah.Sdk.Catalog.Product.TermLincolnTermaccel">
+            <summary>Lincoln TermAccel (term-lincoln-termaccel).</summary>
+        </member>
+        <member name="F:Sah.Sdk.Catalog.Product.TermMutualOfOmahaTermLifeAnswers">
+            <summary>Mutual of Omaha Term Life Answers (term-mutual-of-omaha-term-life-answers).</summary>
+        </member>
+        <member name="F:Sah.Sdk.Catalog.Product.TermMutualOfOmahaTermLifeExpress">
+            <summary>Mutual of Omaha Term Life Express (term-mutual-of-omaha-term-life-express).</summary>
+        </member>
+        <member name="F:Sah.Sdk.Catalog.Product.TermNationwideYourlife">
+            <summary>Nationwide YourLife (term-nationwide-yourlife).</summary>
+        </member>
+        <member name="F:Sah.Sdk.Catalog.Product.TermNorthAmericanAddvantage">
+            <summary>North American ADDvantage (term-north-american-addvantage).</summary>
+        </member>
+        <member name="F:Sah.Sdk.Catalog.Product.TermProsperityFamilyFreedomTerm">
+            <summary>Prosperity Family Freedom Term (term-prosperity-family-freedom-term).</summary>
+        </member>
+        <member name="F:Sah.Sdk.Catalog.Product.TermProtectiveLifeClassicChoiceTerm">
+            <summary>Protective Life Classic Choice Term (term-protective-life-classic-choice-term).</summary>
+        </member>
+        <member name="F:Sah.Sdk.Catalog.Product.TermProtectiveLifeCustomChoiceTerm">
+            <summary>Protective Life Custom Choice Term (term-protective-life-custom-choice-term).</summary>
+        </member>
+        <member name="F:Sah.Sdk.Catalog.Product.TermPrudentialEssentialTermPlus">
+            <summary>Prudential Essential Term Plus (term-prudential-essential-term-plus).</summary>
+        </member>
+        <member name="F:Sah.Sdk.Catalog.Product.TermPrudentialEssentialTermValue">
+            <summary>Prudential Essential Term Value (term-prudential-essential-term-value).</summary>
+        </member>
+        <member name="F:Sah.Sdk.Catalog.Product.TermSagicorSageTerm">
+            <summary>Sagicor Sage Term (term-sagicor-sage-term).</summary>
+        </member>
+        <member name="F:Sah.Sdk.Catalog.Product.TermSbliTTerm">
+            <summary>SBLI T Term (term-sbli-t-term).</summary>
+        </member>
+        <member name="F:Sah.Sdk.Catalog.Product.TermSeniorLifeTermLife">
+            <summary>Senior Life Term Life (term-senior-life-term-life).</summary>
+        </member>
+        <member name="F:Sah.Sdk.Catalog.Product.TermTransamericaTrendsetterLb">
+            <summary>TransAmerica Trendsetter LB (term-transamerica-trendsetter-lb).</summary>
+        </member>
+        <member name="F:Sah.Sdk.Catalog.Product.TermTransamericaTrendsetterSuper">
+            <summary>TransAmerica Trendsetter Super (term-transamerica-trendsetter-super).</summary>
+        </member>
+        <member name="F:Sah.Sdk.Catalog.Product.TermWilliamPennOpterm">
+            <summary>William Penn OPTerm (term-william-penn-opterm).</summary>
+        </member>
+        <member name="T:Sah.Sdk.Catalog.ProductMetadata">
+            <summary>Public metadata for a single <see cref="T:Sah.Sdk.Catalog.Product"/>.</summary>
+        </member>
+        <member name="M:Sah.Sdk.Catalog.ProductMetadata.#ctor(System.String,System.String,System.String,System.String,System.Collections.Generic.IReadOnlyList{System.String})">
+            <summary>Public metadata for a single <see cref="T:Sah.Sdk.Catalog.Product"/>.</summary>
+        </member>
+        <member name="T:Sah.Sdk.Catalog.Products">
+            <summary>Catalog API for <see cref="T:Sah.Sdk.Catalog.Product"/>. Methods return frozen,
+            sorted views; the underlying tables are constructed once at startup.</summary>
+        </member>
+        <member name="M:Sah.Sdk.Catalog.Products.Values">
+            <summary>Every product slug, sorted alphabetically.</summary>
+        </member>
+        <member name="M:Sah.Sdk.Catalog.Products.Entries">
+            <summary>(<see cref="T:Sah.Sdk.Catalog.Product"/>, <see cref="T:Sah.Sdk.Catalog.ProductMetadata"/>) pairs in catalog order.</summary>
+        </member>
+        <member name="M:Sah.Sdk.Catalog.Products.ByCarrier(System.String)">
+            <summary>Products filed by a given carrier slug. Case-insensitive match.</summary>
+        </member>
+        <member name="M:Sah.Sdk.Catalog.Products.Search(System.String)">
+            <summary>Substring search across slug + display name. Prefix matches come first.</summary>
+        </member>
+        <member name="M:Sah.Sdk.Catalog.Products.Metadata(Sah.Sdk.Catalog.Product)">
+            <summary>Metadata lookup for a <see cref="T:Sah.Sdk.Catalog.Product"/> enum value.</summary>
+        </member>
+        <member name="M:Sah.Sdk.Catalog.Products.WireValue(Sah.Sdk.Catalog.Product)">
+            <summary>Canonical wire-form value for a <see cref="T:Sah.Sdk.Catalog.Product"/>.</summary>
+        </member>
+        <member name="T:Sah.Sdk.Catalog.Scope">
+            <summary>Bearer-token scopes recognized across the ISA platform.</summary>
+        </member>
+        <member name="F:Sah.Sdk.Catalog.Scope.RapidsignDocumentsNotify">
+            <summary>send signer notification emails.</summary>
+        </member>
+        <member name="F:Sah.Sdk.Catalog.Scope.RapidsignDocumentsRead">
+            <summary>fetch signature state and signed PDFs.</summary>
+        </member>
+        <member name="F:Sah.Sdk.Catalog.Scope.RapidsignDocumentsSign">
+            <summary>submit signatures.</summary>
+        </member>
+        <member name="F:Sah.Sdk.Catalog.Scope.RapidsignDocumentsWrite">
+            <summary>create new documents.</summary>
+        </member>
+        <member name="T:Sah.Sdk.Catalog.ScopeDescriptions">
+            <summary>Human-readable description per scope.</summary>
+        </member>
+        <member name="M:Sah.Sdk.Catalog.ScopeDescriptions.Get(Sah.Sdk.Catalog.Scope)">
+            <summary>Get the description for a scope.</summary>
+        </member>
+        <member name="T:Sah.Sdk.Catalog.SignEvent">
+            <summary>RapidSign webhook event types.</summary>
+        </member>
+        <member name="T:Sah.Sdk.Catalog.SignEventLabels">
+            <summary>Label per sign event.</summary>
+        </member>
+        <member name="M:Sah.Sdk.Catalog.SignEventLabels.Get(Sah.Sdk.Catalog.SignEvent)">
+            <summary>Get the label for an event.</summary>
+        </member>
+        <member name="T:Sah.Sdk.Catalog.WireValueAttribute">
+            <summary>Attaches the canonical wire-form string to a catalog enum member.</summary>
+        </member>
+        <member name="P:Sah.Sdk.Catalog.WireValueAttribute.Value">
+            <summary>Canonical wire-form value emitted by the engine.</summary>
+        </member>
+        <member name="M:Sah.Sdk.Catalog.WireValueAttribute.#ctor(System.String)">
+            <summary>Construct with the canonical wire value.</summary>
+        </member>
+        <member name="T:Sah.Sdk.Catalog.State">
+            <summary>ISO 3166-2:US administrative subdivisions. Includes the 50 states,
+            DC, and the five inhabited US territories. Order is alphabetical by name.</summary>
+        </member>
+        <member name="F:Sah.Sdk.Catalog.State.Alabama">
+            <summary>Alabama (AL).</summary>
+        </member>
+        <member name="F:Sah.Sdk.Catalog.State.Alaska">
+            <summary>Alaska (AK).</summary>
+        </member>
+        <member name="F:Sah.Sdk.Catalog.State.Arizona">
+            <summary>Arizona (AZ).</summary>
+        </member>
+        <member name="F:Sah.Sdk.Catalog.State.Arkansas">
+            <summary>Arkansas (AR).</summary>
+        </member>
+        <member name="F:Sah.Sdk.Catalog.State.California">
+            <summary>California (CA).</summary>
+        </member>
+        <member name="F:Sah.Sdk.Catalog.State.Colorado">
+            <summary>Colorado (CO).</summary>
+        </member>
+        <member name="F:Sah.Sdk.Catalog.State.Connecticut">
+            <summary>Connecticut (CT).</summary>
+        </member>
+        <member name="F:Sah.Sdk.Catalog.State.Delaware">
+            <summary>Delaware (DE).</summary>
+        </member>
+        <member name="F:Sah.Sdk.Catalog.State.Florida">
+            <summary>Florida (FL).</summary>
+        </member>
+        <member name="F:Sah.Sdk.Catalog.State.Georgia">
+            <summary>Georgia (GA).</summary>
+        </member>
+        <member name="F:Sah.Sdk.Catalog.State.Hawaii">
+            <summary>Hawaii (HI).</summary>
+        </member>
+        <member name="F:Sah.Sdk.Catalog.State.Idaho">
+            <summary>Idaho (ID).</summary>
+        </member>
+        <member name="F:Sah.Sdk.Catalog.State.Illinois">
+            <summary>Illinois (IL).</summary>
+        </member>
+        <member name="F:Sah.Sdk.Catalog.State.Indiana">
+            <summary>Indiana (IN).</summary>
+        </member>
+        <member name="F:Sah.Sdk.Catalog.State.Iowa">
+            <summary>Iowa (IA).</summary>
+        </member>
+        <member name="F:Sah.Sdk.Catalog.State.Kansas">
+            <summary>Kansas (KS).</summary>
+        </member>
+        <member name="F:Sah.Sdk.Catalog.State.Kentucky">
+            <summary>Kentucky (KY).</summary>
+        </member>
+        <member name="F:Sah.Sdk.Catalog.State.Louisiana">
+            <summary>Louisiana (LA).</summary>
+        </member>
+        <member name="F:Sah.Sdk.Catalog.State.Maine">
+            <summary>Maine (ME).</summary>
+        </member>
+        <member name="F:Sah.Sdk.Catalog.State.Maryland">
+            <summary>Maryland (MD).</summary>
+        </member>
+        <member name="F:Sah.Sdk.Catalog.State.Massachusetts">
+            <summary>Massachusetts (MA).</summary>
+        </member>
+        <member name="F:Sah.Sdk.Catalog.State.Michigan">
+            <summary>Michigan (MI).</summary>
+        </member>
+        <member name="F:Sah.Sdk.Catalog.State.Minnesota">
+            <summary>Minnesota (MN).</summary>
+        </member>
+        <member name="F:Sah.Sdk.Catalog.State.Mississippi">
+            <summary>Mississippi (MS).</summary>
+        </member>
+        <member name="F:Sah.Sdk.Catalog.State.Missouri">
+            <summary>Missouri (MO).</summary>
+        </member>
+        <member name="F:Sah.Sdk.Catalog.State.Montana">
+            <summary>Montana (MT).</summary>
+        </member>
+        <member name="F:Sah.Sdk.Catalog.State.Nebraska">
+            <summary>Nebraska (NE).</summary>
+        </member>
+        <member name="F:Sah.Sdk.Catalog.State.Nevada">
+            <summary>Nevada (NV).</summary>
+        </member>
+        <member name="F:Sah.Sdk.Catalog.State.NewHampshire">
+            <summary>New Hampshire (NH).</summary>
+        </member>
+        <member name="F:Sah.Sdk.Catalog.State.NewJersey">
+            <summary>New Jersey (NJ).</summary>
+        </member>
+        <member name="F:Sah.Sdk.Catalog.State.NewMexico">
+            <summary>New Mexico (NM).</summary>
+        </member>
+        <member name="F:Sah.Sdk.Catalog.State.NewYork">
+            <summary>New York (NY).</summary>
+        </member>
+        <member name="F:Sah.Sdk.Catalog.State.NorthCarolina">
+            <summary>North Carolina (NC).</summary>
+        </member>
+        <member name="F:Sah.Sdk.Catalog.State.NorthDakota">
+            <summary>North Dakota (ND).</summary>
+        </member>
+        <member name="F:Sah.Sdk.Catalog.State.Ohio">
+            <summary>Ohio (OH).</summary>
+        </member>
+        <member name="F:Sah.Sdk.Catalog.State.Oklahoma">
+            <summary>Oklahoma (OK).</summary>
+        </member>
+        <member name="F:Sah.Sdk.Catalog.State.Oregon">
+            <summary>Oregon (OR).</summary>
+        </member>
+        <member name="F:Sah.Sdk.Catalog.State.Pennsylvania">
+            <summary>Pennsylvania (PA).</summary>
+        </member>
+        <member name="F:Sah.Sdk.Catalog.State.RhodeIsland">
+            <summary>Rhode Island (RI).</summary>
+        </member>
+        <member name="F:Sah.Sdk.Catalog.State.SouthCarolina">
+            <summary>South Carolina (SC).</summary>
+        </member>
+        <member name="F:Sah.Sdk.Catalog.State.SouthDakota">
+            <summary>South Dakota (SD).</summary>
+        </member>
+        <member name="F:Sah.Sdk.Catalog.State.Tennessee">
+            <summary>Tennessee (TN).</summary>
+        </member>
+        <member name="F:Sah.Sdk.Catalog.State.Texas">
+            <summary>Texas (TX).</summary>
+        </member>
+        <member name="F:Sah.Sdk.Catalog.State.Utah">
+            <summary>Utah (UT).</summary>
+        </member>
+        <member name="F:Sah.Sdk.Catalog.State.Vermont">
+            <summary>Vermont (VT).</summary>
+        </member>
+        <member name="F:Sah.Sdk.Catalog.State.Virginia">
+            <summary>Virginia (VA).</summary>
+        </member>
+        <member name="F:Sah.Sdk.Catalog.State.Washington">
+            <summary>Washington (WA).</summary>
+        </member>
+        <member name="F:Sah.Sdk.Catalog.State.WestVirginia">
+            <summary>West Virginia (WV).</summary>
+        </member>
+        <member name="F:Sah.Sdk.Catalog.State.Wisconsin">
+            <summary>Wisconsin (WI).</summary>
+        </member>
+        <member name="F:Sah.Sdk.Catalog.State.Wyoming">
+            <summary>Wyoming (WY).</summary>
+        </member>
+        <member name="F:Sah.Sdk.Catalog.State.DistrictOfColumbia">
+            <summary>District of Columbia (DC).</summary>
+        </member>
+        <member name="F:Sah.Sdk.Catalog.State.AmericanSamoa">
+            <summary>American Samoa (AS).</summary>
+        </member>
+        <member name="F:Sah.Sdk.Catalog.State.Guam">
+            <summary>Guam (GU).</summary>
+        </member>
+        <member name="F:Sah.Sdk.Catalog.State.NorthernMarianaIslands">
+            <summary>Northern Mariana Islands (MP).</summary>
+        </member>
+        <member name="F:Sah.Sdk.Catalog.State.PuertoRico">
+            <summary>Puerto Rico (PR).</summary>
+        </member>
+        <member name="F:Sah.Sdk.Catalog.State.UnitedStatesVirginIslands">
+            <summary>United States Virgin Islands (VI).</summary>
+        </member>
+        <member name="T:Sah.Sdk.Catalog.StateMetadata">
+            <summary>Public metadata for a single <see cref="T:Sah.Sdk.Catalog.State"/>.</summary>
+        </member>
+        <member name="M:Sah.Sdk.Catalog.StateMetadata.#ctor(System.String,System.String,System.Boolean)">
+            <summary>Public metadata for a single <see cref="T:Sah.Sdk.Catalog.State"/>.</summary>
+        </member>
+        <member name="T:Sah.Sdk.Catalog.States">
+            <summary>Catalog API for <see cref="T:Sah.Sdk.Catalog.State"/>. Every accessor returns a
+            read-only view; the underlying tables are constructed once at startup.</summary>
+        </member>
+        <member name="M:Sah.Sdk.Catalog.States.Values">
+            <summary>Every state in catalog order.</summary>
+        </member>
+        <member name="M:Sah.Sdk.Catalog.States.Metadata(Sah.Sdk.Catalog.State)">
+            <summary>Metadata lookup for a <see cref="T:Sah.Sdk.Catalog.State"/> enum value.</summary>
+        </member>
+        <member name="M:Sah.Sdk.Catalog.States.ByAbbreviation(System.String)">
+            <summary>Look up a state by ISO abbreviation (case-insensitive) or by
+            full English name (case-insensitive). Returns null when not recognized.</summary>
+        </member>
+        <member name="M:Sah.Sdk.Catalog.States.WireValue(Sah.Sdk.Catalog.State)">
+            <summary>Canonical wire-form value for a <see cref="T:Sah.Sdk.Catalog.State"/>.</summary>
         </member>
         <member name="T:Sah.Sdk.Core.IClock">
             <summary>Injectable time source. Default is <see cref="T:Sah.Sdk.Core.SystemClock"/>.</summary>
@@ -3452,6 +4486,58 @@
         <member name="M:Sah.Sdk.Core.ProblemDetailsParser.ToException(Sah.Sdk.Core.TransportResponse)">
             <summary>Map a non-2xx <see cref="T:Sah.Sdk.Core.TransportResponse"/> to an exception.</summary>
         </member>
+        <member name="T:Sah.Sdk.Core.SignedHeaders">
+            <summary>
+            The four headers emitted by <see cref="M:Sah.Sdk.Core.SignRequest.Sign(System.String,System.String,System.Byte[],System.String,System.String,Sah.Sdk.Core.IClock)"/>.
+            </summary>
+        </member>
+        <member name="M:Sah.Sdk.Core.SignedHeaders.#ctor(System.String,System.String,System.String,System.String)">
+            <summary>
+            The four headers emitted by <see cref="M:Sah.Sdk.Core.SignRequest.Sign(System.String,System.String,System.Byte[],System.String,System.String,Sah.Sdk.Core.IClock)"/>.
+            </summary>
+        </member>
+        <member name="F:Sah.Sdk.Core.SignedHeaders.AuthorizationHeader">
+            <summary>Canonical header name for the bearer credential.</summary>
+        </member>
+        <member name="F:Sah.Sdk.Core.SignedHeaders.IsaSessionIdHeader">
+            <summary>Canonical header name for the session identifier.</summary>
+        </member>
+        <member name="F:Sah.Sdk.Core.SignedHeaders.IsaTimestampHeader">
+            <summary>Canonical header name for the request timestamp.</summary>
+        </member>
+        <member name="F:Sah.Sdk.Core.SignedHeaders.IsaSignatureHeader">
+            <summary>Canonical header name for the per-request HMAC signature.</summary>
+        </member>
+        <member name="M:Sah.Sdk.Core.SignedHeaders.AsDictionary">
+            <summary>Return the headers as a case-insensitive dictionary.</summary>
+        </member>
+        <member name="T:Sah.Sdk.Core.SignRequest">
+            <summary>
+            Canonical session-signing helper. Pure static methods; injectable
+            clock via <see cref="T:Sah.Sdk.Core.IClock"/>.
+            </summary>
+        </member>
+        <member name="M:Sah.Sdk.Core.SignRequest.FormatTimestamp(System.DateTimeOffset)">
+            <summary>Format <paramref name="now"/> as RFC 3339 UTC with a <c>Z</c>
+            suffix and no fractional seconds. Matches Go's <c>time.RFC3339</c>
+            rendering for whole-second instants.</summary>
+        </member>
+        <member name="M:Sah.Sdk.Core.SignRequest.CanonicalString(System.String,System.String,System.Byte[],System.String,System.String)">
+            <summary>Build the canonical signing string. Pure; exported for
+            cross-SDK byte-parity tests.</summary>
+        </member>
+        <member name="M:Sah.Sdk.Core.SignRequest.Sign(System.String,System.String,System.Byte[],System.String,System.String,Sah.Sdk.Core.IClock)">
+            <summary>Compute the canonical session-auth headers for one request.</summary>
+            <param name="method">HTTP method (uppercased internally).</param>
+            <param name="path">Request path including query string.</param>
+            <param name="body">Raw request body bytes (may be null or empty).</param>
+            <param name="sessionId">Session identifier (<c>sess_…</c>).</param>
+            <param name="sessionSecret">HMAC key; travels in Authorization.</param>
+            <param name="clock">Injectable clock; defaults to <see cref="F:Sah.Sdk.Core.SystemClock.Instance"/>.</param>
+        </member>
+        <member name="M:Sah.Sdk.Core.SignRequest.Sign(System.String,System.String,System.String,System.String,System.String,Sah.Sdk.Core.IClock)">
+            <summary>Convenience overload that accepts the body as a UTF-8 string.</summary>
+        </member>
         <member name="T:Sah.Sdk.Core.HttpVerb">
             <summary>The set of HTTP verbs the SDK ever issues.</summary>
         </member>
@@ -3464,7 +4550,7 @@
         <member name="T:Sah.Sdk.Core.TransportResponse">
             <summary>The raw HTTP response shape the SDK consumes.</summary>
         </member>
-        <member name="M:Sah.Sdk.Core.TransportResponse.#ctor(System.Int32,System.Collections.Generic.IReadOnlyDictionary{System.String,System.String},System.String)">
+        <member name="M:Sah.Sdk.Core.TransportResponse.#ctor(System.Int32,System.Collections.Generic.IReadOnlyDictionary{System.String,System.String},System.String,System.Byte[])">
             <summary>The raw HTTP response shape the SDK consumes.</summary>
         </member>
         <member name="T:Sah.Sdk.Core.ITransport">
@@ -3501,6 +4587,10 @@
         <member name="P:Sah.Sdk.LicenseOptions.SigningSecret">
             <summary>Optional HMAC signing secret from the license-exchange handshake.</summary>
         </member>
+        <member name="P:Sah.Sdk.LicenseOptions.CredentialStore">
+            <summary>Optional credential store. Defaults to <see cref="T:Sah.Sdk.Zyins.InMemoryCredentialStore"/>;
+            pass a durable adapter to persist the license key across process boots.</summary>
+        </member>
         <member name="T:Sah.Sdk.SessionOptions">
             <summary>Session credentials for embedded browser flows.</summary>
         </member>
@@ -3526,6 +4616,17 @@
         </member>
         <member name="P:Sah.Sdk.Isa.Zyins">
             <summary>ZyINS underwriting and prequalification surface.</summary>
+        </member>
+        <member name="P:Sah.Sdk.Isa.Account">
+            <summary>License-scoped account operations (branding, preferences, cases,
+            email, reference-data). Available only on license-mode instances built
+            via <see cref="M:Sah.Sdk.Isa.WithLicense(System.String,System.String)"/> /
+            <see cref="M:Sah.Sdk.Isa.WithLicenseAsync(Sah.Sdk.LicenseOptions)"/> / <see cref="M:Sah.Sdk.Isa.FromEnv"/>.</summary>
+        </member>
+        <member name="E:Sah.Sdk.Isa.OnLicenseRefreshed">
+            <summary>Fires when the SDK observes a fresh license key (typically the
+            return value of <c>Zyins.Licenses.ActivateAsync()</c>). Subscribing on a
+            non-license-mode instance throws <see cref="T:System.InvalidOperationException"/>.</summary>
         </member>
         <member name="P:Sah.Sdk.Isa.RapidSign">
             <summary>RapidSign document-workflow surface. Stub until v0.3.x product wiring.</summary>
@@ -3571,6 +4672,25 @@
         <member name="M:Sah.Sdk.Isa.WithLicenseAsync(Sah.Sdk.LicenseOptions,Sah.Sdk.Zyins.IEnvironment)">
             <summary>Test seam: env-injectable variant.</summary>
         </member>
+        <member name="M:Sah.Sdk.Isa.WithLicense(System.String,System.String)">
+            <summary>Ergonomic license-mode factory. Equivalent to passing a
+            <see cref="T:Sah.Sdk.LicenseOptions"/> with just <c>Keycode</c> + <c>Email</c>.
+            The SDK mints a device id automatically; an in-memory credential
+            store backs the license key.</summary>
+        </member>
+        <member name="M:Sah.Sdk.Isa.WithLicense(System.String,System.String,Sah.Sdk.Zyins.IEnvironment)">
+            <summary>Test seam: env-injectable variant.</summary>
+        </member>
+        <member name="M:Sah.Sdk.Isa.FromEnv">
+            <summary>Construct from environment variables. Reads
+            <c>ISA_LICENSE_KEYCODE</c> + <c>ISA_LICENSE_EMAIL</c> and returns a
+            license-mode <see cref="T:Sah.Sdk.Isa"/>. Equivalent to
+            <c>Isa.WithLicense()</c> with no args, but resolves synchronously
+            without a Task.</summary>
+        </member>
+        <member name="M:Sah.Sdk.Isa.FromEnv(Sah.Sdk.Zyins.IEnvironment)">
+            <summary>Test seam: env-injectable variant of <see cref="M:Sah.Sdk.Isa.FromEnv"/>.</summary>
+        </member>
         <member name="M:Sah.Sdk.Isa.WithSession(Sah.Sdk.SessionOptions)">
             <summary>
             Session-bound client. Reads <c>ISA_SESSION_ID</c> + <c>ISA_SESSION_SECRET</c>
@@ -3595,20 +4715,72 @@
         <member name="M:Sah.Sdk.Proxy.BearerTokenSigner.Sign(Sah.Sdk.Core.TransportRequest)">
             <summary>Return a copy of <paramref name="request"/> with the bearer header set.</summary>
         </member>
+        <member name="T:Sah.Sdk.Proxy.ProxyDefaults">
+            <summary>Default origin for the platform proxy `/v1/call` endpoint.</summary>
+        </member>
+        <member name="F:Sah.Sdk.Proxy.ProxyDefaults.DefaultProxyOrigin">
+            <summary>Production proxy origin.</summary>
+        </member>
+        <member name="T:Sah.Sdk.Proxy.ProxyCallOptions">
+            <summary>Parameterizes one invocation of <see cref="M:Sah.Sdk.Proxy.ProxyNamespace.CallAsync(Sah.Sdk.Proxy.ProxyCallOptions,System.Threading.CancellationToken)"/>.</summary>
+        </member>
+        <member name="P:Sah.Sdk.Proxy.ProxyCallOptions.IntegrationUuid">
+            <summary>Preferred opaque identifier. Mutually exclusive with <see cref="P:Sah.Sdk.Proxy.ProxyCallOptions.IntegrationId"/>.</summary>
+        </member>
+        <member name="P:Sah.Sdk.Proxy.ProxyCallOptions.IntegrationId">
+            <summary>Legacy BIGSERIAL identifier. Mutually exclusive with <see cref="P:Sah.Sdk.Proxy.ProxyCallOptions.IntegrationUuid"/>.</summary>
+        </member>
+        <member name="P:Sah.Sdk.Proxy.ProxyCallOptions.Params">
+            <summary>Opaque JSON-serializable payload forwarded to the downstream integration.</summary>
+        </member>
+        <member name="P:Sah.Sdk.Proxy.ProxyCallOptions.Method">
+            <summary>HTTP method the proxy uses against the integration. Defaults to "POST".</summary>
+        </member>
+        <member name="P:Sah.Sdk.Proxy.ProxyCallOptions.IdempotencyKey">
+            <summary>Optional caller-supplied idempotency key; auto-minted as UUID v4 when null.</summary>
+        </member>
         <member name="T:Sah.Sdk.Proxy.ProxyNamespace">
             <summary>
-            Accessor for proxy/transport-signing helpers, reached via
-            <see cref="P:Sah.Sdk.Isa.Proxy"/>.
+            Session-signed `/v1/call` entry point reached via <see cref="P:Sah.Sdk.Isa.Proxy"/>.
+            Carries the session binding for the parent <see cref="T:Sah.Sdk.Isa"/>;
+            non-session callers see <see cref="T:Sah.Sdk.Core.IsaConfigException"/>
+            at the boundary so they know to exchange credentials first.
             </summary>
             <example>
             <code>
-            var isa = Isa.WithBearer();
-            // var signed = isa.Proxy.SignBearer(request);    // v0.3.x wiring
+            var isa = Isa.WithSession(new SessionOptions { SessionId = "sess_…", SessionSecret = "…" });
+            var body = await isa.Proxy.CallAsync(new ProxyCallOptions
+            {
+                IntegrationUuid = "int_abc",
+                Params = new { foo = "bar" },
+            });
             </code>
             </example>
         </member>
+        <member name="F:Sah.Sdk.Proxy.ProxyNamespace.ProxyCallPath">
+            <summary>The platform proxy invocation path.</summary>
+        </member>
         <member name="M:Sah.Sdk.Proxy.ProxyNamespace.#ctor">
-            <summary>Internal: bound by <see cref="T:Sah.Sdk.Isa"/> at construction.</summary>
+            <summary>Default constructor — non-session callers see <see cref="T:Sah.Sdk.Core.IsaConfigException"/> at <see cref="M:Sah.Sdk.Proxy.ProxyNamespace.CallAsync(Sah.Sdk.Proxy.ProxyCallOptions,System.Threading.CancellationToken)"/>.</summary>
+        </member>
+        <member name="M:Sah.Sdk.Proxy.ProxyNamespace.#ctor(System.String,System.String,System.String,System.Net.Http.HttpMessageHandler,Sah.Sdk.Core.IClock,System.Func{System.String})">
+            <summary>
+            Construct a session-bound proxy namespace. Used by <see cref="T:Sah.Sdk.Isa"/>
+            to plumb credentials; tests pass a handler + fixed clock to drive
+            deterministic outbound assertions.
+            </summary>
+        </member>
+        <member name="M:Sah.Sdk.Proxy.ProxyNamespace.CallAsync(Sah.Sdk.Proxy.ProxyCallOptions,System.Threading.CancellationToken)">
+            <summary>
+            Invoke a registered integration through the platform proxy. Returns
+            the raw response body as a UTF-8 string (envelope shape is whatever
+            the server returns).
+            </summary>
+            <exception cref="T:Sah.Sdk.Core.IsaConfigException">When the parent Isa was constructed without a session credential.</exception>
+            <exception cref="T:Sah.Sdk.Core.IsaValidationException">When neither/both of IntegrationUuid/IntegrationId are supplied, or on a 400 response.</exception>
+            <exception cref="T:Sah.Sdk.Core.IsaAuthException">On a 401 response.</exception>
+            <exception cref="T:Sah.Sdk.Core.IsaIdempotencyConflictException">On a 409 idempotency_conflict response.</exception>
+            <exception cref="T:Sah.Sdk.Core.IsaException">On any other non-2xx response.</exception>
         </member>
         <member name="T:Sah.Sdk.RapidSign.RapidSignNamespace">
             <summary>
@@ -3639,8 +4811,175 @@
         <member name="M:Sah.Sdk.Webhooks.WebhooksNamespace.#ctor">
             <summary>Internal: bound by <see cref="T:Sah.Sdk.Isa"/> at construction.</summary>
         </member>
+        <member name="T:Sah.Sdk.Zyins.BrandingDetail">
+            <summary>Whitelabel branding detail returned by
+            <see cref="M:Sah.Sdk.Zyins.BrandingSubClient.LookupAsync(System.Threading.CancellationToken)"/>. Zero-valued when no row
+            exists; the server intentionally does not 404.</summary>
+        </member>
+        <member name="P:Sah.Sdk.Zyins.BrandingDetail.HideAffiliateLeads">
+            <summary>The handler ships either a JSON bool or the legacy
+            "true"/"1" string. <see cref="T:Sah.Sdk.Zyins.FlexBoolConverter"/> normalizes.</summary>
+        </member>
+        <member name="T:Sah.Sdk.Zyins.BrandingSubClient">
+            <summary>Sub-client for whitelabel branding lookup.</summary>
+        </member>
+        <member name="M:Sah.Sdk.Zyins.BrandingSubClient.LookupAsync(System.Threading.CancellationToken)">
+            <summary>Fetch the whitelabel branding for the caller's license.</summary>
+        </member>
+        <member name="T:Sah.Sdk.Zyins.PreferencesSetRequest">
+            <summary>Input for <see cref="M:Sah.Sdk.Zyins.PreferencesSubClient.SetAsync(Sah.Sdk.Zyins.PreferencesSetRequest,System.Threading.CancellationToken)"/>.</summary>
+        </member>
+        <member name="P:Sah.Sdk.Zyins.PreferencesSetRequest.Prefs">
+            <summary>Opaque preferences document. Required.</summary>
+        </member>
+        <member name="T:Sah.Sdk.Zyins.PreferencesResult">
+            <summary>Result of <see cref="M:Sah.Sdk.Zyins.PreferencesSubClient.LookupAsync(System.Threading.CancellationToken)"/> /
+            <see cref="M:Sah.Sdk.Zyins.PreferencesSubClient.SetAsync(Sah.Sdk.Zyins.PreferencesSetRequest,System.Threading.CancellationToken)"/>.</summary>
+        </member>
+        <member name="T:Sah.Sdk.Zyins.PreferencesSubClient">
+            <summary>Sub-client for preferences lookup + upsert.</summary>
+        </member>
+        <member name="M:Sah.Sdk.Zyins.PreferencesSubClient.LookupAsync(System.Threading.CancellationToken)">
+            <summary>Fetch the caller's preferences document.</summary>
+        </member>
+        <member name="M:Sah.Sdk.Zyins.PreferencesSubClient.SetAsync(Sah.Sdk.Zyins.PreferencesSetRequest,System.Threading.CancellationToken)">
+            <summary>Upsert the caller's preferences document.</summary>
+        </member>
+        <member name="T:Sah.Sdk.Zyins.CaseCreateRequest">
+            <summary>Input for <see cref="M:Sah.Sdk.Zyins.CasesSubClient.CreateAsync(Sah.Sdk.Zyins.CaseCreateRequest,System.Threading.CancellationToken)"/>. <c>Input</c>
+            is polymorphic at the wire — a structured object is converted to XML
+            server-side; a string is treated as raw XML.</summary>
+        </member>
+        <member name="P:Sah.Sdk.Zyins.CaseCreateRequest.Input">
+            <summary>Quote input — structured payload or raw XML string. Required.</summary>
+        </member>
+        <member name="P:Sah.Sdk.Zyins.CaseCreateRequest.Results">
+            <summary>Optional quote results.</summary>
+        </member>
+        <member name="P:Sah.Sdk.Zyins.CaseCreateRequest.Products">
+            <summary>Optional list of product identifiers.</summary>
+        </member>
+        <member name="T:Sah.Sdk.Zyins.CaseCreateResult">
+            <summary>Result of <see cref="M:Sah.Sdk.Zyins.CasesSubClient.CreateAsync(Sah.Sdk.Zyins.CaseCreateRequest,System.Threading.CancellationToken)"/>.</summary>
+        </member>
+        <member name="T:Sah.Sdk.Zyins.CasesSubClient">
+            <summary>Sub-client for case create + share. Future
+            list / get / delete operations require new server work.</summary>
+        </member>
+        <member name="M:Sah.Sdk.Zyins.CasesSubClient.CreateAsync(Sah.Sdk.Zyins.CaseCreateRequest,System.Threading.CancellationToken)">
+            <summary>Create a shareable case from quote input + results + products.</summary>
+        </member>
+        <member name="M:Sah.Sdk.Zyins.CasesSubClient.EmailAsync(Sah.Sdk.Zyins.EmailEnqueueRequest,System.Threading.CancellationToken)">
+            <summary>Email a case-share payload — delegates to <see cref="M:Sah.Sdk.Zyins.EmailSubClient.EnqueueAsync(Sah.Sdk.Zyins.EmailEnqueueRequest,System.Threading.CancellationToken)"/>.</summary>
+        </member>
+        <member name="T:Sah.Sdk.Zyins.EmailAttachment">
+            <summary>Optional attachment for <see cref="T:Sah.Sdk.Zyins.EmailEnqueueRequest"/>.</summary>
+        </member>
+        <member name="T:Sah.Sdk.Zyins.EmailEnqueueRequest">
+            <summary>Input for <see cref="M:Sah.Sdk.Zyins.EmailSubClient.EnqueueAsync(Sah.Sdk.Zyins.EmailEnqueueRequest,System.Threading.CancellationToken)"/>.</summary>
+        </member>
+        <member name="T:Sah.Sdk.Zyins.EmailEnqueueResult">
+            <summary>Result of <see cref="M:Sah.Sdk.Zyins.EmailSubClient.EnqueueAsync(Sah.Sdk.Zyins.EmailEnqueueRequest,System.Threading.CancellationToken)"/>.</summary>
+        </member>
+        <member name="T:Sah.Sdk.Zyins.EmailSubClient">
+            <summary>Sub-client for transactional email enqueue.</summary>
+        </member>
+        <member name="M:Sah.Sdk.Zyins.EmailSubClient.EnqueueAsync(Sah.Sdk.Zyins.EmailEnqueueRequest,System.Threading.CancellationToken)">
+            <summary>Enqueue a transactional email for delivery.</summary>
+        </member>
         <member name="M:Sah.Sdk.Zyins.CompatHex.ToLowerHex(System.Byte[])">
             <summary>Hex-encode <paramref name="bytes"/> as a lowercase string.</summary>
+        </member>
+        <member name="T:Sah.Sdk.Zyins.ICredentialStore">
+            <summary>Pluggable credential store. Backs the shared <see cref="T:Sah.Sdk.Zyins.IsaCredentialState"/>
+            so license keys survive across process boots when the host provides a durable
+            adapter (e.g. AsyncStorage on React Native, the secret-service on Linux).
+            The default in-process implementation is <see cref="T:Sah.Sdk.Zyins.InMemoryCredentialStore"/>.</summary>
+        </member>
+        <member name="M:Sah.Sdk.Zyins.ICredentialStore.GetAsync(System.String,System.Threading.CancellationToken)">
+            <summary>Get a value previously written via <see cref="M:Sah.Sdk.Zyins.ICredentialStore.SetAsync(System.String,System.String,System.Threading.CancellationToken)"/>. Returns null when
+            the key has not been written or has been cleared via <see cref="M:Sah.Sdk.Zyins.ICredentialStore.RemoveAsync(System.String,System.Threading.CancellationToken)"/>.</summary>
+        </member>
+        <member name="M:Sah.Sdk.Zyins.ICredentialStore.SetAsync(System.String,System.String,System.Threading.CancellationToken)">
+            <summary>Upsert a value. Implementations MUST persist to durable storage
+            before returning; the SDK relies on this guarantee for license-key durability.</summary>
+        </member>
+        <member name="M:Sah.Sdk.Zyins.ICredentialStore.RemoveAsync(System.String,System.Threading.CancellationToken)">
+            <summary>Clear a previously stashed value. A no-op when the key is unset.</summary>
+        </member>
+        <member name="T:Sah.Sdk.Zyins.CredentialKeys">
+            <summary>Canonical storage keys used by the SDK. Stable strings — consumers
+            of <see cref="T:Sah.Sdk.Zyins.ICredentialStore"/> can read them out-of-band.</summary>
+        </member>
+        <member name="F:Sah.Sdk.Zyins.CredentialKeys.LicenseKey">
+            <summary>License key written by <see cref="M:Sah.Sdk.Zyins.LicensesSubClient.ActivateAsync(Sah.Sdk.Zyins.LicensesActivateRequest,System.Threading.CancellationToken)"/>.</summary>
+        </member>
+        <member name="F:Sah.Sdk.Zyins.CredentialKeys.DeviceId">
+            <summary>Persisted device-id minted on first run.</summary>
+        </member>
+        <member name="T:Sah.Sdk.Zyins.InMemoryCredentialStore">
+            <summary>In-process credential store. Not durable across restarts; provided
+            as the default so callers who haven't wired durable storage still get a
+            functional surface within one process. Thread-safe.</summary>
+        </member>
+        <member name="M:Sah.Sdk.Zyins.InMemoryCredentialStore.GetAsync(System.String,System.Threading.CancellationToken)">
+            <inheritdoc />
+        </member>
+        <member name="M:Sah.Sdk.Zyins.InMemoryCredentialStore.SetAsync(System.String,System.String,System.Threading.CancellationToken)">
+            <inheritdoc />
+        </member>
+        <member name="M:Sah.Sdk.Zyins.InMemoryCredentialStore.RemoveAsync(System.String,System.Threading.CancellationToken)">
+            <inheritdoc />
+        </member>
+        <member name="T:Sah.Sdk.Zyins.LicenseRefreshedEvent">
+            <summary>Event payload fired when the SDK observes a fresh license key
+            (typically the return value of <see cref="M:Sah.Sdk.Zyins.LicensesSubClient.ActivateAsync(Sah.Sdk.Zyins.LicensesActivateRequest,System.Threading.CancellationToken)"/>).
+            Consumers wire this to UI banners, analytics, or invalidation
+            triggers.</summary>
+        </member>
+        <member name="P:Sah.Sdk.Zyins.LicenseRefreshedEvent.LicenseKey">
+            <summary>Fresh license key the SDK stashed.</summary>
+        </member>
+        <member name="P:Sah.Sdk.Zyins.LicenseRefreshedEvent.DeviceId">
+            <summary>Device id signed under for this activation.</summary>
+        </member>
+        <member name="P:Sah.Sdk.Zyins.LicenseRefreshedEvent.Email">
+            <summary>Email the activation was bound to.</summary>
+        </member>
+        <member name="P:Sah.Sdk.Zyins.LicenseRefreshedEvent.OrderId">
+            <summary>Order id paired with the license key.</summary>
+        </member>
+        <member name="T:Sah.Sdk.Zyins.IsaCredentialState">
+            <summary>Holds the shared license credentials and an event channel for
+            <c>OnLicenseRefreshed</c>. One instance per license-mode <see cref="T:Sah.Sdk.Isa"/>.</summary>
+        </member>
+        <member name="P:Sah.Sdk.Zyins.IsaCredentialState.Email">
+            <summary>Login email. Stable for the lifetime of the state.</summary>
+        </member>
+        <member name="P:Sah.Sdk.Zyins.IsaCredentialState.OrderId">
+            <summary>Order id (defaults to keycode when unspecified).</summary>
+        </member>
+        <member name="P:Sah.Sdk.Zyins.IsaCredentialState.DeviceId">
+            <summary>Persisted device id.</summary>
+        </member>
+        <member name="P:Sah.Sdk.Zyins.IsaCredentialState.LicenseKey">
+            <summary>Current license key. Empty until activation; mutated in place
+            by <see cref="M:Sah.Sdk.Zyins.IsaCredentialState.RefreshLicenseKeyAsync(System.String,System.Threading.CancellationToken)"/> on successful activate.</summary>
+        </member>
+        <member name="M:Sah.Sdk.Zyins.IsaCredentialState.#ctor(System.String,System.String,System.String,System.String,Sah.Sdk.Zyins.ICredentialStore)">
+            <summary>Construct from a credential snapshot + store.</summary>
+        </member>
+        <member name="M:Sah.Sdk.Zyins.IsaCredentialState.OnLicenseRefreshed(System.Action{Sah.Sdk.Zyins.LicenseRefreshedEvent})">
+            <summary>Subscribe to <c>OnLicenseRefreshed</c>. The returned action
+            detaches the listener — call it to unsubscribe.</summary>
+        </member>
+        <member name="M:Sah.Sdk.Zyins.IsaCredentialState.RefreshLicenseKeyAsync(System.String,System.Threading.CancellationToken)">
+            <summary>Update the in-memory license key, persist it, and fire
+            the refresh event. Listener exceptions are swallowed — observer
+            failures must not break activation.</summary>
+        </member>
+        <member name="M:Sah.Sdk.Zyins.IsaCredentialState.ClearLicenseKeyAsync(System.Threading.CancellationToken)">
+            <summary>Clear the stashed license key (post-deactivate).</summary>
         </member>
         <member name="T:Sah.Sdk.Zyins.Envelope`1">
             <summary>Typed wrapper around a successful response. Exposes the
@@ -3688,6 +5027,9 @@
         <member name="M:Sah.Sdk.Zyins.HttpDispatcher.PostJsonAsync``2(Sah.Sdk.Zyins.OperationContext,System.String,``0,System.Threading.CancellationToken)">
             <summary>Issue a POST with a JSON body and parse the JSON response.</summary>
         </member>
+        <member name="M:Sah.Sdk.Zyins.HttpDispatcher.PostJsonEnvelopeAsync``2(Sah.Sdk.Zyins.OperationContext,System.String,``0,System.String,System.Threading.CancellationToken)">
+            <summary>Issue a POST and parse either a bare body or ADR-012 envelope.</summary>
+        </member>
         <member name="M:Sah.Sdk.Zyins.HttpDispatcher.DispatchRawAsync(Sah.Sdk.Zyins.OperationContext,Sah.Sdk.Core.TransportRequest,System.Threading.CancellationToken)">
             <summary>Dispatch and return the raw response alongside its body. Internal helper
             for the <c>WithRawResponseAsync</c> variants.</summary>
@@ -3709,6 +5051,216 @@
         </member>
         <member name="T:Sah.Sdk.Zyins.ZyInsJson">
             <summary>Process-wide JSON options for the ZyINS wire format.</summary>
+        </member>
+        <member name="T:Sah.Sdk.Zyins.LicenseValidationStatus">
+            <summary>License validation state mirror of the proto `LicenseStatus`
+            enum. Wire values are lower-case strings.</summary>
+        </member>
+        <member name="F:Sah.Sdk.Zyins.LicenseValidationStatus.Unknown">
+            <summary>Default / unknown wire value.</summary>
+        </member>
+        <member name="F:Sah.Sdk.Zyins.LicenseValidationStatus.Valid">
+            <summary>License is authenticated and currently usable (wire: `valid`).</summary>
+        </member>
+        <member name="F:Sah.Sdk.Zyins.LicenseValidationStatus.Invalid">
+            <summary>Credentials do not match a known license (wire: `invalid`).</summary>
+        </member>
+        <member name="F:Sah.Sdk.Zyins.LicenseValidationStatus.Inactive">
+            <summary>License exists but is not currently usable (wire: `inactive`).</summary>
+        </member>
+        <member name="T:Sah.Sdk.Zyins.ServingStatus">
+            <summary>Probe outcome enum, mirror of proto `ServingStatus`.</summary>
+        </member>
+        <member name="F:Sah.Sdk.Zyins.ServingStatus.Unspecified">
+            <summary>Default zero value; client could not parse the wire value.</summary>
+        </member>
+        <member name="F:Sah.Sdk.Zyins.ServingStatus.Serving">
+            <summary>Component is healthy and accepting traffic (wire: `serving`).</summary>
+        </member>
+        <member name="F:Sah.Sdk.Zyins.ServingStatus.NotServing">
+            <summary>Component is unhealthy (wire: `not_serving`).</summary>
+        </member>
+        <member name="F:Sah.Sdk.Zyins.ServingStatus.Unknown">
+            <summary>Component state could not be determined (wire: `unknown`).</summary>
+        </member>
+        <member name="T:Sah.Sdk.Zyins.LicensesCheckRequest">
+            <summary>Typed request for <see cref="M:Sah.Sdk.Zyins.LicensesSubClient.CheckAsync(Sah.Sdk.Zyins.LicensesCheckRequest,System.Threading.CancellationToken)"/>.</summary>
+        </member>
+        <member name="P:Sah.Sdk.Zyins.LicensesCheckRequest.Email">
+            <summary>Email associated with the license. Required.</summary>
+        </member>
+        <member name="P:Sah.Sdk.Zyins.LicensesCheckRequest.Keycode">
+            <summary>BPP order keycode (XXX-XXX-XXX). Required.</summary>
+        </member>
+        <member name="P:Sah.Sdk.Zyins.LicensesCheckRequest.DeviceId">
+            <summary>Optional client-generated device fingerprint.</summary>
+        </member>
+        <member name="P:Sah.Sdk.Zyins.LicensesCheckRequest.LicenseKey">
+            <summary>Optional license key to verify.</summary>
+        </member>
+        <member name="T:Sah.Sdk.Zyins.LicensesCheckResult">
+            <summary>Typed response from <see cref="M:Sah.Sdk.Zyins.LicensesSubClient.CheckAsync(Sah.Sdk.Zyins.LicensesCheckRequest,System.Threading.CancellationToken)"/>.</summary>
+        </member>
+        <member name="P:Sah.Sdk.Zyins.LicensesCheckResult.Status">
+            <summary>Validation outcome as the raw wire value (`valid`, `invalid`, `inactive`).</summary>
+        </member>
+        <member name="P:Sah.Sdk.Zyins.LicensesCheckResult.ValidationStatus">
+            <summary>Typed accessor for <see cref="P:Sah.Sdk.Zyins.LicensesCheckResult.Status"/>.</summary>
+        </member>
+        <member name="T:Sah.Sdk.Zyins.LicensesDeactivateRequest">
+            <summary>Typed request for <see cref="M:Sah.Sdk.Zyins.LicensesSubClient.DeactivateAsync(Sah.Sdk.Zyins.LicensesDeactivateRequest,System.Threading.CancellationToken)"/>.</summary>
+        </member>
+        <member name="P:Sah.Sdk.Zyins.LicensesDeactivateRequest.Email">
+            <summary>Email associated with the license. Required.</summary>
+        </member>
+        <member name="P:Sah.Sdk.Zyins.LicensesDeactivateRequest.Keycode">
+            <summary>BPP order keycode. Required.</summary>
+        </member>
+        <member name="P:Sah.Sdk.Zyins.LicensesDeactivateRequest.DeviceId">
+            <summary>Optional device fingerprint; reset on success.</summary>
+        </member>
+        <member name="T:Sah.Sdk.Zyins.LicensesDeactivateResult">
+            <summary>Typed response from <see cref="M:Sah.Sdk.Zyins.LicensesSubClient.DeactivateAsync(Sah.Sdk.Zyins.LicensesDeactivateRequest,System.Threading.CancellationToken)"/>.</summary>
+        </member>
+        <member name="P:Sah.Sdk.Zyins.LicensesDeactivateResult.Status">
+            <summary>Always `deactivated` on success.</summary>
+        </member>
+        <member name="T:Sah.Sdk.Zyins.ProbeResult">
+            <summary>Per-dependency readiness probe outcome.</summary>
+        </member>
+        <member name="P:Sah.Sdk.Zyins.ProbeResult.Status">
+            <summary>Raw wire value (`serving`, `not_serving`, `unknown`).</summary>
+        </member>
+        <member name="P:Sah.Sdk.Zyins.ProbeResult.LatencyMs">
+            <summary>Observed round-trip latency in milliseconds.</summary>
+        </member>
+        <member name="P:Sah.Sdk.Zyins.ProbeResult.Message">
+            <summary>Human-readable explanation when not serving; empty otherwise.</summary>
+        </member>
+        <member name="P:Sah.Sdk.Zyins.ProbeResult.CheckedAt">
+            <summary>ISO 8601 timestamp at which this probe ran.</summary>
+        </member>
+        <member name="P:Sah.Sdk.Zyins.ProbeResult.ServingStatus">
+            <summary>Typed accessor for <see cref="P:Sah.Sdk.Zyins.ProbeResult.Status"/>.</summary>
+        </member>
+        <member name="T:Sah.Sdk.Zyins.ReadinessResult">
+            <summary>Typed response from <see cref="M:Sah.Sdk.Zyins.HealthSubClient.GetReadinessAsync(System.Threading.CancellationToken)"/>.</summary>
+        </member>
+        <member name="P:Sah.Sdk.Zyins.ReadinessResult.Ready">
+            <summary>True iff every required sub-probe returned `serving`.</summary>
+        </member>
+        <member name="P:Sah.Sdk.Zyins.ReadinessResult.Status">
+            <summary>Overall serving status mirror of <see cref="P:Sah.Sdk.Zyins.ReadinessResult.Ready"/>.</summary>
+        </member>
+        <member name="P:Sah.Sdk.Zyins.ReadinessResult.Db">
+            <summary>Primary dependency probe (database for ZyINS).</summary>
+        </member>
+        <member name="P:Sah.Sdk.Zyins.ReadinessResult.Cache">
+            <summary>Secondary dependency probe (cache).</summary>
+        </member>
+        <member name="P:Sah.Sdk.Zyins.ReadinessResult.DownstreamServices">
+            <summary>Additional downstream probes keyed by logical service name.</summary>
+        </member>
+        <member name="P:Sah.Sdk.Zyins.ReadinessResult.CheckedAt">
+            <summary>ISO 8601 timestamp at which this readiness evaluation ran.</summary>
+        </member>
+        <member name="T:Sah.Sdk.Zyins.LicensesActivateRequest">
+            <summary>Typed request for <see cref="M:Sah.Sdk.Zyins.LicensesSubClient.ActivateAsync(Sah.Sdk.Zyins.LicensesActivateRequest,System.Threading.CancellationToken)"/>.</summary>
+        </member>
+        <member name="P:Sah.Sdk.Zyins.LicensesActivateRequest.Email">
+            <summary>Email associated with the license. Required.</summary>
+        </member>
+        <member name="P:Sah.Sdk.Zyins.LicensesActivateRequest.Keycode">
+            <summary>BPP order keycode in XXX-XXX-XXX format. Required.</summary>
+        </member>
+        <member name="P:Sah.Sdk.Zyins.LicensesActivateRequest.DeviceId">
+            <summary>Client-generated device fingerprint. Required.</summary>
+        </member>
+        <member name="T:Sah.Sdk.Zyins.LicensesActivateAuth">
+            <summary>Auth block returned inside an activation response.</summary>
+        </member>
+        <member name="P:Sah.Sdk.Zyins.LicensesActivateAuth.LicenseKey">
+            <summary>License key minted (or reused) for this activation.</summary>
+        </member>
+        <member name="T:Sah.Sdk.Zyins.LicensesActivateResult">
+            <summary>Typed response from <see cref="M:Sah.Sdk.Zyins.LicensesSubClient.ActivateAsync(Sah.Sdk.Zyins.LicensesActivateRequest,System.Threading.CancellationToken)"/>.</summary>
+        </member>
+        <member name="P:Sah.Sdk.Zyins.LicensesActivateResult.Status">
+            <summary>Activation outcome (<c>active</c> on success).</summary>
+        </member>
+        <member name="P:Sah.Sdk.Zyins.LicensesActivateResult.Auth">
+            <summary>Auth credentials minted for the device.</summary>
+        </member>
+        <member name="P:Sah.Sdk.Zyins.LicensesActivateResult.RemainingActivations">
+            <summary>Device activations remaining on the order after this call.</summary>
+        </member>
+        <member name="T:Sah.Sdk.Zyins.LicensesSubClient">
+            <summary>Sub-client exposing the public BPP license-lifecycle surface
+            (PublicActivate, PublicCheck, PublicDeactivate). The authenticated
+            self-* surface lands with the LicenseHMAC transport in a follow-up PR.</summary>
+        </member>
+        <member name="M:Sah.Sdk.Zyins.LicensesSubClient.ActivateAsync(Sah.Sdk.Zyins.LicensesActivateRequest,System.Threading.CancellationToken)">
+            <summary>Activate a license on this device. Mints a fresh license key
+            and, when the client was built with a credential store, stashes the
+            key + fires <c>OnLicenseRefreshed</c>.</summary>
+        </member>
+        <member name="M:Sah.Sdk.Zyins.LicensesSubClient.ActivateAsync(System.Threading.CancellationToken)">
+            <summary>Ergonomic zero-arg activate. Fills <c>email</c>, <c>keycode</c>,
+            and <c>deviceId</c> from the parent <see cref="T:Sah.Sdk.Isa"/>'s credential
+            state. Throws <see cref="T:System.InvalidOperationException"/> when the client
+            was not constructed in license-mode.</summary>
+        </member>
+        <member name="M:Sah.Sdk.Zyins.LicensesSubClient.CheckAsync(Sah.Sdk.Zyins.LicensesCheckRequest,System.Threading.CancellationToken)">
+            <summary>Phone-home validation. Returns the current license
+            validation state. Does not require authentication on the wire.</summary>
+            <exception cref="T:System.ArgumentNullException">when <paramref name="request"/> is null.</exception>
+            <exception cref="T:System.ArgumentException">when required fields are empty.</exception>
+        </member>
+        <member name="M:Sah.Sdk.Zyins.LicensesSubClient.DeactivateAsync(Sah.Sdk.Zyins.LicensesDeactivateRequest,System.Threading.CancellationToken)">
+            <summary>Deactivate the license. Resets the anti-piracy device
+            record and marks the order inactive.</summary>
+        </member>
+        <member name="M:Sah.Sdk.Zyins.LicensesSubClient.CheckAsync(System.Threading.CancellationToken)">
+            <summary>Ergonomic zero-arg check. Fills credentials from instance state.</summary>
+        </member>
+        <member name="M:Sah.Sdk.Zyins.LicensesSubClient.DeactivateAsync(System.Threading.CancellationToken)">
+            <summary>Ergonomic zero-arg deactivate. Fills credentials from instance state.</summary>
+        </member>
+        <member name="T:Sah.Sdk.Zyins.HealthSubClient">
+            <summary>Sub-client exposing the platform readiness probe.</summary>
+        </member>
+        <member name="M:Sah.Sdk.Zyins.HealthSubClient.GetReadinessAsync(System.Threading.CancellationToken)">
+            <summary>Query the platform `/ready` endpoint. A 5xx response
+            surfaces as a typed <see cref="T:Sah.Sdk.Core.IsaException"/>.</summary>
+        </member>
+        <member name="T:Sah.Sdk.Zyins.LogosOptions">
+            <summary>Options accepted by <see cref="M:Sah.Sdk.Zyins.LogosSubClient.GetAsync(System.String,Sah.Sdk.Zyins.LogosOptions,System.Threading.CancellationToken)"/>.</summary>
+        </member>
+        <member name="P:Sah.Sdk.Zyins.LogosOptions.DataUri">
+            <summary>When true, returns the asset as a <c>data:image/...</c> URI string
+            via <see cref="P:Sah.Sdk.Zyins.LogoResult.DataUri"/>. When false (default), returns the raw
+            bytes via <see cref="P:Sah.Sdk.Zyins.LogoResult.Bytes"/>.</summary>
+        </member>
+        <member name="T:Sah.Sdk.Zyins.LogoResult">
+            <summary>Result of <see cref="M:Sah.Sdk.Zyins.LogosSubClient.GetAsync(System.String,Sah.Sdk.Zyins.LogosOptions,System.Threading.CancellationToken)"/>. Exactly one of
+            <see cref="P:Sah.Sdk.Zyins.LogoResult.Bytes"/> or <see cref="P:Sah.Sdk.Zyins.LogoResult.DataUri"/> is populated, mirroring the
+            <c>dataUri</c> flag in the request options.</summary>
+        </member>
+        <member name="P:Sah.Sdk.Zyins.LogoResult.Bytes">
+            <summary>Raw image bytes when the request did not opt in to the data URI shape.</summary>
+        </member>
+        <member name="P:Sah.Sdk.Zyins.LogoResult.DataUri">
+            <summary>Base64 data URI string when the request opted in via
+            <see cref="P:Sah.Sdk.Zyins.LogosOptions.DataUri"/>.</summary>
+        </member>
+        <member name="T:Sah.Sdk.Zyins.LogosSubClient">
+            <summary>Sub-client for the public carrier-logo endpoint. Non-credentialed —
+            requests are issued without auth headers, matching the GET allowlist.</summary>
+        </member>
+        <member name="M:Sah.Sdk.Zyins.LogosSubClient.GetAsync(System.String,Sah.Sdk.Zyins.LogosOptions,System.Threading.CancellationToken)">
+            <summary>Fetch the carrier-logo asset.</summary>
+            <exception cref="T:System.ArgumentException">when <paramref name="carrier"/> is empty.</exception>
+            <exception cref="T:Sah.Sdk.Core.IsaException">when the server returns a non-2xx response.</exception>
         </member>
         <member name="T:Sah.Sdk.Zyins.Sex">
             <summary>Applicant biological sex.</summary>
@@ -3976,6 +5528,21 @@
             <summary>Run a prequalify call and return the raw HTTP response alongside the parsed body.
             Useful for inspecting headers (e.g. <c>X-Isa-Request-Id</c>, rate-limit headers).</summary>
         </member>
+        <member name="M:Sah.Sdk.Zyins.PrequalifySubClient.LegacyBlobAsync(System.Collections.Generic.IReadOnlyDictionary{System.String,System.Object},System.Threading.CancellationToken)">
+             <summary>Raw-blob variant of <see cref="M:Sah.Sdk.Zyins.PrequalifySubClient.RunAsync(Sah.Sdk.Zyins.PrequalifyInput,System.Threading.CancellationToken)"/>. Accepts a pre-encoded
+             prequalify payload (the wire shape produced by bpp2.0's <c>prepEncObj</c> /
+             <c>prepEncObjV2</c> encoders) verbatim and reuses the rest of the
+             prequalify transport — auth headers, idempotency-key derivation, error
+             funnel, response parsing.
+            
+             The server accepts both the typed and legacy-blob shapes on the same
+             <c>/v1/prequalify</c> path. This entry point exists so consumers do not
+             have to restructure their encoder to take advantage of the SDK transport.
+             </summary>
+             <param name="encodedPayload">The pre-encoded prequalify payload. Serialized
+             to JSON verbatim and sent as the request body.</param>
+             <param name="ct">Cancellation token.</param>
+        </member>
         <member name="T:Sah.Sdk.Zyins.QuoteSubClient">
             <summary>Sub-client for quoting operations.</summary>
         </member>
@@ -4021,9 +5588,14 @@
             + <c>X-Device-Signature</c> headers. The device-signature primitive is implemented in the
             shared Core transport-helpers package; this signer wires it into the request pipeline.</summary>
         </member>
-        <member name="T:Sah.Sdk.Zyins.SessionSigner">
-            <summary>Apply <c>Authorization: Session &lt;sessionId&gt;</c> + <c>X-Session-Signature</c>
-            headers. Mirrors <see cref="T:Sah.Sdk.Zyins.LicenseSigner"/> but for short-lived browser sessions.</summary>
+        <member name="T:Sah.Sdk.Zyins.SessionRequestSigner">
+            <summary>Apply the canonical four-header session-auth bundle
+            (<c>Authorization: Bearer …</c> + <c>X-Isa-Session-Id</c> +
+            <c>X-Isa-Timestamp</c> + <c>X-Isa-Signature</c>) to every outbound
+            request. The signing primitive lives in
+            <see cref="T:Sah.Sdk.Core.SignRequest"/>; this adapter just plumbs the
+            session credential through and lets the canonical helper compute the
+            bytes.</summary>
         </member>
         <member name="T:Sah.Sdk.Zyins.ZyInsClientOptions">
             <summary>Construction options for <see cref="T:Sah.Sdk.Zyins.ZyInsClient"/>.</summary>
@@ -4071,6 +5643,33 @@
         <member name="P:Sah.Sdk.Zyins.ZyInsClient.Usage">
             <summary>Usage / billing data.</summary>
         </member>
+        <member name="P:Sah.Sdk.Zyins.ZyInsClient.Licenses">
+            <summary>Public BPP license-lifecycle operations (Check, Deactivate).
+            Targets the proto-backed `/v1/licenses/*` surface.</summary>
+        </member>
+        <member name="P:Sah.Sdk.Zyins.ZyInsClient.Health">
+            <summary>Platform readiness probe (`/ready`).</summary>
+        </member>
+        <member name="P:Sah.Sdk.Zyins.ZyInsClient.Branding">
+            <summary>Whitelabel branding lookup (`GET /v1/branding`).</summary>
+        </member>
+        <member name="P:Sah.Sdk.Zyins.ZyInsClient.Preferences">
+            <summary>Per-license preferences document (`GET` / `POST /v1/preferences`).</summary>
+        </member>
+        <member name="P:Sah.Sdk.Zyins.ZyInsClient.Cases">
+            <summary>Case create + share. Targets `POST /v1/case` and the
+            `POST /v1/email/enqueue` case-share helper.</summary>
+        </member>
+        <member name="P:Sah.Sdk.Zyins.ZyInsClient.Email">
+            <summary>Transactional email enqueue (`POST /v1/email/enqueue`).</summary>
+        </member>
+        <member name="P:Sah.Sdk.Zyins.ZyInsClient.Logos">
+            <summary>Non-credentialed carrier-logo lookup (`/v1/logo/{carrier}`).</summary>
+        </member>
+        <member name="P:Sah.Sdk.Zyins.ZyInsClient.CredentialState">
+            <summary>Shared credential state for license-mode clients. Null when
+            the client was constructed in bearer or session mode.</summary>
+        </member>
         <member name="M:Sah.Sdk.Zyins.ZyInsClient.#ctor(System.String,System.String,System.Nullable{System.TimeSpan})">
             <summary>One-line construction: <c>new ZyInsClient(token)</c>.</summary>
         </member>
@@ -4079,6 +5678,12 @@
         </member>
         <member name="M:Sah.Sdk.Zyins.ZyInsClient.#ctor(Sah.Sdk.Zyins.ZyInsClientOptions,Sah.Sdk.Zyins.IRequestSigner)">
             <summary>Internal constructor that accepts a pre-built signer (used by the License/Session factories).</summary>
+        </member>
+        <member name="M:Sah.Sdk.Zyins.ZyInsClient.#ctor(Sah.Sdk.Zyins.ZyInsClientOptions,Sah.Sdk.Zyins.IRequestSigner,Sah.Sdk.Zyins.IsaCredentialState)">
+            <summary>Internal constructor accepting a signer plus an optional credential
+            state. License-mode factories pass the shared state so the
+            <see cref="T:Sah.Sdk.Zyins.LicensesSubClient"/> can auto-stash the license key on
+            successful activation.</summary>
         </member>
         <member name="M:Sah.Sdk.Zyins.ZyInsClient.Configure(System.String)">
             <summary>Begin a fluent builder for the advanced configuration path.</summary>
@@ -4205,6 +5810,12 @@
         <member name="M:Sah.Sdk.Zyins.ZyinsFactory.WithLicense(Sah.Sdk.Zyins.LicenseCredentials,Sah.Sdk.Zyins.ZyInsClientOptions,Sah.Sdk.Zyins.IEnvironment)">
             <summary>Test seam: same as <see cref="M:Sah.Sdk.Zyins.ZyinsFactory.WithLicense(Sah.Sdk.Zyins.LicenseCredentials,Sah.Sdk.Zyins.ZyInsClientOptions)"/>
             but with an injectable environment.</summary>
+        </member>
+        <member name="M:Sah.Sdk.Zyins.ZyinsFactory.WithLicense(Sah.Sdk.Zyins.LicenseCredentials,Sah.Sdk.Zyins.ZyInsClientOptions,Sah.Sdk.Zyins.IEnvironment,Sah.Sdk.Zyins.ICredentialStore)">
+            <summary>Build a license-mode client with an attached credential store.
+            The store backs the shared <see cref="T:Sah.Sdk.Zyins.IsaCredentialState"/> so the
+            <see cref="T:Sah.Sdk.Zyins.LicensesSubClient"/> can auto-stash the license key on
+            successful activation.</summary>
         </member>
         <member name="M:Sah.Sdk.Zyins.ZyinsFactory.WithSession(Sah.Sdk.Zyins.SessionCredentials,Sah.Sdk.Zyins.ZyInsClientOptions)">
             <summary>

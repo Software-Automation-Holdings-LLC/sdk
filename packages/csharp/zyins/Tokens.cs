@@ -32,68 +32,73 @@ namespace IsaSdk.ZyINS.Api.V1 {
             "Ei0KBGRhdGEYBCADKAsyGS5hcGkuenlpbnMudjEuVG9rZW5EZXRhaWxSBGRh",
             "dGEiaAoSQ3JlYXRlVG9rZW5SZXF1ZXN0EhIKBG5hbWUYASABKAlSBG5hbWUS",
             "FgoGc2NvcGVzGAIgAygJUgZzY29wZXMSJgoPZXhwaXJlc19pbl9kYXlzGAMg",
-            "ASgFUg1leHBpcmVzSW5EYXlzIowCChNDcmVhdGVUb2tlblJlc3BvbnNlEhYK",
+            "ASgFUg1leHBpcmVzSW5EYXlzIvMCChNDcmVhdGVUb2tlblJlc3BvbnNlEhYK",
             "Bm9iamVjdBgBIAEoCVIGb2JqZWN0EhoKCGxpdmVtb2RlGAIgASgIUghsaXZl",
             "bW9kZRIdCgpyZXF1ZXN0X2lkGAMgASgJUglyZXF1ZXN0SWQSDgoCaWQYBCAB",
             "KAlSAmlkEhQKBXRva2VuGAUgASgJUgV0b2tlbhISCgRuYW1lGAYgASgJUgRu",
             "YW1lEhIKBGhpbnQYByABKAlSBGhpbnQSFgoGc2NvcGVzGAggAygJUgZzY29w",
             "ZXMSHQoKY3JlYXRlZF9hdBgJIAEoCVIJY3JlYXRlZEF0Eh0KCmV4cGlyZXNf",
-            "YXQYCiABKAlSCWV4cGlyZXNBdCIhCg9HZXRUb2tlblJlcXVlc3QSDgoCaWQY",
-            "ASABKAlSAmlkIiQKEkRlbGV0ZVRva2VuUmVxdWVzdBIOCgJpZBgBIAEoCVIC",
-            "aWQiFQoTRGVsZXRlVG9rZW5SZXNwb25zZSI8ChJSZXZva2VUb2tlblJlcXVl",
-            "c3QSDgoCaWQYASABKAlSAmlkEhYKBnJlYXNvbhgCIAEoCVIGcmVhc29uIicK",
-            "FVJlaW5zdGF0ZVRva2VuUmVxdWVzdBIOCgJpZBgBIAEoCVICaWQiOQoPQmFu",
-            "VG9rZW5SZXF1ZXN0Eg4KAmlkGAEgASgJUgJpZBIWCgZyZWFzb24YAiABKAlS",
-            "BnJlYXNvbiJXChJSb3RhdGVUb2tlblJlcXVlc3QSGQoIdG9rZW5faWQYASAB",
-            "KAlSB3Rva2VuSWQSJgoPZXhwaXJlc19pbl9kYXlzGAIgASgFUg1leHBpcmVz",
-            "SW5EYXlzIokDCgtUb2tlbkRldGFpbBIWCgZvYmplY3QYASABKAlSBm9iamVj",
-            "dBIaCghsaXZlbW9kZRgCIAEoCFIIbGl2ZW1vZGUSHQoKcmVxdWVzdF9pZBgD",
-            "IAEoCVIJcmVxdWVzdElkEg4KAmlkGAQgASgJUgJpZBISCgRuYW1lGAUgASgJ",
-            "UgRuYW1lEhIKBGhpbnQYBiABKAlSBGhpbnQSFgoGc2NvcGVzGAcgAygJUgZz",
-            "Y29wZXMSMQoGc3RhdHVzGAggASgOMhkuYXBpLnp5aW5zLnYxLlRva2VuU3Rh",
-            "dHVzUgZzdGF0dXMSJQoOcmV2b2tlZF9yZWFzb24YCSABKAlSDXJldm9rZWRS",
-            "ZWFzb24SHQoKY3JlYXRlZF9hdBgKIAEoCVIJY3JlYXRlZEF0Eh0KCmV4cGly",
-            "ZXNfYXQYCyABKAlSCWV4cGlyZXNBdBIdCgpyZXZva2VkX2F0GAwgASgJUgly",
-            "ZXZva2VkQXQSIAoMbGFzdF91c2VkX2F0GA0gASgJUgpsYXN0VXNlZEF0MsEG",
-            "Cg1Ub2tlbnNTZXJ2aWNlEl0KBExpc3QSHy5hcGkuenlpbnMudjEuTGlzdFRv",
-            "a2Vuc1JlcXVlc3QaIC5hcGkuenlpbnMudjEuTGlzdFRva2Vuc1Jlc3BvbnNl",
-            "IhKC0+STAgwSCi92MS90b2tlbnMSZAoGQ3JlYXRlEiAuYXBpLnp5aW5zLnYx",
-            "LkNyZWF0ZVRva2VuUmVxdWVzdBohLmFwaS56eWlucy52MS5DcmVhdGVUb2tl",
-            "blJlc3BvbnNlIhWC0+STAg86ASoiCi92MS90b2tlbnMSWAoDR2V0Eh0uYXBp",
-            "Lnp5aW5zLnYxLkdldFRva2VuUmVxdWVzdBoZLmFwaS56eWlucy52MS5Ub2tl",
-            "bkRldGFpbCIXgtPkkwIREg8vdjEvdG9rZW5zL3tpZH0SZgoGRGVsZXRlEiAu",
-            "YXBpLnp5aW5zLnYxLkRlbGV0ZVRva2VuUmVxdWVzdBohLmFwaS56eWlucy52",
-            "MS5EZWxldGVUb2tlblJlc3BvbnNlIheC0+STAhEqDy92MS90b2tlbnMve2lk",
-            "fRJoCgZSZXZva2USIC5hcGkuenlpbnMudjEuUmV2b2tlVG9rZW5SZXF1ZXN0",
-            "GhkuYXBpLnp5aW5zLnYxLlRva2VuRGV0YWlsIiGC0+STAhs6ASoiFi92MS90",
-            "b2tlbnMve2lkfS9yZXZva2UScQoJUmVpbnN0YXRlEiMuYXBpLnp5aW5zLnYx",
-            "LlJlaW5zdGF0ZVRva2VuUmVxdWVzdBoZLmFwaS56eWlucy52MS5Ub2tlbkRl",
-            "dGFpbCIkgtPkkwIeOgEqIhkvdjEvdG9rZW5zL3tpZH0vcmVpbnN0YXRlEl8K",
-            "A0JhbhIdLmFwaS56eWlucy52MS5CYW5Ub2tlblJlcXVlc3QaGS5hcGkuenlp",
-            "bnMudjEuVG9rZW5EZXRhaWwiHoLT5JMCGDoBKiITL3YxL3Rva2Vucy97aWR9",
-            "L2JhbhJrCgZSb3RhdGUSIC5hcGkuenlpbnMudjEuUm90YXRlVG9rZW5SZXF1",
-            "ZXN0GiEuYXBpLnp5aW5zLnYxLkNyZWF0ZVRva2VuUmVzcG9uc2UiHILT5JMC",
-            "FjoBKiIRL3YxL3Rva2Vucy9yb3RhdGVCxQEKEGNvbS5hcGkuenlpbnMudjFC",
-            "C1Rva2Vuc1Byb3RvUAFaSmdpdGh1Yi5jb20vU29mdHdhcmUtQXV0b21hdGlv",
-            "bi1Ib2xkaW5ncy1MTEMvc2RrL3p5aW5zL2FwaS96eWlucy92MTt6eWluc3Yx",
-            "ogIDQVpYqgITSXNhU2RrLlp5SU5TLkFwaS5WMcoCEFNhaFxaeUlOU1xBcGlc",
-            "VjHiAhVTYWhcWnlJTlNcQXBpXFYxXE1ldGHqAg5BcGk6Olp5aW5zOjpWMWIG",
-            "cHJvdG8z"));
+            "YXQYCiABKAlSCWV4cGlyZXNBdBI5ChlwcmV2aW91c190b2tlbl9yZXZva2Vz",
+            "X2F0GAsgASgJUhZwcmV2aW91c1Rva2VuUmV2b2tlc0F0EioKEXByZXZpb3Vz",
+            "X3Rva2VuX2lkGAwgASgJUg9wcmV2aW91c1Rva2VuSWQiIQoPR2V0VG9rZW5S",
+            "ZXF1ZXN0Eg4KAmlkGAEgASgJUgJpZCIkChJEZWxldGVUb2tlblJlcXVlc3QS",
+            "DgoCaWQYASABKAlSAmlkIhUKE0RlbGV0ZVRva2VuUmVzcG9uc2UiPAoSUmV2",
+            "b2tlVG9rZW5SZXF1ZXN0Eg4KAmlkGAEgASgJUgJpZBIWCgZyZWFzb24YAiAB",
+            "KAlSBnJlYXNvbiInChVSZWluc3RhdGVUb2tlblJlcXVlc3QSDgoCaWQYASAB",
+            "KAlSAmlkIjkKD0JhblRva2VuUmVxdWVzdBIOCgJpZBgBIAEoCVICaWQSFgoG",
+            "cmVhc29uGAIgASgJUgZyZWFzb24ipwEKElJvdGF0ZVRva2VuUmVxdWVzdBIZ",
+            "Cgh0b2tlbl9pZBgBIAEoCVIHdG9rZW5JZBImCg9leHBpcmVzX2luX2RheXMY",
+            "AiABKAVSDWV4cGlyZXNJbkRheXMSNQoUZ3JhY2VfcGVyaW9kX3NlY29uZHMY",
+            "AyABKAVIAFISZ3JhY2VQZXJpb2RTZWNvbmRziAEBQhcKFV9ncmFjZV9wZXJp",
+            "b2Rfc2Vjb25kcyKoAwoLVG9rZW5EZXRhaWwSFgoGb2JqZWN0GAEgASgJUgZv",
+            "YmplY3QSGgoIbGl2ZW1vZGUYAiABKAhSCGxpdmVtb2RlEh0KCnJlcXVlc3Rf",
+            "aWQYAyABKAlSCXJlcXVlc3RJZBIOCgJpZBgEIAEoCVICaWQSEgoEbmFtZRgF",
+            "IAEoCVIEbmFtZRISCgRoaW50GAYgASgJUgRoaW50EhYKBnNjb3BlcxgHIAMo",
+            "CVIGc2NvcGVzEjEKBnN0YXR1cxgIIAEoDjIZLmFwaS56eWlucy52MS5Ub2tl",
+            "blN0YXR1c1IGc3RhdHVzEiUKDnJldm9rZWRfcmVhc29uGAkgASgJUg1yZXZv",
+            "a2VkUmVhc29uEh0KCmNyZWF0ZWRfYXQYCiABKAlSCWNyZWF0ZWRBdBIdCgpl",
+            "eHBpcmVzX2F0GAsgASgJUglleHBpcmVzQXQSHQoKcmV2b2tlZF9hdBgMIAEo",
+            "CVIJcmV2b2tlZEF0EiAKDGxhc3RfdXNlZF9hdBgNIAEoCVIKbGFzdFVzZWRB",
+            "dBIdCgpyZXZva2VzX2F0GA4gASgJUglyZXZva2VzQXQy5QYKDVRva2Vuc1Nl",
+            "cnZpY2USXQoETGlzdBIfLmFwaS56eWlucy52MS5MaXN0VG9rZW5zUmVxdWVz",
+            "dBogLmFwaS56eWlucy52MS5MaXN0VG9rZW5zUmVzcG9uc2UiEoLT5JMCDBIK",
+            "L3YxL3Rva2VucxJkCgZDcmVhdGUSIC5hcGkuenlpbnMudjEuQ3JlYXRlVG9r",
+            "ZW5SZXF1ZXN0GiEuYXBpLnp5aW5zLnYxLkNyZWF0ZVRva2VuUmVzcG9uc2Ui",
+            "FYLT5JMCDzoBKiIKL3YxL3Rva2VucxJYCgNHZXQSHS5hcGkuenlpbnMudjEu",
+            "R2V0VG9rZW5SZXF1ZXN0GhkuYXBpLnp5aW5zLnYxLlRva2VuRGV0YWlsIheC",
+            "0+STAhESDy92MS90b2tlbnMve2lkfRJmCgZEZWxldGUSIC5hcGkuenlpbnMu",
+            "djEuRGVsZXRlVG9rZW5SZXF1ZXN0GiEuYXBpLnp5aW5zLnYxLkRlbGV0ZVRv",
+            "a2VuUmVzcG9uc2UiF4LT5JMCESoPL3YxL3Rva2Vucy97aWR9EmgKBlJldm9r",
+            "ZRIgLmFwaS56eWlucy52MS5SZXZva2VUb2tlblJlcXVlc3QaGS5hcGkuenlp",
+            "bnMudjEuVG9rZW5EZXRhaWwiIYLT5JMCGzoBKiIWL3YxL3Rva2Vucy97aWR9",
+            "L3Jldm9rZRJxCglSZWluc3RhdGUSIy5hcGkuenlpbnMudjEuUmVpbnN0YXRl",
+            "VG9rZW5SZXF1ZXN0GhkuYXBpLnp5aW5zLnYxLlRva2VuRGV0YWlsIiSC0+ST",
+            "Ah46ASoiGS92MS90b2tlbnMve2lkfS9yZWluc3RhdGUSXwoDQmFuEh0uYXBp",
+            "Lnp5aW5zLnYxLkJhblRva2VuUmVxdWVzdBoZLmFwaS56eWlucy52MS5Ub2tl",
+            "bkRldGFpbCIegtPkkwIYOgEqIhMvdjEvdG9rZW5zL3tpZH0vYmFuEo4BCgZS",
+            "b3RhdGUSIC5hcGkuenlpbnMudjEuUm90YXRlVG9rZW5SZXF1ZXN0GiEuYXBp",
+            "Lnp5aW5zLnYxLkNyZWF0ZVRva2VuUmVzcG9uc2UiP4LT5JMCOToBKloWOgEq",
+            "IhEvdjEvdG9rZW5zL3JvdGF0ZSIcL3YxL3Rva2Vucy97dG9rZW5faWR9L3Jv",
+            "dGF0ZULFAQoQY29tLmFwaS56eWlucy52MUILVG9rZW5zUHJvdG9QAVpKZ2l0",
+            "aHViLmNvbS9Tb2Z0d2FyZS1BdXRvbWF0aW9uLUhvbGRpbmdzLUxMQy9zZGsv",
+            "enlpbnMvYXBpL3p5aW5zL3YxO3p5aW5zdjGiAgNBWliqAhNJc2FTZGsuWnlJ",
+            "TlMuQXBpLlYxygIQU2FoXFp5SU5TXEFwaVxWMeICFVNhaFxaeUlOU1xBcGlc",
+            "VjFcTWV0YeoCDkFwaTo6WnlpbnM6OlYxYgZwcm90bzM="));
       descriptor = pbr::FileDescriptor.FromGeneratedCode(descriptorData,
           new pbr::FileDescriptor[] { global::IsaSdk.ZyINS.Api.V1.CommonReflection.Descriptor, global::Google.Api.AnnotationsReflection.Descriptor, },
           new pbr::GeneratedClrTypeInfo(null, null, new pbr::GeneratedClrTypeInfo[] {
             new pbr::GeneratedClrTypeInfo(typeof(global::IsaSdk.ZyINS.Api.V1.ListTokensRequest), global::IsaSdk.ZyINS.Api.V1.ListTokensRequest.Parser, null, null, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::IsaSdk.ZyINS.Api.V1.ListTokensResponse), global::IsaSdk.ZyINS.Api.V1.ListTokensResponse.Parser, new[]{ "Object", "Livemode", "RequestId", "Data" }, null, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::IsaSdk.ZyINS.Api.V1.CreateTokenRequest), global::IsaSdk.ZyINS.Api.V1.CreateTokenRequest.Parser, new[]{ "Name", "Scopes", "ExpiresInDays" }, null, null, null, null),
-            new pbr::GeneratedClrTypeInfo(typeof(global::IsaSdk.ZyINS.Api.V1.CreateTokenResponse), global::IsaSdk.ZyINS.Api.V1.CreateTokenResponse.Parser, new[]{ "Object", "Livemode", "RequestId", "Id", "Token", "Name", "Hint", "Scopes", "CreatedAt", "ExpiresAt" }, null, null, null, null),
+            new pbr::GeneratedClrTypeInfo(typeof(global::IsaSdk.ZyINS.Api.V1.CreateTokenResponse), global::IsaSdk.ZyINS.Api.V1.CreateTokenResponse.Parser, new[]{ "Object", "Livemode", "RequestId", "Id", "Token", "Name", "Hint", "Scopes", "CreatedAt", "ExpiresAt", "PreviousTokenRevokesAt", "PreviousTokenId" }, null, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::IsaSdk.ZyINS.Api.V1.GetTokenRequest), global::IsaSdk.ZyINS.Api.V1.GetTokenRequest.Parser, new[]{ "Id" }, null, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::IsaSdk.ZyINS.Api.V1.DeleteTokenRequest), global::IsaSdk.ZyINS.Api.V1.DeleteTokenRequest.Parser, new[]{ "Id" }, null, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::IsaSdk.ZyINS.Api.V1.DeleteTokenResponse), global::IsaSdk.ZyINS.Api.V1.DeleteTokenResponse.Parser, null, null, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::IsaSdk.ZyINS.Api.V1.RevokeTokenRequest), global::IsaSdk.ZyINS.Api.V1.RevokeTokenRequest.Parser, new[]{ "Id", "Reason" }, null, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::IsaSdk.ZyINS.Api.V1.ReinstateTokenRequest), global::IsaSdk.ZyINS.Api.V1.ReinstateTokenRequest.Parser, new[]{ "Id" }, null, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::IsaSdk.ZyINS.Api.V1.BanTokenRequest), global::IsaSdk.ZyINS.Api.V1.BanTokenRequest.Parser, new[]{ "Id", "Reason" }, null, null, null, null),
-            new pbr::GeneratedClrTypeInfo(typeof(global::IsaSdk.ZyINS.Api.V1.RotateTokenRequest), global::IsaSdk.ZyINS.Api.V1.RotateTokenRequest.Parser, new[]{ "TokenId", "ExpiresInDays" }, null, null, null, null),
-            new pbr::GeneratedClrTypeInfo(typeof(global::IsaSdk.ZyINS.Api.V1.TokenDetail), global::IsaSdk.ZyINS.Api.V1.TokenDetail.Parser, new[]{ "Object", "Livemode", "RequestId", "Id", "Name", "Hint", "Scopes", "Status", "RevokedReason", "CreatedAt", "ExpiresAt", "RevokedAt", "LastUsedAt" }, null, null, null, null)
+            new pbr::GeneratedClrTypeInfo(typeof(global::IsaSdk.ZyINS.Api.V1.RotateTokenRequest), global::IsaSdk.ZyINS.Api.V1.RotateTokenRequest.Parser, new[]{ "TokenId", "ExpiresInDays", "GracePeriodSeconds" }, new[]{ "GracePeriodSeconds" }, null, null, null),
+            new pbr::GeneratedClrTypeInfo(typeof(global::IsaSdk.ZyINS.Api.V1.TokenDetail), global::IsaSdk.ZyINS.Api.V1.TokenDetail.Parser, new[]{ "Object", "Livemode", "RequestId", "Id", "Name", "Hint", "Scopes", "Status", "RevokedReason", "CreatedAt", "ExpiresAt", "RevokedAt", "LastUsedAt", "RevokesAt" }, null, null, null, null)
           }));
     }
     #endregion
@@ -902,6 +907,8 @@ namespace IsaSdk.ZyINS.Api.V1 {
       scopes_ = other.scopes_.Clone();
       createdAt_ = other.createdAt_;
       expiresAt_ = other.expiresAt_;
+      previousTokenRevokesAt_ = other.previousTokenRevokesAt_;
+      previousTokenId_ = other.previousTokenId_;
       _unknownFields = pb::UnknownFieldSet.Clone(other._unknownFields);
     }
 
@@ -1061,6 +1068,39 @@ namespace IsaSdk.ZyINS.Api.V1 {
       }
     }
 
+    /// <summary>Field number for the "previous_token_revokes_at" field.</summary>
+    public const int PreviousTokenRevokesAtFieldNumber = 11;
+    private string previousTokenRevokesAt_ = "";
+    /// <summary>
+    /// RFC 3339 timestamp at which the *previous* token is scheduled to
+    /// revoke. Populated only on Rotate responses with a non-zero grace
+    /// window; empty on Create or immediate revocation. Task #117.
+    /// </summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public string PreviousTokenRevokesAt {
+      get { return previousTokenRevokesAt_; }
+      set {
+        previousTokenRevokesAt_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
+    /// <summary>Field number for the "previous_token_id" field.</summary>
+    public const int PreviousTokenIdFieldNumber = 12;
+    private string previousTokenId_ = "";
+    /// <summary>
+    /// Identifier of the *previous* token (the one being rotated).
+    /// Populated only on Rotate responses; empty on Create. Task #117.
+    /// </summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public string PreviousTokenId {
+      get { return previousTokenId_; }
+      set {
+        previousTokenId_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public override bool Equals(object other) {
@@ -1086,6 +1126,8 @@ namespace IsaSdk.ZyINS.Api.V1 {
       if(!scopes_.Equals(other.scopes_)) return false;
       if (CreatedAt != other.CreatedAt) return false;
       if (ExpiresAt != other.ExpiresAt) return false;
+      if (PreviousTokenRevokesAt != other.PreviousTokenRevokesAt) return false;
+      if (PreviousTokenId != other.PreviousTokenId) return false;
       return Equals(_unknownFields, other._unknownFields);
     }
 
@@ -1103,6 +1145,8 @@ namespace IsaSdk.ZyINS.Api.V1 {
       hash ^= scopes_.GetHashCode();
       if (CreatedAt.Length != 0) hash ^= CreatedAt.GetHashCode();
       if (ExpiresAt.Length != 0) hash ^= ExpiresAt.GetHashCode();
+      if (PreviousTokenRevokesAt.Length != 0) hash ^= PreviousTokenRevokesAt.GetHashCode();
+      if (PreviousTokenId.Length != 0) hash ^= PreviousTokenId.GetHashCode();
       if (_unknownFields != null) {
         hash ^= _unknownFields.GetHashCode();
       }
@@ -1158,6 +1202,14 @@ namespace IsaSdk.ZyINS.Api.V1 {
         output.WriteRawTag(82);
         output.WriteString(ExpiresAt);
       }
+      if (PreviousTokenRevokesAt.Length != 0) {
+        output.WriteRawTag(90);
+        output.WriteString(PreviousTokenRevokesAt);
+      }
+      if (PreviousTokenId.Length != 0) {
+        output.WriteRawTag(98);
+        output.WriteString(PreviousTokenId);
+      }
       if (_unknownFields != null) {
         _unknownFields.WriteTo(output);
       }
@@ -1205,6 +1257,14 @@ namespace IsaSdk.ZyINS.Api.V1 {
         output.WriteRawTag(82);
         output.WriteString(ExpiresAt);
       }
+      if (PreviousTokenRevokesAt.Length != 0) {
+        output.WriteRawTag(90);
+        output.WriteString(PreviousTokenRevokesAt);
+      }
+      if (PreviousTokenId.Length != 0) {
+        output.WriteRawTag(98);
+        output.WriteString(PreviousTokenId);
+      }
       if (_unknownFields != null) {
         _unknownFields.WriteTo(ref output);
       }
@@ -1242,6 +1302,12 @@ namespace IsaSdk.ZyINS.Api.V1 {
       }
       if (ExpiresAt.Length != 0) {
         size += 1 + pb::CodedOutputStream.ComputeStringSize(ExpiresAt);
+      }
+      if (PreviousTokenRevokesAt.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeStringSize(PreviousTokenRevokesAt);
+      }
+      if (PreviousTokenId.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeStringSize(PreviousTokenId);
       }
       if (_unknownFields != null) {
         size += _unknownFields.CalculateSize();
@@ -1282,6 +1348,12 @@ namespace IsaSdk.ZyINS.Api.V1 {
       }
       if (other.ExpiresAt.Length != 0) {
         ExpiresAt = other.ExpiresAt;
+      }
+      if (other.PreviousTokenRevokesAt.Length != 0) {
+        PreviousTokenRevokesAt = other.PreviousTokenRevokesAt;
+      }
+      if (other.PreviousTokenId.Length != 0) {
+        PreviousTokenId = other.PreviousTokenId;
       }
       _unknownFields = pb::UnknownFieldSet.MergeFrom(_unknownFields, other._unknownFields);
     }
@@ -1342,6 +1414,14 @@ namespace IsaSdk.ZyINS.Api.V1 {
             ExpiresAt = input.ReadString();
             break;
           }
+          case 90: {
+            PreviousTokenRevokesAt = input.ReadString();
+            break;
+          }
+          case 98: {
+            PreviousTokenId = input.ReadString();
+            break;
+          }
         }
       }
     #endif
@@ -1399,6 +1479,14 @@ namespace IsaSdk.ZyINS.Api.V1 {
           }
           case 82: {
             ExpiresAt = input.ReadString();
+            break;
+          }
+          case 90: {
+            PreviousTokenRevokesAt = input.ReadString();
+            break;
+          }
+          case 98: {
+            PreviousTokenId = input.ReadString();
             break;
           }
         }
@@ -2675,7 +2763,8 @@ namespace IsaSdk.ZyINS.Api.V1 {
 
   /// <summary>
   /// RotateTokenRequest targets an existing token; the server issues a new
-  /// token with the same scopes and revokes the old one.
+  /// token with the same scopes and schedules the old one for revocation
+  /// after a grace window.
   /// </summary>
   [global::System.Diagnostics.DebuggerDisplayAttribute("{ToString(),nq}")]
   public sealed partial class RotateTokenRequest : pb::IMessage<RotateTokenRequest>
@@ -2685,6 +2774,7 @@ namespace IsaSdk.ZyINS.Api.V1 {
   {
     private static readonly pb::MessageParser<RotateTokenRequest> _parser = new pb::MessageParser<RotateTokenRequest>(() => new RotateTokenRequest());
     private pb::UnknownFieldSet _unknownFields;
+    private int _hasBits0;
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public static pb::MessageParser<RotateTokenRequest> Parser { get { return _parser; } }
@@ -2712,8 +2802,10 @@ namespace IsaSdk.ZyINS.Api.V1 {
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public RotateTokenRequest(RotateTokenRequest other) : this() {
+      _hasBits0 = other._hasBits0;
       tokenId_ = other.tokenId_;
       expiresInDays_ = other.expiresInDays_;
+      gracePeriodSeconds_ = other.gracePeriodSeconds_;
       _unknownFields = pb::UnknownFieldSet.Clone(other._unknownFields);
     }
 
@@ -2727,7 +2819,9 @@ namespace IsaSdk.ZyINS.Api.V1 {
     public const int TokenIdFieldNumber = 1;
     private string tokenId_ = "";
     /// <summary>
-    /// Identifier of the token to rotate.
+    /// Identifier of the token to rotate. May be supplied as the
+    /// path parameter on `/v1/tokens/{token_id}/rotate` or in the
+    /// request body on the legacy `/v1/tokens/rotate` binding.
     /// </summary>
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
@@ -2754,6 +2848,43 @@ namespace IsaSdk.ZyINS.Api.V1 {
       }
     }
 
+    /// <summary>Field number for the "grace_period_seconds" field.</summary>
+    public const int GracePeriodSecondsFieldNumber = 3;
+    private readonly static int GracePeriodSecondsDefaultValue = 0;
+
+    private int gracePeriodSeconds_;
+    /// <summary>
+    /// Seconds the old token remains active after rotation before the
+    /// sweeper revokes it. Absent applies the default 2,592,000 (30
+    /// days). Range 0 to 7,776,000 (90 days). Explicit 0 revokes the old
+    /// token immediately; the new token still ships in the response.
+    ///
+    /// Task #117 + #118: handler stamps `revokes_at = now() +
+    /// grace_period_seconds`; the sweeper Lambda flips status to
+    /// `revoked` when the deadline elapses.
+    /// </summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public int GracePeriodSeconds {
+      get { if ((_hasBits0 & 1) != 0) { return gracePeriodSeconds_; } else { return GracePeriodSecondsDefaultValue; } }
+      set {
+        _hasBits0 |= 1;
+        gracePeriodSeconds_ = value;
+      }
+    }
+    /// <summary>Gets whether the "grace_period_seconds" field is set</summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public bool HasGracePeriodSeconds {
+      get { return (_hasBits0 & 1) != 0; }
+    }
+    /// <summary>Clears the value of the "grace_period_seconds" field</summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public void ClearGracePeriodSeconds() {
+      _hasBits0 &= ~1;
+    }
+
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public override bool Equals(object other) {
@@ -2771,6 +2902,7 @@ namespace IsaSdk.ZyINS.Api.V1 {
       }
       if (TokenId != other.TokenId) return false;
       if (ExpiresInDays != other.ExpiresInDays) return false;
+      if (GracePeriodSeconds != other.GracePeriodSeconds) return false;
       return Equals(_unknownFields, other._unknownFields);
     }
 
@@ -2780,6 +2912,7 @@ namespace IsaSdk.ZyINS.Api.V1 {
       int hash = 1;
       if (TokenId.Length != 0) hash ^= TokenId.GetHashCode();
       if (ExpiresInDays != 0) hash ^= ExpiresInDays.GetHashCode();
+      if (HasGracePeriodSeconds) hash ^= GracePeriodSeconds.GetHashCode();
       if (_unknownFields != null) {
         hash ^= _unknownFields.GetHashCode();
       }
@@ -2806,6 +2939,10 @@ namespace IsaSdk.ZyINS.Api.V1 {
         output.WriteRawTag(16);
         output.WriteInt32(ExpiresInDays);
       }
+      if (HasGracePeriodSeconds) {
+        output.WriteRawTag(24);
+        output.WriteInt32(GracePeriodSeconds);
+      }
       if (_unknownFields != null) {
         _unknownFields.WriteTo(output);
       }
@@ -2824,6 +2961,10 @@ namespace IsaSdk.ZyINS.Api.V1 {
         output.WriteRawTag(16);
         output.WriteInt32(ExpiresInDays);
       }
+      if (HasGracePeriodSeconds) {
+        output.WriteRawTag(24);
+        output.WriteInt32(GracePeriodSeconds);
+      }
       if (_unknownFields != null) {
         _unknownFields.WriteTo(ref output);
       }
@@ -2839,6 +2980,9 @@ namespace IsaSdk.ZyINS.Api.V1 {
       }
       if (ExpiresInDays != 0) {
         size += 1 + pb::CodedOutputStream.ComputeInt32Size(ExpiresInDays);
+      }
+      if (HasGracePeriodSeconds) {
+        size += 1 + pb::CodedOutputStream.ComputeInt32Size(GracePeriodSeconds);
       }
       if (_unknownFields != null) {
         size += _unknownFields.CalculateSize();
@@ -2857,6 +3001,9 @@ namespace IsaSdk.ZyINS.Api.V1 {
       }
       if (other.ExpiresInDays != 0) {
         ExpiresInDays = other.ExpiresInDays;
+      }
+      if (other.HasGracePeriodSeconds) {
+        GracePeriodSeconds = other.GracePeriodSeconds;
       }
       _unknownFields = pb::UnknownFieldSet.MergeFrom(_unknownFields, other._unknownFields);
     }
@@ -2885,6 +3032,10 @@ namespace IsaSdk.ZyINS.Api.V1 {
             ExpiresInDays = input.ReadInt32();
             break;
           }
+          case 24: {
+            GracePeriodSeconds = input.ReadInt32();
+            break;
+          }
         }
       }
     #endif
@@ -2910,6 +3061,10 @@ namespace IsaSdk.ZyINS.Api.V1 {
           }
           case 16: {
             ExpiresInDays = input.ReadInt32();
+            break;
+          }
+          case 24: {
+            GracePeriodSeconds = input.ReadInt32();
             break;
           }
         }
@@ -2972,6 +3127,7 @@ namespace IsaSdk.ZyINS.Api.V1 {
       expiresAt_ = other.expiresAt_;
       revokedAt_ = other.revokedAt_;
       lastUsedAt_ = other.lastUsedAt_;
+      revokesAt_ = other.revokesAt_;
       _unknownFields = pb::UnknownFieldSet.Clone(other._unknownFields);
     }
 
@@ -3179,6 +3335,24 @@ namespace IsaSdk.ZyINS.Api.V1 {
       }
     }
 
+    /// <summary>Field number for the "revokes_at" field.</summary>
+    public const int RevokesAtFieldNumber = 14;
+    private string revokesAt_ = "";
+    /// <summary>
+    /// RFC 3339 timestamp at which the sweeper will revoke this token.
+    /// Set when the token has been replaced via Rotate but its grace
+    /// window has not yet elapsed. Empty string when no rotation is
+    /// pending. Task #117 + #118.
+    /// </summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public string RevokesAt {
+      get { return revokesAt_; }
+      set {
+        revokesAt_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public override bool Equals(object other) {
@@ -3207,6 +3381,7 @@ namespace IsaSdk.ZyINS.Api.V1 {
       if (ExpiresAt != other.ExpiresAt) return false;
       if (RevokedAt != other.RevokedAt) return false;
       if (LastUsedAt != other.LastUsedAt) return false;
+      if (RevokesAt != other.RevokesAt) return false;
       return Equals(_unknownFields, other._unknownFields);
     }
 
@@ -3227,6 +3402,7 @@ namespace IsaSdk.ZyINS.Api.V1 {
       if (ExpiresAt.Length != 0) hash ^= ExpiresAt.GetHashCode();
       if (RevokedAt.Length != 0) hash ^= RevokedAt.GetHashCode();
       if (LastUsedAt.Length != 0) hash ^= LastUsedAt.GetHashCode();
+      if (RevokesAt.Length != 0) hash ^= RevokesAt.GetHashCode();
       if (_unknownFields != null) {
         hash ^= _unknownFields.GetHashCode();
       }
@@ -3294,6 +3470,10 @@ namespace IsaSdk.ZyINS.Api.V1 {
         output.WriteRawTag(106);
         output.WriteString(LastUsedAt);
       }
+      if (RevokesAt.Length != 0) {
+        output.WriteRawTag(114);
+        output.WriteString(RevokesAt);
+      }
       if (_unknownFields != null) {
         _unknownFields.WriteTo(output);
       }
@@ -3353,6 +3533,10 @@ namespace IsaSdk.ZyINS.Api.V1 {
         output.WriteRawTag(106);
         output.WriteString(LastUsedAt);
       }
+      if (RevokesAt.Length != 0) {
+        output.WriteRawTag(114);
+        output.WriteString(RevokesAt);
+      }
       if (_unknownFields != null) {
         _unknownFields.WriteTo(ref output);
       }
@@ -3399,6 +3583,9 @@ namespace IsaSdk.ZyINS.Api.V1 {
       }
       if (LastUsedAt.Length != 0) {
         size += 1 + pb::CodedOutputStream.ComputeStringSize(LastUsedAt);
+      }
+      if (RevokesAt.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeStringSize(RevokesAt);
       }
       if (_unknownFields != null) {
         size += _unknownFields.CalculateSize();
@@ -3448,6 +3635,9 @@ namespace IsaSdk.ZyINS.Api.V1 {
       }
       if (other.LastUsedAt.Length != 0) {
         LastUsedAt = other.LastUsedAt;
+      }
+      if (other.RevokesAt.Length != 0) {
+        RevokesAt = other.RevokesAt;
       }
       _unknownFields = pb::UnknownFieldSet.MergeFrom(_unknownFields, other._unknownFields);
     }
@@ -3520,6 +3710,10 @@ namespace IsaSdk.ZyINS.Api.V1 {
             LastUsedAt = input.ReadString();
             break;
           }
+          case 114: {
+            RevokesAt = input.ReadString();
+            break;
+          }
         }
       }
     #endif
@@ -3589,6 +3783,10 @@ namespace IsaSdk.ZyINS.Api.V1 {
           }
           case 106: {
             LastUsedAt = input.ReadString();
+            break;
+          }
+          case 114: {
+            RevokesAt = input.ReadString();
             break;
           }
         }

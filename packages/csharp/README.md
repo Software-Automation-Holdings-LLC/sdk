@@ -75,3 +75,28 @@ catch (IsaRateLimitException ex)
 ## License
 
 MIT. Copyright (c) Software Automation Holdings, LLC.
+
+## Licenses and Ready
+
+The C# SDK exposes the public BPP license-lifecycle surface and the
+platform readiness probe on every `ZyInsClient`:
+
+```csharp
+using Sah.Sdk.Zyins;
+
+var client = new ZyInsClient("isa_live_...");
+
+var result = await client.Licenses.CheckAsync(new LicensesCheckRequest
+{
+    Email = "john.doe@acme-agency.com",
+    Keycode = "ABC-123-XYZ",
+});
+// result.Status: "valid" | "invalid" | "inactive"
+// result.ValidationStatus: typed LicenseValidationStatus enum
+
+var ready = await client.Health.GetReadinessAsync();
+// ready.Ready: true on every required probe = "serving"
+```
+
+`/v1/licenses/check` and `/v1/licenses/deactivate` are public;
+`/ready` is the unauthenticated load-balancer probe.

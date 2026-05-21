@@ -32,6 +32,10 @@ public sealed record LicenseOptions
 
     /// <summary>Optional HMAC signing secret from the license-exchange handshake.</summary>
     public string? SigningSecret { get; init; }
+
+    /// <summary>Optional credential store. Defaults to <see cref="InMemoryCredentialStore"/>;
+    /// pass a durable adapter to persist the license key across process boots.</summary>
+    public ICredentialStore? CredentialStore { get; init; }
 }
 
 /// <summary>Session credentials for embedded browser flows.</summary>
@@ -61,6 +65,39 @@ public sealed class Isa
     /// <summary>ZyINS underwriting and prequalification surface.</summary>
     public ZyInsClient Zyins { get; }
 
+    /// <summary>License-scoped account operations (branding, preferences, cases,
+    /// email, reference-data). Available only on license-mode instances built
+    /// via <see cref="WithLicense(string, string)"/> /
+    /// <see cref="WithLicenseAsync(LicenseOptions)"/> / <see cref="FromEnv()"/>.</summary>
+    public Sah.Sdk.Account.AccountNamespace Account { get; }
+
+    /// <summary>Fires when the SDK observes a fresh license key (typically the
+    /// return value of <c>Zyins.Licenses.ActivateAsync()</c>). Subscribing on a
+    /// non-license-mode instance throws <see cref="InvalidOperationException"/>.</summary>
+    public event Action<LicenseRefreshedEvent>? OnLicenseRefreshed
+    {
+        add
+        {
+            var state = Zyins.CredentialState ?? throw new InvalidOperationException(
+                "Isa.OnLicenseRefreshed is available only on license-mode instances.");
+            if (value is not null)
+            {
+                // Hold the unsubscribe handle in the shared multicast table.
+                var unsub = state.OnLicenseRefreshed(value);
+                _unsubscribers[value] = unsub;
+            }
+        }
+        remove
+        {
+            if (value is not null && _unsubscribers.TryRemove(value, out var unsub))
+            {
+                unsub();
+            }
+        }
+    }
+
+    private readonly System.Collections.Concurrent.ConcurrentDictionary<Action<LicenseRefreshedEvent>, Action> _unsubscribers = new();
+
     /// <summary>RapidSign document-workflow surface. Stub until v0.3.x product wiring.</summary>
     public Sah.Sdk.RapidSign.RapidSignNamespace RapidSign { get; }
 
@@ -70,12 +107,17 @@ public sealed class Isa
     /// <summary>Webhook verification helpers (HMAC, timestamp tolerance).</summary>
     public Sah.Sdk.Webhooks.WebhooksNamespace Webhooks { get; }
 
-    private Isa(ZyInsClient zyins)
+    private Isa(ZyInsClient zyins, string? sessionId = null, string? sessionSecret = null)
     {
         Zyins = zyins;
         RapidSign = new Sah.Sdk.RapidSign.RapidSignNamespace();
-        Proxy = new Sah.Sdk.Proxy.ProxyNamespace();
+        // Session credentials, when present, plumb the session-signed
+        // proxy.call entry point; otherwise the namespace throws
+        // IsaConfigException at the boundary so non-session callers
+        // see the exchange-credentials hint.
+        Proxy = new Sah.Sdk.Proxy.ProxyNamespace(sessionId, sessionSecret);
         Webhooks = new Sah.Sdk.Webhooks.WebhooksNamespace();
+        Account = Sah.Sdk.Account.AccountNamespace.FromZyInsClient(zyins);
     }
 
     /// <summary>
@@ -125,13 +167,47 @@ public sealed class Isa
                 DeviceId = options.DeviceId,
                 SigningSecret = options.SigningSecret,
             };
-            var client = ZyinsFactory.WithLicense(creds, options: null, env: env);
+            var store = options?.CredentialStore ?? new InMemoryCredentialStore();
+            var client = ZyinsFactory.WithLicense(creds, options: null, env: env, store: store);
             return Task.FromResult(new Isa(client));
         }
         catch (Exception ex)
         {
             return Task.FromException<Isa>(ex);
         }
+    }
+
+    /// <summary>Ergonomic license-mode factory. Equivalent to passing a
+    /// <see cref="LicenseOptions"/> with just <c>Keycode</c> + <c>Email</c>.
+    /// The SDK mints a device id automatically; an in-memory credential
+    /// store backs the license key.</summary>
+    public static Isa WithLicense(string keycode, string email)
+        => WithLicense(keycode, email, SystemEnvironment.Instance);
+
+    /// <summary>Test seam: env-injectable variant.</summary>
+    public static Isa WithLicense(string keycode, string email, IEnvironment env)
+    {
+        if (string.IsNullOrWhiteSpace(keycode)) throw new ArgumentException("keycode required", nameof(keycode));
+        if (string.IsNullOrWhiteSpace(email)) throw new ArgumentException("email required", nameof(email));
+        var creds = new LicenseCredentials { Keycode = keycode, Email = email };
+        var store = new InMemoryCredentialStore();
+        var client = ZyinsFactory.WithLicense(creds, options: null, env: env, store: store);
+        return new Isa(client);
+    }
+
+    /// <summary>Construct from environment variables. Reads
+    /// <c>ISA_LICENSE_KEYCODE</c> + <c>ISA_LICENSE_EMAIL</c> and returns a
+    /// license-mode <see cref="Isa"/>. Equivalent to
+    /// <c>Isa.WithLicense()</c> with no args, but resolves synchronously
+    /// without a Task.</summary>
+    public static Isa FromEnv() => FromEnv(SystemEnvironment.Instance);
+
+    /// <summary>Test seam: env-injectable variant of <see cref="FromEnv()"/>.</summary>
+    public static Isa FromEnv(IEnvironment env)
+    {
+        var store = new InMemoryCredentialStore();
+        var client = ZyinsFactory.WithLicense(credentials: null, options: null, env: env, store: store);
+        return new Isa(client);
     }
 
     /// <summary>
@@ -155,6 +231,12 @@ public sealed class Isa
             SessionId = options.SessionId,
             SessionSecret = options.SessionSecret,
         };
-        return new Isa(ZyinsFactory.WithSession(creds, options: null, env: env));
+        var client = ZyinsFactory.WithSession(creds, options: null, env: env);
+        // Resolve session credentials again at this layer so the proxy
+        // namespace can sign without reaching back into ZyInsClient
+        // internals. env-fallback mirrors ZyinsFactory.WithSession.
+        var sessionId = options?.SessionId is { Length: > 0 } sid ? sid : env.Get("ISA_SESSION_ID");
+        var sessionSecret = options?.SessionSecret is { Length: > 0 } sec ? sec : env.Get("ISA_SESSION_SECRET");
+        return new Isa(client, sessionId, sessionSecret);
     }
 }

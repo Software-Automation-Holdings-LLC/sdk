@@ -107,3 +107,5 @@
 /home/runner/work/isa-platform/isa-platform/mirror/packages/csharp/tests/obj/Release/net8.0/Sah.Sdk.Tests.pdb
 /home/runner/work/isa-platform/isa-platform/mirror/packages/csharp/tests/obj/Release/net8.0/Sah.Sdk.Tests.genruntimeconfig.cache
 /home/runner/work/isa-platform/isa-platform/mirror/packages/csharp/tests/obj/Release/net8.0/ref/Sah.Sdk.Tests.dll
+/home/runner/work/isa-platform/isa-platform/mirror/packages/csharp/tests/bin/Release/net8.0/Validation.dll
+/home/runner/work/isa-platform/isa-platform/mirror/packages/csharp/tests/bin/Release/net8.0/Xunit.SkippableFact.dll

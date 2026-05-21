@@ -27,7 +27,8 @@ public sealed record TransportRequest(
 public sealed record TransportResponse(
     int Status,
     IReadOnlyDictionary<string, string> Headers,
-    string Body);
+    string Body,
+    byte[]? BodyBytes = null);
 
 /// <summary>Injectable transport. Default is <see cref="HttpClientTransport"/>.</summary>
 public interface ITransport
@@ -79,10 +80,11 @@ public sealed class HttpClientTransport : ITransport
         // pre-check the token to honour caller cancellation semantics.
 #if NETSTANDARD2_0
         ct.ThrowIfCancellationRequested();
-        var body = await resp.Content.ReadAsStringAsync().ConfigureAwait(false);
+        var bodyBytes = await resp.Content.ReadAsByteArrayAsync().ConfigureAwait(false);
 #else
-        var body = await resp.Content.ReadAsStringAsync(ct).ConfigureAwait(false);
+        var bodyBytes = await resp.Content.ReadAsByteArrayAsync(ct).ConfigureAwait(false);
 #endif
+        var body = Encoding.UTF8.GetString(bodyBytes);
         var headers = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
         foreach (var h in resp.Headers)
         {
@@ -92,7 +94,7 @@ public sealed class HttpClientTransport : ITransport
         {
             headers[h.Key] = string.Join(",", h.Value);
         }
-        return new TransportResponse((int)resp.StatusCode, headers, body);
+        return new TransportResponse((int)resp.StatusCode, headers, body, bodyBytes);
     }
 
     private static HttpMethod MapVerb(HttpVerb v) => v switch

@@ -12,7 +12,7 @@
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
     <RootNamespace>Sah.Sdk</RootNamespace>
     <!-- Version is rewritten at publish time by sdk-pin-csharp-deps.py. -->
-    <Version>0.3.2</Version>
+    <Version>0.4.0</Version>
     <PackageId>Sah.Sdk</PackageId>
     <Authors>Software Automation Holdings, LLC</Authors>
     <Company>Software Automation Holdings, LLC</Company>
@@ -29,6 +29,15 @@
   <ItemGroup>
     <Compile Remove="tests/**/*.cs"/>
     <None Remove="tests/**/*"/>
+  </ItemGroup>
+  <!-- Expose internals to the test assembly so the test project can poke
+       at the LicenseCredentials/ZyinsFactory seams without going through
+       the public Isa.* surface (which requires more boilerplate for the
+       transport-injectable code paths). -->
+  <ItemGroup>
+    <AssemblyAttribute Include="System.Runtime.CompilerServices.InternalsVisibleToAttribute">
+      <_Parameter1>Sah.Sdk.Tests</_Parameter1>
+    </AssemblyAttribute>
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Google.Protobuf" Version="3.28.3"/>

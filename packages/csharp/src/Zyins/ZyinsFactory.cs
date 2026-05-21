@@ -36,7 +36,7 @@ public sealed class SystemEnvironment : IEnvironment
 
 /// <summary>Per-factory option records. License and Session take more
 /// than one credential, so they have dedicated input types.</summary>
-public sealed record LicenseCredentials
+internal sealed record LicenseCredentials
 {
     /// <summary>Agent's license keycode (e.g. <c>ABC-123-XYZ</c>).</summary>
     public required string Keycode { get; init; }
@@ -53,7 +53,7 @@ public sealed record LicenseCredentials
 }
 
 /// <summary>Session credentials for browser-embedded forms.</summary>
-public sealed record SessionCredentials
+internal sealed record SessionCredentials
 {
     /// <summary>Session id.</summary>
     public required string SessionId { get; init; }
@@ -138,11 +138,18 @@ internal static class ZyinsFactory
     /// </example>
     /// <seealso href="https://docs.isaapi.com/sdk/factories"/>
     public static ZyInsClient WithLicense(LicenseCredentials? credentials = null, ZyInsClientOptions? options = null)
-        => WithLicense(credentials, options, SystemEnvironment.Instance);
+        => WithLicense(credentials, options, SystemEnvironment.Instance, store: null);
 
     /// <summary>Test seam: same as <see cref="WithLicense(LicenseCredentials,ZyInsClientOptions)"/>
     /// but with an injectable environment.</summary>
     public static ZyInsClient WithLicense(LicenseCredentials? credentials, ZyInsClientOptions? options, IEnvironment env)
+        => WithLicense(credentials, options, env, store: null);
+
+    /// <summary>Build a license-mode client with an attached credential store.
+    /// The store backs the shared <see cref="IsaCredentialState"/> so the
+    /// <see cref="LicensesSubClient"/> can auto-stash the license key on
+    /// successful activation.</summary>
+    public static ZyInsClient WithLicense(LicenseCredentials? credentials, ZyInsClientOptions? options, IEnvironment env, ICredentialStore? store)
     {
         if (env is null) throw new ArgumentNullException(nameof(env));
         var keycode = credentials?.Keycode is { Length: > 0 } k ? k : env.Get(LicenseKeycodeEnvVar);
@@ -162,10 +169,28 @@ internal static class ZyinsFactory
         var resolvedSecret = signingSecret ?? keycode;
 
         var opts = options ?? new ZyInsClientOptions();
-        // Non-null after the IsNullOrWhiteSpace guard above; the
-        // netstandard2.0 BCL omits the flow-analysis attribute.
+        var resolvedStore = store ?? new InMemoryCredentialStore();
+        var licenseKey = RestoreLicenseKey(resolvedStore);
+        var state = new IsaCredentialState(
+            email: email!,
+            orderId: keycode!,
+            deviceId: resolvedDeviceId,
+            licenseKey: licenseKey,
+            store: resolvedStore);
         var signer = new LicenseSigner(keycode!, email!, resolvedDeviceId, resolvedSecret!);
-        return new ZyInsClient(opts, signer);
+        return new ZyInsClient(opts, signer, state);
+    }
+
+    private static string RestoreLicenseKey(ICredentialStore store)
+    {
+        try
+        {
+            return store.GetAsync(CredentialKeys.LicenseKey).GetAwaiter().GetResult() ?? string.Empty;
+        }
+        catch (Exception ex)
+        {
+            throw new IsaConfigException("Isa.WithLicense failed to restore the stashed license key.", ex);
+        }
     }
 
     /// <summary>
@@ -206,7 +231,7 @@ internal static class ZyinsFactory
         var opts = options ?? new ZyInsClientOptions();
         // Non-null after the IsNullOrWhiteSpace guard above; see note in
         // WithLicense for the netstandard2.0 rationale.
-        var signer = new SessionSigner(sessionId!, sessionSecret!);
+        var signer = new SessionRequestSigner(sessionId!, sessionSecret!, opts.Clock);
         return new ZyInsClient(opts, signer);
     }
 }
