@@ -1,6 +1,6 @@
 {
     "name": "@software-automation-holdings-llc/sdk",
-    "version": "0.3.2",
+    "version": "0.4.0",
     "description": "Unified TypeScript SDK for the ISA platform APIs (zyins, rapidsign, proxy).",
     "license": "Apache-2.0",
     "repository": {
@@ -33,6 +33,8 @@
         "MIGRATION.md"
     ],
     "scripts": {
+        "gen:catalog": "node scripts/gen-catalog.mjs",
+        "prebuild": "node scripts/gen-catalog.mjs",
         "build": "tsc -p tsconfig.json",
         "typecheck": "tsc --noEmit",
         "test": "vitest run",

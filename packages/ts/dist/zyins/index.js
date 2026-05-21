@@ -12,9 +12,11 @@ export { Sex, NicotineUsage, Height, Weight, sexWireCode, } from './applicant';
 export { Coverage, } from './coverage';
 export { ProductCatalog, ProductSelection, ProductType, } from './product';
 export { ZyInsError, LicenseError, PrequalifyError, RateLimitedError, fromHttpResponse, fromProblemDetails, } from './errors';
+export { getReadiness, } from './health';
 export { defaultTransport, } from './transport';
 // --- Phase 1+2 additions (SDK_DESIGN.md §§3,4,5,6,7,10) -------------------
 export { Isa, ZyInsNamespace } from './isa';
+export { IsaCredentialState, } from './credentialState';
 export { resolveBearerIdentity, resolveLicenseIdentity, resolveSessionIdentity, ENV_VAR_NAMES, } from './envFactory';
 export { IsaError, IsaApiError, IsaConfigError, IsaIdempotencyConflictError, } from './apiError';
 export { debugLoggerFromEnv, makeLogger, redactHeaders, redactBody, redactBodyString, processEnv, stderrSink, } from './logger';

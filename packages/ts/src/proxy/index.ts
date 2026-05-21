@@ -10,3 +10,10 @@
 
 export * from "./algosure";
 export * from "./transport/call";
+export {
+  type ProxyCallBinding,
+  type ProxyCallOptions,
+  type ProxyCallResult,
+  assertSessionIdentityForProxyCall,
+  proxyCall as proxyCallV2,
+} from "./call";

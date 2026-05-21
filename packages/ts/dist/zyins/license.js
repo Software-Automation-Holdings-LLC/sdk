@@ -1,5 +1,12 @@
 /**
- * Tier 3 license operations.
+ * Tier 3 license operations — LEGACY CGI surface (`/v1/licensing`).
+ *
+ * @deprecated Use the proto-backed `licenses` (plural) sub-client
+ * (`./licenses.ts`) for new code. The new sub-client targets
+ * `/v1/licenses/check` and `/v1/licenses/deactivate`, which return
+ * structured JSON instead of the legacy CGI `ERR_*` plain-text
+ * dialect. This module remains for backward compatibility with
+ * bpp2.0's `useSoftwareActivator.js`.
  *
  * Replaces the 7-branch ERR_* if-chain in bpp2.0's `useSoftwareActivator.js`
  * with three typed methods (`activate`, `deactivate`, `check`) and one

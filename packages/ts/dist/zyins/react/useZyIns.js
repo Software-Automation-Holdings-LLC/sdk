@@ -16,12 +16,12 @@ const ZyInsContext = createContext(null);
 /**
  * Provider component. Wrap the app (or a subtree) so descendants can call
  * `useZyIns()`. The provider re-constructs the client when `auth`,
- * `baseUrl`, `transport`, or `clock` change — referential stability on
- * those values is the caller's responsibility.
+ * `baseUrl`, `transport`, `clock`, or `logosFetch` change — referential
+ * stability on those values is the caller's responsibility.
  */
 export function ZyInsProvider(props) {
     const { config, children } = props;
-    const client = useMemo(() => new ZyInsClient(config), [config.auth, config.baseUrl, config.transport, config.clock]);
+    const client = useMemo(() => new ZyInsClient(config), [config.auth, config.baseUrl, config.transport, config.clock, config.logosFetch]);
     return createElement(ZyInsContext.Provider, { value: client }, children);
 }
 /**

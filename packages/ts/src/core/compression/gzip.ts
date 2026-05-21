@@ -15,6 +15,8 @@
  */
 
 const GZIP_ENCODING = 'gzip';
+const GZIP_OS_BYTE_OFFSET = 9;
+const LEGACY_GZIP_OS_BYTE = 0x13;
 
 /**
  * Envelope produced by {@link compress} and consumed by {@link decompress}.
@@ -67,7 +69,9 @@ export async function gzipBytes(bytes: Uint8Array): Promise<Uint8Array> {
         writer.releaseLock();
     }
     const buffer = await new Response(stream.readable).arrayBuffer();
-    return new Uint8Array(buffer);
+    const out = new Uint8Array(buffer);
+    out[GZIP_OS_BYTE_OFFSET] = LEGACY_GZIP_OS_BYTE;
+    return out;
 }
 
 /**

@@ -76,3 +76,28 @@ your bundle when you import only the names you use.
 `@isa-sdk/proxy` (all `0.0.0`) are retired in favor of this unified
 package. See [MIGRATION.md](./MIGRATION.md) for the codemod and a
 mapping table.
+
+## Licenses and Ready
+
+`@software-automation-holdings-llc/sdk` exposes the public BPP
+license-lifecycle surface and the platform readiness probe on every
+`ZyInsClient`:
+
+```ts
+import { ZyInsClient } from '@software-automation-holdings-llc/sdk';
+
+const client = new ZyInsClient({ auth });
+
+const status = await client.licenses.check({
+  email: 'john.doe@acme-agency.com',
+  keycode: 'ABC-123-XYZ',
+});
+// status.status: 'valid' | 'invalid' | 'inactive'
+
+const ready = await client.health.getReadiness();
+// ready.ready: true on every required probe = 'serving'
+```
+
+The pre-existing `client.license` (singular) sub-client is
+`@deprecated` and targets the legacy `/v1/licensing` CGI surface; new
+code should use `client.licenses` (plural).

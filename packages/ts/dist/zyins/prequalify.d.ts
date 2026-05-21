@@ -27,6 +27,15 @@ export interface PrequalifyRequest {
     coverage: Coverage;
     products: ProductSelection;
 }
+/** Inputs accepted by `prequalifyLegacyBlob`. */
+export interface PrequalifyLegacyBlobRequest {
+    /**
+     * The pre-encoded prequalify payload produced by a legacy caller's own
+     * encoder (e.g. bpp2.0's `prepEncObj` / `prepEncObjV2`). Serialized to
+     * JSON verbatim and sent as the request body.
+     */
+    encodedPayload: Record<string, unknown>;
+}
 /** One plan returned by the engine. */
 export interface PrequalifyPlan {
     /** Carrier brand (e.g., "colonial-penn"). */
@@ -61,4 +70,9 @@ export interface PrequalifyContext {
  * signs the request, and parses the response into typed plans.
  */
 export declare function prequalify(request: PrequalifyRequest, ctx: PrequalifyContext): Promise<PrequalifyResult>;
+/**
+ * Run a prequalify call from a pre-encoded payload. Same path, same
+ * headers, same response shape as the typed `prequalify`.
+ */
+export declare function prequalifyLegacyBlob(request: PrequalifyLegacyBlobRequest, ctx: PrequalifyContext): Promise<PrequalifyResult>;
 //# sourceMappingURL=prequalify.d.ts.map

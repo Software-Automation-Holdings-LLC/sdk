@@ -43,6 +43,32 @@ export declare class IsaApiError extends IsaError {
     });
 }
 /**
+ * 401 Unauthorized — the request was rejected by session-auth
+ * verification (missing/expired session, bad signature, etc.). Maps to
+ * the `unauthorized` problem-details code in the platform catalog.
+ */
+export declare class IsaUnauthorizedError extends IsaApiError {
+    constructor(opts: {
+        message: string;
+        code?: string;
+        requestId?: string;
+        raw?: unknown;
+    });
+}
+/**
+ * 400 Validation — the request body or arguments were malformed. Maps to
+ * the `validation_error` problem-details code.
+ */
+export declare class IsaValidationError extends IsaApiError {
+    constructor(opts: {
+        message: string;
+        code?: string;
+        param?: string;
+        requestId?: string;
+        raw?: unknown;
+    });
+}
+/**
  * 409 Conflict surfaced when an idempotency key is reused with a different
  * request body. Server-side, the original response is preserved for the
  * 30-day TTL window; this error tells the caller which key collided and

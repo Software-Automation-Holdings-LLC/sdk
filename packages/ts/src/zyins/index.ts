@@ -48,6 +48,7 @@ export {
 
 export {
   type PrequalifyRequest,
+  type PrequalifyLegacyBlobRequest,
   type PrequalifyResult,
   type PrequalifyPlan,
 } from './prequalify';
@@ -56,6 +57,25 @@ export {
   type LicenseActivateResult,
   type LicenseCheckResult,
 } from './license';
+
+export {
+  type LicensesActivateRequest,
+  type LicensesActivateResult,
+  type LicensesActivateAuth,
+  type LicensesCheckRequest,
+  type LicensesCheckResult,
+  type LicensesDeactivateRequest,
+  type LicensesDeactivateResult,
+  type LicenseValidationStatus,
+} from './licenses';
+
+export {
+  getReadiness,
+  type ReadinessResult,
+  type ProbeResult,
+  type ServingStatus,
+  type HealthContext,
+} from './health';
 
 export {
   type CaseEmailRequest,
@@ -72,6 +92,12 @@ export {
 
 // --- Phase 1+2 additions (SDK_DESIGN.md §§3,4,5,6,7,10) -------------------
 export { Isa, ZyInsNamespace, type IsaOptions } from './isa';
+export {
+  IsaCredentialState,
+  type LicenseCredentialSnapshot,
+  type LicenseRefreshedEvent,
+  type LicenseRefreshedListener,
+} from './credentialState';
 export {
   type IsaIdentity,
   type BearerIdentity,

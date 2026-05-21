@@ -1,0 +1,79 @@
+/**
+ * Pluggable credential storage facade.
+ *
+ * The SDK persists the device id minted at first activation and the license
+ * key issued by `/v1/licenses/activate` so subsequent process boots do not
+ * have to re-bootstrap the user. The storage layer is a facade so the same
+ * `Isa.withLicense({...})` call works in three runtimes:
+ *
+ * 1. React Native — caller passes an AsyncStorage-shaped adapter.
+ * 2. Browser     — caller passes a localStorage-shaped adapter.
+ * 3. Node        — the SDK ships an in-memory default; a Node fs adapter
+ *                  can be supplied where persistence across process boots
+ *                  is required.
+ *
+ * The interface is intentionally tiny (get / set / remove) so any KV-shaped
+ * storage can be adapted in a few lines. All values are strings; callers
+ * MUST NOT pass JSON to `set` — the SDK serializes once via the key naming
+ * convention defined in `CREDENTIAL_KEYS`.
+ *
+ * Operations may be sync or async; the facade always returns Promises.
+ */
+/** Canonical key names the SDK uses inside any {@link CredentialStore}. */
+export const CREDENTIAL_KEYS = {
+    /** Per-device identifier; HMAC signing key for `X-Device-Signature`. */
+    deviceId: 'isa.deviceId',
+    /** License key minted at `/v1/licenses/activate`. */
+    licenseKey: 'isa.licenseKey',
+};
+/**
+ * In-memory {@link CredentialStore}. Default when the caller supplies no
+ * persistent adapter. State survives the process but NOT a restart — for
+ * cross-boot persistence, plug in an AsyncStorage / localStorage / fs
+ * adapter via `Isa.withLicense({ credentialStore: ... })`.
+ */
+export function inMemoryCredentialStore() {
+    const state = new Map();
+    return {
+        async get(key) {
+            return state.get(key);
+        },
+        async set(key, value) {
+            state.set(key, value);
+        },
+        async remove(key) {
+            state.delete(key);
+        },
+    };
+}
+/** Wrap an {@link AsyncStorageLike} into the SDK's {@link CredentialStore}. */
+export function fromAsyncStorage(storage) {
+    return {
+        async get(key) {
+            const value = await Promise.resolve(storage.getItem(key));
+            return value == null ? undefined : value;
+        },
+        async set(key, value) {
+            await Promise.resolve(storage.setItem(key, value));
+        },
+        async remove(key) {
+            await Promise.resolve(storage.removeItem(key));
+        },
+    };
+}
+/** Wrap a synchronous `Storage` (e.g., `localStorage`) into a {@link CredentialStore}. */
+export function fromLocalStorage(storage) {
+    return {
+        async get(key) {
+            const value = storage.getItem(key);
+            return value == null ? undefined : value;
+        },
+        async set(key, value) {
+            storage.setItem(key, value);
+        },
+        async remove(key) {
+            storage.removeItem(key);
+        },
+    };
+}
+//# sourceMappingURL=credentialStore.js.map

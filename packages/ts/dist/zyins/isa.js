@@ -19,12 +19,17 @@
  * Concurrency: the client carries no shared mutable state. Multiple in-
  * flight calls on one instance are safe (see README "Concurrency safety").
  */
-import { resolveBearerIdentity, resolveLicenseIdentity, resolveSessionIdentity, } from './envFactory';
+import { resolveBearerIdentity, resolveLicenseIdentity, resolveSessionIdentity, ENV_VAR_NAMES, } from './envFactory';
 import { IsaConfigError } from './apiError';
+import { CREDENTIAL_KEYS, inMemoryCredentialStore, loadOrMintDeviceId, mintDeviceId, } from '../core';
+import { IsaCredentialState, } from './credentialState';
 import { debugLoggerFromEnv, processEnv, stderrSink, } from './logger';
 import { ZyInsClient, DEFAULT_ZYINS_BASE_URL } from './client';
 import { defaultTransport } from './transport';
 import { WebhooksService } from '../rapidsign/webhooks';
+import { assertSessionIdentityForProxyCall, proxyCall as runProxyCall, } from '../proxy/call';
+import { BrandingFacade, PreferencesFacade, CasesFacade, EmailFacade, LicensesFacade, LogosFacade, } from './isaNamespaces';
+import { buildAccountNamespace } from '../account/factory';
 /**
  * Unified SDK entry point.
  *
@@ -46,31 +51,70 @@ export class Isa {
     rapidsign;
     /** Proxy namespace — internal-facing; transport composition only. */
     proxy;
+    /**
+     * `isa.account.*` — per-license account operations (branding, preferences,
+     * cases, email, reference-data). License-HMAC auth path; constructed only
+     * when the identity is a license. Bearer / session callers receive an
+     * accessor that throws `IsaConfigError` on first use, matching the zyins
+     * namespace pattern.
+     */
+    account;
     /** Top-level webhook verifier. */
     webhooks;
+    /**
+     * Shared credential state for license-mode `Isa` instances. Mutated in
+     * place by `isa.zyins.licenses.activate()`; `undefined` for bearer /
+     * session identities.
+     */
+    credentialState;
     constructor(opts) {
         this.identity = opts.identity;
         this.logger =
             opts.logger ??
                 debugLoggerFromEnv(opts.env ?? processEnv, opts.logSink ?? stderrSink);
-        this.zyins = new ZyInsNamespace({
+        this.credentialState = buildCredentialStateIfLicense(opts);
+        if (this.credentialState && opts.onLicenseRefreshed) {
+            this.credentialState.onLicenseRefreshed(opts.onLicenseRefreshed);
+        }
+        const nsOpts = { identity: opts.identity };
+        if (opts.baseUrl !== undefined)
+            nsOpts.baseUrl = opts.baseUrl;
+        if (this.logger !== undefined)
+            nsOpts.logger = this.logger;
+        if (this.credentialState !== undefined)
+            nsOpts.credentialState = this.credentialState;
+        if (opts.transport !== undefined)
+            nsOpts.transport = opts.transport;
+        if (opts.logosFetch !== undefined)
+            nsOpts.logosFetch = opts.logosFetch;
+        this.zyins = new ZyInsNamespace(nsOpts);
+        this.rapidsign = new RapidSignNamespace();
+        this.proxy = new ProxyNamespace({
+            identity: opts.identity,
+            proxyOrigin: opts.proxyOrigin ?? DEFAULT_PROXY_ORIGIN,
+        });
+        this.account = buildAccountNamespace({
             identity: opts.identity,
             ...(opts.baseUrl !== undefined && { baseUrl: opts.baseUrl }),
             ...(opts.deviceId !== undefined && { deviceId: opts.deviceId }),
             ...(opts.orderId !== undefined && { orderId: opts.orderId }),
-            ...(this.logger !== undefined && { logger: this.logger }),
         });
-        this.rapidsign = new RapidSignNamespace();
-        this.proxy = new ProxyNamespace();
         this.webhooks = new WebhooksService();
+    }
+    /** Subscribe to `onLicenseRefreshed` after construction. */
+    onLicenseRefreshed(listener) {
+        if (!this.credentialState) {
+            throw new IsaConfigError('Isa.onLicenseRefreshed is available only on license-mode instances');
+        }
+        return this.credentialState.onLicenseRefreshed(listener);
     }
     /**
      * Construct from a bearer token (server-to-server `isa_live_…` tokens).
      * With no arguments, reads `ISA_TOKEN` from the environment. Throws
      * `IsaConfigError` when neither is supplied.
      */
-    static withBearer(args, env = processEnv) {
-        return new Isa({ identity: resolveBearerIdentity(args, env) });
+    static withBearer(args, env = processEnv, options = {}) {
+        return new Isa({ identity: resolveBearerIdentity(args, env), ...options });
     }
     /**
      * Construct from a license keycode + email (BPP agent tools). With no
@@ -81,22 +125,61 @@ export class Isa {
      * in a later phase the SDK will load them from durable storage on first
      * product call.
      */
-    static withLicense(args, env = processEnv) {
+    static withLicense(args, env = processEnv, options = {}) {
         const identity = resolveLicenseIdentity(args, env);
-        const opts = { identity };
+        const opts = { identity, ...options };
         if (args?.deviceId !== undefined)
             opts.deviceId = args.deviceId;
         if (args?.orderId !== undefined)
             opts.orderId = args.orderId;
+        if (args?.licenseKey !== undefined)
+            opts.licenseKey = args.licenseKey;
+        if (args?.credentialStore !== undefined)
+            opts.credentialStore = args.credentialStore;
+        if (args?.onLicenseRefreshed !== undefined)
+            opts.onLicenseRefreshed = args.onLicenseRefreshed;
+        if (args?.transport !== undefined)
+            opts.transport = args.transport;
         return new Isa(opts);
+    }
+    /**
+     * Async variant of {@link withLicense}. Probes the credential store for a
+     * persisted `deviceId` + `licenseKey` BEFORE constructing the instance so
+     * the very first call already has every credential it needs. Use this in
+     * runtimes with persistent storage (React Native, browsers) to skip the
+     * synchronous-mint fallback and reuse the device id across process boots.
+     */
+    static async withLicenseAsync(args, env = processEnv) {
+        const deviceId = args.deviceId ?? (await loadOrMintDeviceId(args.credentialStore));
+        const storedKey = await args.credentialStore.get(CREDENTIAL_KEYS.licenseKey);
+        const licenseKey = args.licenseKey ?? storedKey;
+        const merged = { ...args, deviceId, ...(licenseKey !== undefined && { licenseKey }) };
+        return Isa.withLicense(merged, env);
+    }
+    /**
+     * Auto-detect mode from environment variables: bearer if `ISA_TOKEN` is
+     * set, license if `ISA_LICENSE_KEYCODE` + `ISA_LICENSE_EMAIL` are set,
+     * session if `ISA_SESSION_ID` + `ISA_SESSION_SECRET` are set. Throws
+     * `IsaConfigError` when no mode matches.
+     */
+    static fromEnv(env = processEnv) {
+        if (env.get(ENV_VAR_NAMES.bearer.token))
+            return Isa.withBearer(undefined, env);
+        if (env.get(ENV_VAR_NAMES.license.keycode) && env.get(ENV_VAR_NAMES.license.email)) {
+            return Isa.withLicense(undefined, env);
+        }
+        if (env.get(ENV_VAR_NAMES.session.sessionId) && env.get(ENV_VAR_NAMES.session.sessionSecret)) {
+            return Isa.withSession(undefined, env);
+        }
+        throw new IsaConfigError(`Isa.fromEnv: no recognized credential in environment (set ${ENV_VAR_NAMES.bearer.token}, ${ENV_VAR_NAMES.license.keycode} + ${ENV_VAR_NAMES.license.email}, or ${ENV_VAR_NAMES.session.sessionId} + ${ENV_VAR_NAMES.session.sessionSecret})`);
     }
     /**
      * Construct from a session (id, secret) — embedded forms. With no
      * arguments, reads `ISA_SESSION_ID` and the session-secret env var from
      * the environment.
      */
-    static withSession(args, env = processEnv) {
-        return new Isa({ identity: resolveSessionIdentity(args, env) });
+    static withSession(args, env = processEnv, options = {}) {
+        return new Isa({ identity: resolveSessionIdentity(args, env), ...options });
     }
 }
 /**
@@ -110,6 +193,30 @@ export class Isa {
 export class ZyInsNamespace {
     opts;
     clientOnce;
+    /** `isa.zyins.branding` — whitelabel lookup. */
+    branding;
+    /** `isa.zyins.preferences` — per-license preferences document. */
+    preferences;
+    /** `isa.zyins.cases` — case create + share. */
+    cases;
+    /**
+     * `isa.zyins.email` — transactional email enqueue. Today the only
+     * server endpoint is `POST /v1/email/enqueue`; the SDK exposes it as
+     * `email.enqueue` so future `list` / `get` RPCs land cleanly.
+     */
+    email;
+    /**
+     * `isa.zyins.prequalify` — callable that runs the prequalify decision
+     * from a typed `PrequalifyRequest`. Carries a `legacyBlob` property for
+     * consumers (bpp2.0) whose long-standing encoder produces the wire
+     * payload directly and would have to restructure their call site to use
+     * the typed shape.
+     */
+    prequalify;
+    /** `isa.zyins.licenses` — license lifecycle (activate / check / deactivate). */
+    licenses;
+    /** `isa.zyins.logos` — carrier-logo asset lookup (public, no auth). */
+    logos;
     constructor(opts) {
         this.opts = opts;
         let cached;
@@ -119,15 +226,13 @@ export class ZyInsNamespace {
             cached = buildLicenseClient(opts);
             return cached;
         };
-    }
-    /**
-     * Run the prequalify decision. Returns an `Envelope<PrequalifyResult>`
-     * with named `requestId`, `idempotencyKey`, and `retryAttempts` fields.
-     */
-    async prequalify(request) {
-        const client = this.clientOnce();
-        const result = await client.prequalify(request);
-        return wrapEnvelope(result, result.requestId);
+        this.branding = new BrandingFacade(this.clientOnce);
+        this.preferences = new PreferencesFacade(this.clientOnce);
+        this.cases = new CasesFacade(this.clientOnce);
+        this.email = new EmailFacade(this.clientOnce);
+        this.prequalify = buildPrequalifyCallable(this.clientOnce);
+        this.licenses = buildLicensesFacade(opts);
+        this.logos = new LogosFacade(opts.baseUrl ?? DEFAULT_ZYINS_BASE_URL, opts.logosFetch);
     }
     /** Raw-response sibling of `prequalify`. */
     prequalifyRaw = async (request) => {
@@ -135,6 +240,24 @@ export class ZyInsNamespace {
         const result = await client.prequalify(request);
         return { data: result, response: synthesizeRawResponse(result.requestId) };
     };
+}
+/**
+ * Build the `prequalify` callable with the `legacyBlob` property attached.
+ * The same `clientOnce` thunk backs both entry points so they share one
+ * lazily-constructed client (and therefore one resolved auth context).
+ */
+function buildPrequalifyCallable(clientOnce) {
+    const callable = (async (request) => {
+        const client = clientOnce();
+        const result = await client.prequalify(request);
+        return wrapEnvelope(result, result.requestId);
+    });
+    callable.legacyBlob = async (request) => {
+        const client = clientOnce();
+        const result = await client.prequalifyLegacyBlob(request);
+        return wrapEnvelope(result, result.requestId);
+    };
+    return callable;
 }
 /** Wrap a result in an envelope. Defaults for the optional fields are documented in SDK_DESIGN §4.6. */
 export function wrapEnvelope(data, requestId) {
@@ -170,26 +293,86 @@ function buildLicenseClient(opts) {
     if (opts.identity.mode !== 'license') {
         throw new IsaConfigError(`isa.zyins.* product methods currently require Isa.withLicense() — bearer and session transport wiring lands in Phase 3 of SDK_DESIGN.md`);
     }
-    if (!opts.deviceId) {
-        throw new IsaConfigError(`isa.zyins.* product methods require a deviceId on Isa.withLicense({ deviceId, orderId, … })`);
+    if (!opts.credentialState) {
+        throw new IsaConfigError('isa.zyins.* product methods require a credential state (constructed by Isa.withLicense)');
     }
-    if (!opts.orderId) {
-        throw new IsaConfigError(`isa.zyins.* product methods require an orderId on Isa.withLicense({ deviceId, orderId, … })`);
-    }
-    const auth = {
-        licenseKey: licenseKeyFor(opts.identity),
-        orderId: opts.orderId,
-        email: opts.identity.email,
-        deviceId: opts.deviceId,
-    };
     const clientOpts = {
-        auth,
+        auth: opts.credentialState.auth,
         baseUrl: opts.baseUrl ?? DEFAULT_ZYINS_BASE_URL,
     };
-    if (opts.logger) {
-        clientOpts.transport = wrapTransportWithLogger(defaultTransport(), opts.logger);
+    const baseTransport = guardTransportWithLicenseKey(opts.logger
+        ? wrapTransportWithLogger(opts.transport ?? defaultTransport(), opts.logger)
+        : (opts.transport ?? defaultTransport()), opts.credentialState);
+    clientOpts.transport = baseTransport;
+    if (opts.logosFetch) {
+        clientOpts.logosFetch = opts.logosFetch;
     }
     return new ZyInsClient(clientOpts);
+}
+function guardTransportWithLicenseKey(inner, state) {
+    return async (request) => {
+        if (!state.auth.licenseKey.trim()) {
+            throw new IsaConfigError('isa.zyins.* product methods require an active licenseKey; call isa.zyins.licenses.activate() first');
+        }
+        return inner(request);
+    };
+}
+function buildLicensesTransport(opts) {
+    const baseTransport = opts.transport ?? defaultTransport();
+    return opts.logger
+        ? wrapTransportWithLogger(baseTransport, opts.logger)
+        : baseTransport;
+}
+/**
+ * Build the licenses facade. License-mode instances get a state-backed
+ * facade with optional-arg ergonomics; other modes get a stub that raises
+ * `IsaConfigError` until those auth modes are wired.
+ */
+function buildLicensesFacade(opts) {
+    if (opts.identity.mode !== 'license' || !opts.credentialState) {
+        return licensesNotConfigured();
+    }
+    return new LicensesFacade({
+        state: opts.credentialState,
+        baseUrl: opts.baseUrl ?? DEFAULT_ZYINS_BASE_URL,
+        transport: buildLicensesTransport(opts),
+    });
+}
+/** Throws on every method when the parent `Isa` is not license-mode. */
+function licensesNotConfigured() {
+    const fail = () => {
+        throw new IsaConfigError('isa.zyins.licenses requires Isa.withLicense({ keycode, email, ... })');
+    };
+    return new Proxy(Object.create(LicensesFacade.prototype), {
+        get: () => fail,
+    });
+}
+/**
+ * Construct the {@link IsaCredentialState} for license-mode instances.
+ * Returns `undefined` for bearer / session identities; those modes do not
+ * use the license HMAC auth path yet.
+ */
+function buildCredentialStateIfLicense(opts) {
+    if (opts.identity.mode !== 'license')
+        return undefined;
+    const store = opts.credentialStore ?? inMemoryCredentialStore();
+    const deviceId = opts.deviceId ?? mintDeviceId();
+    if (!opts.deviceId) {
+        // Persist the freshly minted id so subsequent calls (and process boots
+        // sharing the store) reuse the same value. Best-effort — failures are
+        // swallowed because in-memory stores never fail, and a downstream
+        // failure on a third-party store must not block construction.
+        void store.set(CREDENTIAL_KEYS.deviceId, deviceId).catch(() => { });
+    }
+    const orderId = opts.orderId ?? licenseKeyFor(opts.identity);
+    const licenseKey = opts.licenseKey ?? '';
+    return new IsaCredentialState({
+        keycode: licenseKeyFor(opts.identity),
+        email: opts.identity.email,
+        deviceId,
+        licenseKey,
+        orderId,
+    }, store);
 }
 /**
  * Wrap a transport with debug logging. The wrapper records the request
@@ -247,20 +430,37 @@ export class RapidSignNamespace {
     /** Webhook verifier — alias of `isa.webhooks` for spec-alignment. */
     webhooks = new WebhooksService();
 }
+/** Default origin for the platform proxy `/v1/call` endpoint. */
+export const DEFAULT_PROXY_ORIGIN = 'https://proxy.isaapi.com';
 /**
- * `isa.proxy.*` — internal-facing transport namespace. The proxy surface
- * is not consumed by application code (per `@isa-sdk/proxy` ADR-035); it
- * exists on the unified `Isa` instance for parity with the spec and for
- * the SDK's own transport composition.
+ * `isa.proxy.*` — structured invocation against the platform `/v1/call`
+ * endpoint. The SDK↔proxy hop is signed with canonical session-credential
+ * HMAC (ADR-035 amendment, PR #<this>); the proxy↔downstream hop remains
+ * Algosure HMAC and is handled server-side.
+ *
+ * `proxy.call()` requires a Session identity. Bearer and License callers
+ * must exchange credentials for a session first.
  */
 export class ProxyNamespace {
+    opts;
+    constructor(opts) {
+        this.opts = opts;
+    }
     /**
-     * Placeholder — proxy transport is composed internally by product
-     * namespaces. Direct invocation lands with the bearer / session
-     * transport wiring in Phase 3 of SDK_DESIGN.md.
+     * Invoke a registered integration through the platform proxy.
+     *
+     * @throws IsaConfigError when the parent Isa was constructed with a
+     *   non-session credential (bearer / license).
+     * @throws IsaValidationError when neither or both of integrationUuid /
+     *   integrationId are supplied.
+     * @throws IsaUnauthorizedError on a 401 from the proxy.
+     * @throws IsaIdempotencyConflictError on a 409 idempotency_conflict.
+     * @throws IsaApiError on any other non-2xx response.
      */
-    call() {
-        throw new IsaConfigError(`isa.proxy.call() is reserved for Phase 3 transport wiring in SDK_DESIGN.md`);
+    async call(opts) {
+        const identity = this.opts.identity;
+        assertSessionIdentityForProxyCall(identity);
+        return runProxyCall({ proxyOrigin: this.opts.proxyOrigin, identity }, opts);
     }
 }
 //# sourceMappingURL=isa.js.map

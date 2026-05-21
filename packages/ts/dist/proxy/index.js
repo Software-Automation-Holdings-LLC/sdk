@@ -9,4 +9,5 @@
  */
 export * from "./algosure";
 export * from "./transport/call";
+export { assertSessionIdentityForProxyCall, proxyCall as proxyCallV2, } from "./call";
 //# sourceMappingURL=index.js.map

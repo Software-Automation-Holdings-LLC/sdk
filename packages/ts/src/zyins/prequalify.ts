@@ -33,6 +33,16 @@ export interface PrequalifyRequest {
   products: ProductSelection;
 }
 
+/** Inputs accepted by `prequalifyLegacyBlob`. */
+export interface PrequalifyLegacyBlobRequest {
+  /**
+   * The pre-encoded prequalify payload produced by a legacy caller's own
+   * encoder (e.g. bpp2.0's `prepEncObj` / `prepEncObjV2`). Serialized to
+   * JSON verbatim and sent as the request body.
+   */
+  encodedPayload: Record<string, unknown>;
+}
+
 /** One plan returned by the engine. */
 export interface PrequalifyPlan {
   /** Carrier brand (e.g., "colonial-penn"). */
@@ -76,6 +86,25 @@ export async function prequalify(
   ctx: PrequalifyContext,
 ): Promise<PrequalifyResult> {
   const body = serializePrequalifyBody(request, ctx.auth);
+  return prequalifyBody(body, ctx);
+}
+
+/**
+ * Run a prequalify call from a pre-encoded payload. Same path, same
+ * headers, same response shape as the typed `prequalify`.
+ */
+export async function prequalifyLegacyBlob(
+  request: PrequalifyLegacyBlobRequest,
+  ctx: PrequalifyContext,
+): Promise<PrequalifyResult> {
+  const body = JSON.stringify(request.encodedPayload);
+  return prequalifyBody(body, ctx);
+}
+
+async function prequalifyBody(
+  body: string,
+  ctx: PrequalifyContext,
+): Promise<PrequalifyResult> {
   const idempotencyKey =
     ctx.idempotencyKey ??
     (await deriveIdempotencyKey({ deviceId: ctx.auth.deviceId, op: 'prequalify', body }));

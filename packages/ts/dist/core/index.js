@@ -14,10 +14,12 @@ export * from './problem-details/types';
 export * from './http/constants';
 export * from './http/request';
 export * from './transport';
+export { canonicalString, formatTimestamp, signRequest, } from './auth/signRequest';
 // Namespaced re-exports so identically-named symbols (compress / decompress
 // in compression, encode / decode in obfuscation) don't collide at the
 // barrel level. Callers import as `import { compression, obfuscation } from
 // '@isa-sdk/core'` then call `compression.compress(...)`.
 export * as compression from './compression/gzip';
 export * as obfuscation from './obfuscation/xor';
+export { CREDENTIAL_KEYS, inMemoryCredentialStore, fromAsyncStorage, fromLocalStorage, loadOrMintDeviceId, mintDeviceId, } from './storage';
 //# sourceMappingURL=index.js.map

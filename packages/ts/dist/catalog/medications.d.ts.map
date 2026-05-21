@@ -1,0 +1,1 @@
+{"version":3,"file":"medications.d.ts","sourceRoot":"","sources":["../../src/catalog/medications.ts"],"names":[],"mappings":"AAAA;;;;;;;;;GASG;AAEH;;;;;;;;GAQG;AACH,MAAM,WAAW,qBAAqB;IACpC,QAAQ,CAAC,WAAW,EAAE,MAAM,CAAC;IAC7B,QAAQ,CAAC,WAAW,EAAE,SAAS,MAAM,EAAE,CAAC;CACzC;AAQD,eAAO,MAAM,cAAc;cACf,SAAS,MAAM,EAAE;gBAGf,MAAM,GAAG,qBAAqB;EAK1C,CAAC"}

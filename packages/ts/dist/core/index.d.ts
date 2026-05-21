@@ -15,6 +15,8 @@ export * from './problem-details/types';
 export * from './http/constants';
 export * from './http/request';
 export * from './transport';
+export { canonicalString, formatTimestamp, signRequest, type SignClock, type SignRequestHeaders, type SignRequestInput, type SignRequestResult, } from './auth/signRequest';
 export * as compression from './compression/gzip';
 export * as obfuscation from './obfuscation/xor';
+export { type CredentialStore, type AsyncStorageLike, type SyncStorageLike, CREDENTIAL_KEYS, inMemoryCredentialStore, fromAsyncStorage, fromLocalStorage, loadOrMintDeviceId, mintDeviceId, } from './storage';
 //# sourceMappingURL=index.d.ts.map

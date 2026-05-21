@@ -6,10 +6,14 @@ import { describe, it, expect } from 'vitest';
 import {
   Isa,
   ENV_VAR_NAMES,
+  IsaConfigError,
   type Envelope,
   type RawResponseResult,
   type EnvReader,
+  type ZyInsClient,
+  type CaseEmailRequest,
 } from '../../src/zyins';
+import { EmailFacade } from '../../src/zyins/isaNamespaces';
 import { TEST_APPLICANT, TEST_AUTH, TEST_COVERAGE, TEST_PRODUCTS } from './fixtures';
 
 function licenseEnv(): EnvReader {
@@ -30,6 +34,7 @@ function buildIsa(opts: { transport?: import('../src/transport').Transport } = {
       email: TEST_AUTH.email,
       deviceId: TEST_AUTH.deviceId,
       orderId: TEST_AUTH.orderId,
+      licenseKey: TEST_AUTH.licenseKey,
     },
     licenseEnv(),
   );
@@ -86,6 +91,14 @@ describe('Envelope<T>', () => {
   });
 });
 
+describe('Isa.account namespace configuration', () => {
+  it('defers non-license configuration errors until a method is called', () => {
+    const isa = Isa.withBearer({ token: 'isa_live_test' });
+    expect(() => isa.account.branding).not.toThrow();
+    expect(() => isa.account.branding.lookup()).toThrow(IsaConfigError);
+  });
+});
+
 describe('.withRawResponse variant (Phase 2 §5.4)', () => {
   it('returns { data, response } with status/headers/url', async () => {
     const isa = buildIsa({
@@ -103,6 +116,26 @@ describe('.withRawResponse variant (Phase 2 §5.4)', () => {
     expect(raw.response.status).toBe(200);
     expect(typeof raw.response.headers).toBe('object');
     expect(typeof raw.response.url).toBe('string');
+  });
+});
+
+describe('isa.zyins.prequalify.legacyBlob', () => {
+  it('POSTs an opaque encoded payload to /v1/prequalify and returns an envelope', async () => {
+    let capturedBody: string | undefined;
+    let capturedUrl: string | undefined;
+    const isa = buildIsa({
+      transport: async (req) => {
+        capturedBody = req.body;
+        capturedUrl = req.url;
+        return { status: 200, body: OK_BODY, headers: {} };
+      },
+    });
+    const opaque: Record<string, unknown> = { foo: 'bar', n: 42 };
+    const envelope = await isa.zyins.prequalify.legacyBlob({ encodedPayload: opaque });
+    expect(capturedBody).toBe(JSON.stringify(opaque));
+    expect(capturedUrl).toMatch(/\/v1\/prequalify$/);
+    expect(envelope.requestId).toBe('req_test_iso');
+    expect(envelope.data.plans[0]?.brand).toBe('colonial-penn');
   });
 });
 
@@ -128,5 +161,35 @@ describe('Concurrency safety (Phase 2 §12)', () => {
     const ids = results.map((e) => e.requestId);
     expect(ids).toHaveLength(100);
     expect(new Set(ids).size).toBe(100);
+  });
+});
+
+describe('Isa.zyins.email', () => {
+  it('routes enqueue through the cases sub-client', async () => {
+    const request: CaseEmailRequest = {
+      to: 'agent@example.com',
+      subject: 'Case',
+      bodyHtml: '<p>Case</p>',
+      attachmentFilename: 'case.pdf',
+      attachmentContent: 'pdf-bytes',
+    };
+    const facade = new EmailFacade(
+      () =>
+        ({
+          case: {
+            email: () => {
+              throw new Error('legacy case sub-client used');
+            },
+          },
+          cases: {
+            email: async (actual: CaseEmailRequest) => {
+              expect(actual).toBe(request);
+              return { enqueueId: 'eq_1' };
+            },
+          },
+        }) as unknown as ZyInsClient,
+    );
+
+    await expect(facade.enqueue(request)).resolves.toEqual({ enqueueId: 'eq_1' });
   });
 });

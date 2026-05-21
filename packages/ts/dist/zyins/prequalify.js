@@ -27,6 +27,17 @@ const PREQUALIFY_PATH = '/v1/prequalify';
  */
 export async function prequalify(request, ctx) {
     const body = serializePrequalifyBody(request, ctx.auth);
+    return prequalifyBody(body, ctx);
+}
+/**
+ * Run a prequalify call from a pre-encoded payload. Same path, same
+ * headers, same response shape as the typed `prequalify`.
+ */
+export async function prequalifyLegacyBlob(request, ctx) {
+    const body = JSON.stringify(request.encodedPayload);
+    return prequalifyBody(body, ctx);
+}
+async function prequalifyBody(body, ctx) {
     const idempotencyKey = ctx.idempotencyKey ??
         (await deriveIdempotencyKey({ deviceId: ctx.auth.deviceId, op: 'prequalify', body }));
     const headers = await buildPrequalifyHeaders({

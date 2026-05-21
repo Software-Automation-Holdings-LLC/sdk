@@ -21,15 +21,23 @@
  * bundle.
  */
 // --- Unified facade ------------------------------------------------------
-export { Isa, ZyInsNamespace, RapidSignNamespace, ProxyNamespace } from './zyins/isa';
+export { Isa, ZyInsNamespace, RapidSignNamespace, ProxyNamespace, } from './zyins/isa';
+// --- Account namespace --------------------------------------------------
+export { AccountNamespace, AccountBranding, AccountPreferences, AccountCases, AccountEmail, AccountReferenceData, } from './account';
 // --- Auth / identity / env factory --------------------------------------
 export { resolveBearerIdentity, resolveLicenseIdentity, resolveSessionIdentity, ENV_VAR_NAMES, } from './zyins/envFactory';
 // --- Errors -------------------------------------------------------------
 export { IsaError, IsaApiError, IsaConfigError, IsaIdempotencyConflictError, } from './zyins/apiError';
+export { canonicalString, formatTimestamp, signRequest, } from './core/auth/signRequest';
 // --- Value types / domain primitives (zyins-flavored, public) ----------
 export { Sex, NicotineUsage, Height, Weight, sexWireCode, } from './zyins/applicant';
 export { Coverage, } from './zyins/coverage';
 export { ProductCatalog, ProductSelection, ProductType, } from './zyins/product';
+// --- Generated catalogs -------------------------------------------------
+// Every name in this block is produced by `scripts/gen-catalog.mjs`. See
+// `src/catalog/` for the source modules and `docs/SDK_DESIGN.md` §5.1
+// for the named-export contract.
+export { Product, Products, State, States, ProductCarriers, ConditionCategories, MedicationUses, Scope, ScopeDescriptions, SignEvent, SignEventLabels, ErrorCode, ErrorAdviceCodes, ErrorDocUrls, } from './catalog';
 // --- Debug logger / env reader -----------------------------------------
 export { debugLoggerFromEnv, makeLogger, redactHeaders, redactBody, redactBodyString, processEnv, stderrSink, } from './zyins/logger';
 //# sourceMappingURL=index.js.map

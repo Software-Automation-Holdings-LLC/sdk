@@ -14,6 +14,8 @@
  * (`SAH_Compress` / `SAH_Decompress`).
  */
 const GZIP_ENCODING = 'gzip';
+const GZIP_OS_BYTE_OFFSET = 9;
+const LEGACY_GZIP_OS_BYTE = 0x13;
 /**
  * Gzip-compress `input` and return the Form.enc wire envelope.
  *
@@ -55,7 +57,9 @@ export async function gzipBytes(bytes) {
         writer.releaseLock();
     }
     const buffer = await new Response(stream.readable).arrayBuffer();
-    return new Uint8Array(buffer);
+    const out = new Uint8Array(buffer);
+    out[GZIP_OS_BYTE_OFFSET] = LEGACY_GZIP_OS_BYTE;
+    return out;
 }
 /**
  * Lower-level: decompress bytes via the platform DecompressionStream API.

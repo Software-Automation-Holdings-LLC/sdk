@@ -12,11 +12,14 @@ export { Sex, NicotineUsage, Height, Weight, sexWireCode, type Applicant, type M
 export { Coverage, type FaceValueCoverage, type MonthlyBudgetCoverage, } from './coverage';
 export { ProductCatalog, ProductSelection, ProductType, type Product, } from './product';
 export { ZyInsError, LicenseError, PrequalifyError, RateLimitedError, fromHttpResponse, fromProblemDetails, type LicenseErrorCode, type PrequalifyErrorCode, } from './errors';
-export { type PrequalifyRequest, type PrequalifyResult, type PrequalifyPlan, } from './prequalify';
+export { type PrequalifyRequest, type PrequalifyLegacyBlobRequest, type PrequalifyResult, type PrequalifyPlan, } from './prequalify';
 export { type LicenseActivateResult, type LicenseCheckResult, } from './license';
+export { type LicensesActivateRequest, type LicensesActivateResult, type LicensesActivateAuth, type LicensesCheckRequest, type LicensesCheckResult, type LicensesDeactivateRequest, type LicensesDeactivateResult, type LicenseValidationStatus, } from './licenses';
+export { getReadiness, type ReadinessResult, type ProbeResult, type ServingStatus, type HealthContext, } from './health';
 export { type CaseEmailRequest, type CaseEmailResult, } from './case';
 export { defaultTransport, type Transport, type TransportRequest, type TransportResponse, type HttpMethod, } from './transport';
 export { Isa, ZyInsNamespace, type IsaOptions } from './isa';
+export { IsaCredentialState, type LicenseCredentialSnapshot, type LicenseRefreshedEvent, type LicenseRefreshedListener, } from './credentialState';
 export { type IsaIdentity, type BearerIdentity, type LicenseIdentity, type SessionIdentity, resolveBearerIdentity, resolveLicenseIdentity, resolveSessionIdentity, ENV_VAR_NAMES, } from './envFactory';
 export { IsaError, IsaApiError, IsaConfigError, IsaIdempotencyConflictError, } from './apiError';
 export { type Envelope, type RawResponse, type RawResponseResult, } from './envelope';

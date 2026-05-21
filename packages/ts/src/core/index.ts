@@ -23,6 +23,15 @@ export * from './problem-details/types';
 export * from './http/constants';
 export * from './http/request';
 export * from './transport';
+export {
+  canonicalString,
+  formatTimestamp,
+  signRequest,
+  type SignClock,
+  type SignRequestHeaders,
+  type SignRequestInput,
+  type SignRequestResult,
+} from './auth/signRequest';
 
 // Namespaced re-exports so identically-named symbols (compress / decompress
 // in compression, encode / decode in obfuscation) don't collide at the
@@ -30,3 +39,15 @@ export * from './transport';
 // '@isa-sdk/core'` then call `compression.compress(...)`.
 export * as compression from './compression/gzip';
 export * as obfuscation from './obfuscation/xor';
+
+export {
+  type CredentialStore,
+  type AsyncStorageLike,
+  type SyncStorageLike,
+  CREDENTIAL_KEYS,
+  inMemoryCredentialStore,
+  fromAsyncStorage,
+  fromLocalStorage,
+  loadOrMintDeviceId,
+  mintDeviceId,
+} from './storage';
