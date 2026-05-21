@@ -5,10 +5,17 @@ declare(strict_types=1);
 namespace Sah\Sdk;
 
 use Psr\Log\LoggerInterface;
+use Sah\Sdk\Account\AccountClient;
+use Sah\Sdk\Core\CredentialStore;
+use Sah\Sdk\Core\InMemoryCredentialStore;
+use Sah\Sdk\Core\StaticToken;
 use Sah\Sdk\Proxy\ProxyClient;
 use Sah\Sdk\RapidSign\RapidSignClient;
 use Sah\Sdk\Zyins\Auth as ZyinsAuth;
 use Sah\Sdk\Zyins\Exception\IsaConfigException;
+use Sah\Sdk\Zyins\Licenses\CredentialState;
+use Sah\Sdk\Zyins\Licenses\Facade as LicensesFacade;
+use Sah\Sdk\Zyins\Licenses\LicenseRefreshedEvent;
 use Sah\Sdk\Zyins\ZyInsClient;
 
 /**
@@ -18,75 +25,124 @@ use Sah\Sdk\Zyins\ZyInsClient;
  * audiences described in the SDK Design (§3.2):
  *
  *  - {@see Isa::withBearer()}  — server-to-server, Stripe-issued `isa_*` token.
- *  - {@see Isa::withLicense()} — agent tools (BPP web, BPP desktop, BPP online).
- *  - {@see Isa::withSession()} — embedded forms (eApp signer page, third-party hosts).
+ *  - {@see Isa::withLicense()} — agent tools (BPP web, desktop, online).
+ *  - {@see Isa::withSession()} — embedded forms (eApp signer, third-party hosts).
+ *  - {@see Isa::fromEnv()}     — pick the right factory based on the environment.
  *
  * Each factory reads sensible defaults from the environment when invoked
- * with no arguments — see the factory docblock for the exact variable names.
+ * with no arguments — see the factory docblock for the exact variable
+ * names.
  *
  *     $isa = Isa::withBearer();                       // reads ISA_TOKEN
  *     $result = $isa->zyins->prequalify->run($input);
  *     $envelope = $isa->rapidsign->documents->send($req);
  *     $resp = $isa->proxy->call->invoke($uuid, $invokeInput);
+ *     $branding = $isa->account->branding->lookup(['keycode' => 'ABC-123-XYZ']);
  *
- * Product namespaces are wired lazily at construction; all share the same
- * authentication credential and base URL.
+ * Product namespaces are wired lazily at construction; all share the
+ * same authentication credential and base URL.
  */
 final readonly class Isa
 {
+    private const LICENSE_DEVICE_ID_PREFIX = 'php-sdk-';
+
     /**
-     * Product namespace: ZyINS underwriting and quoting.
+     * Product namespace: ZyINS underwriting, quoting, licensing, logos.
      *
      * Access services via the public properties on {@see ZyInsClient}
-     * (`prequalify`, `quote`, `datasets`, `referenceData`, `usage`).
+     * (`prequalify`, `quote`, `datasets`, `referenceData`, `usage`,
+     * `licenses`, `logos`, `health`).
      */
     public ZyInsClient $zyins;
 
     /**
      * Product namespace: RapidSign envelope and document workflows.
-     *
-     * Access services via the public properties on {@see RapidSignClient}
-     * (`documents`, `webhooks`).
      */
     public RapidSignClient $rapidsign;
 
     /**
      * Product namespace: ISA Platform `/v1/call` proxy (Algosure HMAC).
-     *
-     * Access services via the public properties on {@see ProxyClient}
-     * (`call`, `algosure`).
      */
     public ProxyClient $proxy;
 
     /**
-     * Private constructor — every public path is one of the three named
-     * factories so callers cannot accidentally bypass credential resolution.
+     * Product namespace: elevated account API surface (branding,
+     * preferences, cases, email, referenceData). Mounted under
+     * `account.isaapi.com`.
+     */
+    public AccountClient $account;
+
+    /**
+     * Credential-aware licenses facade exposed at
+     * `$isa->licenses->{activate,check,deactivate}()` with zero-arg
+     * call sites. `null` outside license mode — the {@see ZyInsClient}
+     * `licenses` service is still available for explicit-input calls.
+     */
+    public ?LicensesFacade $licenses;
+
+    /**
+     * Shared credential state in license mode. `null` for bearer /
+     * session modes. Subscribe via {@see onLicenseRefreshed()}.
+     */
+    private ?CredentialState $credentialState;
+
+    /**
+     * Private constructor — every public path is a named factory so
+     * callers cannot accidentally bypass credential resolution.
      */
     private function __construct(
         string|ZyinsAuth $token,
         ?LoggerInterface $logger,
+        ?CredentialState $credentialState = null,
     ) {
-        // RapidSign and Proxy clients consume the raw bearer string for
-        // their Authorization header; ZyINS owns the polymorphic Auth
-        // value object so license/session schemes propagate through it.
         $bearer = $token instanceof ZyinsAuth ? $token->token : $token;
+        $proxyAuth = $token instanceof ZyinsAuth ? $token : new ZyinsAuth(token: $token);
         $this->zyins = new ZyInsClient(token: $token, logger: $logger);
         $this->rapidsign = new RapidSignClient(token: $bearer);
-        $this->proxy = new ProxyClient(token: $bearer);
+        $this->proxy = new ProxyClient(token: $bearer, identityAuth: $proxyAuth);
+
+        $tokenSource = new StaticToken($bearer);
+        $this->account = new AccountClient(
+            tokenSource: $tokenSource,
+            referenceData: $this->zyins->referenceData,
+            authorizationScheme: $proxyAuth->scheme,
+        );
+
+        $this->credentialState = $credentialState;
+        $this->licenses = $credentialState === null
+            ? null
+            : new LicensesFacade($this->zyins->licenses, $credentialState);
+    }
+
+    /**
+     * Subscribe to license-refresh events. The listener fires whenever
+     * the SDK observes a fresh license key — typically the return
+     * value of `$isa->licenses->activate()`.
+     *
+     * Returns an unsubscribe closure so callers can detach without
+     * holding the original listener.
+     *
+     * @param \Closure(LicenseRefreshedEvent):void $listener
+     * @return \Closure():void
+     *
+     * @throws \LogicException When called on a non-license Isa instance.
+     */
+    public function onLicenseRefreshed(\Closure $listener): \Closure
+    {
+        if ($this->credentialState === null) {
+            throw new \LogicException(
+                'Isa::onLicenseRefreshed is available only on license-mode instances. ' .
+                'Construct via Isa::withLicense() or Isa::fromEnv() with ISA_LICENSE_* set.'
+            );
+        }
+        return $this->credentialState->onLicenseRefreshed($listener);
     }
 
     /**
      * Construct a Bearer-mode SDK. When no token is provided, reads
      * `ISA_TOKEN` from the process environment.
      *
-     * @param string|null          $token  Optional bearer token; env is consulted when null.
-     * @param LoggerInterface|null $logger Optional PSR-3 logger. Defaults to stderr at `ISA_LOG=debug`.
-     *
      * @throws IsaConfigException When neither argument nor env supplies a token.
-     *
-     * @example
-     * // Reads ISA_TOKEN from the environment:
-     * $isa = Isa::withBearer();
      */
     public static function withBearer(?string $token = null, ?LoggerInterface $logger = null): self
     {
@@ -100,23 +156,26 @@ final readonly class Isa
     }
 
     /**
-     * Construct a License-mode SDK (agent-tool credential). When invoked
-     * with no arguments, reads `ISA_LICENSE_KEYCODE` and
-     * `ISA_LICENSE_EMAIL` from the environment.
+     * Construct a License-mode SDK. When invoked with no arguments,
+     * reads `ISA_LICENSE_KEYCODE` and `ISA_LICENSE_EMAIL` from the
+     * environment. Wires the credential-aware
+     * {@see \Sah\Sdk\Zyins\Licenses\Facade} so callers may invoke
+     * `activate() / check() / deactivate()` with zero arguments.
      *
-     * @param string|null          $keycode License keycode; env is consulted when null.
-     * @param string|null          $email   License email; env is consulted when null.
-     * @param LoggerInterface|null $logger  Optional PSR-3 logger.
+     * @param string|null              $keycode  License keycode; env is consulted when null.
+     * @param string|null              $email    License email; env is consulted when null.
+     * @param LoggerInterface|null     $logger   Optional PSR-3 logger.
+     * @param CredentialStore|null     $store    Pluggable persistence; defaults to in-memory.
+     * @param string|null              $deviceId Optional device fingerprint; reads `ISA_LICENSE_DEVICE_ID` when null.
      *
-     * @throws IsaConfigException When either credential is missing.
-     *
-     * @example
-     * $isa = Isa::withLicense('ABC-123-XYZ', 'agent@example.com');
+     * @throws IsaConfigException When either required credential is missing.
      */
     public static function withLicense(
         ?string $keycode = null,
         ?string $email = null,
         ?LoggerInterface $logger = null,
+        ?CredentialStore $store = null,
+        ?string $deviceId = null,
     ): self {
         $resolvedKey = $keycode ?? self::env('ISA_LICENSE_KEYCODE');
         $resolvedEmail = $email ?? self::env('ISA_LICENSE_EMAIL');
@@ -130,23 +189,37 @@ final readonly class Isa
                 'Isa::withLicense(): missing email. Pass it explicitly or set ISA_LICENSE_EMAIL in the environment.'
             );
         }
-        return new self(token: ZyinsAuth::license($resolvedKey, $resolvedEmail), logger: $logger);
+
+        $resolvedStore = $store ?? new InMemoryCredentialStore();
+        $resolvedDevice = $deviceId
+            ?? self::env('ISA_LICENSE_DEVICE_ID')
+            ?? $resolvedStore->get(CredentialState::STORE_KEY_DEVICE_ID)
+            ?? self::newLicenseDeviceId();
+        $resolvedStore->set(CredentialState::STORE_KEY_DEVICE_ID, $resolvedDevice);
+        $stashedKey = $resolvedStore->get(CredentialState::STORE_KEY_LICENSE) ?? '';
+
+        $state = new CredentialState(
+            email: $resolvedEmail,
+            keycode: $resolvedKey,
+            deviceId: $resolvedDevice,
+            licenseKey: $stashedKey,
+            orderId: $resolvedKey,
+            store: $resolvedStore,
+        );
+
+        return new self(
+            token: ZyinsAuth::license($resolvedKey, $resolvedEmail),
+            logger: $logger,
+            credentialState: $state,
+        );
     }
 
     /**
-     * Construct a Session-mode SDK (embedded-form credential). When
-     * invoked with no arguments, reads `ISA_SESSION_ID` and
-     * `ISA_SESSION_SECRET` from the environment.
-     *
-     * @param string|null          $sessionId     Session id; env is consulted when null.
-     * @param string|null          $sessionSecret Session signing secret; env is consulted when null.
-     * @param LoggerInterface|null $logger        Optional PSR-3 logger.
+     * Construct a Session-mode SDK. When invoked with no arguments,
+     * reads `ISA_SESSION_ID` and `ISA_SESSION_SECRET` from the
+     * environment.
      *
      * @throws IsaConfigException When either credential is missing.
-     *
-     * @example
-     * // Reads ISA_SESSION_ID and ISA_SESSION_SECRET from the environment:
-     * $isa = Isa::withSession();
      */
     public static function withSession(
         ?string $sessionId = null,
@@ -168,6 +241,34 @@ final readonly class Isa
         return new self(token: ZyinsAuth::session($resolvedId, $resolvedSecret), logger: $logger);
     }
 
+    /**
+     * Pick the right factory based on the environment, in priority
+     * order:
+     *
+     *   1. `ISA_TOKEN`                         → {@see withBearer()}
+     *   2. `ISA_LICENSE_KEYCODE` + `_EMAIL`    → {@see withLicense()}
+     *   3. `ISA_SESSION_ID` + `_SECRET`        → {@see withSession()}
+     *
+     * Throws {@see IsaConfigException} when none of the recognized
+     * credential bundles is present.
+     */
+    public static function fromEnv(?LoggerInterface $logger = null): self
+    {
+        if (self::env('ISA_TOKEN') !== null) {
+            return self::withBearer(logger: $logger);
+        }
+        if (self::env('ISA_LICENSE_KEYCODE') !== null && self::env('ISA_LICENSE_EMAIL') !== null) {
+            return self::withLicense(logger: $logger);
+        }
+        if (self::env('ISA_SESSION_ID') !== null && self::env('ISA_SESSION_SECRET') !== null) {
+            return self::withSession(logger: $logger);
+        }
+        throw new IsaConfigException(
+            'Isa::fromEnv(): no recognized credential bundle in environment. ' .
+            'Set ISA_TOKEN, or ISA_LICENSE_KEYCODE + ISA_LICENSE_EMAIL, or ISA_SESSION_ID + ISA_SESSION_SECRET.'
+        );
+    }
+
     private static function env(string $name): ?string
     {
         $value = getenv($name);
@@ -175,5 +276,10 @@ final readonly class Isa
             return null;
         }
         return $value;
+    }
+
+    private static function newLicenseDeviceId(): string
+    {
+        return self::LICENSE_DEVICE_ID_PREFIX . bin2hex(random_bytes(16));
     }
 }

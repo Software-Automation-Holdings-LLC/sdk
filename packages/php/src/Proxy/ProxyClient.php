@@ -8,6 +8,8 @@ use GuzzleHttp\Client as GuzzleClient;
 use Psr\Http\Client\ClientInterface;
 use Sah\Sdk\Proxy\Algosure\AlgosureSigner;
 use Sah\Sdk\Proxy\Call\Service as CallService;
+use Sah\Sdk\Proxy\Call\SessionCallService;
+use Sah\Sdk\Zyins\Auth as IdentityAuth;
 
 /**
  * ISA Platform proxy SDK entry point.
@@ -38,6 +40,15 @@ final readonly class ProxyClient
     public CallService $call;
     public AlgosureSigner $algosure;
     public Auth $auth;
+    /**
+     * Typed identity threaded from the parent Isa instance. Carries the
+     * scheme (Bearer / License / Session) so {@see invokeSession()} can
+     * refuse non-session callers at the boundary. Null when the
+     * ProxyClient was constructed directly with a raw token string (the
+     * legacy entry-point preserved for back-compat).
+     */
+    public ?IdentityAuth $identityAuth;
+    public SessionCallService $callSession;
     private Transport $transport;
 
     public function __construct(
@@ -48,8 +59,10 @@ final readonly class ProxyClient
         string $apiVersion = Transport::DEFAULT_API_VERSION,
         ?string $userAgent = null,
         ?Clock $clock = null,
+        ?IdentityAuth $identityAuth = null,
     ) {
         $this->auth = new Auth($token);
+        $this->identityAuth = $identityAuth;
         $this->transport = new Transport(
             http: $httpClient ?? new GuzzleClient(['http_errors' => false]),
             auth: $this->auth,
@@ -60,6 +73,13 @@ final readonly class ProxyClient
         );
         $this->call = new CallService($this->transport);
         $this->algosure = new AlgosureSigner(clock: $clock ?? new SystemClock());
+        $this->callSession = new SessionCallService(
+            http: $httpClient ?? new GuzzleClient(['http_errors' => false]),
+            baseUrl: rtrim($baseUrl, '/'),
+            identityAuth: $identityAuth,
+            idempotency: $idempotency ?? new RandomIdempotencyKeySource(),
+            clock: $clock ?? new SystemClock(),
+        );
     }
 
     private static function defaultUserAgent(): string

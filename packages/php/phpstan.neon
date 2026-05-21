@@ -39,3 +39,26 @@ parameters:
         -
             message: '#Access to an undefined property Sah\\Sdk\\Core\\Sleeper::\$calls\.#'
             path: tests/Core/RetryClientTest.php
+        # Account-namespace tests assert envelope `data` shape after a
+        # mocked HTTP exchange; the envelope's `data` is intentionally
+        # `mixed` and the test narrowing happens at runtime via the
+        # client's typed value objects (BrandingDetail / CaseDetail /
+        # EmailCaseAck). PHPStan cannot see through the require/json
+        # round-trip.
+        -
+            message: '#Cannot access property \$(imoName|hideAffiliateLeads|caseId|to|status) on mixed\.#'
+            path: tests/Account/*
+        # The negative-test for EmailClient intentionally calls
+        # `enqueue` with an incomplete array literal to assert the
+        # InvalidArgumentException; PHPStan correctly notices the
+        # missing required `body` key.
+        -
+            message: '#expects array\{to: string, subject: string, body: string.*\}#'
+            path: tests/Account/AccountClientTest.php
+        # IsaTest exercises the package-private CredentialState via
+        # reflection so the listener path can be tested without hitting
+        # the network. PHPStan loses the narrowing through
+        # ReflectionProperty::getValue().
+        -
+            message: '#Cannot call method refreshLicenseKey\(\) on mixed\.#'
+            path: tests/IsaTest.php

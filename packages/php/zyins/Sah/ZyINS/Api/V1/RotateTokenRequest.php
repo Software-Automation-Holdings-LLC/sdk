@@ -11,14 +11,17 @@ use Google\Protobuf\RepeatedField;
 
 /**
  * RotateTokenRequest targets an existing token; the server issues a new
- * token with the same scopes and revokes the old one.
+ * token with the same scopes and schedules the old one for revocation
+ * after a grace window.
  *
  * Generated from protobuf message <code>api.zyins.v1.RotateTokenRequest</code>
  */
 class RotateTokenRequest extends \Google\Protobuf\Internal\Message
 {
     /**
-     * Identifier of the token to rotate.
+     * Identifier of the token to rotate. May be supplied as the
+     * path parameter on `/v1/tokens/{token_id}/rotate` or in the
+     * request body on the legacy `/v1/tokens/rotate` binding.
      *
      * Generated from protobuf field <code>string token_id = 1 [json_name = "tokenId"];</code>
      */
@@ -30,6 +33,18 @@ class RotateTokenRequest extends \Google\Protobuf\Internal\Message
      * Generated from protobuf field <code>int32 expires_in_days = 2 [json_name = "expiresInDays"];</code>
      */
     protected $expires_in_days = 0;
+    /**
+     * Seconds the old token remains active after rotation before the
+     * sweeper revokes it. Absent applies the default 2,592,000 (30
+     * days). Range 0 to 7,776,000 (90 days). Explicit 0 revokes the old
+     * token immediately; the new token still ships in the response.
+     * Task #117 + #118: handler stamps `revokes_at = now() +
+     * grace_period_seconds`; the sweeper Lambda flips status to
+     * `revoked` when the deadline elapses.
+     *
+     * Generated from protobuf field <code>optional int32 grace_period_seconds = 3 [json_name = "gracePeriodSeconds"];</code>
+     */
+    protected $grace_period_seconds = null;
 
     /**
      * Constructor.
@@ -38,10 +53,20 @@ class RotateTokenRequest extends \Google\Protobuf\Internal\Message
      *     Optional. Data for populating the Message object.
      *
      *     @type string $token_id
-     *           Identifier of the token to rotate.
+     *           Identifier of the token to rotate. May be supplied as the
+     *           path parameter on `/v1/tokens/{token_id}/rotate` or in the
+     *           request body on the legacy `/v1/tokens/rotate` binding.
      *     @type int $expires_in_days
      *           Expiry for the replacement token in days. Zero or absent keeps the
      *           original expiry policy.
+     *     @type int $grace_period_seconds
+     *           Seconds the old token remains active after rotation before the
+     *           sweeper revokes it. Absent applies the default 2,592,000 (30
+     *           days). Range 0 to 7,776,000 (90 days). Explicit 0 revokes the old
+     *           token immediately; the new token still ships in the response.
+     *           Task #117 + #118: handler stamps `revokes_at = now() +
+     *           grace_period_seconds`; the sweeper Lambda flips status to
+     *           `revoked` when the deadline elapses.
      * }
      */
     public function __construct($data = NULL) {
@@ -50,7 +75,9 @@ class RotateTokenRequest extends \Google\Protobuf\Internal\Message
     }
 
     /**
-     * Identifier of the token to rotate.
+     * Identifier of the token to rotate. May be supplied as the
+     * path parameter on `/v1/tokens/{token_id}/rotate` or in the
+     * request body on the legacy `/v1/tokens/rotate` binding.
      *
      * Generated from protobuf field <code>string token_id = 1 [json_name = "tokenId"];</code>
      * @return string
@@ -61,7 +88,9 @@ class RotateTokenRequest extends \Google\Protobuf\Internal\Message
     }
 
     /**
-     * Identifier of the token to rotate.
+     * Identifier of the token to rotate. May be supplied as the
+     * path parameter on `/v1/tokens/{token_id}/rotate` or in the
+     * request body on the legacy `/v1/tokens/rotate` binding.
      *
      * Generated from protobuf field <code>string token_id = 1 [json_name = "tokenId"];</code>
      * @param string $var
@@ -99,6 +128,54 @@ class RotateTokenRequest extends \Google\Protobuf\Internal\Message
     {
         GPBUtil::checkInt32($var);
         $this->expires_in_days = $var;
+
+        return $this;
+    }
+
+    /**
+     * Seconds the old token remains active after rotation before the
+     * sweeper revokes it. Absent applies the default 2,592,000 (30
+     * days). Range 0 to 7,776,000 (90 days). Explicit 0 revokes the old
+     * token immediately; the new token still ships in the response.
+     * Task #117 + #118: handler stamps `revokes_at = now() +
+     * grace_period_seconds`; the sweeper Lambda flips status to
+     * `revoked` when the deadline elapses.
+     *
+     * Generated from protobuf field <code>optional int32 grace_period_seconds = 3 [json_name = "gracePeriodSeconds"];</code>
+     * @return int
+     */
+    public function getGracePeriodSeconds()
+    {
+        return isset($this->grace_period_seconds) ? $this->grace_period_seconds : 0;
+    }
+
+    public function hasGracePeriodSeconds()
+    {
+        return isset($this->grace_period_seconds);
+    }
+
+    public function clearGracePeriodSeconds()
+    {
+        unset($this->grace_period_seconds);
+    }
+
+    /**
+     * Seconds the old token remains active after rotation before the
+     * sweeper revokes it. Absent applies the default 2,592,000 (30
+     * days). Range 0 to 7,776,000 (90 days). Explicit 0 revokes the old
+     * token immediately; the new token still ships in the response.
+     * Task #117 + #118: handler stamps `revokes_at = now() +
+     * grace_period_seconds`; the sweeper Lambda flips status to
+     * `revoked` when the deadline elapses.
+     *
+     * Generated from protobuf field <code>optional int32 grace_period_seconds = 3 [json_name = "gracePeriodSeconds"];</code>
+     * @param int $var
+     * @return $this
+     */
+    public function setGracePeriodSeconds(int $var)
+    {
+        GPBUtil::checkInt32($var);
+        $this->grace_period_seconds = $var;
 
         return $this;
     }

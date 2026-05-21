@@ -100,6 +100,15 @@ class TokenDetail extends \Google\Protobuf\Internal\Message
      * Generated from protobuf field <code>string last_used_at = 13 [json_name = "lastUsedAt"];</code>
      */
     protected $last_used_at = '';
+    /**
+     * RFC 3339 timestamp at which the sweeper will revoke this token.
+     * Set when the token has been replaced via Rotate but its grace
+     * window has not yet elapsed. Empty string when no rotation is
+     * pending. Task #117 + #118.
+     *
+     * Generated from protobuf field <code>string revokes_at = 14 [json_name = "revokesAt"];</code>
+     */
+    protected $revokes_at = '';
 
     /**
      * Constructor.
@@ -137,6 +146,11 @@ class TokenDetail extends \Google\Protobuf\Internal\Message
      *     @type string $last_used_at
      *           RFC 3339 timestamp of the most recent authenticated request made
      *           with this token. Empty string if the token has never been used.
+     *     @type string $revokes_at
+     *           RFC 3339 timestamp at which the sweeper will revoke this token.
+     *           Set when the token has been replaced via Rotate but its grace
+     *           window has not yet elapsed. Empty string when no rotation is
+     *           pending. Task #117 + #118.
      * }
      */
     public function __construct($data = NULL) {
@@ -485,6 +499,38 @@ class TokenDetail extends \Google\Protobuf\Internal\Message
     {
         GPBUtil::checkString($var, true);
         $this->last_used_at = $var;
+
+        return $this;
+    }
+
+    /**
+     * RFC 3339 timestamp at which the sweeper will revoke this token.
+     * Set when the token has been replaced via Rotate but its grace
+     * window has not yet elapsed. Empty string when no rotation is
+     * pending. Task #117 + #118.
+     *
+     * Generated from protobuf field <code>string revokes_at = 14 [json_name = "revokesAt"];</code>
+     * @return string
+     */
+    public function getRevokesAt()
+    {
+        return $this->revokes_at;
+    }
+
+    /**
+     * RFC 3339 timestamp at which the sweeper will revoke this token.
+     * Set when the token has been replaced via Rotate but its grace
+     * window has not yet elapsed. Empty string when no rotation is
+     * pending. Task #117 + #118.
+     *
+     * Generated from protobuf field <code>string revokes_at = 14 [json_name = "revokesAt"];</code>
+     * @param string $var
+     * @return $this
+     */
+    public function setRevokesAt(string $var)
+    {
+        GPBUtil::checkString($var, true);
+        $this->revokes_at = $var;
 
         return $this;
     }

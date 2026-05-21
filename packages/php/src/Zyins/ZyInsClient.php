@@ -7,8 +7,15 @@ namespace Sah\Sdk\Zyins;
 use GuzzleHttp\Client as GuzzleClient;
 use Psr\Http\Client\ClientInterface;
 use Psr\Log\LoggerInterface;
+use Sah\Sdk\Zyins\Branding\Service as BrandingService;
+use Sah\Sdk\Zyins\Cases\Service as CasesService;
 use Sah\Sdk\Zyins\Datasets\Service as DatasetsService;
+use Sah\Sdk\Zyins\Email\Service as EmailService;
 use Sah\Sdk\Zyins\Exception\IsaConfigException;
+use Sah\Sdk\Zyins\Health\Service as HealthService;
+use Sah\Sdk\Zyins\Licenses\Service as LicensesService;
+use Sah\Sdk\Zyins\Logos\Service as LogosService;
+use Sah\Sdk\Zyins\Preferences\Service as PreferencesService;
 use Sah\Sdk\Zyins\Logging\DebugLogger;
 use Sah\Sdk\Zyins\Prequalify\Service as PrequalifyService;
 use Sah\Sdk\Zyins\Quote\Service as QuoteService;
@@ -49,6 +56,13 @@ final readonly class ZyInsClient
     public DatasetsService $datasets;
     public ReferenceDataService $referenceData;
     public UsageService $usage;
+    public LicensesService $licenses;
+    public LogosService $logos;
+    public HealthService $health;
+    public BrandingService $branding;
+    public PreferencesService $preferences;
+    public CasesService $cases;
+    public EmailService $email;
     public Auth $auth;
     private Transport $transport;
 
@@ -76,6 +90,16 @@ final readonly class ZyInsClient
         $this->datasets = new DatasetsService($this->transport);
         $this->referenceData = new ReferenceDataService($this->transport);
         $this->usage = new UsageService($this->transport);
+        $this->licenses = new LicensesService($this->transport);
+        $this->logos = new LogosService(
+            http: $httpClient ?? new GuzzleClient(['http_errors' => false]),
+            baseUrl: rtrim($baseUrl, '/'),
+        );
+        $this->health = new HealthService($this->transport);
+        $this->branding = new BrandingService($this->transport);
+        $this->preferences = new PreferencesService($this->transport);
+        $this->email = new EmailService($this->transport);
+        $this->cases = new CasesService($this->transport, $this->email);
     }
 
     /**
@@ -194,6 +218,6 @@ final readonly class ZyInsClient
 
     private static function defaultUserAgent(): string
     {
-        return sprintf('sah-sdk-zyins-php/%s php/%s', '0.2.0', PHP_VERSION);
+        return sprintf('sah-sdk-zyins-php/%s php/%s', '0.4.0-rc.1', PHP_VERSION);
     }
 }

@@ -47,12 +47,17 @@
     },
     "extra": {
         "branch-alias": {
-            "dev-main": "0.3-dev"
+            "dev-main": "0.4-dev"
         }
     },
     "config": {
         "sort-packages": true
     },
+    "scripts": {
+        "test": "phpunit --no-coverage",
+        "lint": "phpstan analyse --memory-limit=2G --no-progress",
+        "gen:catalog": "php -d memory_limit=2G scripts/gen-catalog.php"
+    },
     "minimum-stability": "stable",
-    "version": "0.3.2"
+    "version": "0.4.0"
 }

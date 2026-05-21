@@ -78,6 +78,21 @@ class CreateTokenResponse extends \Google\Protobuf\Internal\Message
      * Generated from protobuf field <code>string expires_at = 10 [json_name = "expiresAt"];</code>
      */
     protected $expires_at = '';
+    /**
+     * RFC 3339 timestamp at which the *previous* token is scheduled to
+     * revoke. Populated only on Rotate responses with a non-zero grace
+     * window; empty on Create or immediate revocation. Task #117.
+     *
+     * Generated from protobuf field <code>string previous_token_revokes_at = 11 [json_name = "previousTokenRevokesAt"];</code>
+     */
+    protected $previous_token_revokes_at = '';
+    /**
+     * Identifier of the *previous* token (the one being rotated).
+     * Populated only on Rotate responses; empty on Create. Task #117.
+     *
+     * Generated from protobuf field <code>string previous_token_id = 12 [json_name = "previousTokenId"];</code>
+     */
+    protected $previous_token_id = '';
 
     /**
      * Constructor.
@@ -106,6 +121,13 @@ class CreateTokenResponse extends \Google\Protobuf\Internal\Message
      *     @type string $expires_at
      *           RFC 3339 expiry timestamp. Empty string means the token does not
      *           expire.
+     *     @type string $previous_token_revokes_at
+     *           RFC 3339 timestamp at which the *previous* token is scheduled to
+     *           revoke. Populated only on Rotate responses with a non-zero grace
+     *           window; empty on Create or immediate revocation. Task #117.
+     *     @type string $previous_token_id
+     *           Identifier of the *previous* token (the one being rotated).
+     *           Populated only on Rotate responses; empty on Create. Task #117.
      * }
      */
     public function __construct($data = NULL) {
@@ -370,6 +392,64 @@ class CreateTokenResponse extends \Google\Protobuf\Internal\Message
     {
         GPBUtil::checkString($var, true);
         $this->expires_at = $var;
+
+        return $this;
+    }
+
+    /**
+     * RFC 3339 timestamp at which the *previous* token is scheduled to
+     * revoke. Populated only on Rotate responses with a non-zero grace
+     * window; empty on Create or immediate revocation. Task #117.
+     *
+     * Generated from protobuf field <code>string previous_token_revokes_at = 11 [json_name = "previousTokenRevokesAt"];</code>
+     * @return string
+     */
+    public function getPreviousTokenRevokesAt()
+    {
+        return $this->previous_token_revokes_at;
+    }
+
+    /**
+     * RFC 3339 timestamp at which the *previous* token is scheduled to
+     * revoke. Populated only on Rotate responses with a non-zero grace
+     * window; empty on Create or immediate revocation. Task #117.
+     *
+     * Generated from protobuf field <code>string previous_token_revokes_at = 11 [json_name = "previousTokenRevokesAt"];</code>
+     * @param string $var
+     * @return $this
+     */
+    public function setPreviousTokenRevokesAt(string $var)
+    {
+        GPBUtil::checkString($var, true);
+        $this->previous_token_revokes_at = $var;
+
+        return $this;
+    }
+
+    /**
+     * Identifier of the *previous* token (the one being rotated).
+     * Populated only on Rotate responses; empty on Create. Task #117.
+     *
+     * Generated from protobuf field <code>string previous_token_id = 12 [json_name = "previousTokenId"];</code>
+     * @return string
+     */
+    public function getPreviousTokenId()
+    {
+        return $this->previous_token_id;
+    }
+
+    /**
+     * Identifier of the *previous* token (the one being rotated).
+     * Populated only on Rotate responses; empty on Create. Task #117.
+     *
+     * Generated from protobuf field <code>string previous_token_id = 12 [json_name = "previousTokenId"];</code>
+     * @param string $var
+     * @return $this
+     */
+    public function setPreviousTokenId(string $var)
+    {
+        GPBUtil::checkString($var, true);
+        $this->previous_token_id = $var;
 
         return $this;
     }

@@ -65,6 +65,30 @@ final readonly class Service
     }
 
     /**
+     * Raw-blob variant of {@see run()}. Accepts a pre-encoded
+     * payload verbatim — useful for long-standing consumers (e.g.
+     * bpp2.0's `prepEncObj` / `prepEncObjV2`) that already build the
+     * wire body via their own encoder and would have to restructure
+     * to pass through {@see Input}. Reuses the rest of the transport
+     * machinery (auth, idempotency, error funnel, response parsing).
+     *
+     * The server accepts both the typed and legacy-blob shapes on
+     * the same `/v1/prequalify` path.
+     *
+     * @param array<string,mixed> $encodedPayload Pre-encoded prequalify body.
+     */
+    public function legacyBlob(array $encodedPayload, ?RequestOptions $options = null): Result
+    {
+        $response = $this->transport->post(self::PATH, $encodedPayload, $options);
+        return Result::fromWire(
+            $response->data,
+            $response->requestId,
+            $response->idempotencyKey,
+            $response->retryAttempts,
+        );
+    }
+
+    /**
      * Same as {@see run()} but returns a `[Result, RawResponse]` pair so
      * callers can read response headers, the effective URL after
      * redirects, or the raw body without subclassing the transport.

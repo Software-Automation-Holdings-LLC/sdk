@@ -103,3 +103,27 @@ vendor/bin/phpunit
 vendor/bin/phpstan analyse --level max src tests
 vendor/bin/php-cs-fixer fix --dry-run --diff
 ```
+
+## Licenses and Ready
+
+The PHP SDK exposes the public BPP license-lifecycle surface and the
+platform readiness probe on every `ZyInsClient`:
+
+```php
+use Sah\Sdk\Zyins\Licenses\CheckInput;
+use Sah\Sdk\Zyins\ZyInsClient;
+
+$client = ZyInsClient::withBearer();
+
+$result = $client->licenses->check(new CheckInput(
+    email: 'john.doe@acme-agency.com',
+    keycode: 'ABC-123-XYZ',
+));
+// $result->status: 'valid' | 'invalid' | 'inactive'
+
+$ready = $client->health->getReadiness();
+// $ready->ready: true on every required probe = 'serving'
+```
+
+`/v1/licenses/check` and `/v1/licenses/deactivate` are public; `/ready`
+is the unauthenticated load-balancer probe.

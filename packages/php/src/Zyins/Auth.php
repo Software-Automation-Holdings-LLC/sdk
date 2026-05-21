@@ -32,6 +32,11 @@ final readonly class Auth
     public function __construct(
         public string $token,
         public string $scheme = self::SCHEME_BEARER,
+        // Session-mode credentials carry the HMAC signing secret here;
+        // null for Bearer / License modes. Previously this field was
+        // dropped at construction — the proxy.call boundary now requires
+        // it so the surgical fix is to preserve it through Auth.
+        public ?string $sessionSecret = null,
     ) {
         if (trim($this->token) === '') {
             throw new InvalidArgumentException('Sah\\Sdk\\Zyins\\Auth refuses an empty token');
@@ -72,7 +77,17 @@ final readonly class Auth
         if ($secretIsEmpty) {
             throw new InvalidArgumentException('Sah\\Sdk\\Zyins\\Auth::session requires a non-empty session secret');
         }
-        return new self(token: $sid, scheme: self::SCHEME_SESSION);
+        return new self(
+            token: $sid,
+            scheme: self::SCHEME_SESSION,
+            sessionSecret: $sessionSecret,
+        );
+    }
+
+    /** True iff this credential is session-mode (proxy.call eligible). */
+    public function isSession(): bool
+    {
+        return $this->scheme === self::SCHEME_SESSION;
     }
 
     /**
