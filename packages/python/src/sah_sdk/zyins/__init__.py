@@ -26,10 +26,25 @@ from ..core.errors import (
     ValidationError,
 )
 from .applicant import Applicant, Condition, Medication, NicotineUsage, Sex
+from .branding import BrandingDetail
+from .cases import (
+    CaseCreateInput,
+    CaseCreateResult,
+    EmailEnqueueInput,
+    EmailEnqueueResult,
+)
 from .client import DEFAULT_BASE_URL, ZyInsClient
 from .coverage import Coverage, CoverageType
 from .datasets import Dataset
+from .health import ProbeResult, ReadinessResult
 from .license import LicenseActivateResult, LicenseCheckResult
+from .licenses import (
+    LicensesCheckInput,
+    LicensesCheckResult,
+    LicensesDeactivateInput,
+    LicensesDeactivateResult,
+)
+from .preferences import PreferencesResult, PreferencesSetInput
 from .prequalify import PrequalifyInput, PrequalifyPlan, PrequalifyResult
 from .product import Product, ProductSelection, ProductType
 from .quote import QuotedPlan, QuoteInput, QuoteResult
@@ -54,14 +69,20 @@ def __getattr__(name: str) -> object:
         return _Isa
     raise AttributeError(f"module 'sah_sdk.zyins' has no attribute {name!r}")
 
+
 __all__ = [
     "DEFAULT_BASE_URL",
     "Applicant",
     "AuthError",
+    "BrandingDetail",
+    "CaseCreateInput",
+    "CaseCreateResult",
     "Condition",
     "Coverage",
     "CoverageType",
     "Dataset",
+    "EmailEnqueueInput",
+    "EmailEnqueueResult",
     "Envelope",
     "ISAError",
     "Isa",
@@ -71,12 +92,19 @@ __all__ = [
     "LicenseActivateResult",
     "LicenseCheckResult",
     "LicenseError",
+    "LicensesCheckInput",
+    "LicensesCheckResult",
+    "LicensesDeactivateInput",
+    "LicensesDeactivateResult",
     "Medication",
     "NicotineUsage",
+    "PreferencesResult",
+    "PreferencesSetInput",
     "PrequalifyError",
     "PrequalifyInput",
     "PrequalifyPlan",
     "PrequalifyResult",
+    "ProbeResult",
     "Product",
     "ProductSelection",
     "ProductType",
@@ -85,6 +113,7 @@ __all__ = [
     "QuotedPlan",
     "RateLimitError",
     "RawResponse",
+    "ReadinessResult",
     "ReferenceDataResponse",
     "Sex",
     "UsageSummary",

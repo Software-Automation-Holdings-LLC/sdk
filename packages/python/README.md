@@ -161,3 +161,25 @@ Live-integration tests run only when `ZYINS_TEST_TOKEN` is set:
 ```bash
 ZYINS_TEST_TOKEN=isa_test_... hatch run test -- -m integration
 ```
+
+## Licenses and Ready
+
+The Python SDK exposes the public BPP license-lifecycle surface and the
+platform readiness probe on every `ZyInsClient`:
+
+```python
+from sah_sdk.zyins import LicensesCheckInput, ZyInsClient
+
+client = ZyInsClient("isa_live_...")
+
+result = client.licenses.check(
+    LicensesCheckInput(email="john.doe@acme-agency.com", keycode="ABC-123-XYZ")
+)
+# result.status: "valid" | "invalid" | "inactive"
+
+ready = client.health.get_readiness()
+# ready.ready: True on every required probe = "serving"
+```
+
+The pre-existing `client.license` (singular) sub-client targets the
+authenticated `/v1/license/*` self-status endpoints and is untouched.

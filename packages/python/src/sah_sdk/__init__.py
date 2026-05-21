@@ -17,8 +17,26 @@ Public surface (see SDK_DESIGN.md §0 + §3):
 
 from __future__ import annotations
 
+from .catalog import (
+    ErrorAdviceCodes,
+    ErrorCode,
+    ErrorDocUrls,
+    MedicationUses,
+    Product,
+    ProductCarriers,
+    Products,
+    Scope,
+    SignEvent,
+    State,
+    States,
+)
 from .core.auth import BearerAuth, LicenseAuth, SessionAuth
-from .core.constants import ErrorCode, ProductLabels, UsState
+
+# NOTE: The catalog ``ErrorCode`` (proto-backed wire codes) is the
+# canonical top-level export; the legacy ``core.constants.ErrorCode``
+# remains available via the ``sah_sdk.core`` import path for any caller
+# already pinned to it.
+from .core.constants import ProductLabels, UsState
 from .core.env import IsaConfigError
 from .core.envelope import Envelope, RawResponse
 from .core.errors import (
@@ -35,9 +53,10 @@ from .core.errors import (
 )
 from .core.value_types import Email, Money, Url
 from .isa import Isa
-from .zyins.product import Product
+from .zyins.credential_state import LicenseRefreshedEvent
+from .zyins.product import Product as ZyinsProduct  # zyins regex helper (legacy)
 
-__version__ = "0.3.0"
+__version__ = "0.4.0rc1"
 
 # IsaTransportError is the documented error class for network/transport
 # failures. Until the runtime maps such failures to it, the alias keeps
@@ -47,7 +66,9 @@ __all__ = [
     "BearerAuth",
     "Email",
     "Envelope",
+    "ErrorAdviceCodes",
     "ErrorCode",
+    "ErrorDocUrls",
     "ISAError",
     "Isa",
     "IsaApiError",
@@ -57,15 +78,24 @@ __all__ = [
     "IsaTransportError",
     "LicenseAuth",
     "LicenseError",
+    "LicenseRefreshedEvent",
+    "MedicationUses",
     "Money",
     "PrequalifyError",
     "Product",
+    "ProductCarriers",
     "ProductLabels",
+    "Products",
     "RateLimitError",
     "RawResponse",
+    "Scope",
     "SessionAuth",
+    "SignEvent",
+    "State",
+    "States",
     "Url",
     "UsState",
     "ValidationError",
+    "ZyinsProduct",
     "__version__",
 ]

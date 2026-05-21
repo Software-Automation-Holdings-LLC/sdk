@@ -30,12 +30,27 @@ from ..core.auth import BearerAuth
 from ..core.debug import DebugLogger
 from ..core.idempotency import generate_idempotency_key
 from ..core.transport import HttpTransport, Transport, raise_for_status
+from .account_namespaces import (
+    BrandingSubClient,
+    CasesSubClient,
+    EmailSubClient,
+    PreferencesSubClient,
+)
 from .datasets import Dataset, parse_dataset, parse_dataset_list
+from .health import ReadinessResult, parse_readiness
 from .license import (
     LicenseActivateResult,
     LicenseCheckResult,
     parse_activate,
     parse_check,
+)
+from .licenses import (
+    LicensesCheckInput,
+    LicensesCheckResult,
+    LicensesDeactivateInput,
+    LicensesDeactivateResult,
+    parse_check_response,
+    parse_deactivate_response,
 )
 from .prequalify import PrequalifyInput, PrequalifyResult, parse_prequalify_response
 from .quote import QuoteInput, QuoteResult, parse_quote_response
@@ -109,7 +124,13 @@ class ZyInsClient:
         self.reference_data = ReferenceDataSubClient(self)
         self.usage = UsageSubClient(self)
         self.license = LicenseSubClient(self)
+        self.licenses = LicensesSubClient(self)
+        self.health = HealthSubClient(self)
         self.case = CaseSubClient(self)
+        self.branding = BrandingSubClient(self)
+        self.preferences = PreferencesSubClient(self)
+        self.cases = CasesSubClient(self)
+        self.email = EmailSubClient(self)
 
     # ------------------------------------------------------------------
     # Lifecycle
@@ -322,6 +343,67 @@ class LicenseSubClient:
     def check(self) -> LicenseCheckResult:
         raw = self._client._request("GET", f"{self._PATH}/check")
         return parse_check(raw)
+
+
+class LicensesSubClient:
+    """``client.licenses`` namespace (proto-backed PublicCheck / PublicDeactivate).
+
+    Targets the canonical public license-lifecycle endpoints
+    ``/v1/licenses/check`` and ``/v1/licenses/deactivate`` defined in
+    ``shared/schemas/api/zyins/v1/licenses.proto``.
+    """
+
+    _CHECK_PATH = "/v1/licenses/check"
+    _DEACTIVATE_PATH = "/v1/licenses/deactivate"
+
+    def __init__(self, client: ZyInsClient) -> None:
+        self._client = client
+
+    def check(
+        self,
+        input: LicensesCheckInput,
+        *,
+        idempotency_key: str | None = None,
+    ) -> LicensesCheckResult:
+        raw = self._client._request(
+            "POST",
+            self._CHECK_PATH,
+            body=input.to_wire_body(),
+            idempotency_key=idempotency_key,
+        )
+        return parse_check_response(raw)
+
+    def deactivate(
+        self,
+        input: LicensesDeactivateInput,
+        *,
+        idempotency_key: str | None = None,
+    ) -> LicensesDeactivateResult:
+        raw = self._client._request(
+            "POST",
+            self._DEACTIVATE_PATH,
+            body=input.to_wire_body(),
+            idempotency_key=idempotency_key,
+        )
+        return parse_deactivate_response(raw)
+
+
+class HealthSubClient:
+    """``client.health`` namespace.
+
+    Exposes the shared platform ``/ready`` probe per
+    ``shared/schemas/api/isa/v1/health.proto``. The probe is
+    unauthenticated; an attached bearer token is harmless.
+    """
+
+    _READY_PATH = "/ready"
+
+    def __init__(self, client: ZyInsClient) -> None:
+        self._client = client
+
+    def get_readiness(self) -> ReadinessResult:
+        raw = self._client._request("GET", self._READY_PATH)
+        return parse_readiness(raw)
 
 
 class CaseSubClient:
