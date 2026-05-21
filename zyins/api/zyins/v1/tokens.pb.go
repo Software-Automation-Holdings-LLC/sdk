@@ -233,9 +233,16 @@ type CreateTokenResponse struct {
 	CreatedAt string `protobuf:"bytes,9,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
 	// RFC 3339 expiry timestamp. Empty string means the token does not
 	// expire.
-	ExpiresAt     string `protobuf:"bytes,10,opt,name=expires_at,json=expiresAt,proto3" json:"expires_at,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	ExpiresAt string `protobuf:"bytes,10,opt,name=expires_at,json=expiresAt,proto3" json:"expires_at,omitempty"`
+	// RFC 3339 timestamp at which the *previous* token is scheduled to
+	// revoke. Populated only on Rotate responses with a non-zero grace
+	// window; empty on Create or immediate revocation. Task #117.
+	PreviousTokenRevokesAt string `protobuf:"bytes,11,opt,name=previous_token_revokes_at,json=previousTokenRevokesAt,proto3" json:"previous_token_revokes_at,omitempty"`
+	// Identifier of the *previous* token (the one being rotated).
+	// Populated only on Rotate responses; empty on Create. Task #117.
+	PreviousTokenId string `protobuf:"bytes,12,opt,name=previous_token_id,json=previousTokenId,proto3" json:"previous_token_id,omitempty"`
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
 }
 
 func (x *CreateTokenResponse) Reset() {
@@ -334,6 +341,20 @@ func (x *CreateTokenResponse) GetCreatedAt() string {
 func (x *CreateTokenResponse) GetExpiresAt() string {
 	if x != nil {
 		return x.ExpiresAt
+	}
+	return ""
+}
+
+func (x *CreateTokenResponse) GetPreviousTokenRevokesAt() string {
+	if x != nil {
+		return x.PreviousTokenRevokesAt
+	}
+	return ""
+}
+
+func (x *CreateTokenResponse) GetPreviousTokenId() string {
+	if x != nil {
+		return x.PreviousTokenId
 	}
 	return ""
 }
@@ -625,16 +646,28 @@ func (x *BanTokenRequest) GetReason() string {
 }
 
 // RotateTokenRequest targets an existing token; the server issues a new
-// token with the same scopes and revokes the old one.
+// token with the same scopes and schedules the old one for revocation
+// after a grace window.
 type RotateTokenRequest struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
-	// Identifier of the token to rotate.
+	// Identifier of the token to rotate. May be supplied as the
+	// path parameter on `/v1/tokens/{token_id}/rotate` or in the
+	// request body on the legacy `/v1/tokens/rotate` binding.
 	TokenId string `protobuf:"bytes,1,opt,name=token_id,json=tokenId,proto3" json:"token_id,omitempty"`
 	// Expiry for the replacement token in days. Zero or absent keeps the
 	// original expiry policy.
 	ExpiresInDays int32 `protobuf:"varint,2,opt,name=expires_in_days,json=expiresInDays,proto3" json:"expires_in_days,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	// Seconds the old token remains active after rotation before the
+	// sweeper revokes it. Absent applies the default 2,592,000 (30
+	// days). Range 0 to 7,776,000 (90 days). Explicit 0 revokes the old
+	// token immediately; the new token still ships in the response.
+	//
+	// Task #117 + #118: handler stamps `revokes_at = now() +
+	// grace_period_seconds`; the sweeper Lambda flips status to
+	// `revoked` when the deadline elapses.
+	GracePeriodSeconds *int32 `protobuf:"varint,3,opt,name=grace_period_seconds,json=gracePeriodSeconds,proto3,oneof" json:"grace_period_seconds,omitempty"`
+	unknownFields      protoimpl.UnknownFields
+	sizeCache          protoimpl.SizeCache
 }
 
 func (x *RotateTokenRequest) Reset() {
@@ -681,6 +714,13 @@ func (x *RotateTokenRequest) GetExpiresInDays() int32 {
 	return 0
 }
 
+func (x *RotateTokenRequest) GetGracePeriodSeconds() int32 {
+	if x != nil && x.GracePeriodSeconds != nil {
+		return *x.GracePeriodSeconds
+	}
+	return 0
+}
+
 // TokenDetail is the canonical token resource shape returned by every
 // read and lifecycle-transition endpoint (except Create and Rotate,
 // which additionally return the plaintext token value).
@@ -715,7 +755,12 @@ type TokenDetail struct {
 	RevokedAt string `protobuf:"bytes,12,opt,name=revoked_at,json=revokedAt,proto3" json:"revoked_at,omitempty"`
 	// RFC 3339 timestamp of the most recent authenticated request made
 	// with this token. Empty string if the token has never been used.
-	LastUsedAt    string `protobuf:"bytes,13,opt,name=last_used_at,json=lastUsedAt,proto3" json:"last_used_at,omitempty"`
+	LastUsedAt string `protobuf:"bytes,13,opt,name=last_used_at,json=lastUsedAt,proto3" json:"last_used_at,omitempty"`
+	// RFC 3339 timestamp at which the sweeper will revoke this token.
+	// Set when the token has been replaced via Rotate but its grace
+	// window has not yet elapsed. Empty string when no rotation is
+	// pending. Task #117 + #118.
+	RevokesAt     string `protobuf:"bytes,14,opt,name=revokes_at,json=revokesAt,proto3" json:"revokes_at,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -841,6 +886,13 @@ func (x *TokenDetail) GetLastUsedAt() string {
 	return ""
 }
 
+func (x *TokenDetail) GetRevokesAt() string {
+	if x != nil {
+		return x.RevokesAt
+	}
+	return ""
+}
+
 var File_api_zyins_v1_tokens_proto protoreflect.FileDescriptor
 
 const file_api_zyins_v1_tokens_proto_rawDesc = "" +
@@ -856,7 +908,7 @@ const file_api_zyins_v1_tokens_proto_rawDesc = "" +
 	"\x12CreateTokenRequest\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12\x16\n" +
 	"\x06scopes\x18\x02 \x03(\tR\x06scopes\x12&\n" +
-	"\x0fexpires_in_days\x18\x03 \x01(\x05R\rexpiresInDays\"\x8c\x02\n" +
+	"\x0fexpires_in_days\x18\x03 \x01(\x05R\rexpiresInDays\"\xf3\x02\n" +
 	"\x13CreateTokenResponse\x12\x16\n" +
 	"\x06object\x18\x01 \x01(\tR\x06object\x12\x1a\n" +
 	"\blivemode\x18\x02 \x01(\bR\blivemode\x12\x1d\n" +
@@ -871,7 +923,9 @@ const file_api_zyins_v1_tokens_proto_rawDesc = "" +
 	"created_at\x18\t \x01(\tR\tcreatedAt\x12\x1d\n" +
 	"\n" +
 	"expires_at\x18\n" +
-	" \x01(\tR\texpiresAt\"!\n" +
+	" \x01(\tR\texpiresAt\x129\n" +
+	"\x19previous_token_revokes_at\x18\v \x01(\tR\x16previousTokenRevokesAt\x12*\n" +
+	"\x11previous_token_id\x18\f \x01(\tR\x0fpreviousTokenId\"!\n" +
 	"\x0fGetTokenRequest\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\"$\n" +
 	"\x12DeleteTokenRequest\x12\x0e\n" +
@@ -884,10 +938,12 @@ const file_api_zyins_v1_tokens_proto_rawDesc = "" +
 	"\x02id\x18\x01 \x01(\tR\x02id\"9\n" +
 	"\x0fBanTokenRequest\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x16\n" +
-	"\x06reason\x18\x02 \x01(\tR\x06reason\"W\n" +
+	"\x06reason\x18\x02 \x01(\tR\x06reason\"\xa7\x01\n" +
 	"\x12RotateTokenRequest\x12\x19\n" +
 	"\btoken_id\x18\x01 \x01(\tR\atokenId\x12&\n" +
-	"\x0fexpires_in_days\x18\x02 \x01(\x05R\rexpiresInDays\"\x89\x03\n" +
+	"\x0fexpires_in_days\x18\x02 \x01(\x05R\rexpiresInDays\x125\n" +
+	"\x14grace_period_seconds\x18\x03 \x01(\x05H\x00R\x12gracePeriodSeconds\x88\x01\x01B\x17\n" +
+	"\x15_grace_period_seconds\"\xa8\x03\n" +
 	"\vTokenDetail\x12\x16\n" +
 	"\x06object\x18\x01 \x01(\tR\x06object\x12\x1a\n" +
 	"\blivemode\x18\x02 \x01(\bR\blivemode\x12\x1d\n" +
@@ -907,7 +963,9 @@ const file_api_zyins_v1_tokens_proto_rawDesc = "" +
 	"\n" +
 	"revoked_at\x18\f \x01(\tR\trevokedAt\x12 \n" +
 	"\flast_used_at\x18\r \x01(\tR\n" +
-	"lastUsedAt2\xc1\x06\n" +
+	"lastUsedAt\x12\x1d\n" +
+	"\n" +
+	"revokes_at\x18\x0e \x01(\tR\trevokesAt2\xe5\x06\n" +
 	"\rTokensService\x12]\n" +
 	"\x04List\x12\x1f.api.zyins.v1.ListTokensRequest\x1a .api.zyins.v1.ListTokensResponse\"\x12\x82\xd3\xe4\x93\x02\f\x12\n" +
 	"/v1/tokens\x12d\n" +
@@ -917,8 +975,8 @@ const file_api_zyins_v1_tokens_proto_rawDesc = "" +
 	"\x06Delete\x12 .api.zyins.v1.DeleteTokenRequest\x1a!.api.zyins.v1.DeleteTokenResponse\"\x17\x82\xd3\xe4\x93\x02\x11*\x0f/v1/tokens/{id}\x12h\n" +
 	"\x06Revoke\x12 .api.zyins.v1.RevokeTokenRequest\x1a\x19.api.zyins.v1.TokenDetail\"!\x82\xd3\xe4\x93\x02\x1b:\x01*\"\x16/v1/tokens/{id}/revoke\x12q\n" +
 	"\tReinstate\x12#.api.zyins.v1.ReinstateTokenRequest\x1a\x19.api.zyins.v1.TokenDetail\"$\x82\xd3\xe4\x93\x02\x1e:\x01*\"\x19/v1/tokens/{id}/reinstate\x12_\n" +
-	"\x03Ban\x12\x1d.api.zyins.v1.BanTokenRequest\x1a\x19.api.zyins.v1.TokenDetail\"\x1e\x82\xd3\xe4\x93\x02\x18:\x01*\"\x13/v1/tokens/{id}/ban\x12k\n" +
-	"\x06Rotate\x12 .api.zyins.v1.RotateTokenRequest\x1a!.api.zyins.v1.CreateTokenResponse\"\x1c\x82\xd3\xe4\x93\x02\x16:\x01*\"\x11/v1/tokens/rotateB\xc5\x01\n" +
+	"\x03Ban\x12\x1d.api.zyins.v1.BanTokenRequest\x1a\x19.api.zyins.v1.TokenDetail\"\x1e\x82\xd3\xe4\x93\x02\x18:\x01*\"\x13/v1/tokens/{id}/ban\x12\x8e\x01\n" +
+	"\x06Rotate\x12 .api.zyins.v1.RotateTokenRequest\x1a!.api.zyins.v1.CreateTokenResponse\"?\x82\xd3\xe4\x93\x029:\x01*Z\x16:\x01*\"\x11/v1/tokens/rotate\"\x1c/v1/tokens/{token_id}/rotateB\xc5\x01\n" +
 	"\x10com.api.zyins.v1B\vTokensProtoP\x01ZJgithub.com/Software-Automation-Holdings-LLC/sdk/zyins/api/zyins/v1;zyinsv1\xa2\x02\x03AZX\xaa\x02\x13IsaSdk.ZyINS.Api.V1\xca\x02\x10Sah\\ZyINS\\Api\\V1\xe2\x02\x15Sah\\ZyINS\\Api\\V1\\Meta\xea\x02\x0eApi::Zyins::V1b\x06proto3"
 
 var (
@@ -981,6 +1039,7 @@ func file_api_zyins_v1_tokens_proto_init() {
 		return
 	}
 	file_api_zyins_v1_common_proto_init()
+	file_api_zyins_v1_tokens_proto_msgTypes[10].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{

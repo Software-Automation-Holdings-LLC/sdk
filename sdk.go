@@ -28,9 +28,11 @@
 package sdk
 
 import (
+	"context"
 	"fmt"
 	"os"
 
+	"github.com/Software-Automation-Holdings-LLC/sdk/proxy"
 	"github.com/Software-Automation-Holdings-LLC/sdk/rapidsign"
 	"github.com/Software-Automation-Holdings-LLC/sdk/zyins"
 )
@@ -42,6 +44,24 @@ type Isa struct {
 	Zyins     *zyins.Client
 	RapidSign *rapidsign.Client
 	Webhooks  *WebhooksNamespace
+	// Proxy exposes proxy.Call. Available only when the Isa was
+	// constructed from a session credential (WithSession); other factories
+	// leave it non-nil but its Call method returns *zyins.ConfigError at
+	// the boundary so callers see the exchange-credentials hint.
+	Proxy *ProxyNamespace
+}
+
+// ProxyNamespace is the proxy.Call entry point reached via isa.Proxy.
+// The namespace carries the session binding for the parent Isa; the
+// underlying transport is reconstructed per-call (stateless).
+type ProxyNamespace struct {
+	binding proxy.SessionBinding
+}
+
+// Call invokes a registered integration through the platform proxy.
+// See proxy.Call for the full semantic contract.
+func (n *ProxyNamespace) Call(ctx context.Context, opts proxy.CallOptions) ([]byte, error) {
+	return proxy.Call(ctx, n.binding, opts)
 }
 
 // WebhooksNamespace is the placeholder for cross-product webhook
@@ -91,7 +111,12 @@ func WithBearer(token string) (*Isa, error) {
 	if err != nil {
 		return nil, fmt.Errorf("sdk: WithBearer: rapidsign.New: %w", err)
 	}
-	return &Isa{Zyins: zc, RapidSign: rc, Webhooks: &WebhooksNamespace{}}, nil
+	return &Isa{
+		Zyins:     zc,
+		RapidSign: rc,
+		Webhooks:  &WebhooksNamespace{},
+		Proxy:     &ProxyNamespace{binding: proxy.SessionBinding{ProxyOrigin: proxy.DefaultProxyOrigin}},
+	}, nil
 }
 
 // WithLicense constructs an Isa client authenticated by the License
@@ -114,7 +139,12 @@ func WithLicense(opts LicenseOptions) (*Isa, error) {
 	if err != nil {
 		return nil, fmt.Errorf("sdk: WithLicense: zyins.NewClient: %w", err)
 	}
-	return &Isa{Zyins: zc, RapidSign: nil, Webhooks: &WebhooksNamespace{}}, nil
+	return &Isa{
+		Zyins:     zc,
+		RapidSign: nil,
+		Webhooks:  &WebhooksNamespace{},
+		Proxy:     &ProxyNamespace{binding: proxy.SessionBinding{ProxyOrigin: proxy.DefaultProxyOrigin}},
+	}, nil
 }
 
 // WithSession constructs an Isa client authenticated by the Session
@@ -137,7 +167,32 @@ func WithSession(opts SessionOptions) (*Isa, error) {
 	if err != nil {
 		return nil, fmt.Errorf("sdk: WithSession: zyins.NewClient: %w", err)
 	}
-	return &Isa{Zyins: zc, RapidSign: nil, Webhooks: &WebhooksNamespace{}}, nil
+	sessionID, sessionSecret := resolveSessionCredentials(opts)
+	return &Isa{
+		Zyins:     zc,
+		RapidSign: nil,
+		Webhooks:  &WebhooksNamespace{},
+		Proxy: &ProxyNamespace{binding: proxy.SessionBinding{
+			SessionID:     sessionID,
+			SessionSecret: sessionSecret,
+			ProxyOrigin:   proxy.DefaultProxyOrigin,
+		}},
+	}, nil
+}
+
+// resolveSessionCredentials extracts the session id + secret from opts,
+// falling back to env. Used by WithSession to populate the proxy binding
+// without duplicating buildSessionOption's env logic.
+func resolveSessionCredentials(opts SessionOptions) (string, string) {
+	id := opts.SessionID
+	if len(id) == 0 {
+		id = os.Getenv(zyins.EnvSessionIDVar)
+	}
+	secret := opts.SessionSecret
+	if len(secret) == 0 {
+		secret = os.Getenv(zyins.EnvSessionSecretVar)
+	}
+	return id, secret
 }
 
 func buildLicenseOption(opts LicenseOptions) (zyins.Option, error) {

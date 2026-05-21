@@ -41,6 +41,27 @@ type Client struct {
 	ReferenceData *ReferenceDataService
 	// Usage reads consumption and quota counters.
 	Usage *UsageService
+	// Licenses runs public license-lifecycle calls (Check, Deactivate).
+	// The authenticated self-* surface lands with the LicenseHMAC
+	// transport in a follow-up PR.
+	Licenses *LicensesService
+	// Health exposes the platform readiness probe (/ready). Liveness
+	// (/health) lands in a follow-up PR.
+	Health *HealthService
+	// Branding fetches the whitelabel branding for the caller's
+	// license. See branding.go.
+	Branding *BrandingService
+	// Preferences fetches and upserts the opaque per-license
+	// preferences document. See preferences.go.
+	Preferences *PreferencesService
+	// Cases creates shareable cases and shares them by email. See
+	// cases.go.
+	Cases *CasesService
+	// Email enqueues transactional emails. See cases.go.
+	Email *EmailService
+	// Logos serves the public carrier-logo asset endpoint. Non-credentialed
+	// per api-standards.md (GET allowlist); no bearer/HMAC headers attached.
+	Logos *LogosService
 }
 
 // Option mutates an *options block during NewClient. The functional-
@@ -237,6 +258,13 @@ func NewClient(opts ...Option) (*Client, error) {
 	c.Datasets = &DatasetsService{client: c}
 	c.ReferenceData = &ReferenceDataService{client: c}
 	c.Usage = &UsageService{client: c}
+	c.Licenses = &LicensesService{client: c}
+	c.Health = &HealthService{client: c}
+	c.Branding = &BrandingService{client: c}
+	c.Preferences = &PreferencesService{client: c}
+	c.Cases = &CasesService{client: c}
+	c.Email = &EmailService{client: c}
+	c.Logos = &LogosService{client: c}
 	return c, nil
 }
 

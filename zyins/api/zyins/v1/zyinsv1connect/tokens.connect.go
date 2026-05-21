@@ -101,9 +101,15 @@ type TokensServiceClient interface {
 	// reinstated. Internal surface; not exposed on ReadMe.
 	Ban(context.Context, *connect.Request[v1.BanTokenRequest]) (*connect.Response[v1.TokenDetail], error)
 	// Rotate creates a new token with the same scopes and configuration
-	// as the identified token, then revokes the old one. The new
-	// plaintext token value is returned in the response. Internal
-	// surface; not exposed on ReadMe.
+	// as the identified token, then schedules the old one for revocation
+	// after `grace_period_seconds` (default 30 days, max 90 days). The
+	// new plaintext token value is returned in the response. Callers
+	// migrate consumers within the grace window; the sweeper revokes the
+	// old token when `revokes_at` elapses (task #118).
+	//
+	// Task #117: self-service rotation. The legacy
+	// `POST /v1/tokens/rotate` (body-keyed) remains for back-compat;
+	// new integrators use the resource-style `/v1/tokens/{id}/rotate`.
 	Rotate(context.Context, *connect.Request[v1.RotateTokenRequest]) (*connect.Response[v1.CreateTokenResponse], error)
 }
 
@@ -247,9 +253,15 @@ type TokensServiceHandler interface {
 	// reinstated. Internal surface; not exposed on ReadMe.
 	Ban(context.Context, *connect.Request[v1.BanTokenRequest]) (*connect.Response[v1.TokenDetail], error)
 	// Rotate creates a new token with the same scopes and configuration
-	// as the identified token, then revokes the old one. The new
-	// plaintext token value is returned in the response. Internal
-	// surface; not exposed on ReadMe.
+	// as the identified token, then schedules the old one for revocation
+	// after `grace_period_seconds` (default 30 days, max 90 days). The
+	// new plaintext token value is returned in the response. Callers
+	// migrate consumers within the grace window; the sweeper revokes the
+	// old token when `revokes_at` elapses (task #118).
+	//
+	// Task #117: self-service rotation. The legacy
+	// `POST /v1/tokens/rotate` (body-keyed) remains for back-compat;
+	// new integrators use the resource-style `/v1/tokens/{id}/rotate`.
 	Rotate(context.Context, *connect.Request[v1.RotateTokenRequest]) (*connect.Response[v1.CreateTokenResponse], error)
 }
 
