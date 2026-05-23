@@ -96,7 +96,12 @@ class CasesSubClient:
         *,
         idempotency_key: str | None = None,
     ) -> CaseCreateResult:
-        """Create a shareable case from quote input + results + products."""
+        """Create a shareable case from quote input + results + products.
+
+        .. deprecated::
+            Use :meth:`share` instead. ``create`` is retained as an alias
+            for one minor; it will be removed in v0.7.0.
+        """
         raw = self._client._request(
             "POST",
             self._CREATE_PATH,
@@ -104,6 +109,18 @@ class CasesSubClient:
             idempotency_key=idempotency_key,
         )
         return _parse_cases_create(raw)
+
+    def share(
+        self,
+        input: CaseCreateInput,
+        *,
+        idempotency_key: str | None = None,
+    ) -> CaseCreateResult:
+        """Create (share) a case. Canonical verb per the locked SDK syntax
+        (TS canon: ``isa.zyins.cases.share``); equivalent to :meth:`create`,
+        which is retained as a deprecated alias.
+        """
+        return self.create(input, idempotency_key=idempotency_key)
 
     def email(
         self,

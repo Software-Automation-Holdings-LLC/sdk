@@ -16,8 +16,8 @@ from pydantic import ValidationError
 from sah_sdk.core.errors import ISAError
 from sah_sdk.core.transport import TransportResponse
 from sah_sdk.zyins import (
-    LicensesCheckInput,
-    LicensesDeactivateInput,
+    LicenseCheckInput,
+    LicenseDeactivateInput,
     ZyInsClient,
 )
 
@@ -54,8 +54,8 @@ class RecordingTransport:
 def test_check_serializes_and_parses_status() -> None:
     transport = RecordingTransport(response_body=json.dumps({"status": "valid"}))
     client = ZyInsClient(_TOKEN, transport=transport)
-    result = client.licenses.check(
-        LicensesCheckInput(
+    result = client.license.check(
+        LicenseCheckInput(
             email="john.doe@acme-agency.com",
             keycode="ABC-123-XYZ",
             device_id="device-1",
@@ -78,15 +78,15 @@ def test_check_tolerates_adr012_envelope() -> None:
         response_body=json.dumps({"data": {"status": "inactive"}})
     )
     client = ZyInsClient(_TOKEN, transport=transport)
-    result = client.licenses.check(
-        LicensesCheckInput(email="x@x", keycode="ABC-123-XYZ")
+    result = client.license.check(
+        LicenseCheckInput(email="x@x", keycode="ABC-123-XYZ")
     )
     assert result.status == "inactive"
 
 
 def test_check_rejects_missing_email() -> None:
     with pytest.raises(ValidationError, match="email"):
-        LicensesCheckInput(email="", keycode="ABC-123-XYZ")
+        LicenseCheckInput(email="", keycode="ABC-123-XYZ")
 
 
 def test_check_surfaces_5xx_as_isa_error() -> None:
@@ -96,14 +96,14 @@ def test_check_surfaces_5xx_as_isa_error() -> None:
     )
     client = ZyInsClient(_TOKEN, transport=transport)
     with pytest.raises(ISAError):
-        client.licenses.check(LicensesCheckInput(email="x@x", keycode="ABC-123-XYZ"))
+        client.license.check(LicenseCheckInput(email="x@x", keycode="ABC-123-XYZ"))
 
 
 def test_deactivate_serializes_and_parses_status() -> None:
     transport = RecordingTransport(response_body=json.dumps({"status": "deactivated"}))
     client = ZyInsClient(_TOKEN, transport=transport)
-    result = client.licenses.deactivate(
-        LicensesDeactivateInput(email="john.doe@acme-agency.com", keycode="ABC-123-XYZ")
+    result = client.license.deactivate(
+        LicenseDeactivateInput(email="john.doe@acme-agency.com", keycode="ABC-123-XYZ")
     )
     assert result.status == "deactivated"
     method, url, _, _ = transport.calls[0]

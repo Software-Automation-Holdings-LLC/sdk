@@ -38,17 +38,11 @@ from .account_namespaces import (
 )
 from .datasets import Dataset, parse_dataset, parse_dataset_list
 from .health import ReadinessResult, parse_readiness
-from .license import (
-    LicenseActivateResult,
-    LicenseCheckResult,
-    parse_activate,
-    parse_check,
-)
 from .licenses import (
-    LicensesCheckInput,
-    LicensesCheckResult,
-    LicensesDeactivateInput,
-    LicensesDeactivateResult,
+    LicenseCheckInput,
+    LicenseCheckResult,
+    LicenseDeactivateInput,
+    LicenseDeactivateResult,
     parse_check_response,
     parse_deactivate_response,
 )
@@ -124,7 +118,6 @@ class ZyInsClient:
         self.reference_data = ReferenceDataSubClient(self)
         self.usage = UsageSubClient(self)
         self.license = LicenseSubClient(self)
-        self.licenses = LicensesSubClient(self)
         self.health = HealthSubClient(self)
         self.case = CaseSubClient(self)
         self.branding = BrandingSubClient(self)
@@ -326,29 +319,9 @@ class UsageSubClient:
 
 
 class LicenseSubClient:
-    """``client.license`` namespace."""
+    """``client.license`` namespace (proto-backed Check / Deactivate).
 
-    _PATH = "/v1/license"
-
-    def __init__(self, client: ZyInsClient) -> None:
-        self._client = client
-
-    def activate(self) -> LicenseActivateResult:
-        raw = self._client._request("POST", f"{self._PATH}/activate", body="{}")
-        return parse_activate(raw)
-
-    def deactivate(self) -> None:
-        self._client._request("POST", f"{self._PATH}/deactivate", body="{}")
-
-    def check(self) -> LicenseCheckResult:
-        raw = self._client._request("GET", f"{self._PATH}/check")
-        return parse_check(raw)
-
-
-class LicensesSubClient:
-    """``client.licenses`` namespace (proto-backed PublicCheck / PublicDeactivate).
-
-    Targets the canonical public license-lifecycle endpoints
+    Targets the public license-lifecycle endpoints
     ``/v1/licenses/check`` and ``/v1/licenses/deactivate`` defined in
     ``shared/schemas/api/zyins/v1/licenses.proto``.
     """
@@ -361,10 +334,10 @@ class LicensesSubClient:
 
     def check(
         self,
-        input: LicensesCheckInput,
+        input: LicenseCheckInput,
         *,
         idempotency_key: str | None = None,
-    ) -> LicensesCheckResult:
+    ) -> LicenseCheckResult:
         raw = self._client._request(
             "POST",
             self._CHECK_PATH,
@@ -375,10 +348,10 @@ class LicensesSubClient:
 
     def deactivate(
         self,
-        input: LicensesDeactivateInput,
+        input: LicenseDeactivateInput,
         *,
         idempotency_key: str | None = None,
-    ) -> LicensesDeactivateResult:
+    ) -> LicenseDeactivateResult:
         raw = self._client._request(
             "POST",
             self._DEACTIVATE_PATH,

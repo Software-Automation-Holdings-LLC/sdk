@@ -24,8 +24,8 @@ def _require_non_empty(value: str, field_name: str) -> str:
     return value
 
 
-class LicensesCheckInput(BaseModel):
-    """Input for :meth:`LicensesSubClient.check`."""
+class LicenseCheckInput(BaseModel):
+    """Input for :meth:`LicenseSubClient.check`."""
 
     model_config = ConfigDict(extra="forbid", frozen=True)
 
@@ -53,16 +53,16 @@ class LicensesCheckInput(BaseModel):
         return json.dumps(payload, separators=(",", ":"))
 
 
-class LicensesCheckResult(BaseModel):
-    """Output of :meth:`LicensesSubClient.check`."""
+class LicenseCheckResult(BaseModel):
+    """Output of :meth:`LicenseSubClient.check`."""
 
     model_config = ConfigDict(extra="ignore", frozen=True)
 
     status: str = ""
 
 
-class LicensesDeactivateInput(BaseModel):
-    """Input for :meth:`LicensesSubClient.deactivate`."""
+class LicenseDeactivateInput(BaseModel):
+    """Input for :meth:`LicenseSubClient.deactivate`."""
 
     model_config = ConfigDict(extra="forbid", frozen=True)
 
@@ -87,8 +87,8 @@ class LicensesDeactivateInput(BaseModel):
         return json.dumps(payload, separators=(",", ":"))
 
 
-class LicensesDeactivateResult(BaseModel):
-    """Output of :meth:`LicensesSubClient.deactivate`."""
+class LicenseDeactivateResult(BaseModel):
+    """Output of :meth:`LicenseSubClient.deactivate`."""
 
     model_config = ConfigDict(extra="ignore", frozen=True)
 
@@ -108,13 +108,13 @@ def _unwrap_envelope(raw: str, *, context: str) -> dict[str, Any]:
     return parsed
 
 
-def parse_check_response(raw: str) -> LicensesCheckResult:
-    return LicensesCheckResult.model_validate(
+def parse_check_response(raw: str) -> LicenseCheckResult:
+    return LicenseCheckResult.model_validate(
         _unwrap_envelope(raw, context="licenses.check"),
     )
 
 
-def parse_deactivate_response(raw: str) -> LicensesDeactivateResult:
-    return LicensesDeactivateResult.model_validate(
+def parse_deactivate_response(raw: str) -> LicenseDeactivateResult:
+    return LicenseDeactivateResult.model_validate(
         _unwrap_envelope(raw, context="licenses.deactivate"),
     )

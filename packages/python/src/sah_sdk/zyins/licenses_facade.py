@@ -2,11 +2,11 @@
 
 Every method accepts optional arguments; missing fields fall back to the
 credentials the parent :class:`Isa` was constructed with. The first
-successful :meth:`LicensesFacade.activate` updates the shared credential
+successful :meth:`LicenseFacade.activate` updates the shared credential
 state in place so subsequent calls (prequalify, cases.create, …) sign
 with the new license key automatically — no caller re-bootstrap.
 
-Mirror of ``packages/ts/src/zyins/isaNamespaces.ts::LicensesFacade``.
+Mirror of ``packages/ts/src/zyins/isaNamespaces.ts::LicenseFacade``.
 """
 
 from __future__ import annotations
@@ -30,23 +30,23 @@ _DEACTIVATED_STATUS = "deactivated"
 
 
 @dataclass(frozen=True, slots=True)
-class LicensesActivateResult:
+class LicenseActivateResult:
     status: str = ""
     license_key: str = ""
     remaining_activations: int = 0
 
 
 @dataclass(frozen=True, slots=True)
-class LicensesCheckResult:
+class LicenseCheckResult:
     status: str = ""
 
 
 @dataclass(frozen=True, slots=True)
-class LicensesDeactivateResult:
+class LicenseDeactivateResult:
     status: str = ""
 
 
-class LicensesFacade:
+class LicenseFacade:
     """Credential-aware licenses facade.
 
     Constructor takes the shared :class:`IsaCredentialState` plus the
@@ -75,7 +75,7 @@ class LicensesFacade:
         email: str | None = None,
         keycode: str | None = None,
         device_id: str | None = None,
-    ) -> LicensesActivateResult:
+    ) -> LicenseActivateResult:
         snap = self._state.snapshot()
         body = json.dumps(
             {
@@ -98,7 +98,7 @@ class LicensesFacade:
         keycode: str | None = None,
         device_id: str | None = None,
         license_key: str | None = None,
-    ) -> LicensesCheckResult:
+    ) -> LicenseCheckResult:
         snap = self._state.snapshot()
         payload: dict[str, str] = {
             "email": email if email is not None else snap.email,
@@ -120,7 +120,7 @@ class LicensesFacade:
         email: str | None = None,
         keycode: str | None = None,
         device_id: str | None = None,
-    ) -> LicensesDeactivateResult:
+    ) -> LicenseDeactivateResult:
         snap = self._state.snapshot()
         payload: dict[str, str] = {
             "email": email if email is not None else snap.email,
@@ -175,7 +175,7 @@ def _unwrap(raw: str, *, context: str) -> dict[str, Any]:
     return parsed
 
 
-def _parse_activate(raw: str) -> LicensesActivateResult:
+def _parse_activate(raw: str) -> LicenseActivateResult:
     root = _unwrap(raw, context="licenses.activate")
     auth = root.get("auth")
     license_key = ""
@@ -193,22 +193,22 @@ def _parse_activate(raw: str) -> LicensesActivateResult:
     except (TypeError, ValueError):
         remaining_int = 0
     status = root.get("status")
-    return LicensesActivateResult(
+    return LicenseActivateResult(
         status=status if isinstance(status, str) else "",
         license_key=license_key,
         remaining_activations=remaining_int,
     )
 
 
-def _parse_check(raw: str) -> LicensesCheckResult:
+def _parse_check(raw: str) -> LicenseCheckResult:
     root = _unwrap(raw, context="licenses.check")
     status = root.get("status")
-    return LicensesCheckResult(status=status if isinstance(status, str) else "")
+    return LicenseCheckResult(status=status if isinstance(status, str) else "")
 
 
-def _parse_deactivate(raw: str) -> LicensesDeactivateResult:
+def _parse_deactivate(raw: str) -> LicenseDeactivateResult:
     root = _unwrap(raw, context="licenses.deactivate")
     status = root.get("status")
     if status != _DEACTIVATED_STATUS:
         raise ValueError("licenses.deactivate: response missing deactivated status")
-    return LicensesDeactivateResult(status=status if isinstance(status, str) else "")
+    return LicenseDeactivateResult(status=status if isinstance(status, str) else "")

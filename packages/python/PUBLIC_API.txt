@@ -158,6 +158,22 @@ class SessionAuth
     session_id: str
     session_secret: str
 
+=== core/bootstrap.py ===
+class BootstrapInput
+    keycode: str
+    email: str
+    license_key: str
+    device_id: str
+    method: str
+    path: str
+    timestamp: int
+class BootstrapSignature
+    serialized_body: str
+    canonical: str
+    hex: str
+    header: str
+def build_bootstrap_signature(inp: BootstrapInput) -> BootstrapSignature
+
 === core/constants.py ===
 class ErrorCode(str, Enum)
 class UsState(str, Enum)
@@ -250,6 +266,26 @@ class LicenseHMACHeaders
     def as_dict(self) -> dict[str, str]
 def build_license_hmac_headers(*, license_key: str, order_id: str, email: str, method: str, request_uri: str, body: str, device_id: str, clock: LicenseClock | None) -> LicenseHMACHeaders
 
+=== core/session.py ===
+class Session
+    session_id: str
+    session_secret: str
+    expires_at: datetime
+class ExchangeInput
+    keycode: str
+    email: str
+    license_key: str
+    device_id: str
+class SessionExchangeError(RuntimeError)
+class SessionStore
+    def bootstrap_count(self) -> int
+    def current_secret(self) -> Session | None
+    def bootstrap(self) -> Session
+    def invalidate(self) -> None
+    def on_activity(self) -> None
+class SessionInterceptor
+    def request(self, method: str, url: str, *, headers: dict[str, str], body: str | None) -> TransportResponse
+
 === core/sign_request.py ===
 def format_timestamp(now: datetime) -> str
 def canonical_string(method: str, path: str, body: bytes | str, timestamp: str, session_id: str) -> str
@@ -294,13 +330,17 @@ def request_id_from_envelope(raw: dict[str, Any]) -> str
 class Isa
     def with_bearer(cls, token: str | None, *, base_url: str, timeout: float, transport: Transport | None, env: EnvReader | None) -> Isa
     def with_license(cls, keycode: str | None, email: str | None, *, base_url: str, timeout: float, transport: Transport | None, env: EnvReader | None, credential_store: CredentialStore | None, license_clock: LicenseClock | None) -> Isa
+    def with_keycode(cls, keycode: str | None, email: str | None, *, base_url: str, timeout: float, transport: Transport | None, env: EnvReader | None, credential_store: CredentialStore | None, license_clock: LicenseClock | None) -> Isa
+    def for_form(cls, form_token: str, *, base_url: str, timeout: float, transport: Transport | None) -> Isa
+    def authenticate(cls, *, token: str | None, keycode: str | None, email: str | None, form_token: str | None, base_url: str, timeout: float, transport: Transport | None, env: EnvReader | None, credential_store: CredentialStore | None, license_clock: LicenseClock | None) -> Isa
     def with_session(cls, *, session_id: str | None, session_secret: str | None, base_url: str, timeout: float, transport: Transport | None, env: EnvReader | None) -> Isa
     def from_env(cls, *, base_url: str, timeout: float, transport: Transport | None, env: EnvReader | None, credential_store: CredentialStore | None) -> Isa
     def account(self) -> AccountNamespace
     def on_license_refreshed(self, listener: LicenseRefreshedListener) -> Callable[[], None]
     def close(self) -> None
 class ZyinsNamespace
-    def licenses(self) -> LicensesFacade
+    def license(self) -> LicenseFacade
+    def cases(self) -> Any
 
 === proxy/__init__.py ===
 class ProxyNamespace
@@ -331,6 +371,7 @@ class PreferencesSubClient
     def set(self, input: PreferencesSetInput, *, idempotency_key: str | None) -> PreferencesResult
 class CasesSubClient
     def create(self, input: CaseCreateInput, *, idempotency_key: str | None) -> CaseCreateResult
+    def share(self, input: CaseCreateInput, *, idempotency_key: str | None) -> CaseCreateResult
     def email(self, input: EmailEnqueueInput, *, idempotency_key: str | None) -> EmailEnqueueResult
 class EmailSubClient
     def enqueue(self, input: EmailEnqueueInput, *, idempotency_key: str | None) -> EmailEnqueueResult
@@ -353,7 +394,7 @@ class Applicant(BaseModel)
     sex: Sex
     height_inches: int
     weight_pounds: int
-    state: str
+    state: State | str
     zip: str | None
     nicotine_use: NicotineUsage
     medications: tuple[Medication, ...]
@@ -416,12 +457,8 @@ class ReferenceDataSubClient
 class UsageSubClient
     def summary(self, period: str) -> UsageSummary
 class LicenseSubClient
-    def activate(self) -> LicenseActivateResult
-    def deactivate(self) -> None
-    def check(self) -> LicenseCheckResult
-class LicensesSubClient
-    def check(self, input: LicensesCheckInput, *, idempotency_key: str | None) -> LicensesCheckResult
-    def deactivate(self, input: LicensesDeactivateInput, *, idempotency_key: str | None) -> LicensesDeactivateResult
+    def check(self, input: LicenseCheckInput, *, idempotency_key: str | None) -> LicenseCheckResult
+    def deactivate(self, input: LicenseDeactivateInput, *, idempotency_key: str | None) -> LicenseDeactivateResult
 class HealthSubClient
     def get_readiness(self) -> ReadinessResult
 class CaseSubClient
@@ -499,37 +536,37 @@ def parse_activate(body: str) -> LicenseActivateResult
 def parse_check(body: str) -> LicenseCheckResult
 
 === zyins/licenses.py ===
-class LicensesCheckInput(BaseModel)
+class LicenseCheckInput(BaseModel)
     email: str
     keycode: str
     device_id: str
     license_key: str
     def to_wire_body(self) -> str
-class LicensesCheckResult(BaseModel)
+class LicenseCheckResult(BaseModel)
     status: str
-class LicensesDeactivateInput(BaseModel)
+class LicenseDeactivateInput(BaseModel)
     email: str
     keycode: str
     device_id: str
     def to_wire_body(self) -> str
-class LicensesDeactivateResult(BaseModel)
+class LicenseDeactivateResult(BaseModel)
     status: str
-def parse_check_response(raw: str) -> LicensesCheckResult
-def parse_deactivate_response(raw: str) -> LicensesDeactivateResult
+def parse_check_response(raw: str) -> LicenseCheckResult
+def parse_deactivate_response(raw: str) -> LicenseDeactivateResult
 
 === zyins/licenses_facade.py ===
-class LicensesActivateResult
+class LicenseActivateResult
     status: str
     license_key: str
     remaining_activations: int
-class LicensesCheckResult
+class LicenseCheckResult
     status: str
-class LicensesDeactivateResult
+class LicenseDeactivateResult
     status: str
-class LicensesFacade
-    def activate(self, *, email: str | None, keycode: str | None, device_id: str | None) -> LicensesActivateResult
-    def check(self, *, email: str | None, keycode: str | None, device_id: str | None, license_key: str | None) -> LicensesCheckResult
-    def deactivate(self, *, email: str | None, keycode: str | None, device_id: str | None) -> LicensesDeactivateResult
+class LicenseFacade
+    def activate(self, *, email: str | None, keycode: str | None, device_id: str | None) -> LicenseActivateResult
+    def check(self, *, email: str | None, keycode: str | None, device_id: str | None, license_key: str | None) -> LicenseCheckResult
+    def deactivate(self, *, email: str | None, keycode: str | None, device_id: str | None) -> LicenseDeactivateResult
 
 === zyins/logos.py ===
 LOGOS_PATH = ...

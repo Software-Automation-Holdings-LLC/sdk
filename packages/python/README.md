@@ -1,6 +1,6 @@
 # sah-sdk
 
-Python SDK for the [ZyINS API](https://docs.isaapi.com). Mirrors the
+Python SDK for the [Best Plan Pro API](https://docs.isaapi.com) — powered by the ZyINS engine. Mirrors the
 canonical TypeScript SDK at `packages/zyins/js/` with Python-idiomatic
 naming (`snake_case`) and pydantic v2 models.
 
@@ -168,12 +168,16 @@ The Python SDK exposes the public BPP license-lifecycle surface and the
 platform readiness probe on every `ZyInsClient`:
 
 ```python
-from sah_sdk.zyins import LicensesCheckInput, ZyInsClient
+from sah_sdk.zyins import LicenseCheckInput, ZyInsClient
 
 client = ZyInsClient("isa_live_...")
 
-result = client.licenses.check(
-    LicensesCheckInput(email="john.doe@acme-agency.com", keycode="ABC-123-XYZ")
+result = client.license.check(
+    LicenseCheckInput(
+        email="john.doe@acme-agency.com",
+        keycode="ABC-123-XYZ",
+        device_id="dev_01HZK2N5GQR9T8X4B6FJW3Y1AS",
+    )
 )
 # result.status: "valid" | "invalid" | "inactive"
 

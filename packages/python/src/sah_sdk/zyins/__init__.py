@@ -37,13 +37,13 @@ from .client import DEFAULT_BASE_URL, ZyInsClient
 from .coverage import Coverage, CoverageType
 from .datasets import Dataset
 from .health import ProbeResult, ReadinessResult
-from .license import LicenseActivateResult, LicenseCheckResult
 from .licenses import (
-    LicensesCheckInput,
-    LicensesCheckResult,
-    LicensesDeactivateInput,
-    LicensesDeactivateResult,
+    LicenseCheckInput,
+    LicenseCheckResult,
+    LicenseDeactivateInput,
+    LicenseDeactivateResult,
 )
+from .licenses_facade import LicenseActivateResult
 from .preferences import PreferencesResult, PreferencesSetInput
 from .prequalify import PrequalifyInput, PrequalifyPlan, PrequalifyResult
 from .product import Product, ProductSelection, ProductType
@@ -90,12 +90,11 @@ __all__ = [
     "IsaConfigError",
     "IsaIdempotencyConflictError",
     "LicenseActivateResult",
+    "LicenseCheckInput",
     "LicenseCheckResult",
+    "LicenseDeactivateInput",
+    "LicenseDeactivateResult",
     "LicenseError",
-    "LicensesCheckInput",
-    "LicensesCheckResult",
-    "LicensesDeactivateInput",
-    "LicensesDeactivateResult",
     "Medication",
     "NicotineUsage",
     "PreferencesResult",

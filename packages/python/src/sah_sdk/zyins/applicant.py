@@ -14,6 +14,8 @@ from enum import Enum
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
+from sah_sdk.catalog.states import State
+
 
 class Sex(str, Enum):
     """Applicant biological sex. Wire format uses ``M`` / ``F``."""
@@ -80,8 +82,16 @@ class Applicant(BaseModel):
     sex: Sex
     height_inches: int = Field(..., ge=12, le=108)
     weight_pounds: int = Field(..., ge=1, le=1500)
-    state: str = Field(
-        ..., min_length=2, max_length=2, description="Two-letter US state code."
+    state: State | str = Field(
+        ...,
+        min_length=2,
+        max_length=2,
+        description=(
+            "ISO 3166-2:US two-letter postal code. Prefer the typed catalog "
+            "enum (``catalog.State.NorthCarolina``) — idiotproof against "
+            "typos like ``'North Carolina'``. Raw two-letter strings "
+            "(``'NC'``) remain accepted for backward compatibility."
+        ),
     )
     zip: str | None = Field(
         default=None, description="ZIP code; required by some product families."
@@ -92,5 +102,11 @@ class Applicant(BaseModel):
 
     @field_validator("state")
     @classmethod
-    def _state_upper(cls, value: str) -> str:
+    def _state_upper(cls, value: State | str) -> str:
+        # State is a StrEnum (str, Enum); calling .upper() on either form
+        # produces the canonical wire value. Normalize to plain str so
+        # downstream serialization (e.g. model_dump) emits the wire token
+        # rather than the enum's repr.
+        if isinstance(value, State):
+            return value.value
         return value.upper()

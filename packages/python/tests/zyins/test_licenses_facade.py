@@ -66,7 +66,7 @@ def test_activate_zero_args_uses_instance_state() -> None:
         ]
     )
     isa = _isa_with(transport)
-    result = isa.zyins.licenses.activate()
+    result = isa.zyins.license.activate()
     assert result.status == "active"
     assert result.license_key == "lk-fresh"
     assert result.remaining_activations == 4
@@ -94,7 +94,7 @@ def test_activate_refreshes_credential_state_in_place() -> None:
     )
     store = InMemoryCredentialStore()
     isa = _isa_with(transport, store)
-    isa.zyins.licenses.activate()
+    isa.zyins.license.activate()
     # Stored license key persists for cross-boot reuse.
     assert store.get(CREDENTIAL_KEYS.LICENSE_KEY) == "lk-fresh"
     # And the in-memory snapshot reflects the new key.
@@ -121,7 +121,7 @@ def test_account_uses_refreshed_license_after_cached_access() -> None:
     )
     isa = _isa_with(transport)
     cases = isa.account.cases
-    isa.zyins.licenses.activate()
+    isa.zyins.license.activate()
 
     summary = cases.get("case-123")
 
@@ -182,7 +182,7 @@ def test_on_license_refreshed_fires() -> None:
     isa = _isa_with(transport)
     received: list[LicenseRefreshedEvent] = []
     isa.on_license_refreshed(received.append)
-    isa.zyins.licenses.activate()
+    isa.zyins.license.activate()
     assert len(received) == 1
     assert received[0].license_key == "lk-fresh"
 
@@ -201,7 +201,7 @@ def test_check_zero_args_uses_instance_state() -> None:
     # Pre-populate the license key so it's included on the check payload.
     assert isa._credential_state is not None
     isa._credential_state.refresh_license_key("lk-stored")
-    result = isa.zyins.licenses.check()
+    result = isa.zyins.license.check()
     assert result.status == "valid"
     _, url, _, body = transport.calls[-1]
     assert url.endswith("/v1/licenses/check")
@@ -224,7 +224,7 @@ def test_deactivate_clears_stashed_license_key() -> None:
     isa = _isa_with(transport, store)
     assert isa._credential_state is not None
     isa._credential_state.refresh_license_key("lk-existing")
-    isa.zyins.licenses.deactivate()
+    isa.zyins.license.deactivate()
     assert store.get(CREDENTIAL_KEYS.LICENSE_KEY) is None
     assert isa._credential_state.snapshot().license_key == ""
 
@@ -246,7 +246,7 @@ def test_deactivate_keeps_stashed_license_key_when_response_is_not_success() -> 
     isa._credential_state.refresh_license_key("lk-existing")
 
     with pytest.raises(ValueError, match="deactivated status"):
-        isa.zyins.licenses.deactivate()
+        isa.zyins.license.deactivate()
 
     assert store.get(CREDENTIAL_KEYS.LICENSE_KEY) == "lk-existing"
     assert isa._credential_state.snapshot().license_key == "lk-existing"

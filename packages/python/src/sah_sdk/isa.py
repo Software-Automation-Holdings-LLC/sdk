@@ -11,7 +11,7 @@ adds over the bare client is:
 * A typed :class:`~.envelope.Envelope` carrying ``request_id``,
   ``idempotency_key``, ``livemode``, and ``retry_attempts`` — per §4.6.
 * The License-HMAC ``isa.account.*`` namespace and the
-  ``isa.zyins.licenses`` ergonomics layer.
+  ``isa.zyins.license`` ergonomics layer.
 """
 
 from __future__ import annotations
@@ -36,7 +36,7 @@ from .zyins.credential_state import (
     LicenseRefreshedListener,
     load_or_mint_device_id,
 )
-from .zyins.licenses_facade import LicensesFacade
+from .zyins.licenses_facade import LicenseFacade
 from .zyins.logos import LogosSubClient
 from .zyins.prequalify import PrequalifyInput, PrequalifyResult, parse_prequalify_response
 from .zyins.prequalify_legacy_blob import encode_legacy_blob, parse_legacy_blob_response
@@ -201,6 +201,121 @@ class Isa:
         return instance
 
     @classmethod
+    def with_keycode(
+        cls,
+        keycode: str | None = None,
+        email: str | None = None,
+        *,
+        base_url: str = DEFAULT_BASE_URL,
+        timeout: float = DEFAULT_TIMEOUT_SECONDS,
+        transport: Transport | None = None,
+        env: EnvReader | None = None,
+        credential_store: CredentialStore | None = None,
+        license_clock: LicenseClock | None = None,
+    ) -> Isa:
+        """Construct an :class:`Isa` from a license keycode + email.
+
+        Canonical factory name per the locked SDK syntax (TS canon:
+        ``Isa.withKeycode``). Equivalent to :meth:`with_license`, which is
+        retained as a deprecated alias.
+        """
+        return cls.with_license(
+            keycode,
+            email,
+            base_url=base_url,
+            timeout=timeout,
+            transport=transport,
+            env=env,
+            credential_store=credential_store,
+            license_clock=license_clock,
+        )
+
+    @classmethod
+    def for_form(
+        cls,
+        form_token: str,
+        *,
+        base_url: str = DEFAULT_BASE_URL,
+        timeout: float = DEFAULT_TIMEOUT_SECONDS,
+        transport: Transport | None = None,
+    ) -> Isa:
+        """Construct an :class:`Isa` from an embedded-form token.
+
+        Canonical factory per the locked SDK syntax (TS canon:
+        ``Isa.forForm``). The form token is exchanged via
+        ``POST /v1/sessions/reissue`` on first use; in the Python SDK this
+        is a thin bootstrap that wraps the token as the bearer credential
+        for subsequent requests until a session reissue is wired.
+
+        :param form_token: the opaque embedded-form token issued by the
+            host application.
+        """
+        if not form_token:
+            raise IsaConfigError(
+                "Isa.for_form requires a non-empty form_token.",
+                missing_env=("form_token",),
+            )
+        token = _form_bootstrap_token(form_token)
+        client = ZyInsClient(
+            token, base_url=base_url, timeout=timeout, transport=transport
+        )
+        return cls(
+            client=client,
+            base_url=base_url,
+            transport=transport,
+        )
+
+    @classmethod
+    def authenticate(
+        cls,
+        *,
+        token: str | None = None,
+        keycode: str | None = None,
+        email: str | None = None,
+        form_token: str | None = None,
+        base_url: str = DEFAULT_BASE_URL,
+        timeout: float = DEFAULT_TIMEOUT_SECONDS,
+        transport: Transport | None = None,
+        env: EnvReader | None = None,
+        credential_store: CredentialStore | None = None,
+        license_clock: LicenseClock | None = None,
+    ) -> Isa:
+        """Dispatching factory — picks the right credential path by args.
+
+        Canonical factory per the locked SDK syntax (TS canon:
+        ``Isa.authenticate``). Resolution order:
+
+        1. ``token`` → :meth:`with_bearer`
+        2. ``keycode`` + ``email`` → :meth:`with_keycode`
+        3. ``form_token`` → :meth:`for_form`
+
+        Raises :class:`IsaConfigError` when no valid combination is supplied.
+        """
+        if token is not None:
+            return cls.with_bearer(
+                token, base_url=base_url, timeout=timeout, transport=transport, env=env
+            )
+        if keycode is not None and email is not None:
+            return cls.with_keycode(
+                keycode,
+                email,
+                base_url=base_url,
+                timeout=timeout,
+                transport=transport,
+                env=env,
+                credential_store=credential_store,
+                license_clock=license_clock,
+            )
+        if form_token is not None:
+            return cls.for_form(
+                form_token, base_url=base_url, timeout=timeout, transport=transport
+            )
+        raise IsaConfigError(
+            "Isa.authenticate: provide one of token=, keycode=+email=, or form_token=.",
+            missing_env=("token", "keycode", "email", "form_token"),
+        )
+
+    @classmethod
     def with_session(
         cls,
         *,
@@ -347,6 +462,13 @@ def _license_bootstrap_token(keycode: str, email: str) -> str:
     return f"isa_test_license_{digest}"
 
 
+def _form_bootstrap_token(form_token: str) -> str:
+    import hashlib
+
+    digest = hashlib.sha256(form_token.encode()).hexdigest()[:20]
+    return f"isa_test_form_{digest}"
+
+
 def _session_bootstrap_token(session_id: str, session_secret: str) -> str:
     import hashlib
 
@@ -368,30 +490,43 @@ class ZyinsNamespace:
         self.prequalify = _PrequalifyCallable(self)
         self.quote = _Quote(self)
         self.logos = LogosSubClient(isa._base_url)
-        # `licenses` is constructed lazily so non-license bootstrap paths
+        # `license` is constructed lazily so non-license bootstrap paths
         # don't pay the cost of an unused facade.
-        self._licenses: LicensesFacade | None = None
+        self._license: LicenseFacade | None = None
 
     @property
-    def licenses(self) -> LicensesFacade:
-        """``isa.zyins.licenses`` — credential-aware license lifecycle.
+    def license(self) -> LicenseFacade:
+        """``isa.zyins.license`` — credential-aware license lifecycle.
+
+        Canonical singular form per the locked SDK syntax (TS canon:
+        ``isa.zyins.license``). Each device has exactly one license.
 
         Requires license-mode bootstrap; raises :class:`IsaConfigError`
         otherwise.
         """
         if self._isa._credential_state is None:
             raise IsaConfigError(
-                "isa.zyins.licenses is only available when Isa is constructed "
+                "isa.zyins.license is only available when Isa is constructed "
                 "with license credentials. Use Isa.with_license(keycode, email)."
             )
-        if self._licenses is None:
-            self._licenses = LicensesFacade(
+        if self._license is None:
+            self._license = LicenseFacade(
                 state=self._isa._credential_state,
                 base_url=self._isa._base_url,
                 transport=self._isa._transport,
                 clock=self._isa._license_clock,
             )
-        return self._licenses
+        return self._license
+
+    @property
+    def cases(self) -> Any:
+        """``isa.zyins.cases`` — case create/share + email convenience.
+
+        Forwards to the underlying ``ZyInsClient.cases`` sub-client so
+        the canonical ``isa.zyins.cases.share(...)`` path is reachable
+        through the unified ``Isa`` entry.
+        """
+        return self._client.cases
 
 
 class _PrequalifyCallable:
