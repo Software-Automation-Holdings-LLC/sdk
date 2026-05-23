@@ -10,6 +10,7 @@
  * `IsaConfigError` with a description of what's missing.
  */
 import { type IsaIdentity } from '../zyins/envFactory';
+import { type IsaCredentialState } from '../zyins/credentialState';
 import { AccountNamespace } from './index';
 /** Inputs the unified `Isa` factory hands down for namespace construction. */
 export interface AccountFactoryOptions {
@@ -17,6 +18,13 @@ export interface AccountFactoryOptions {
     baseUrl?: string;
     deviceId?: string;
     orderId?: string;
+    /**
+     * Shared credential state owned by `Isa`. The account namespace consumes
+     * `credentialState.auth` directly so the live `licenseKey` (mutated in
+     * place by `isa.zyins.license.activate()`) is observed without rebuilding
+     * the namespace.
+     */
+    credentialState?: IsaCredentialState;
 }
 /** Build the `isa.account` namespace from the unified `Isa` options. */
 export declare function buildAccountNamespace(opts: AccountFactoryOptions): AccountNamespace;

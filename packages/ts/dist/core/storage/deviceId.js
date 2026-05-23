@@ -3,7 +3,7 @@
  *
  * The SDK auto-mints a per-device identifier on first activation and
  * persists it via a pluggable {@link CredentialStore}. Callers therefore do
- * NOT have to manage `deviceId` themselves — `Isa.withLicense({ keycode,
+ * NOT have to manage `deviceId` themselves — `Isa.withKeycode({ keycode,
  * email })` returns a fully usable instance.
  *
  * The minted id is a 32-character hex string (128 bits of randomness),

@@ -21,13 +21,17 @@
  * bundle.
  */
 // --- Unified facade ------------------------------------------------------
-export { Isa, ZyInsNamespace, RapidSignNamespace, ProxyNamespace, } from './zyins/isa';
+export { Isa, ZyInsNamespace, RapidSignNamespace, ProxyNamespace, SESSIONS_REISSUE_PATH, } from './zyins/isa';
 // --- Account namespace --------------------------------------------------
-export { AccountNamespace, AccountBranding, AccountPreferences, AccountCases, AccountEmail, AccountReferenceData, } from './account';
+export { AccountNamespace, AccountBranding, AccountPreferences, AccountCases, AccountEmail, } from './account';
 // --- Auth / identity / env factory --------------------------------------
-export { resolveBearerIdentity, resolveLicenseIdentity, resolveSessionIdentity, ENV_VAR_NAMES, } from './zyins/envFactory';
+// `SessionIdentity` and `resolveSessionIdentity` are intentionally omitted
+// from the public surface — sessions are SDK-internal refresh state minted
+// by `Isa.withKeycode` / `Isa.forForm`, not a consumer-constructed auth
+// mode (sdk-syntax-proposal.md §4 + §6).
+export { resolveBearerIdentity, resolveLicenseIdentity, ENV_VAR_NAMES, } from './zyins/envFactory';
 // --- Errors -------------------------------------------------------------
-export { IsaError, IsaApiError, IsaConfigError, IsaIdempotencyConflictError, } from './zyins/apiError';
+export { IsaError, IsaApiError, IsaConfigError, IsaIdempotencyConflictError, IsaNotActivatedError, } from './zyins/apiError';
 export { canonicalString, formatTimestamp, signRequest, } from './core/auth/signRequest';
 // --- Value types / domain primitives (zyins-flavored, public) ----------
 export { Sex, NicotineUsage, Height, Weight, sexWireCode, } from './zyins/applicant';

@@ -20,6 +20,25 @@ export declare class IsaConfigError extends IsaError {
     constructor(message: string);
 }
 /**
+ * Stable activation-state codes surfaced by {@link IsaNotActivatedError}.
+ *
+ * Today only `requires_activation` is thrown by the SDK; future codes
+ * (`max_activations`, `inactive`, `active_elsewhere`, `locked`) will flow
+ * from the server's `licenses.activate` response once typed activation
+ * errors land (tracked as task #197).
+ */
+export type IsaNotActivatedCode = 'requires_activation' | 'max_activations' | 'inactive' | 'active_elsewhere' | 'locked';
+/**
+ * The `isa.zyins.*` product surface was invoked on a license-mode `Isa`
+ * that has no usable licenseKey. Consumers dispatch on `error.code` rather
+ * than substring-matching the message — the message text is allowed to
+ * evolve, but `code` is contractual.
+ */
+export declare class IsaNotActivatedError extends IsaError {
+    readonly code: IsaNotActivatedCode;
+    constructor(code?: IsaNotActivatedCode, message?: string);
+}
+/**
  * Any HTTP response that carries a stable error `code`. Subclasses add
  * typed fields (e.g. `IsaIdempotencyConflictError.key`).
  */

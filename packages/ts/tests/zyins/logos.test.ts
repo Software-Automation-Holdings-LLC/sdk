@@ -35,7 +35,7 @@ function stubFetch(response: Partial<LogosResponse>): {
 }
 
 /** Build the public Isa facade with a test base URL and logos fetcher. */
-function buildIsa(fetchImpl: LogosFetch): Isa {
+async function buildIsa(fetchImpl: LogosFetch): Promise<Isa> {
   return Isa.withBearer(
     { token: FAKE_BEARER },
     emptyEnv,
@@ -49,7 +49,7 @@ describe('isa.zyins.logos.get', () => {
       status: 200,
       text: async () => 'data:image/png;base64,AAAA',
     });
-    const result = await buildIsa(fetchImpl).zyins.logos.get('mountain-life', { dataUri: true });
+    const result = await (await buildIsa(fetchImpl)).zyins.logos.get('mountain-life', { dataUri: true });
     expect(typeof result).toBe('string');
     expect(result.startsWith('data:image/')).toBe(true);
     expect(calls[0]!.url).toBe(`${TEST_BASE_URL}/v1/logos/mountain-life?ds=true`);
@@ -61,7 +61,7 @@ describe('isa.zyins.logos.get', () => {
       status: 200,
       blob: async () => new Blob([bytes], { type: 'image/png' }),
     });
-    const result = await buildIsa(fetchImpl).zyins.logos.get('mountain-life');
+    const result = await (await buildIsa(fetchImpl)).zyins.logos.get('mountain-life');
     expect(result).toBeInstanceOf(Blob);
     expect(calls[0]!.url).toBe(`${TEST_BASE_URL}/v1/logos/mountain-life`);
   });
@@ -71,7 +71,7 @@ describe('isa.zyins.logos.get', () => {
       status: 200,
       blob: async () => new Blob([new Uint8Array([1, 2, 3])]),
     });
-    const result = await buildIsa(fetchImpl).zyins.logos.get('mountain-life', { dataUri: false });
+    const result = await (await buildIsa(fetchImpl)).zyins.logos.get('mountain-life', { dataUri: false });
     expect(result).toBeInstanceOf(Blob);
   });
 
@@ -81,7 +81,7 @@ describe('isa.zyins.logos.get', () => {
       status: 200,
       text: async () => 'data:image/png;base64,AAAA',
     });
-    const result = await buildIsa(fetchImpl).zyins.logos.get('mountain-life', options);
+    const result = await (await buildIsa(fetchImpl)).zyins.logos.get('mountain-life', options);
     expect(result).toBe('data:image/png;base64,AAAA');
   });
 
@@ -90,7 +90,7 @@ describe('isa.zyins.logos.get', () => {
       status: 200,
       blob: async () => new Blob([]),
     });
-    await buildIsa(fetchImpl).zyins.logos.get('acme insurance/co');
+    await (await buildIsa(fetchImpl)).zyins.logos.get('acme insurance/co');
     expect(calls[0]!.url).toBe(`${TEST_BASE_URL}/v1/logos/acme%20insurance%2Fco`);
   });
 
@@ -105,19 +105,19 @@ describe('isa.zyins.logos.get', () => {
       status: 404,
       text: async () => problem,
     });
-    await expect(buildIsa(fetchImpl).zyins.logos.get('does-not-exist')).rejects.toBeInstanceOf(
+    await expect((await buildIsa(fetchImpl)).zyins.logos.get('does-not-exist')).rejects.toBeInstanceOf(
       ZyInsError,
     );
   });
 
   it('throws when carrier is empty', async () => {
     const { fetchImpl } = stubFetch({ status: 200, text: async () => '' });
-    await expect(buildIsa(fetchImpl).zyins.logos.get('')).rejects.toBeInstanceOf(ZyInsError);
+    await expect((await buildIsa(fetchImpl)).zyins.logos.get('')).rejects.toBeInstanceOf(ZyInsError);
   });
 
   it('throws when carrier is blank after trimming', async () => {
     const { fetchImpl, calls } = stubFetch({ status: 200, text: async () => '' });
-    await expect(buildIsa(fetchImpl).zyins.logos.get('   ')).rejects.toBeInstanceOf(ZyInsError);
+    await expect((await buildIsa(fetchImpl)).zyins.logos.get('   ')).rejects.toBeInstanceOf(ZyInsError);
     expect(calls).toHaveLength(0);
   });
 
@@ -127,7 +127,7 @@ describe('isa.zyins.logos.get', () => {
       text: async () => '<html>not a uri</html>',
     });
     await expect(
-      buildIsa(fetchImpl).zyins.logos.get('mountain-life', { dataUri: true }),
+      (await buildIsa(fetchImpl)).zyins.logos.get('mountain-life', { dataUri: true }),
     ).rejects.toBeInstanceOf(ZyInsError);
   });
 });

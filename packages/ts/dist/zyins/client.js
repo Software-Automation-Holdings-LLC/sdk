@@ -19,11 +19,11 @@
 import { defaultTransport } from './transport';
 import { systemClock } from '../core';
 import { prequalify, prequalifyLegacyBlob, } from './prequalify';
-import { activate, deactivate, check, } from './license';
-import { activate as licensesActivate, check as licensesCheck, deactivate as licensesDeactivate, } from './licenses';
+import { activate as licenseActivate, check as licenseCheck, deactivate as licenseDeactivate, } from './license';
 import { getReadiness } from './health';
 import { email } from './case';
 import { lookup as brandingLookup } from './branding';
+import { DatasetsSubClient } from './datasets';
 import { lookup as preferencesLookup, set as preferencesSet, } from './preferences';
 import { create as casesCreate, } from './cases';
 import { LogosSubClient } from './logos';
@@ -42,16 +42,10 @@ export class ZyInsClient {
     clock;
     logosFetch;
     /**
-     * @deprecated Hits the legacy `/v1/licensing` CGI surface. Use
-     * {@link licenses} (plural) for new code; it targets the proto-backed
-     * `/v1/licenses/check` and `/v1/licenses/deactivate` endpoints.
+     * Proto-backed license-lifecycle sub-client. Targets `/v1/licenses/*`.
+     * The TS surface is singular: a device has exactly one license.
      */
     license;
-    /**
-     * Proto-backed license-lifecycle sub-client. Replaces {@link license}
-     * for new code.
-     */
-    licenses;
     /** Platform readiness probe (`/ready`). Unauthenticated. */
     health;
     case;
@@ -63,6 +57,8 @@ export class ZyInsClient {
     cases;
     /** Carrier-logo lookup. See `logos.ts`. */
     logos;
+    /** Reference-data bundle (`isa.zyins.datasets.get()`). */
+    datasets;
     constructor(options) {
         this.auth = options.auth;
         this.baseUrl = options.baseUrl ?? DEFAULT_ZYINS_BASE_URL;
@@ -70,13 +66,13 @@ export class ZyInsClient {
         this.clock = options.clock ?? systemClock;
         this.logosFetch = options.logosFetch;
         this.license = new LicenseSubClient(this.context());
-        this.licenses = new LicensesSubClient(this.context());
         this.health = new HealthSubClient(this.context());
         this.case = new CaseSubClient(this.context());
         this.branding = new BrandingSubClient(this.context());
         this.preferences = new PreferencesSubClient(this.context());
         this.cases = new CasesSubClient(this.context());
         this.logos = new LogosSubClient(this.baseUrl, this.logosFetch);
+        this.datasets = new DatasetsSubClient(this.context());
     }
     /** Run a prequalify call. See `PrequalifyRequest` for input shape. */
     async prequalify(request) {
@@ -102,41 +98,23 @@ export class ZyInsClient {
     }
 }
 /**
- * @deprecated Legacy CGI sub-client. Use {@link LicensesSubClient}
- * for new code.
+ * Proto-backed license-lifecycle sub-client. Targets `/v1/licenses/activate`,
+ * `/v1/licenses/check`, and `/v1/licenses/deactivate`. The TS surface is
+ * singular (one license per device); the wire paths remain plural.
  */
 class LicenseSubClient {
     ctx;
     constructor(ctx) {
         this.ctx = ctx;
     }
-    activate() {
-        return activate(this.ctx);
-    }
-    deactivate() {
-        return deactivate(this.ctx);
-    }
-    check() {
-        return check(this.ctx);
-    }
-}
-/**
- * Proto-backed license-lifecycle sub-client. Targets `/v1/licenses/activate`,
- * `/v1/licenses/check`, and `/v1/licenses/deactivate`.
- */
-class LicensesSubClient {
-    ctx;
-    constructor(ctx) {
-        this.ctx = ctx;
-    }
     activate(request) {
-        return licensesActivate(request, this.ctx);
+        return licenseActivate(request, this.ctx);
     }
     check(request) {
-        return licensesCheck(request, this.ctx);
+        return licenseCheck(request, this.ctx);
     }
     deactivate(request) {
-        return licensesDeactivate(request, this.ctx);
+        return licenseDeactivate(request, this.ctx);
     }
 }
 /** Platform readiness sub-client. Targets `/ready` (no auth). */
@@ -192,6 +170,20 @@ class CasesSubClient {
     constructor(ctx) {
         this.ctx = ctx;
     }
+    /**
+     * Share a case (RW + optional analysis). Canonical surface per the locked
+     * spec (Section 3 Flow 5 + Appendix B post-lock correction #2). The
+     * recipient's UI decides RO vs RW based on whether `results` is present;
+     * the SDK has no `mode` flag.
+     */
+    share(request) {
+        return casesCreate(request, this.ctx);
+    }
+    /**
+     * @deprecated Use `share()` instead. `create()` is retained as a back-compat
+     * alias and will be removed in v0.7.0. See
+     * `/tmp/sdk-syntax-proposal.md` Appendix B post-lock correction #2.
+     */
     create(request) {
         return casesCreate(request, this.ctx);
     }

@@ -20,16 +20,16 @@ import { type AuthContext } from './auth';
 import { type Transport } from './transport';
 import { type Clock } from '../core';
 import { type PrequalifyLegacyBlobRequest, type PrequalifyRequest, type PrequalifyResult } from './prequalify';
-import { type LicenseActivateResult, type LicenseCheckResult } from './license';
-import { type LicensesActivateRequest, type LicensesActivateResult, type LicensesCheckRequest, type LicensesCheckResult, type LicensesDeactivateRequest, type LicensesDeactivateResult } from './licenses';
+import { type LicenseActivateRequest, type LicenseActivateResult, type LicenseCheckRequest, type LicenseCheckResult, type LicenseDeactivateRequest, type LicenseDeactivateResult } from './license';
 import { type ReadinessResult } from './health';
 import { type CaseEmailRequest, type CaseEmailResult } from './case';
 import { type BrandingDetail } from './branding';
+import { DatasetsSubClient } from './datasets';
 import { type PreferencesLookupResult, type PreferencesSetRequest, type PreferencesSetResult } from './preferences';
 import { type CaseCreateRequest, type CaseCreateResult } from './cases';
 import { LogosSubClient, type LogosFetch } from './logos';
 /** Per-call context shared across sub-clients. */
-interface OperationContext {
+export interface OperationContext {
     auth: AuthContext;
     baseUrl: string;
     transport: Transport;
@@ -68,16 +68,10 @@ export declare class ZyInsClient {
     private readonly clock;
     private readonly logosFetch;
     /**
-     * @deprecated Hits the legacy `/v1/licensing` CGI surface. Use
-     * {@link licenses} (plural) for new code; it targets the proto-backed
-     * `/v1/licenses/check` and `/v1/licenses/deactivate` endpoints.
+     * Proto-backed license-lifecycle sub-client. Targets `/v1/licenses/*`.
+     * The TS surface is singular: a device has exactly one license.
      */
     readonly license: LicenseSubClient;
-    /**
-     * Proto-backed license-lifecycle sub-client. Replaces {@link license}
-     * for new code.
-     */
-    readonly licenses: LicensesSubClient;
     /** Platform readiness probe (`/ready`). Unauthenticated. */
     readonly health: HealthSubClient;
     readonly case: CaseSubClient;
@@ -89,6 +83,8 @@ export declare class ZyInsClient {
     readonly cases: CasesSubClient;
     /** Carrier-logo lookup. See `logos.ts`. */
     readonly logos: LogosSubClient;
+    /** Reference-data bundle (`isa.zyins.datasets.get()`). */
+    readonly datasets: DatasetsSubClient;
     constructor(options: ZyInsClientOptions);
     /** Run a prequalify call. See `PrequalifyRequest` for input shape. */
     prequalify(request: PrequalifyRequest): Promise<PrequalifyResult>;
@@ -103,26 +99,16 @@ export declare class ZyInsClient {
     private context;
 }
 /**
- * @deprecated Legacy CGI sub-client. Use {@link LicensesSubClient}
- * for new code.
+ * Proto-backed license-lifecycle sub-client. Targets `/v1/licenses/activate`,
+ * `/v1/licenses/check`, and `/v1/licenses/deactivate`. The TS surface is
+ * singular (one license per device); the wire paths remain plural.
  */
 declare class LicenseSubClient {
     private readonly ctx;
     constructor(ctx: OperationContext);
-    activate(): Promise<LicenseActivateResult>;
-    deactivate(): Promise<void>;
-    check(): Promise<LicenseCheckResult>;
-}
-/**
- * Proto-backed license-lifecycle sub-client. Targets `/v1/licenses/activate`,
- * `/v1/licenses/check`, and `/v1/licenses/deactivate`.
- */
-declare class LicensesSubClient {
-    private readonly ctx;
-    constructor(ctx: OperationContext);
-    activate(request: LicensesActivateRequest): Promise<LicensesActivateResult>;
-    check(request: LicensesCheckRequest): Promise<LicensesCheckResult>;
-    deactivate(request: LicensesDeactivateRequest): Promise<LicensesDeactivateResult>;
+    activate(request: LicenseActivateRequest): Promise<LicenseActivateResult>;
+    check(request: LicenseCheckRequest): Promise<LicenseCheckResult>;
+    deactivate(request: LicenseDeactivateRequest): Promise<LicenseDeactivateResult>;
 }
 /** Platform readiness sub-client. Targets `/ready` (no auth). */
 declare class HealthSubClient {
@@ -157,6 +143,18 @@ declare class PreferencesSubClient {
 declare class CasesSubClient {
     private readonly ctx;
     constructor(ctx: OperationContext);
+    /**
+     * Share a case (RW + optional analysis). Canonical surface per the locked
+     * spec (Section 3 Flow 5 + Appendix B post-lock correction #2). The
+     * recipient's UI decides RO vs RW based on whether `results` is present;
+     * the SDK has no `mode` flag.
+     */
+    share(request: CaseCreateRequest): Promise<CaseCreateResult>;
+    /**
+     * @deprecated Use `share()` instead. `create()` is retained as a back-compat
+     * alias and will be removed in v0.7.0. See
+     * `/tmp/sdk-syntax-proposal.md` Appendix B post-lock correction #2.
+     */
     create(request: CaseCreateRequest): Promise<CaseCreateResult>;
     email(request: CaseEmailRequest): Promise<CaseEmailResult>;
 }

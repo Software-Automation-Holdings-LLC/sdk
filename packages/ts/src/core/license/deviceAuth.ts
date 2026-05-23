@@ -126,8 +126,11 @@ export const buildLicenseHMACHeaders = async (
   subtle?: SubtleCrypto,
 ): Promise<LicenseHMACHeaders> => {
   const timestamp = String(clock());
-  const canonical = `${method}\n${requestURI}\n${timestamp}\n${body}`;
-  const signature = await computeDeviceSignature(canonical, deviceId, subtle);
+  // Server's verifyDeviceSignature (go/zyins/server/device_signature.go) currently
+  // signs body bytes only. The X-License-{Method,URI,Timestamp} headers ride along
+  // for future canonical-string verification (task #194 server refactor) and
+  // observability, but the signature itself is HMAC-SHA256(body, deviceId).
+  const signature = await computeDeviceSignature(body, deviceId, subtle);
   return {
     Authorization: buildLicenseHeader(licenseKey, orderId, email),
     'X-Device-ID': stripQuotes(deviceId),

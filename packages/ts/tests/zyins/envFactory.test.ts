@@ -1,6 +1,9 @@
 /**
- * Phase 1 — env-var auto-detection in `Isa.withBearer / withLicense /
- * withSession` and `IsaConfigError` for missing env (SDK_DESIGN §3.3).
+ * Phase 1 — env-var auto-detection in `Isa.withBearer / withKeycode`
+ * and `IsaConfigError` for missing env (SDK_DESIGN §3.3). `withSession`
+ * is `@internal`; its env-var path is still exercised below for coverage.
+ *
+ * Every factory is async; missing-env errors surface as rejected promises.
  */
 import { describe, it, expect } from 'vitest';
 import { Isa, IsaConfigError, ENV_VAR_NAMES, type EnvReader } from '../../src/zyins';
@@ -16,46 +19,46 @@ const stubEnv = (entries: Record<string, string>): EnvReader => ({
 });
 
 describe('Isa.withBearer', () => {
-  it('reads ISA_TOKEN from env when no arg supplied', () => {
-    const isa = Isa.withBearer(
+  it('reads ISA_TOKEN from env when no arg supplied', async () => {
+    const isa = await Isa.withBearer(
       undefined,
       stubEnv({ [ENV_VAR_NAMES.bearer.token]: FAKE_LIVE_TOKEN }),
     );
     expect(isa.identity).toEqual({ mode: 'bearer', token: FAKE_LIVE_TOKEN });
   });
 
-  it('prefers explicit arg over env', () => {
-    const isa = Isa.withBearer(
+  it('prefers explicit arg over env', async () => {
+    const isa = await Isa.withBearer(
       { token: FAKE_TEST_TOKEN },
       stubEnv({ [ENV_VAR_NAMES.bearer.token]: FAKE_LIVE_TOKEN }),
     );
     expect(isa.identity).toEqual({ mode: 'bearer', token: FAKE_TEST_TOKEN });
   });
 
-  it('throws IsaConfigError naming the missing env var', () => {
-    expect(() => Isa.withBearer(undefined, emptyEnv())).toThrowError(IsaConfigError);
-    try {
-      Isa.withBearer(undefined, emptyEnv());
-    } catch (e) {
-      expect((e as IsaConfigError).message).toContain(ENV_VAR_NAMES.bearer.token);
-    }
+  it('rejects with IsaConfigError naming the missing env var', async () => {
+    await expect(Isa.withBearer(undefined, emptyEnv())).rejects.toBeInstanceOf(
+      IsaConfigError,
+    );
+    await expect(Isa.withBearer(undefined, emptyEnv())).rejects.toThrow(
+      ENV_VAR_NAMES.bearer.token,
+    );
   });
 
-  it('rejects empty-string env value as missing', () => {
-    expect(() =>
+  it('rejects empty-string env value as missing', async () => {
+    await expect(
       Isa.withBearer(undefined, stubEnv({ [ENV_VAR_NAMES.bearer.token]: '' })),
-    ).toThrowError(IsaConfigError);
+    ).rejects.toBeInstanceOf(IsaConfigError);
   });
 });
 
-describe('Isa.withLicense', () => {
+describe('Isa.withKeycode', () => {
   const fullEnv = stubEnv({
     [ENV_VAR_NAMES.license.keycode]: 'SDV-HWH-WDD',
     [ENV_VAR_NAMES.license.email]: 'agent@example.com',
   });
 
-  it('reads keycode + email from env', () => {
-    const isa = Isa.withLicense(undefined, fullEnv);
+  it('reads keycode + email from env', async () => {
+    const isa = await Isa.withKeycode(undefined, fullEnv);
     expect(isa.identity).toEqual({
       mode: 'license',
       keycode: 'SDV-HWH-WDD',
@@ -63,38 +66,44 @@ describe('Isa.withLicense', () => {
     });
   });
 
-  it('lists every missing var in the error message', () => {
-    try {
-      Isa.withLicense(undefined, emptyEnv());
-      throw new Error('expected throw');
-    } catch (e) {
-      expect(e).toBeInstanceOf(IsaConfigError);
-      const msg = (e as IsaConfigError).message;
-      expect(msg).toContain(ENV_VAR_NAMES.license.keycode);
-      expect(msg).toContain(ENV_VAR_NAMES.license.email);
-    }
+  it('lists every missing var in the error message', async () => {
+    await expect(Isa.withKeycode(undefined, emptyEnv())).rejects.toBeInstanceOf(
+      IsaConfigError,
+    );
+    await expect(Isa.withKeycode(undefined, emptyEnv())).rejects.toThrow(
+      ENV_VAR_NAMES.license.keycode,
+    );
+    await expect(Isa.withKeycode(undefined, emptyEnv())).rejects.toThrow(
+      ENV_VAR_NAMES.license.email,
+    );
   });
 
-  it('reports only the missing var when one is set', () => {
+  it('reports only the missing var when one is set', async () => {
+    const partial = stubEnv({ [ENV_VAR_NAMES.license.keycode]: 'SDV-HWH-WDD' });
+    await expect(Isa.withKeycode(undefined, partial)).rejects.toThrow(
+      ENV_VAR_NAMES.license.email,
+    );
     try {
-      Isa.withLicense(
-        undefined,
-        stubEnv({ [ENV_VAR_NAMES.license.keycode]: 'SDV-HWH-WDD' }),
-      );
-      throw new Error('expected throw');
+      await Isa.withKeycode(undefined, partial);
+      throw new Error('expected rejection');
     } catch (e) {
-      const msg = (e as IsaConfigError).message;
-      expect(msg).toContain(ENV_VAR_NAMES.license.email);
-      expect(msg).not.toContain(ENV_VAR_NAMES.license.keycode);
+      expect((e as IsaConfigError).message).not.toContain(
+        ENV_VAR_NAMES.license.keycode,
+      );
     }
   });
 });
 
-describe('Isa.withSession', () => {
+// `Isa.withSession` is `@internal` per sdk-syntax-proposal.md §4 — sessions
+// are SDK-internal refresh state minted by withKeycode / forForm. These
+// tests exercise the internal helper directly because session-mode
+// instances back `isa.proxy.call()` and need coverage; they are not an
+// assertion that the surface is public.
+describe('Isa.withSession (internal)', () => {
   const FAKE_SECRET = ['shh', 'dont', 'tell'].join('_');
 
-  it('reads sessionId + sessionSecret from env', () => {
-    const isa = Isa.withSession(
+  it('reads sessionId + sessionSecret from env', async () => {
+    const isa = await Isa.withSession(
       undefined,
       stubEnv({
         [ENV_VAR_NAMES.session.sessionId]: 'sess_abc',
@@ -108,14 +117,12 @@ describe('Isa.withSession', () => {
     });
   });
 
-  it('throws IsaConfigError with both missing names', () => {
-    try {
-      Isa.withSession(undefined, emptyEnv());
-      throw new Error('expected throw');
-    } catch (e) {
-      const msg = (e as IsaConfigError).message;
-      expect(msg).toContain(ENV_VAR_NAMES.session.sessionId);
-      expect(msg).toContain(ENV_VAR_NAMES.session.sessionSecret);
-    }
+  it('rejects with IsaConfigError naming both missing env vars', async () => {
+    await expect(Isa.withSession(undefined, emptyEnv())).rejects.toThrow(
+      ENV_VAR_NAMES.session.sessionId,
+    );
+    await expect(Isa.withSession(undefined, emptyEnv())).rejects.toThrow(
+      ENV_VAR_NAMES.session.sessionSecret,
+    );
   });
 });

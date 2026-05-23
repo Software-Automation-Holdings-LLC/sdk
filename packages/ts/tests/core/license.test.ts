@@ -119,13 +119,30 @@ describe("buildLicenseHMACHeaders", () => {
     expect(h1["X-Device-Signature"]).toBe(h2["X-Device-Signature"]);
   });
 
-  it("produces different signatures when the URI changes", async () => {
+  it("produces different signatures when the body changes", async () => {
+    const h1 = await buildLicenseHMACHeaders(
+      LICENSE, ORDER, EMAIL, "POST", "/v1/a", "alpha", DEVICE_ID, () => FIXED_TIME,
+    );
+    const h2 = await buildLicenseHMACHeaders(
+      LICENSE, ORDER, EMAIL, "POST", "/v1/a", "beta", DEVICE_ID, () => FIXED_TIME,
+    );
+    expect(h1["X-Device-Signature"]).not.toBe(h2["X-Device-Signature"]);
+  });
+
+  // Server's verifyDeviceSignature signs body bytes only (see go/zyins/server/
+  // device_signature.go). URI / method / timestamp are sent as headers for
+  // observability and forward-compat with the Stripe-style canonical-string
+  // refactor (task #194 server-side) but the current signature does not cover
+  // them. Until that refactor lands, requests to the same URI with different
+  // methods (or vice versa) but identical bodies will produce the same signature
+  // — which matches the server's verification behavior exactly.
+  it("does not cover URI in signature (matches current server behavior)", async () => {
     const h1 = await buildLicenseHMACHeaders(
       LICENSE, ORDER, EMAIL, "POST", "/v1/a", "body", DEVICE_ID, () => FIXED_TIME,
     );
     const h2 = await buildLicenseHMACHeaders(
       LICENSE, ORDER, EMAIL, "POST", "/v1/b", "body", DEVICE_ID, () => FIXED_TIME,
     );
-    expect(h1["X-Device-Signature"]).not.toBe(h2["X-Device-Signature"]);
+    expect(h1["X-Device-Signature"]).toBe(h2["X-Device-Signature"]);
   });
 });

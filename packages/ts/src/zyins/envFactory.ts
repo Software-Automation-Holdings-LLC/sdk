@@ -84,7 +84,7 @@ export function resolveLicenseIdentity(
   if (!email) missing.push(ENV_VAR_NAMES.license.email);
   if (missing.length > 0) {
     throw new IsaConfigError(
-      `Isa.withLicense: missing ${missing.join(' and ')} (set in environment or pass to factory)`,
+      `Isa.withKeycode: missing ${missing.join(' and ')} (set in environment or pass to factory)`,
     );
   }
   return { mode: 'license', keycode: keycode as string, email: email as string };

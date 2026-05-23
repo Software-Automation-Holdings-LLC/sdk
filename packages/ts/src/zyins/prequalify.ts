@@ -63,6 +63,9 @@ export interface PrequalifyResult {
   plans: ReadonlyArray<PrequalifyPlan>;
   /** Engine request id for correlation with server-side logs. */
   requestId: string;
+  /** Idempotency key sent on the wire request. Propagated into the Envelope
+   *  so callers can round-trip the key without parsing raw headers. */
+  idempotencyKey: string;
 }
 
 /** Shared knobs the client passes through to the prequalify call. */
@@ -117,7 +120,7 @@ async function prequalifyBody(
   const url = `${ctx.baseUrl}${PREQUALIFY_PATH}`;
   const response = await ctx.transport({ url, method: 'POST', headers, body });
   if (response.status >= 200 && response.status < 300) {
-    return parsePrequalifyResponse(response.body);
+    return { ...parsePrequalifyResponse(response.body), idempotencyKey };
   }
   throw fromHttpResponse(response.status, response.body);
 }
@@ -188,7 +191,7 @@ interface RawPrequalifyResponse {
 }
 
 /** Coerce the engine's JSON response into the typed shape. */
-function parsePrequalifyResponse(body: string): PrequalifyResult {
+function parsePrequalifyResponse(body: string): Omit<PrequalifyResult, "idempotencyKey"> {
   let parsed: RawPrequalifyResponse;
   try {
     parsed = JSON.parse(body) as RawPrequalifyResponse;

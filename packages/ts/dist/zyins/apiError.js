@@ -26,6 +26,21 @@ export class IsaConfigError extends IsaError {
     }
 }
 /**
+ * The `isa.zyins.*` product surface was invoked on a license-mode `Isa`
+ * that has no usable licenseKey. Consumers dispatch on `error.code` rather
+ * than substring-matching the message — the message text is allowed to
+ * evolve, but `code` is contractual.
+ */
+export class IsaNotActivatedError extends IsaError {
+    code;
+    constructor(code = 'requires_activation', message) {
+        super(message ??
+            'isa.zyins.* product methods require an active license. Call isa.zyins.license.activate() first.');
+        this.name = 'IsaNotActivatedError';
+        this.code = code;
+    }
+}
+/**
  * Any HTTP response that carries a stable error `code`. Subclasses add
  * typed fields (e.g. `IsaIdempotencyConflictError.key`).
  */

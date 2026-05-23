@@ -10,9 +10,9 @@
  * `IsaConfigError` with a description of what's missing.
  */
 
-import { type IsaIdentity, type LicenseIdentity } from '../zyins/envFactory';
+import { type IsaIdentity } from '../zyins/envFactory';
 import { IsaConfigError } from '../zyins/apiError';
-import { type AuthContext } from './auth';
+import { type IsaCredentialState } from '../zyins/credentialState';
 import { DEFAULT_ZYINS_BASE_URL } from '../zyins/client';
 import { AccountNamespace } from './index';
 
@@ -22,44 +22,44 @@ export interface AccountFactoryOptions {
   baseUrl?: string;
   deviceId?: string;
   orderId?: string;
+  /**
+   * Shared credential state owned by `Isa`. The account namespace consumes
+   * `credentialState.auth` directly so the live `licenseKey` (mutated in
+   * place by `isa.zyins.license.activate()`) is observed without rebuilding
+   * the namespace.
+   */
+  credentialState?: IsaCredentialState;
 }
 
 /** Build the `isa.account` namespace from the unified `Isa` options. */
 export function buildAccountNamespace(opts: AccountFactoryOptions): AccountNamespace {
   if (opts.identity.mode !== 'license') {
     return throwingNamespace(
-      `isa.account.* methods currently require Isa.withLicense() — bearer and session transport wiring lands in Phase 3 of SDK_DESIGN.md`,
+      `isa.account.* methods currently require Isa.withKeycode() — bearer and session transport wiring lands in Phase 3 of SDK_DESIGN.md`,
     );
   }
   if (!opts.deviceId) {
     return throwingNamespace(
-      `isa.account.* methods require a deviceId on Isa.withLicense({ deviceId, orderId, … })`,
+      `isa.account.* methods require a deviceId on Isa.withKeycode({ deviceId, orderId, … })`,
     );
   }
-  if (!opts.orderId) {
+  if (!opts.orderId && !opts.credentialState?.auth.orderId) {
     return throwingNamespace(
-      `isa.account.* methods require an orderId on Isa.withLicense({ deviceId, orderId, … })`,
+      `isa.account.* methods require an orderId on Isa.withKeycode({ deviceId, orderId, … })`,
     );
   }
-  const auth: AuthContext = {
-    licenseKey: licenseKeyFor(opts.identity),
-    orderId: opts.orderId,
-    email: opts.identity.email,
-    deviceId: opts.deviceId,
-  };
+  if (!opts.credentialState) {
+    return throwingNamespace(
+      `isa.account.* methods require the shared credentialState (constructed by Isa.withKeycode())`,
+    );
+  }
+  // Share the live AuthContext reference owned by IsaCredentialState. When
+  // `license.activate()` refreshes the license key, the mutation is observed
+  // by every subsequent account.* request without a namespace rebuild.
   return new AccountNamespace({
-    auth,
+    auth: opts.credentialState.auth,
     baseUrl: opts.baseUrl ?? DEFAULT_ZYINS_BASE_URL,
   });
-}
-
-/**
- * The legacy AuthContext field name is `licenseKey`; the modern identity's
- * activation token is `keycode`. They are the same wire value — this
- * helper makes the mapping explicit so callers do not pass the wrong field.
- */
-function licenseKeyFor(identity: LicenseIdentity): string {
-  return identity.keycode;
 }
 
 /**
@@ -82,6 +82,5 @@ function throwingNamespace(message: string): AccountNamespace {
       email: throwConfigError,
     },
     email: { enqueue: throwConfigError },
-    referenceData: { get: throwConfigError },
   } as unknown as AccountNamespace;
 }

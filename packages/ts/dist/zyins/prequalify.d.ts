@@ -55,6 +55,9 @@ export interface PrequalifyResult {
     plans: ReadonlyArray<PrequalifyPlan>;
     /** Engine request id for correlation with server-side logs. */
     requestId: string;
+    /** Idempotency key sent on the wire request. Propagated into the Envelope
+     *  so callers can round-trip the key without parsing raw headers. */
+    idempotencyKey: string;
 }
 /** Shared knobs the client passes through to the prequalify call. */
 export interface PrequalifyContext {

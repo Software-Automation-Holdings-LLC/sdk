@@ -11,8 +11,11 @@
  * branding / preferences / cases / email surface is preserved for
  * back-compat and shares the same wire endpoints; `account` is the
  * forward-looking ergonomic surface and adds the missing operations
- * (`cases.get`, `cases.list`, `referenceData.get`, scope-partitioned
- * preferences).
+ * (`cases.get`, `cases.list`, scope-partitioned preferences).
+ *
+ * Reference data has consolidated onto `isa.zyins.datasets.get()`; the
+ * deprecated `isa.account.referenceData` surface has been removed per
+ * `/tmp/sdk-syntax-proposal.md` post-lock correction #3.
  */
 import { type AuthContext } from './auth';
 import { type Transport } from '../zyins/transport';
@@ -21,7 +24,6 @@ import { type BrandingDetail, type BrandingLookupRequest } from './branding';
 import { type PreferencesLookupRequest, type PreferencesLookupResult, type PreferencesSetRequest, type PreferencesSetResult } from './preferences';
 import { type CaseCreateRequest, type CaseCreateResult, type CaseEmailRequest, type CaseEmailResult, type CaseSummary } from './cases';
 import { type EmailEnqueueRequest, type EmailEnqueueResult } from './email';
-import { type ReferenceDataRequest, type ReferenceDataResult } from './referenceData';
 /** Construction options for {@link AccountNamespace}. */
 export interface AccountNamespaceOptions {
     auth: AuthContext;
@@ -48,8 +50,6 @@ export declare class AccountNamespace {
     readonly cases: AccountCases;
     /** `isa.account.email` — transactional email enqueue. */
     readonly email: AccountEmail;
-    /** `isa.account.referenceData` — engine reference-data lookups. */
-    readonly referenceData: AccountReferenceData;
     constructor(opts: AccountNamespaceOptions);
 }
 /** `isa.account.branding` facade. */
@@ -80,11 +80,5 @@ export declare class AccountEmail {
     constructor(ctx: OperationContext);
     enqueue(request: EmailEnqueueRequest): Promise<EmailEnqueueResult>;
 }
-/** `isa.account.referenceData` facade. */
-export declare class AccountReferenceData {
-    private readonly ctx;
-    constructor(ctx: OperationContext);
-    get(request: ReferenceDataRequest): Promise<ReferenceDataResult>;
-}
-export type { BrandingDetail, BrandingLookupRequest, PreferencesLookupRequest, PreferencesLookupResult, PreferencesSetRequest, PreferencesSetResult, CaseCreateRequest, CaseCreateResult, CaseEmailRequest, CaseEmailResult, CaseSummary, EmailEnqueueRequest, EmailEnqueueResult, ReferenceDataRequest, ReferenceDataResult, };
+export type { BrandingDetail, BrandingLookupRequest, PreferencesLookupRequest, PreferencesLookupResult, PreferencesSetRequest, PreferencesSetResult, CaseCreateRequest, CaseCreateResult, CaseEmailRequest, CaseEmailResult, CaseSummary, EmailEnqueueRequest, EmailEnqueueResult, };
 //# sourceMappingURL=index.d.ts.map

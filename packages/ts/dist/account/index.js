@@ -11,8 +11,11 @@
  * branding / preferences / cases / email surface is preserved for
  * back-compat and shares the same wire endpoints; `account` is the
  * forward-looking ergonomic surface and adds the missing operations
- * (`cases.get`, `cases.list`, `referenceData.get`, scope-partitioned
- * preferences).
+ * (`cases.get`, `cases.list`, scope-partitioned preferences).
+ *
+ * Reference data has consolidated onto `isa.zyins.datasets.get()`; the
+ * deprecated `isa.account.referenceData` surface has been removed per
+ * `/tmp/sdk-syntax-proposal.md` post-lock correction #3.
  */
 import { defaultTransport } from '../zyins/transport';
 import { systemClock } from '../core';
@@ -20,7 +23,6 @@ import { lookup as brandingLookup, } from './branding';
 import { lookup as preferencesLookup, set as preferencesSet, } from './preferences';
 import { create as casesCreate, get as casesGet, list as casesList, email as casesEmail, } from './cases';
 import { enqueue as emailEnqueue, } from './email';
-import { get as referenceDataGet, } from './referenceData';
 /** Top-level `isa.account.*` namespace. */
 export class AccountNamespace {
     /** `isa.account.branding` — whitelabel lookup. */
@@ -31,8 +33,6 @@ export class AccountNamespace {
     cases;
     /** `isa.account.email` — transactional email enqueue. */
     email;
-    /** `isa.account.referenceData` — engine reference-data lookups. */
-    referenceData;
     constructor(opts) {
         const ctx = {
             auth: opts.auth,
@@ -44,7 +44,6 @@ export class AccountNamespace {
         this.preferences = new AccountPreferences(ctx);
         this.cases = new AccountCases(ctx);
         this.email = new AccountEmail(ctx);
-        this.referenceData = new AccountReferenceData(ctx);
     }
 }
 /** `isa.account.branding` facade. */
@@ -97,16 +96,6 @@ export class AccountEmail {
     }
     enqueue(request) {
         return emailEnqueue(request, this.ctx);
-    }
-}
-/** `isa.account.referenceData` facade. */
-export class AccountReferenceData {
-    ctx;
-    constructor(ctx) {
-        this.ctx = ctx;
-    }
-    get(request) {
-        return referenceDataGet(request, this.ctx);
     }
 }
 //# sourceMappingURL=index.js.map

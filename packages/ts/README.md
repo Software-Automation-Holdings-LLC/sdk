@@ -1,6 +1,6 @@
 # @software-automation-holdings-llc/sdk
 
-Unified TypeScript SDK for the ISA platform APIs.
+Unified TypeScript SDK for the [Best Plan Pro API](https://docs.isaapi.com) — powered by the ZyINS engine.
 
 ## Install
 

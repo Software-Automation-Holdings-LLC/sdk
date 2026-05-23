@@ -18,6 +18,6 @@ export { defaultTransport, } from './transport';
 export { Isa, ZyInsNamespace } from './isa';
 export { IsaCredentialState, } from './credentialState';
 export { resolveBearerIdentity, resolveLicenseIdentity, resolveSessionIdentity, ENV_VAR_NAMES, } from './envFactory';
-export { IsaError, IsaApiError, IsaConfigError, IsaIdempotencyConflictError, } from './apiError';
+export { IsaError, IsaApiError, IsaConfigError, IsaIdempotencyConflictError, IsaNotActivatedError, } from './apiError';
 export { debugLoggerFromEnv, makeLogger, redactHeaders, redactBody, redactBodyString, processEnv, stderrSink, } from './logger';
 //# sourceMappingURL=index.js.map

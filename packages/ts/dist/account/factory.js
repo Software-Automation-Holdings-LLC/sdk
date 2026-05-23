@@ -15,32 +15,24 @@ import { AccountNamespace } from './index';
 /** Build the `isa.account` namespace from the unified `Isa` options. */
 export function buildAccountNamespace(opts) {
     if (opts.identity.mode !== 'license') {
-        return throwingNamespace(`isa.account.* methods currently require Isa.withLicense() — bearer and session transport wiring lands in Phase 3 of SDK_DESIGN.md`);
+        return throwingNamespace(`isa.account.* methods currently require Isa.withKeycode() — bearer and session transport wiring lands in Phase 3 of SDK_DESIGN.md`);
     }
     if (!opts.deviceId) {
-        return throwingNamespace(`isa.account.* methods require a deviceId on Isa.withLicense({ deviceId, orderId, … })`);
+        return throwingNamespace(`isa.account.* methods require a deviceId on Isa.withKeycode({ deviceId, orderId, … })`);
     }
-    if (!opts.orderId) {
-        return throwingNamespace(`isa.account.* methods require an orderId on Isa.withLicense({ deviceId, orderId, … })`);
+    if (!opts.orderId && !opts.credentialState?.auth.orderId) {
+        return throwingNamespace(`isa.account.* methods require an orderId on Isa.withKeycode({ deviceId, orderId, … })`);
     }
-    const auth = {
-        licenseKey: licenseKeyFor(opts.identity),
-        orderId: opts.orderId,
-        email: opts.identity.email,
-        deviceId: opts.deviceId,
-    };
+    if (!opts.credentialState) {
+        return throwingNamespace(`isa.account.* methods require the shared credentialState (constructed by Isa.withKeycode())`);
+    }
+    // Share the live AuthContext reference owned by IsaCredentialState. When
+    // `license.activate()` refreshes the license key, the mutation is observed
+    // by every subsequent account.* request without a namespace rebuild.
     return new AccountNamespace({
-        auth,
+        auth: opts.credentialState.auth,
         baseUrl: opts.baseUrl ?? DEFAULT_ZYINS_BASE_URL,
     });
-}
-/**
- * The legacy AuthContext field name is `licenseKey`; the modern identity's
- * activation token is `keycode`. They are the same wire value — this
- * helper makes the mapping explicit so callers do not pass the wrong field.
- */
-function licenseKeyFor(identity) {
-    return identity.keycode;
 }
 /**
  * Build an `AccountNamespace` whose every method throws the same
@@ -62,7 +54,6 @@ function throwingNamespace(message) {
             email: throwConfigError,
         },
         email: { enqueue: throwConfigError },
-        referenceData: { get: throwConfigError },
     };
 }
 //# sourceMappingURL=factory.js.map

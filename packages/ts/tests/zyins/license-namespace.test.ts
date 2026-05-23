@@ -1,11 +1,11 @@
 /**
- * Verifies the `isa.zyins.licenses.*` facade delegates to the underlying
+ * Verifies the `isa.zyins.license.*` facade delegates to the underlying
  * Tier-3 sub-client for activate / check / deactivate.
  */
 import { describe, it, expect } from 'vitest';
 import { Isa, ENV_VAR_NAMES, type EnvReader } from '../../src/zyins';
 import type { Transport, TransportRequest } from '../../src/zyins/transport';
-import { LicensesFacade } from '../../src/zyins/isaNamespaces';
+import { LicenseFacade } from '../../src/zyins/isaNamespaces';
 import { TEST_AUTH } from './fixtures';
 
 function licenseEnv(): EnvReader {
@@ -19,8 +19,8 @@ function licenseEnv(): EnvReader {
   };
 }
 
-function buildIsa(transport: Transport): Isa {
-  const isa = Isa.withLicense(
+async function buildIsa(transport: Transport): Promise<Isa> {
+  return Isa.withKeycode(
     {
       keycode: TEST_AUTH.licenseKey,
       email: TEST_AUTH.email,
@@ -30,7 +30,6 @@ function buildIsa(transport: Transport): Isa {
     },
     licenseEnv(),
   );
-  return isa;
 }
 
 function recording(
@@ -45,14 +44,14 @@ function recording(
   return { transport, requests };
 }
 
-describe('isa.zyins.licenses namespace', () => {
-  it('exposes a LicensesFacade with activate/check/deactivate', () => {
+describe('isa.zyins.license namespace', () => {
+  it('exposes a LicenseFacade with activate/check/deactivate', async () => {
     const { transport } = recording(200, '{}');
-    const isa = buildIsa(transport);
-    expect(isa.zyins.licenses).toBeInstanceOf(LicensesFacade);
-    expect(typeof isa.zyins.licenses.activate).toBe('function');
-    expect(typeof isa.zyins.licenses.check).toBe('function');
-    expect(typeof isa.zyins.licenses.deactivate).toBe('function');
+    const isa = await buildIsa(transport);
+    expect(isa.zyins.license).toBeInstanceOf(LicenseFacade);
+    expect(typeof isa.zyins.license.activate).toBe('function');
+    expect(typeof isa.zyins.license.check).toBe('function');
+    expect(typeof isa.zyins.license.deactivate).toBe('function');
   });
 
   it('delegates activate() to POST /v1/licenses/activate', async () => {
@@ -64,8 +63,8 @@ describe('isa.zyins.licenses namespace', () => {
         auth: { licenseKey: 'LK-1' },
       }),
     );
-    const isa = buildIsa(transport);
-    const result = await isa.zyins.licenses.activate({
+    const isa = await buildIsa(transport);
+    const result = await isa.zyins.license.activate({
       email: TEST_AUTH.email,
       keycode: TEST_AUTH.licenseKey,
       deviceId: TEST_AUTH.deviceId,
@@ -76,8 +75,8 @@ describe('isa.zyins.licenses namespace', () => {
 
   it('delegates check() to POST /v1/licenses/check', async () => {
     const { transport, requests } = recording(200, JSON.stringify({ status: 'active' }));
-    const isa = buildIsa(transport);
-    const result = await isa.zyins.licenses.check({
+    const isa = await buildIsa(transport);
+    const result = await isa.zyins.license.check({
       email: TEST_AUTH.email,
       keycode: TEST_AUTH.licenseKey,
     });
@@ -87,8 +86,8 @@ describe('isa.zyins.licenses namespace', () => {
 
   it('delegates deactivate() to POST /v1/licenses/deactivate', async () => {
     const { transport, requests } = recording(200, JSON.stringify({ status: 'deactivated' }));
-    const isa = buildIsa(transport);
-    const result = await isa.zyins.licenses.deactivate({
+    const isa = await buildIsa(transport);
+    const result = await isa.zyins.license.deactivate({
       email: TEST_AUTH.email,
       keycode: TEST_AUTH.licenseKey,
     });

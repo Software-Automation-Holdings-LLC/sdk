@@ -56,7 +56,7 @@ function makeStatusFetch(
 
 describe('isa.proxy.call (session-signed)', () => {
   it('rejects bearer identity with IsaConfigError', async () => {
-    const isa = Isa.withBearer({ token: FIXTURE_BEARER });
+    const isa = await Isa.withBearer({ token: FIXTURE_BEARER });
     await expect(
       isa.proxy.call({ integrationUuid: 'u', params: {} }),
     ).rejects.toBeInstanceOf(IsaConfigError);
@@ -66,7 +66,7 @@ describe('isa.proxy.call (session-signed)', () => {
   });
 
   it('rejects license identity with IsaConfigError', async () => {
-    const isa = Isa.withLicense({
+    const isa = await Isa.withKeycode({
       keycode: 'ABC-123-XYZ',
       email: 'agent@example.com',
     });
@@ -76,7 +76,7 @@ describe('isa.proxy.call (session-signed)', () => {
   });
 
   it('rejects both integrationUuid and integrationId set', async () => {
-    const isa = Isa.withSession(SESSION);
+    const isa = await Isa.withSession(SESSION);
     await expect(
       isa.proxy.call({
         integrationUuid: 'u',
@@ -88,14 +88,14 @@ describe('isa.proxy.call (session-signed)', () => {
   });
 
   it('rejects neither integrationUuid nor integrationId', async () => {
-    const isa = Isa.withSession(SESSION);
+    const isa = await Isa.withSession(SESSION);
     await expect(
       isa.proxy.call({ params: {}, fetchImpl: makeOkFetch().fetch }),
     ).rejects.toBeInstanceOf(IsaValidationError);
   });
 
   it('rejects invalid integrationId before sending', async () => {
-    const isa = Isa.withSession(SESSION);
+    const isa = await Isa.withSession(SESSION);
     for (const integrationId of [0, -1, Number.NaN, 1.5]) {
       await expect(
         isa.proxy.call({
@@ -109,7 +109,7 @@ describe('isa.proxy.call (session-signed)', () => {
 
   it('sends the envelope {integration_uuid, method, params} unflattened', async () => {
     const { fetch: f, calls } = makeOkFetch();
-    const isa = Isa.withSession(SESSION);
+    const isa = await Isa.withSession(SESSION);
     await isa.proxy.call({
       integrationUuid: 'int_abc',
       params: { foo: 'bar' },
@@ -127,7 +127,7 @@ describe('isa.proxy.call (session-signed)', () => {
 
   it('treats empty integrationUuid as unset when integrationId is valid', async () => {
     const { fetch: f, calls } = makeOkFetch();
-    const isa = Isa.withSession(SESSION);
+    const isa = await Isa.withSession(SESSION);
     await isa.proxy.call({
       integrationUuid: '',
       integrationId: 42,
@@ -144,7 +144,7 @@ describe('isa.proxy.call (session-signed)', () => {
 
   it('auto-mints a UUID v4 Idempotency-Key when none is supplied', async () => {
     const { fetch: f, calls } = makeOkFetch();
-    const isa = Isa.withSession(SESSION);
+    const isa = await Isa.withSession(SESSION);
     await isa.proxy.call({
       integrationUuid: 'int_abc',
       params: {},
@@ -156,7 +156,7 @@ describe('isa.proxy.call (session-signed)', () => {
 
   it('honors a caller-supplied idempotency_key byte-identically', async () => {
     const { fetch: f, calls } = makeOkFetch();
-    const isa = Isa.withSession(SESSION);
+    const isa = await Isa.withSession(SESSION);
     const key = 'caller-provided-key-not-a-uuid';
     await isa.proxy.call({
       integrationUuid: 'int_abc',
@@ -170,7 +170,7 @@ describe('isa.proxy.call (session-signed)', () => {
 
   it('sets all four session-auth headers', async () => {
     const { fetch: f, calls } = makeOkFetch();
-    const isa = Isa.withSession(SESSION);
+    const isa = await Isa.withSession(SESSION);
     await isa.proxy.call({
       integrationUuid: 'int_abc',
       params: {},
@@ -184,7 +184,7 @@ describe('isa.proxy.call (session-signed)', () => {
   });
 
   it('maps 401 to IsaUnauthorizedError', async () => {
-    const isa = Isa.withSession(SESSION);
+    const isa = await Isa.withSession(SESSION);
     const fetchFn = makeStatusFetch(401, {
       code: 'unauthorized',
       detail: 'bad signature',
@@ -199,7 +199,7 @@ describe('isa.proxy.call (session-signed)', () => {
   });
 
   it('maps 409 idempotency_conflict to IsaIdempotencyConflictError', async () => {
-    const isa = Isa.withSession(SESSION);
+    const isa = await Isa.withSession(SESSION);
     const fetchFn = makeStatusFetch(409, {
       code: 'idempotency_conflict',
       detail: 'body mismatch',
@@ -216,7 +216,7 @@ describe('isa.proxy.call (session-signed)', () => {
   });
 
   it('maps generic 5xx to IsaApiError', async () => {
-    const isa = Isa.withSession(SESSION);
+    const isa = await Isa.withSession(SESSION);
     const fetchFn = makeStatusFetch(500, {
       code: 'internal_error',
       detail: 'boom',

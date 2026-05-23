@@ -9,6 +9,7 @@
         "noImplicitOverride": true,
         "exactOptionalPropertyTypes": false,
         "declaration": true,
+        "stripInternal": true,
         "declarationMap": true,
         "sourceMap": true,
         "esModuleInterop": true,

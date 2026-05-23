@@ -8,6 +8,8 @@
  * prequalify builder is the only consumer that knows how to serialize them.
  */
 
+import type { State } from '../catalog/states';
+
 /**
  * Applicant biological sex. Wire format uses single-letter codes; the
  * `WireCode` accessor performs that mapping so call sites never spell `"M"`
@@ -115,8 +117,21 @@ export interface Applicant {
   sex: Sex;
   height: Height;
   weight: Weight;
-  /** US state of residence (two-letter postal code, e.g., "NC"). */
-  state: string;
+  /**
+   * US state of residence (ISO 3166-2:US two-letter postal code).
+   *
+   * Pass the typed catalog enum to get autocomplete + typo protection:
+   *
+   * ```ts
+   * import { State } from '@software-automation-holdings-llc/sdk';
+   * const applicant: Applicant = { state: State.NorthCarolina, /* … *\/ };
+   * ```
+   *
+   * Raw two-letter strings (`'NC'`) remain accepted for backward
+   * compatibility; the typed form is idiotproof — typos like
+   * `'North Carolina'` become compile errors.
+   */
+  state: State | (string & {});
   /** ZIP code; required by some product families. */
   zip?: string;
   nicotineUse: NicotineUsage;

@@ -27,8 +27,10 @@ export {
   ZyInsNamespace,
   RapidSignNamespace,
   ProxyNamespace,
+  SESSIONS_REISSUE_PATH,
   type IsaOptions,
   type IsaFactoryOptions,
+  type IsaAuthArgs,
 } from './zyins/isa';
 
 // --- Account namespace --------------------------------------------------
@@ -38,7 +40,6 @@ export {
   AccountPreferences,
   AccountCases,
   AccountEmail,
-  AccountReferenceData,
   type AccountNamespaceOptions,
   type BrandingDetail as AccountBrandingDetail,
   type BrandingLookupRequest as AccountBrandingLookupRequest,
@@ -53,19 +54,19 @@ export {
   type CaseSummary as AccountCaseSummary,
   type EmailEnqueueRequest as AccountEmailEnqueueRequest,
   type EmailEnqueueResult as AccountEmailEnqueueResult,
-  type ReferenceDataRequest as AccountReferenceDataRequest,
-  type ReferenceDataResult as AccountReferenceDataResult,
 } from './account';
 
 // --- Auth / identity / env factory --------------------------------------
+// `SessionIdentity` and `resolveSessionIdentity` are intentionally omitted
+// from the public surface — sessions are SDK-internal refresh state minted
+// by `Isa.withKeycode` / `Isa.forForm`, not a consumer-constructed auth
+// mode (sdk-syntax-proposal.md §4 + §6).
 export {
   type IsaIdentity,
   type BearerIdentity,
   type LicenseIdentity,
-  type SessionIdentity,
   resolveBearerIdentity,
   resolveLicenseIdentity,
-  resolveSessionIdentity,
   ENV_VAR_NAMES,
 } from './zyins/envFactory';
 
@@ -75,6 +76,8 @@ export {
   IsaApiError,
   IsaConfigError,
   IsaIdempotencyConflictError,
+  IsaNotActivatedError,
+  type IsaNotActivatedCode,
 } from './zyins/apiError';
 
 // --- Envelope -----------------------------------------------------------

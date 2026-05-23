@@ -1,135 +1,318 @@
 /**
- * Tier 3 license operations — LEGACY CGI surface (`/v1/licensing`).
+ * Tier 3 license operations — proto-backed (`/v1/licenses/activate`,
+ * `/v1/licenses/check`, `/v1/licenses/deactivate`).
  *
- * @deprecated Use the proto-backed `licenses` (plural) sub-client
- * (`./licenses.ts`) for new code. The new sub-client targets
- * `/v1/licenses/check` and `/v1/licenses/deactivate`, which return
- * structured JSON instead of the legacy CGI `ERR_*` plain-text
- * dialect. This module remains for backward compatibility with
- * bpp2.0's `useSoftwareActivator.js`.
+ * The TS/JS surface is singular (`isa.zyins.license`) — a device has exactly
+ * one license, not a collection. The wire paths remain plural for backward
+ * compatibility with the deployed server; only the SDK names changed.
  *
- * Replaces the 7-branch ERR_* if-chain in bpp2.0's `useSoftwareActivator.js`
- * with three typed methods (`activate`, `deactivate`, `check`) and one
- * typed-error funnel (`LicenseError`). The CGI's `text/plain` ERR_* dialect
- * is absorbed by `fromHttpResponse`; the Tier 3 caller switches on
- * `LicenseError.code` instead of comparing strings.
+ * The proto definitions for the request and response shapes live in
+ * `shared/schemas/api/zyins/v1/licenses.proto`.
  */
 
 import { type AuthContext } from './auth';
 import { type Transport } from './transport';
-import { fromHttpResponse, LicenseError } from './errors';
+import { fromHttpResponse } from './errors';
+import { deriveIdempotencyKey } from './idempotency';
+import { parseJsonResponse, unwrapEnvelope as unwrapParsedEnvelope } from './response';
 import { buildLicenseHMACHeaders } from '../core';
 import { type Clock, systemClock } from '../core';
 
-const LICENSING_PATH = '/v1/licensing';
+const LICENSES_ACTIVATE_PATH = '/v1/licenses/activate';
+const LICENSES_CHECK_PATH = '/v1/licenses/check';
+const LICENSES_DEACTIVATE_PATH = '/v1/licenses/deactivate';
+const DEACTIVATED_STATUS = 'deactivated';
 
+/** Mirror of proto `LicenseStatus`. Unknown wire values surface as-is. */
+export type LicenseValidationStatus = string;
+
+/** Inputs accepted by `license.activate`. */
+export interface LicenseActivateRequest {
+  /** Email associated with the license. Required. */
+  email: string;
+  /** BPP order keycode in XXX-XXX-XXX format. Required. */
+  keycode: string;
+  /** Client-generated device fingerprint. Required. */
+  deviceId: string;
+}
+
+/** Auth block surfaced inside an activation response. */
+export interface LicenseActivateAuth {
+  /** License key minted (or reused) for this activation. */
+  licenseKey: string;
+}
+
+/** Output of `license.activate`. */
 export interface LicenseActivateResult {
-  /** Remaining activations on the order (best-effort; may be undefined). */
-  remainingActivations?: number;
+  /** Activation outcome (`active` on success; unknown values surface as-is). */
+  status: string;
+  /** Auth credentials minted for the device. */
+  auth: LicenseActivateAuth;
+  /** Device activations remaining on the order after this call. */
+  remainingActivations: number;
 }
 
+/** Inputs accepted by `license.check`. */
+export interface LicenseCheckRequest {
+  /** Email associated with the license. Required. */
+  email: string;
+  /** BPP order keycode in XXX-XXX-XXX format. Required. */
+  keycode: string;
+  /** Optional client-generated device fingerprint. */
+  deviceId?: string;
+  /** Optional license key to verify (deterministic regeneration). */
+  licenseKey?: string;
+}
+
+/** Output of `license.check`. */
 export interface LicenseCheckResult {
-  /** Whether the activation is currently usable. */
-  active: boolean;
-  /** Remaining activations on the order when known. */
-  remainingActivations?: number;
+  /** Validation outcome. Unknown wire values surface as-is. */
+  status: LicenseValidationStatus;
 }
 
-/** Shared knobs every license call needs. */
+/** Inputs accepted by `license.deactivate`. */
+export interface LicenseDeactivateRequest {
+  /** Email associated with the license. Required. */
+  email: string;
+  /** BPP order keycode. Required. */
+  keycode: string;
+  /** Optional device fingerprint; reset on success. */
+  deviceId?: string;
+}
+
+/** Output of `license.deactivate`. */
+export interface LicenseDeactivateResult {
+  /** Always `deactivated` on success. */
+  status: string;
+}
+
+/** Shared knobs the client passes through to a licenses call. */
 export interface LicenseContext {
   baseUrl: string;
   auth: AuthContext;
   transport: Transport;
   clock: Clock;
+  /** Optional Idempotency-Key override; default derives from body. */
+  idempotencyKey?: string;
 }
 
 /**
- * Activate a license on this device. The CGI ERR_* responses are absorbed
- * into `LicenseError` with codes `max_activations` / `inactive` /
- * `active_elsewhere` / `locked` / `invalid_credentials` / `unknown`.
+ * Activate a license on a new device. The server mints a license key,
+ * decrements the order's remaining-activations counter, and returns
+ * pre-built credentials.
  */
-export async function activate(ctx: LicenseContext): Promise<LicenseActivateResult> {
-  const body = `action=activate&random_string=${encodeURIComponent(ctx.auth.deviceId)}&email=${encodeURIComponent(ctx.auth.email)}&orderid=${encodeURIComponent(ctx.auth.orderId)}`;
-  return call(ctx, body, parseActivateResponse);
-}
-
-/** Deactivate the current device's activation. */
-export async function deactivate(ctx: LicenseContext): Promise<void> {
-  const body = `action=deactivate&random_string=${encodeURIComponent(ctx.auth.deviceId)}&email=${encodeURIComponent(ctx.auth.email)}&orderid=${encodeURIComponent(ctx.auth.orderId)}`;
-  await call(ctx, body, () => undefined);
-}
-
-/** Check whether the current activation is still valid. */
-export async function check(ctx: LicenseContext): Promise<LicenseCheckResult> {
-  const body = `action=check&random_string=${encodeURIComponent(ctx.auth.deviceId)}&email=${encodeURIComponent(ctx.auth.email)}&orderid=${encodeURIComponent(ctx.auth.orderId)}`;
-  return call(ctx, body, parseCheckResponse);
-}
-
-/** Shared call/parse path; ERR_* responses surface as LicenseError. */
-async function call<T>(
+export async function activate(
+  request: LicenseActivateRequest,
   ctx: LicenseContext,
-  body: string,
-  parse: (responseBody: string) => T,
-): Promise<T> {
-  const headers = await buildHeaders({ ctx, body });
+): Promise<LicenseActivateResult> {
+  validateActivateRequest(request);
+  const body = JSON.stringify(serializeActivate(request));
+  const requestCtx: LicenseContext = {
+    ...ctx,
+    auth: { ...ctx.auth, deviceId: request.deviceId },
+  };
+  const idempotencyKey =
+    ctx.idempotencyKey ??
+    (await deriveIdempotencyKey({ deviceId: request.deviceId, op: 'license_activate', body }));
+  const headers = await buildHeaders({ ctx: requestCtx, body, path: LICENSES_ACTIVATE_PATH, idempotencyKey });
   const response = await ctx.transport({
-    url: `${ctx.baseUrl}${LICENSING_PATH}`,
+    url: `${ctx.baseUrl}${LICENSES_ACTIVATE_PATH}`,
     method: 'POST',
     headers,
     body,
   });
   if (response.status >= 200 && response.status < 300) {
-    const trimmed = response.body.trim();
-    if (trimmed.startsWith('ERR_') || trimmed === 'NO_EMAIL') {
-      // Legacy CGI returns 200 with ERR_* body on logical failures.
-      throw fromHttpResponse(response.status, trimmed);
-    }
-    return parse(trimmed);
+    return parseActivate(response.body);
   }
   throw fromHttpResponse(response.status, response.body);
 }
 
-async function buildHeaders(args: { ctx: LicenseContext; body: string }): Promise<Record<string, string>> {
-  const headers = await buildLicenseHMACHeaders(
+/**
+ * Run the public phone-home check. The server does not require
+ * authentication; an attached bearer/HMAC header is harmless and lets
+ * one client struct serve every operation.
+ */
+export async function check(
+  request: LicenseCheckRequest,
+  ctx: LicenseContext,
+): Promise<LicenseCheckResult> {
+  validateCheckRequest(request);
+  const body = JSON.stringify(serializeCheck(request));
+  const idempotencyKey =
+    ctx.idempotencyKey ??
+    (await deriveIdempotencyKey({ deviceId: ctx.auth.deviceId, op: 'license_check', body }));
+  const headers = await buildHeaders({ ctx, body, path: LICENSES_CHECK_PATH, idempotencyKey });
+  const response = await ctx.transport({
+    url: `${ctx.baseUrl}${LICENSES_CHECK_PATH}`,
+    method: 'POST',
+    headers,
+    body,
+  });
+  if (response.status >= 200 && response.status < 300) {
+    return parseCheck(response.body);
+  }
+  throw fromHttpResponse(response.status, response.body);
+}
+
+/**
+ * Run the public deactivation. Marks the activation inactive and
+ * resets the anti-piracy device record.
+ */
+export async function deactivate(
+  request: LicenseDeactivateRequest,
+  ctx: LicenseContext,
+): Promise<LicenseDeactivateResult> {
+  validateDeactivateRequest(request);
+  const body = JSON.stringify(serializeDeactivate(request));
+  const idempotencyKey =
+    ctx.idempotencyKey ??
+    (await deriveIdempotencyKey({ deviceId: ctx.auth.deviceId, op: 'license_deactivate', body }));
+  const headers = await buildHeaders({ ctx, body, path: LICENSES_DEACTIVATE_PATH, idempotencyKey });
+  const response = await ctx.transport({
+    url: `${ctx.baseUrl}${LICENSES_DEACTIVATE_PATH}`,
+    method: 'POST',
+    headers,
+    body,
+  });
+  if (response.status >= 200 && response.status < 300) {
+    return parseDeactivate(response.body);
+  }
+  throw fromHttpResponse(response.status, response.body);
+}
+
+function validateActivateRequest(request: LicenseActivateRequest): void {
+  if (!request.email?.trim()) {
+    throw new Error('zyins: license.activate requires email');
+  }
+  if (!request.keycode?.trim()) {
+    throw new Error('zyins: license.activate requires keycode');
+  }
+  if (!request.deviceId?.trim()) {
+    throw new Error('zyins: license.activate requires deviceId');
+  }
+}
+
+function validateCheckRequest(request: LicenseCheckRequest): void {
+  if (!request.email?.trim()) {
+    throw new Error('zyins: license.check requires email');
+  }
+  if (!request.keycode?.trim()) {
+    throw new Error('zyins: license.check requires keycode');
+  }
+}
+
+function validateDeactivateRequest(request: LicenseDeactivateRequest): void {
+  if (!request.email?.trim()) {
+    throw new Error('zyins: license.deactivate requires email');
+  }
+  if (!request.keycode?.trim()) {
+    throw new Error('zyins: license.deactivate requires keycode');
+  }
+}
+
+function serializeActivate(request: LicenseActivateRequest): Record<string, string> {
+  return {
+    email: request.email,
+    keycode: request.keycode,
+    device_id: request.deviceId,
+  };
+}
+
+function serializeCheck(request: LicenseCheckRequest): Record<string, string> {
+  const payload: Record<string, string> = {
+    email: request.email,
+    keycode: request.keycode,
+  };
+  if (request.deviceId) payload['device_id'] = request.deviceId;
+  if (request.licenseKey) payload['license_key'] = request.licenseKey;
+  return payload;
+}
+
+function serializeDeactivate(request: LicenseDeactivateRequest): Record<string, string> {
+  const payload: Record<string, string> = {
+    email: request.email,
+    keycode: request.keycode,
+  };
+  if (request.deviceId) payload['device_id'] = request.deviceId;
+  return payload;
+}
+
+function parseActivate(body: string): LicenseActivateResult {
+  const data = unwrapEnvelope(body) as {
+    status?: unknown;
+    remainingActivations?: unknown;
+    remaining_activations?: unknown;
+    auth?: unknown;
+  };
+  const status = data.status;
+  if (typeof status !== 'string' || status === '') {
+    throw new Error('zyins: license.activate response missing status field');
+  }
+  const remaining = data.remaining_activations ?? data.remainingActivations;
+  if (typeof remaining !== 'number') {
+    throw new Error('zyins: license.activate response missing remainingActivations');
+  }
+  const auth = data.auth;
+  if (!auth || typeof auth !== 'object') {
+    throw new Error('zyins: license.activate response missing auth block');
+  }
+  const licenseKey =
+    (auth as { license_key?: unknown }).license_key ?? (auth as { licenseKey?: unknown }).licenseKey;
+  if (typeof licenseKey !== 'string' || licenseKey === '') {
+    throw new Error('zyins: license.activate response missing auth.licenseKey');
+  }
+  return {
+    status,
+    auth: { licenseKey },
+    remainingActivations: remaining,
+  };
+}
+
+function parseCheck(body: string): LicenseCheckResult {
+  const data = unwrapEnvelope(body);
+  const status = (data as { status?: unknown }).status;
+  if (typeof status !== 'string') {
+    throw new Error(`zyins: license.check response missing status field`);
+  }
+  return { status: status as LicenseValidationStatus };
+}
+
+function parseDeactivate(body: string): LicenseDeactivateResult {
+  const data = unwrapEnvelope(body);
+  const status = (data as { status?: unknown }).status;
+  if (status !== DEACTIVATED_STATUS) {
+    throw new Error('zyins: license.deactivate response missing deactivated status');
+  }
+  return { status };
+}
+
+function unwrapEnvelope(body: string): unknown {
+  if (!body) {
+    throw new Error('zyins: license response body was empty');
+  }
+  return unwrapParsedEnvelope(parseJsonResponse(body, 'license'));
+}
+
+async function buildHeaders(args: {
+  ctx: LicenseContext;
+  body: string;
+  path: string;
+  idempotencyKey: string;
+}): Promise<Record<string, string>> {
+  const signed = await buildLicenseHMACHeaders(
     args.ctx.auth.licenseKey,
     args.ctx.auth.orderId,
     args.ctx.auth.email,
     'POST',
-    LICENSING_PATH,
+    args.path,
     args.body,
     args.ctx.auth.deviceId,
     args.ctx.clock ?? systemClock,
   );
-  return { ...headers, 'Content-Type': 'application/x-www-form-urlencoded' };
-}
-
-/**
- * The legacy CGI returns either:
- *   "SUCCESS:<remaining_activations>"
- * or a raw count, depending on version. We tolerate both.
- */
-function parseActivateResponse(body: string): LicenseActivateResult {
-  if (body.startsWith('SUCCESS:')) {
-    const tail = body.slice('SUCCESS:'.length);
-    const remaining = Number.parseInt(tail, 10);
-    return Number.isFinite(remaining) ? { remainingActivations: remaining } : {};
-  }
-  const remaining = Number.parseInt(body, 10);
-  return Number.isFinite(remaining) ? { remainingActivations: remaining } : {};
-}
-
-function parseCheckResponse(body: string): LicenseCheckResult {
-  if (body === 'INACTIVE') return { active: false };
-  if (body.startsWith('ACTIVE')) {
-    const colonIdx = body.indexOf(':');
-    if (colonIdx > 0) {
-      const remaining = Number.parseInt(body.slice(colonIdx + 1), 10);
-      return Number.isFinite(remaining) ? { active: true, remainingActivations: remaining } : { active: true };
-    }
-    return { active: true };
-  }
-  // Conservative fallback: an unexpected body shape on a 2xx response is a
-  // protocol-version skew. Surface as LicenseError so the caller does not
-  // silently assume "active".
-  throw new LicenseError('unknown', `unrecognized license check response: ${body}`);
+  return {
+    ...signed,
+    'Content-Type': 'application/json',
+    Accept: 'application/json',
+    'Idempotency-Key': args.idempotencyKey,
+  };
 }

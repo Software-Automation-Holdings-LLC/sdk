@@ -1,9 +1,9 @@
 /**
  * In-memory credential state shared between `Isa`, the underlying
- * `ZyInsClient`, and the `LicensesFacade`.
+ * `ZyInsClient`, and the `LicenseFacade`.
  *
  * The state object's identity is stable across the Isa lifetime; the
- * fields inside it are mutated in place when `licenses.activate()` returns
+ * fields inside it are mutated in place when `license.activate()` returns
  * a fresh license key. Because every sub-client captures the same
  * `AuthContext` reference, the in-place mutation is observed by
  * subsequent calls without any caller re-bootstrap.
@@ -31,7 +31,7 @@ export interface LicenseCredentialSnapshot {
 }
 /**
  * Event payload fired when the SDK observes a fresh license key (typically
- * the return value of `licenses.activate()`). Consumers wire this to
+ * the return value of `license.activate()`). Consumers wire this to
  * React-Query invalidation, analytics, or UI banners.
  */
 export interface LicenseRefreshedEvent {
@@ -71,7 +71,7 @@ export declare class IsaCredentialState {
     /**
      * Update the live `AuthContext` with a fresh license key, persist it to
      * the credential store, and notify subscribers. Called by the
-     * `LicensesFacade` after a successful `activate()`.
+     * `LicenseFacade` after a successful `activate()`.
      */
     refreshLicenseKey(licenseKey: string): Promise<void>;
     /** Clear the stashed license key (post-deactivate). */

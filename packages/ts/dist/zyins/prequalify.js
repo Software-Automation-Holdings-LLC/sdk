@@ -49,7 +49,7 @@ async function prequalifyBody(body, ctx) {
     const url = `${ctx.baseUrl}${PREQUALIFY_PATH}`;
     const response = await ctx.transport({ url, method: 'POST', headers, body });
     if (response.status >= 200 && response.status < 300) {
-        return parsePrequalifyResponse(response.body);
+        return { ...parsePrequalifyResponse(response.body), idempotencyKey };
     }
     throw fromHttpResponse(response.status, response.body);
 }

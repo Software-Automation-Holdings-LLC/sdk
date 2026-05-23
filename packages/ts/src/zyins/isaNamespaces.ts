@@ -16,18 +16,19 @@ import {
 } from './preferences';
 import { type CaseCreateRequest, type CaseCreateResult } from './cases';
 import { type CaseEmailRequest, type CaseEmailResult } from './case';
+import { type DatasetBundle, type DatasetsGetOptions } from './datasets';
 import {
-  activate as licensesActivate,
-  check as licensesCheck,
-  deactivate as licensesDeactivate,
-  type LicensesActivateRequest,
-  type LicensesActivateResult,
-  type LicensesCheckRequest,
-  type LicensesCheckResult,
-  type LicensesContext,
-  type LicensesDeactivateRequest,
-  type LicensesDeactivateResult,
-} from './licenses';
+  activate as licenseActivate,
+  check as licenseCheck,
+  deactivate as licenseDeactivate,
+  type LicenseActivateRequest,
+  type LicenseActivateResult,
+  type LicenseCheckRequest,
+  type LicenseCheckResult,
+  type LicenseContext,
+  type LicenseDeactivateRequest,
+  type LicenseDeactivateResult,
+} from './license';
 import { type IsaCredentialState } from './credentialState';
 import { type Transport } from './transport';
 import { type Clock, systemClock } from '../core';
@@ -39,6 +40,20 @@ import {
 
 type ClientThunk = () => ZyInsClient;
 
+/**
+ * One-shot deprecation warning helpers. Each surface that has a singular →
+ * plural (or method-rename) shim logs a `console.warn` exactly once per
+ * facade instance so the noise doesn't drown a busy app.
+ */
+const DEPRECATED_WARNED = new WeakSet<object>();
+function warnDeprecatedOnce(scope: object, message: string): void {
+  if (DEPRECATED_WARNED.has(scope)) return;
+  DEPRECATED_WARNED.add(scope);
+  if (typeof console !== 'undefined' && typeof console.warn === 'function') {
+    console.warn(`[isa-sdk] ${message}`);
+  }
+}
+
 /** `isa.zyins.branding` — whitelabel lookup. */
 export class BrandingFacade {
   constructor(private readonly clientOnce: ClientThunk) {}
@@ -46,6 +61,19 @@ export class BrandingFacade {
   /** Fetch whitelabel branding for the calling license. */
   lookup(): Promise<BrandingDetail> {
     return this.clientOnce().branding.lookup();
+  }
+}
+
+/** `isa.zyins.datasets` — reference-data bundle for picker UIs. */
+export class DatasetsFacade {
+  constructor(private readonly clientOnce: ClientThunk) {}
+
+  /**
+   * Returns the full reference-data bundle (medications, conditions,
+   * products, etc.). Pass `{ include }` to fetch a subset.
+   */
+  get(options?: DatasetsGetOptions): Promise<DatasetBundle> {
+    return this.clientOnce().datasets.get(options);
   }
 }
 
@@ -62,13 +90,50 @@ export class PreferencesFacade {
   }
 }
 
-/** `isa.zyins.cases` — case create + share. */
+/**
+ * `isa.zyins.cases` — case share + email.
+ *
+ * Per the locked-spec surface (Section 3 Flow 5 + Appendix B post-lock
+ * correction #2): the canonical verb is `share({ input, results?, products? })`.
+ * One method, optional analysis fields. The recipient's UI
+ * (`forceReadonlyAtom` in bpp2.0) decides RO vs RW display state — the SDK
+ * has no `mode` flag.
+ *
+ * @example
+ * ```ts
+ * // RW link (no analysis snapshot):
+ * const rw = await isa.zyins.cases.share({ input: currentCaseToJSON() });
+ *
+ * // RO link (analysis snapshot included):
+ * const ro = await isa.zyins.cases.share({
+ *   input:    currentCaseToJSON(),
+ *   results:  currentAnalysisResult,
+ *   products: selectedProducts,
+ * });
+ * ```
+ */
 export class CasesFacade {
   constructor(private readonly clientOnce: ClientThunk) {}
 
-  /** Create a shareable case from quote input + results + products. */
+  /**
+   * Share a case from quote input + optional analysis snapshot. Returns the
+   * shareable URL. Canonical per the locked spec.
+   */
+  share(request: CaseCreateRequest): Promise<CaseCreateResult> {
+    return this.clientOnce().cases.share(request);
+  }
+
+  /**
+   * @deprecated Use `share()`. `create()` is a back-compat alias that
+   * forwards to the same wire call; will be removed in v0.7.0. See
+   * `/tmp/sdk-syntax-proposal.md` Appendix B post-lock correction #2.
+   */
   create(request: CaseCreateRequest): Promise<CaseCreateResult> {
-    return this.clientOnce().cases.create(request);
+    warnDeprecatedOnce(
+      this,
+      'isa.zyins.cases.create is deprecated; use isa.zyins.cases.share. Removed in v0.7.0.',
+    );
+    return this.clientOnce().cases.share(request);
   }
 
   /** Email a case PDF/artifact to a recipient. */
@@ -77,11 +142,11 @@ export class CasesFacade {
   }
 }
 
-/** Construction options for the credential-aware `LicensesFacade`. */
-export interface LicensesFacadeOptions {
+/** Construction options for the credential-aware `LicenseFacade`. */
+export interface LicenseFacadeOptions {
   /** Shared credential state owned by the parent `Isa`. */
   state: IsaCredentialState;
-  /** Base URL for the licenses surface. */
+  /** Base URL for the license surface. */
   baseUrl: string;
   /** Transport facade (default fetch; tests inject a stub). */
   transport: Transport;
@@ -90,18 +155,33 @@ export interface LicensesFacadeOptions {
 }
 
 /**
- * `isa.zyins.licenses` — license lifecycle (activate / check / deactivate).
+ * `isa.zyins.license` — license lifecycle (activate / check / deactivate).
+ *
+ * Per the locked-spec surface (post-lock correction #3): a device has
+ * exactly one license, so the namespace is singular. The wire is also
+ * singular (`/v1/license/activate`).
  *
  * Every method accepts an optional partial request; missing fields fall back
  * to the credentials the parent `Isa` was constructed with. The first
  * successful `activate()` updates the shared credential state in place so
- * subsequent calls (`prequalify`, `cases.create`, …) sign with the new
+ * subsequent calls (`prequalify`, `cases.share`, …) sign with the new
  * license key automatically — no caller re-bootstrap.
+ *
+ * @example
+ * ```ts
+ * import { Isa } from '@software-automation-holdings-llc/sdk';
+ * const isa = await Isa.withKeycode({
+ *   keycode: 'SDV-HWH-WDD',
+ *   email:   'john.doe@acme-agency.com',
+ * });
+ * const result = await isa.zyins.license.activate();
+ * console.log(result.remainingActivations);
+ * ```
  */
-export class LicensesFacade {
-  private readonly opts: LicensesFacadeOptions;
+export class LicenseFacade {
+  private readonly opts: LicenseFacadeOptions;
 
-  constructor(opts: LicensesFacadeOptions) {
+  constructor(opts: LicenseFacadeOptions) {
     this.opts = opts;
   }
 
@@ -110,9 +190,9 @@ export class LicensesFacade {
    * `email`, `keycode`, and `deviceId` from the parent `Isa`'s credential
    * state. Callers MAY override any field per-call.
    */
-  async activate(request?: Partial<LicensesActivateRequest>): Promise<LicensesActivateResult> {
+  async activate(request?: Partial<LicenseActivateRequest>): Promise<LicenseActivateResult> {
     const filled = this.fillActivate(request);
-    const result = await licensesActivate(filled, this.buildContext());
+    const result = await licenseActivate(filled, this.buildContext());
     if (result.status === 'active' && isOwnLicenseRequest(this.opts.state, filled)) {
       await this.opts.state.refreshLicenseKey(result.auth.licenseKey);
     }
@@ -120,23 +200,23 @@ export class LicensesFacade {
   }
 
   /** Phone-home validation. Defaults fill from instance state. */
-  async check(request?: Partial<LicensesCheckRequest>): Promise<LicensesCheckResult> {
-    return licensesCheck(this.fillCheck(request), this.buildContext());
+  async check(request?: Partial<LicenseCheckRequest>): Promise<LicenseCheckResult> {
+    return licenseCheck(this.fillCheck(request), this.buildContext());
   }
 
   /** Deactivate this device. Clears the stashed license key on success. */
   async deactivate(
-    request?: Partial<LicensesDeactivateRequest>,
-  ): Promise<LicensesDeactivateResult> {
+    request?: Partial<LicenseDeactivateRequest>,
+  ): Promise<LicenseDeactivateResult> {
     const filled = this.fillDeactivate(request);
-    const result = await licensesDeactivate(filled, this.buildContext());
+    const result = await licenseDeactivate(filled, this.buildContext());
     if (isOwnLicenseRequest(this.opts.state, filled)) {
       await this.opts.state.clearLicenseKey();
     }
     return result;
   }
 
-  private buildContext(): LicensesContext {
+  private buildContext(): LicenseContext {
     return {
       baseUrl: this.opts.baseUrl,
       auth: this.opts.state.auth,
@@ -145,7 +225,7 @@ export class LicensesFacade {
     };
   }
 
-  private fillActivate(request: Partial<LicensesActivateRequest> | undefined): LicensesActivateRequest {
+  private fillActivate(request: Partial<LicenseActivateRequest> | undefined): LicenseActivateRequest {
     const snap = this.opts.state.snapshot();
     return {
       email: request?.email ?? snap.email,
@@ -154,9 +234,9 @@ export class LicensesFacade {
     };
   }
 
-  private fillCheck(request: Partial<LicensesCheckRequest> | undefined): LicensesCheckRequest {
+  private fillCheck(request: Partial<LicenseCheckRequest> | undefined): LicenseCheckRequest {
     const snap = this.opts.state.snapshot();
-    const filled: LicensesCheckRequest = {
+    const filled: LicenseCheckRequest = {
       email: request?.email ?? snap.email,
       keycode: request?.keycode ?? snap.keycode,
     };
@@ -168,10 +248,10 @@ export class LicensesFacade {
   }
 
   private fillDeactivate(
-    request: Partial<LicensesDeactivateRequest> | undefined,
-  ): LicensesDeactivateRequest {
+    request: Partial<LicenseDeactivateRequest> | undefined,
+  ): LicenseDeactivateRequest {
     const snap = this.opts.state.snapshot();
-    const filled: LicensesDeactivateRequest = {
+    const filled: LicenseDeactivateRequest = {
       email: request?.email ?? snap.email,
       keycode: request?.keycode ?? snap.keycode,
     };
@@ -180,6 +260,7 @@ export class LicensesFacade {
     return filled;
   }
 }
+
 
 function isOwnLicenseRequest(
   state: IsaCredentialState,

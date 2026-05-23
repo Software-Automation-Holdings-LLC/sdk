@@ -4,7 +4,7 @@
  * The SDK persists the device id minted at first activation and the license
  * key issued by `/v1/licenses/activate` so subsequent process boots do not
  * have to re-bootstrap the user. The storage layer is a facade so the same
- * `Isa.withLicense({...})` call works in three runtimes:
+ * `Isa.withKeycode({...})` call works in three runtimes:
  *
  * 1. React Native — caller passes an AsyncStorage-shaped adapter.
  * 2. Browser     — caller passes a localStorage-shaped adapter.
@@ -42,7 +42,7 @@ export const CREDENTIAL_KEYS = {
  * In-memory {@link CredentialStore}. Default when the caller supplies no
  * persistent adapter. State survives the process but NOT a restart — for
  * cross-boot persistence, plug in an AsyncStorage / localStorage / fs
- * adapter via `Isa.withLicense({ credentialStore: ... })`.
+ * adapter via `Isa.withKeycode({ credentialStore: ... })`.
  */
 export function inMemoryCredentialStore(): CredentialStore {
   const state = new Map<string, string>();

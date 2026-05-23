@@ -54,20 +54,15 @@ export {
 } from './prequalify';
 
 export {
+  type LicenseActivateRequest,
   type LicenseActivateResult,
+  type LicenseActivateAuth,
+  type LicenseCheckRequest,
   type LicenseCheckResult,
-} from './license';
-
-export {
-  type LicensesActivateRequest,
-  type LicensesActivateResult,
-  type LicensesActivateAuth,
-  type LicensesCheckRequest,
-  type LicensesCheckResult,
-  type LicensesDeactivateRequest,
-  type LicensesDeactivateResult,
+  type LicenseDeactivateRequest,
+  type LicenseDeactivateResult,
   type LicenseValidationStatus,
-} from './licenses';
+} from './license';
 
 export {
   getReadiness,
@@ -113,6 +108,8 @@ export {
   IsaApiError,
   IsaConfigError,
   IsaIdempotencyConflictError,
+  IsaNotActivatedError,
+  type IsaNotActivatedCode,
 } from './apiError';
 export {
   type Envelope,

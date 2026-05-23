@@ -11,8 +11,11 @@
  * branding / preferences / cases / email surface is preserved for
  * back-compat and shares the same wire endpoints; `account` is the
  * forward-looking ergonomic surface and adds the missing operations
- * (`cases.get`, `cases.list`, `referenceData.get`, scope-partitioned
- * preferences).
+ * (`cases.get`, `cases.list`, scope-partitioned preferences).
+ *
+ * Reference data has consolidated onto `isa.zyins.datasets.get()`; the
+ * deprecated `isa.account.referenceData` surface has been removed per
+ * `/tmp/sdk-syntax-proposal.md` post-lock correction #3.
  */
 
 import { type AuthContext } from './auth';
@@ -47,11 +50,6 @@ import {
   type EmailEnqueueRequest,
   type EmailEnqueueResult,
 } from './email';
-import {
-  get as referenceDataGet,
-  type ReferenceDataRequest,
-  type ReferenceDataResult,
-} from './referenceData';
 
 /** Construction options for {@link AccountNamespace}. */
 export interface AccountNamespaceOptions {
@@ -81,8 +79,6 @@ export class AccountNamespace {
   public readonly cases: AccountCases;
   /** `isa.account.email` — transactional email enqueue. */
   public readonly email: AccountEmail;
-  /** `isa.account.referenceData` — engine reference-data lookups. */
-  public readonly referenceData: AccountReferenceData;
 
   constructor(opts: AccountNamespaceOptions) {
     const ctx: OperationContext = {
@@ -95,7 +91,6 @@ export class AccountNamespace {
     this.preferences = new AccountPreferences(ctx);
     this.cases = new AccountCases(ctx);
     this.email = new AccountEmail(ctx);
-    this.referenceData = new AccountReferenceData(ctx);
   }
 }
 
@@ -151,15 +146,6 @@ export class AccountEmail {
   }
 }
 
-/** `isa.account.referenceData` facade. */
-export class AccountReferenceData {
-  constructor(private readonly ctx: OperationContext) {}
-
-  get(request: ReferenceDataRequest): Promise<ReferenceDataResult> {
-    return referenceDataGet(request, this.ctx);
-  }
-}
-
 // Re-export types for `import { type BrandingDetail } from '.../account'` style.
 export type {
   BrandingDetail,
@@ -175,6 +161,4 @@ export type {
   CaseSummary,
   EmailEnqueueRequest,
   EmailEnqueueResult,
-  ReferenceDataRequest,
-  ReferenceDataResult,
 };
