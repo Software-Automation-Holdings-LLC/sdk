@@ -26,7 +26,7 @@ const (
 )
 
 // LicenseRefreshedEvent is the payload fired when the SDK observes a
-// fresh license key (typically a return value of Licenses.Activate).
+// fresh license key (typically a return value of License.Activate).
 type LicenseRefreshedEvent struct {
 	LicenseKey string
 	DeviceID   string
@@ -48,7 +48,7 @@ type CredentialSnapshot struct {
 }
 
 // CredentialState is the per-process credential snapshot shared between
-// the License-HMAC sub-clients and the Licenses ergonomic facade. The
+// the License-HMAC sub-clients and the License ergonomic facade. The
 // reference is stable across the SDK lifetime; the inner fields are
 // mutated in place by Refresh* calls so every sub-client observes new
 // credentials without re-bootstrap.
@@ -135,7 +135,7 @@ func (s *CredentialState) Snapshot() CredentialSnapshot {
 
 // OnLicenseRefreshed registers a listener and returns an unsubscribe
 // function. Subscribers receive the fresh license key on every
-// successful Licenses.Activate.
+// successful License.Activate.
 func (s *CredentialState) OnLicenseRefreshed(listener LicenseRefreshedListener) func() {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -181,7 +181,7 @@ func (s *CredentialState) RefreshLicenseKey(licenseKey string) error {
 }
 
 // ClearLicenseKey wipes the stashed license key. Called after a
-// successful Licenses.Deactivate.
+// successful License.Deactivate.
 func (s *CredentialState) ClearLicenseKey() error {
 	s.mu.Lock()
 	s.licenseKey = ""

@@ -27,12 +27,12 @@ const (
 	LicenseStatusInactive LicenseValidationStatus = "inactive"
 )
 
-// LicensesService groups the public BPP license-lifecycle calls
-// (PublicCheck, PublicDeactivate). Authenticated self-* operations
+// LicenseService groups the public BPP license-lifecycle calls
+// (Activate, Check, Deactivate). Authenticated self-* operations
 // (LockSelf, RefreshSelf, etc.) ship after the LicenseHMAC transport
 // lands; this service exposes the no-auth + body-credential surface
 // only.
-type LicensesService struct {
+type LicenseService struct {
 	client *Client
 	// state is the optional CredentialState attached via WithState. When
 	// non-nil, zero-arg ergonomic variants (Activate / Check / Deactivate
@@ -43,15 +43,15 @@ type LicensesService struct {
 // WithState attaches a CredentialState to the service so zero-arg
 // activate/check/deactivate variants can pull credentials and stash the
 // minted license key back into shared state automatically.
-func (s *LicensesService) WithState(state *CredentialState) *LicensesService {
+func (s *LicenseService) WithState(state *CredentialState) *LicenseService {
 	s.state = state
 	return s
 }
 
 // State returns the attached CredentialState, or nil when none is set.
-func (s *LicensesService) State() *CredentialState { return s.state }
+func (s *LicenseService) State() *CredentialState { return s.state }
 
-// LicenseCheckInput is the typed request shape for Licenses.Check.
+// LicenseCheckInput is the typed request shape for License.Check.
 type LicenseCheckInput struct {
 	// Email associated with the license. Required.
 	Email string
@@ -66,14 +66,14 @@ type LicenseCheckInput struct {
 	LicenseKey string
 }
 
-// LicenseCheckResult is the typed response from Licenses.Check.
+// LicenseCheckResult is the typed response from License.Check.
 type LicenseCheckResult struct {
 	// Status is the validation outcome (valid, invalid, inactive).
 	Status LicenseValidationStatus `json:"status"`
 }
 
 // LicenseDeactivateInput is the typed request shape for
-// Licenses.Deactivate.
+// License.Deactivate.
 type LicenseDeactivateInput struct {
 	// Email associated with the license. Required.
 	Email string
@@ -84,7 +84,7 @@ type LicenseDeactivateInput struct {
 }
 
 // LicenseDeactivateResult is the typed response from
-// Licenses.Deactivate.
+// License.Deactivate.
 type LicenseDeactivateResult struct {
 	// Status is always "deactivated" on success.
 	Status string `json:"status"`
@@ -109,7 +109,7 @@ type licensesDeactivateWireBody struct {
 // Check performs a lightweight phone-home validation. The server does
 // not require authentication for this call; an attached bearer token
 // is harmless and lets one client struct serve every operation.
-func (s *LicensesService) Check(ctx context.Context, input *LicenseCheckInput, opts ...RunOption) (*LicenseCheckResult, error) {
+func (s *LicenseService) Check(ctx context.Context, input *LicenseCheckInput, opts ...RunOption) (*LicenseCheckResult, error) {
 	filled := s.fillCheck(input)
 	if strings.TrimSpace(filled.Email) == "" {
 		return nil, validationFailure("zyins: LicenseCheckInput.Email is required")
@@ -132,7 +132,7 @@ func (s *LicensesService) Check(ctx context.Context, input *LicenseCheckInput, o
 		idempotencyKey: ro.idempotencyKey,
 	})
 	if err != nil {
-		return nil, fmt.Errorf("zyins: Licenses.Check: %w", err)
+		return nil, fmt.Errorf("zyins: License.Check: %w", err)
 	}
 	return decodeLicenseCheckResponse(raw)
 }
@@ -140,7 +140,7 @@ func (s *LicensesService) Check(ctx context.Context, input *LicenseCheckInput, o
 // Deactivate revokes an activation, resets the anti-piracy device
 // record, and marks the order inactive. The server does not require
 // authentication for this call.
-func (s *LicensesService) Deactivate(ctx context.Context, input *LicenseDeactivateInput, opts ...RunOption) (*LicenseDeactivateResult, error) {
+func (s *LicenseService) Deactivate(ctx context.Context, input *LicenseDeactivateInput, opts ...RunOption) (*LicenseDeactivateResult, error) {
 	filled := s.fillDeactivate(input)
 	if strings.TrimSpace(filled.Email) == "" {
 		return nil, validationFailure("zyins: LicenseDeactivateInput.Email is required")
@@ -162,7 +162,7 @@ func (s *LicensesService) Deactivate(ctx context.Context, input *LicenseDeactiva
 		idempotencyKey: ro.idempotencyKey,
 	})
 	if err != nil {
-		return nil, fmt.Errorf("zyins: Licenses.Deactivate: %w", err)
+		return nil, fmt.Errorf("zyins: License.Deactivate: %w", err)
 	}
 	result, err := decodeLicenseDeactivateResponse(raw)
 	if err != nil {
@@ -170,14 +170,14 @@ func (s *LicensesService) Deactivate(ctx context.Context, input *LicenseDeactiva
 	}
 	if s.state != nil {
 		if err := s.state.ClearLicenseKey(); err != nil {
-			return nil, fmt.Errorf("zyins: Licenses.Deactivate clearing state: %w", err)
+			return nil, fmt.Errorf("zyins: License.Deactivate clearing state: %w", err)
 		}
 	}
 	return result, nil
 }
 
 // fillCheck merges the caller-supplied input with the attached state.
-func (s *LicensesService) fillCheck(input *LicenseCheckInput) LicenseCheckInput {
+func (s *LicenseService) fillCheck(input *LicenseCheckInput) LicenseCheckInput {
 	out := LicenseCheckInput{}
 	if input != nil {
 		out = *input
@@ -202,7 +202,7 @@ func (s *LicensesService) fillCheck(input *LicenseCheckInput) LicenseCheckInput 
 }
 
 // fillDeactivate merges the caller-supplied input with the attached state.
-func (s *LicensesService) fillDeactivate(input *LicenseDeactivateInput) LicenseDeactivateInput {
+func (s *LicenseService) fillDeactivate(input *LicenseDeactivateInput) LicenseDeactivateInput {
 	out := LicenseDeactivateInput{}
 	if input != nil {
 		out = *input

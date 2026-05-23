@@ -45,6 +45,7 @@ const defaultHTTPTimeout = 30 * time.Second
 type SessionBinding struct {
 	SessionID     string
 	SessionSecret string //nolint:gosec // documented credential field
+	DeviceID      string
 	ProxyOrigin   string
 }
 
@@ -184,6 +185,7 @@ func signedHeaders(b SessionBinding, body []byte, opts CallOptions) (map[string]
 		Body:          body,
 		SessionID:     b.SessionID,
 		SessionSecret: b.SessionSecret,
+		DeviceID:      b.DeviceID,
 		Now:           opts.Now,
 	})
 	if err != nil {

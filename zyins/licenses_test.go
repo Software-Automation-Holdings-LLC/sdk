@@ -34,7 +34,7 @@ func TestLicenses_Check_HappyPath(t *testing.T) {
 	}))
 	defer srv.Close()
 	c := newTestClient(t, srv)
-	result, err := c.Licenses.Check(context.Background(), &LicenseCheckInput{
+	result, err := c.License.Check(context.Background(), &LicenseCheckInput{
 		Email:      "john.doe@acme-agency.com",
 		Keycode:    "ABC-123-XYZ",
 		DeviceID:   "device-1",
@@ -71,7 +71,7 @@ func TestLicenses_Check_AcceptsEnvelopedResponse(t *testing.T) {
 	}))
 	defer srv.Close()
 	c := newTestClient(t, srv)
-	result, err := c.Licenses.Check(context.Background(), &LicenseCheckInput{
+	result, err := c.License.Check(context.Background(), &LicenseCheckInput{
 		Email: "x@x", Keycode: "ABC-123-XYZ",
 	})
 	if err != nil {
@@ -88,7 +88,7 @@ func TestLicenses_Check_RejectsMissingEmail(t *testing.T) {
 	}))
 	defer srv.Close()
 	c := newTestClient(t, srv)
-	_, err := c.Licenses.Check(context.Background(), &LicenseCheckInput{Keycode: "ABC-123-XYZ"})
+	_, err := c.License.Check(context.Background(), &LicenseCheckInput{Keycode: "ABC-123-XYZ"})
 	if err == nil {
 		t.Fatalf("expected validation error, got nil")
 	}
@@ -102,7 +102,7 @@ func TestLicenses_Check_NilInput(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {}))
 	defer srv.Close()
 	c := newTestClient(t, srv)
-	_, err := c.Licenses.Check(context.Background(), nil)
+	_, err := c.License.Check(context.Background(), nil)
 	if err == nil {
 		t.Fatalf("expected validation error on nil input")
 	}
@@ -116,7 +116,7 @@ func TestLicenses_Check_ServerError(t *testing.T) {
 	}))
 	defer srv.Close()
 	c := newTestClient(t, srv)
-	_, err := c.Licenses.Check(context.Background(), &LicenseCheckInput{
+	_, err := c.License.Check(context.Background(), &LicenseCheckInput{
 		Email: "x@x", Keycode: "ABC-123-XYZ",
 	})
 	if err == nil {
@@ -134,7 +134,7 @@ func TestLicenses_Deactivate_HappyPath(t *testing.T) {
 	}))
 	defer srv.Close()
 	c := newTestClient(t, srv)
-	result, err := c.Licenses.Deactivate(context.Background(), &LicenseDeactivateInput{
+	result, err := c.License.Deactivate(context.Background(), &LicenseDeactivateInput{
 		Email:    "john.doe@acme-agency.com",
 		Keycode:  "ABC-123-XYZ",
 		DeviceID: "device-1",
@@ -151,7 +151,7 @@ func TestLicenses_Deactivate_RejectsMissingKeycode(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {}))
 	defer srv.Close()
 	c := newTestClient(t, srv)
-	_, err := c.Licenses.Deactivate(context.Background(), &LicenseDeactivateInput{Email: "x@x"})
+	_, err := c.License.Deactivate(context.Background(), &LicenseDeactivateInput{Email: "x@x"})
 	if err == nil {
 		t.Fatalf("expected validation error")
 	}

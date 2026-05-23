@@ -59,6 +59,7 @@ func sessionBinding(origin string) proxy.SessionBinding {
 	return proxy.SessionBinding{
 		SessionID:     "sess_test_unit",
 		SessionSecret: fixtureSecret(),
+		DeviceID:      "device_test_unit",
 		ProxyOrigin:   origin,
 	}
 }
@@ -188,6 +189,9 @@ func TestCall_SessionAuthHeadersPresent(t *testing.T) {
 	}
 	if got := captured.Headers.Get("X-Isa-Session-Id"); got != "sess_test_unit" {
 		t.Errorf("X-Isa-Session-Id = %q", got)
+	}
+	if got := captured.Headers.Get("X-Device-ID"); got != "device_test_unit" {
+		t.Errorf("X-Device-ID = %q", got)
 	}
 	if got := captured.Headers.Get("X-Isa-Timestamp"); !regexp.MustCompile(`^\d{4}-\d{2}-\d{2}T`).MatchString(got) {
 		t.Errorf("X-Isa-Timestamp = %q", got)

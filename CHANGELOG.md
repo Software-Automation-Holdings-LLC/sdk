@@ -4,6 +4,33 @@ All notable changes to the unified Go SDK. The module has not yet been
 tagged for general release; until v1.0.0 ships, every release is
 implicitly a pre-release and the API may change in incompatible ways.
 
+## v0.5.0 — 2026-05-21
+
+### Added
+
+- **`core/session` package** — atomic session store with single-flight
+  `Bootstrap` driver. `Store.CurrentSecret()` is the read path; the
+  steady-state interceptor calls `Bootstrap` on miss/expiry and
+  `Invalidate` on 401 `session_expired`. `OnActivity(ctx)` is the
+  consumer-facing proactive-refresh hook (re-mints when within 5
+  minutes of expiry).
+- **`core/transport.SessionInterceptor`** — transparent HTTPDoer wrapper
+  that signs every request with the cached session, retries once on
+  401 `session_expired`, and shares one bootstrap across concurrent
+  callers via `golang.org/x/sync/singleflight`. Wiring at the
+  transport layer means every existing product method (zyins,
+  account, rapidsign, proxy) inherits auto-refresh without per-method
+  changes.
+
+### Tests
+
+- `TestSessionInterceptor_ConcurrentProductCalls_TriggerExactlyOneBootstrap`
+  fires 10 concurrent product calls from a cold-start interceptor and
+  asserts exactly one POST `/v1/sessions` round-trip — the
+  single-flight invariant.
+- `TestSessionInterceptor_RetryOn401SessionExpired` covers the
+  invalidate + re-bootstrap + replay path.
+
 ## v0.4.0-rc.1 — 2026-05-21
 
 ### Added

@@ -80,6 +80,7 @@ func TestSignRequest_CrossSDKKnownGoodSignature(t *testing.T) {
 		Body:          []byte(vectorBody),
 		SessionID:     vectorSessionID,
 		SessionSecret: vectorSecret(),
+		DeviceID:      "device-1",
 		Now:           mustParseTime(t, vectorTimestamp),
 	})
 	if err != nil {
@@ -123,6 +124,7 @@ func TestSignRequest_SignatureIsLowercaseHexLength64(t *testing.T) {
 		Body:          []byte(vectorBody),
 		SessionID:     vectorSessionID,
 		SessionSecret: vectorSecret(),
+		DeviceID:      "device-1",
 		Now:           mustParseTime(t, vectorTimestamp),
 	})
 	if err != nil {
@@ -185,6 +187,7 @@ func TestSignRequest_AsMapEmitsCanonicalHeaderNames(t *testing.T) {
 		Body:          []byte(vectorBody),
 		SessionID:     vectorSessionID,
 		SessionSecret: vectorSecret(),
+		DeviceID:      "device-1",
 		Now:           mustParseTime(t, vectorTimestamp),
 	})
 	if err != nil {
@@ -194,6 +197,7 @@ func TestSignRequest_AsMapEmitsCanonicalHeaderNames(t *testing.T) {
 	for _, name := range []string{
 		HeaderAuthorization,
 		HeaderIsaSessionID,
+		HeaderDeviceID,
 		HeaderIsaTimestamp,
 		HeaderIsaSignature,
 	} {

@@ -3,7 +3,24 @@ package zyins
 import (
 	"errors"
 	"fmt"
+
+	"github.com/Software-Automation-Holdings-LLC/sdk/catalog"
 )
+
+// State is a re-export of catalog.State so callers can write
+// `zyins.State("NC")` or use the typed catalog constants
+// (`catalog.StateNorthCarolina`) without importing the catalog package
+// directly. The type alias (not a defined type) preserves identity with
+// catalog.State, so values are freely assignable in either direction.
+//
+// Idiotproof usage:
+//
+//	applicant := zyins.Applicant{State: catalog.StateNorthCarolina, /* … */}
+//
+// Untyped string constants (`State: "NC"`) keep compiling — Go assigns
+// untyped strings to named string types implicitly. The typed form
+// catches typos like `"North Carolina"` at the catalog lookup edge.
+type State = catalog.State
 
 // Sex is the applicant's biological sex. The wire format uses single-
 // letter codes; SexWireCode performs that mapping so call sites never
@@ -128,8 +145,11 @@ type Applicant struct {
 	Height Height `json:"-"`
 	// Weight in pounds.
 	Weight Weight `json:"-"`
-	// State is the two-letter US postal code (e.g., "NC").
-	State string `json:"state"`
+	// State is the ISO 3166-2:US two-letter postal code. Prefer the
+	// typed catalog constants (e.g., catalog.StateNorthCarolina) over
+	// raw string literals; both forms accept at the field, but the
+	// typed form rejects typos like "North Carolina" at the call site.
+	State State `json:"state"`
 	// Zip is the postal code; required by some product families.
 	Zip string `json:"zip,omitempty"`
 	// NicotineUse is the underlying fact; mapped to wire shape by the

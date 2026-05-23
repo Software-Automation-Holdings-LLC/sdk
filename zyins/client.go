@@ -41,10 +41,12 @@ type Client struct {
 	ReferenceData *ReferenceDataService
 	// Usage reads consumption and quota counters.
 	Usage *UsageService
-	// Licenses runs public license-lifecycle calls (Check, Deactivate).
-	// The authenticated self-* surface lands with the LicenseHMAC
-	// transport in a follow-up PR.
-	Licenses *LicensesService
+	// License runs public license-lifecycle calls (Check, Deactivate).
+	// Each device has exactly one license; this singular field is the
+	// canonical SDK surface per the locked SDK syntax (TS canon:
+	// isa.zyins.license). The authenticated self-* surface lands with
+	// the LicenseHMAC transport in a follow-up PR.
+	License *LicenseService
 	// Health exposes the platform readiness probe (/ready). Liveness
 	// (/health) lands in a follow-up PR.
 	Health *HealthService
@@ -258,7 +260,7 @@ func NewClient(opts ...Option) (*Client, error) {
 	c.Datasets = &DatasetsService{client: c}
 	c.ReferenceData = &ReferenceDataService{client: c}
 	c.Usage = &UsageService{client: c}
-	c.Licenses = &LicensesService{client: c}
+	c.License = &LicenseService{client: c}
 	c.Health = &HealthService{client: c}
 	c.Branding = &BrandingService{client: c}
 	c.Preferences = &PreferencesService{client: c}

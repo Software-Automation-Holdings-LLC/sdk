@@ -72,8 +72,10 @@ type caseCreateWireBody struct {
 	Products []string `json:"products,omitempty"`
 }
 
-// Create creates a new shareable case.
-func (s *CasesService) Create(ctx context.Context, input *CaseCreateInput, opts ...RunOption) (*CaseCreateResult, error) {
+// Share creates a new shareable case. Canonical verb per the locked
+// SDK syntax (TS canon: isa.zyins.cases.share). Create is retained
+// as a deprecated alias.
+func (s *CasesService) Share(ctx context.Context, input *CaseCreateInput, opts ...RunOption) (*CaseCreateResult, error) {
 	if input == nil {
 		return nil, validationFailure("zyins: CaseCreateInput is nil")
 	}
@@ -88,13 +90,20 @@ func (s *CasesService) Create(ctx context.Context, input *CaseCreateInput, opts 
 		method:         http.MethodPost,
 		path:           caseCreatePath,
 		body:           caseCreateWireBody{Input: input.Input, Results: input.Results, Products: input.Products},
-		op:             "cases_create",
+		op:             "cases_share",
 		idempotencyKey: ro.idempotencyKey,
 	})
 	if err != nil {
-		return nil, fmt.Errorf("zyins: Cases.Create: %w", err)
+		return nil, fmt.Errorf("zyins: Cases.Share: %w", err)
 	}
-	return decodeCaseCreateResponse(raw)
+	return decodeCaseCreateResponse(raw, "cases_share")
+}
+
+// Create creates a new shareable case.
+//
+// Deprecated: use Share.
+func (s *CasesService) Create(ctx context.Context, input *CaseCreateInput, opts ...RunOption) (*CaseCreateResult, error) {
+	return s.Share(ctx, input, opts...)
 }
 
 // Email is the case-share convenience for emailing a case PDF. It
@@ -137,6 +146,8 @@ func (s *EmailService) Enqueue(ctx context.Context, input *EmailEnqueueInput, op
 	return enqueueEmail(ctx, s.client, input, opts...)
 }
 
+// enqueueEmail sends the shared email payload used by both case and
+// email namespaces.
 func enqueueEmail(ctx context.Context, client *Client, input *EmailEnqueueInput, opts ...RunOption) (*EmailEnqueueResult, error) {
 	if input == nil {
 		return nil, validationFailure("zyins: EmailEnqueueInput is nil")
@@ -165,14 +176,16 @@ func enqueueEmail(ctx context.Context, client *Client, input *EmailEnqueueInput,
 	return decodeEmailEnqueueResponse(raw)
 }
 
-func decodeCaseCreateResponse(body []byte) (*CaseCreateResult, error) {
-	data, err := unwrapEnvelope(body, "cases_create")
+// decodeCaseCreateResponse decodes case-share responses and uses op
+// only to report the caller-facing operation in errors.
+func decodeCaseCreateResponse(body []byte, op string) (*CaseCreateResult, error) {
+	data, err := unwrapEnvelope(body, op)
 	if err != nil {
 		return nil, err
 	}
 	var result CaseCreateResult
 	if err := json.Unmarshal(data, &result); err != nil {
-		return nil, fmt.Errorf("zyins: failed to decode cases_create response: %w", err)
+		return nil, fmt.Errorf("zyins: failed to decode %s response: %w", op, err)
 	}
 	if result.Object == "" {
 		result.Object = "case"
@@ -180,6 +193,8 @@ func decodeCaseCreateResponse(body []byte) (*CaseCreateResult, error) {
 	return &result, nil
 }
 
+// decodeEmailEnqueueResponse decodes email enqueue responses, including
+// empty success bodies from legacy handlers.
 func decodeEmailEnqueueResponse(body []byte) (*EmailEnqueueResult, error) {
 	if len(body) == 0 {
 		return &EmailEnqueueResult{}, nil

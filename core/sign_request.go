@@ -1,11 +1,12 @@
 // Provides: the canonical session-signing helper for outbound proxy /
 // session-auth requests.
 //
-// The four headers emitted are the wire contract the ISA Platform
+// The session headers emitted are the wire contract the ISA Platform
 // session verifier admits (shared/go/auth/session/verifier.go):
 //
 //	Authorization:     Bearer <sessionSecret>
 //	X-Isa-Session-Id:  <sessionId>
+//	X-Device-ID:       <deviceId>
 //	X-Isa-Timestamp:   <iso8601_z>
 //	X-Isa-Signature:   hex(HMAC-SHA256(sessionSecret, canonical))
 //
@@ -32,12 +33,13 @@ import (
 // Header names produced by SignRequest. Exported so callers don't
 // rebuild the literal in five places.
 const (
-	HeaderAuthorization  = "Authorization"
-	HeaderIsaSessionID   = "X-Isa-Session-Id"
-	HeaderIsaTimestamp   = "X-Isa-Timestamp"
-	HeaderIsaSignature   = "X-Isa-Signature"
-	BearerAuthScheme     = "Bearer"
-	emptyBodySHA256Hex   = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+	HeaderAuthorization = "Authorization"
+	HeaderIsaSessionID  = "X-Isa-Session-Id"
+	HeaderDeviceID      = "X-Device-ID"
+	HeaderIsaTimestamp  = "X-Isa-Timestamp"
+	HeaderIsaSignature  = "X-Isa-Signature"
+	BearerAuthScheme    = "Bearer"
+	emptyBodySHA256Hex  = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
 )
 
 // Errors surfaced by SignRequest.
@@ -55,26 +57,32 @@ type SignRequestInput struct {
 	Body          []byte
 	SessionID     string
 	SessionSecret string
+	DeviceID      string
 	Now           time.Time
 }
 
-// SignedHeaders is the four-header bundle emitted by SignRequest.
+// SignedHeaders is the header bundle emitted by SignRequest.
 type SignedHeaders struct {
-	Authorization  string
-	IsaSessionID   string
-	IsaTimestamp   string
-	IsaSignature   string
+	Authorization string
+	IsaSessionID  string
+	DeviceID      string
+	IsaTimestamp  string
+	IsaSignature  string
 }
 
 // AsMap returns the headers as a map keyed by canonical header names.
 // Useful when passing into http.Header or similar consumers.
 func (h SignedHeaders) AsMap() map[string]string {
-	return map[string]string{
+	headers := map[string]string{
 		HeaderAuthorization: h.Authorization,
 		HeaderIsaSessionID:  h.IsaSessionID,
 		HeaderIsaTimestamp:  h.IsaTimestamp,
 		HeaderIsaSignature:  h.IsaSignature,
 	}
+	if h.DeviceID != "" {
+		headers[HeaderDeviceID] = h.DeviceID
+	}
+	return headers
 }
 
 // FormatTimestamp renders t in UTC, RFC 3339 with a Z suffix, no
@@ -135,6 +143,7 @@ func SignRequest(input SignRequestInput) (SignedHeaders, error) {
 	return SignedHeaders{
 		Authorization: BearerAuthScheme + " " + input.SessionSecret,
 		IsaSessionID:  input.SessionID,
+		DeviceID:      input.DeviceID,
 		IsaTimestamp:  timestamp,
 		IsaSignature:  signature,
 	}, nil

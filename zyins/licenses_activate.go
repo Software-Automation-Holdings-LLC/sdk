@@ -10,7 +10,7 @@ import (
 
 const licensesActivatePath = "/v1/licenses/activate"
 
-// LicenseActivateInput is the request shape for Licenses.Activate.
+// LicenseActivateInput is the request shape for License.Activate.
 // Every field is required; the activation surface mints a fresh
 // license key bound to the supplied device fingerprint.
 type LicenseActivateInput struct {
@@ -19,7 +19,7 @@ type LicenseActivateInput struct {
 	DeviceID string
 }
 
-// LicenseActivateResult is the response shape from Licenses.Activate.
+// LicenseActivateResult is the response shape from License.Activate.
 // LicenseKey is auto-stashed into the attached CredentialState (when
 // present) so subsequent calls authenticate without a re-bootstrap.
 type LicenseActivateResult struct {
@@ -45,8 +45,8 @@ type licensesActivateWireResponse struct {
 // Activate runs an explicit license activation. With non-nil input the
 // SDK posts the supplied values; with nil input the SDK fills email,
 // keycode, and deviceId from the attached CredentialState (see
-// LicensesService.WithState).
-func (s *LicensesService) Activate(ctx context.Context, input *LicenseActivateInput, opts ...RunOption) (*LicenseActivateResult, error) {
+// LicenseService.WithState).
+func (s *LicenseService) Activate(ctx context.Context, input *LicenseActivateInput, opts ...RunOption) (*LicenseActivateResult, error) {
 	filled, err := s.fillActivate(input)
 	if err != nil {
 		return nil, err
@@ -65,7 +65,7 @@ func (s *LicensesService) Activate(ctx context.Context, input *LicenseActivateIn
 		idempotencyKey: ro.idempotencyKey,
 	})
 	if err != nil {
-		return nil, fmt.Errorf("zyins: Licenses.Activate: %w", err)
+		return nil, fmt.Errorf("zyins: License.Activate: %w", err)
 	}
 	result, err := decodeLicenseActivateResponse(raw)
 	if err != nil {
@@ -73,7 +73,7 @@ func (s *LicensesService) Activate(ctx context.Context, input *LicenseActivateIn
 	}
 	if s.state != nil && result.LicenseKey != "" {
 		if err := s.state.RefreshLicenseKey(result.LicenseKey); err != nil {
-			return nil, fmt.Errorf("zyins: Licenses.Activate refreshing state: %w", err)
+			return nil, fmt.Errorf("zyins: License.Activate refreshing state: %w", err)
 		}
 	}
 	return result, nil
@@ -82,7 +82,7 @@ func (s *LicensesService) Activate(ctx context.Context, input *LicenseActivateIn
 // fillActivate merges the caller-supplied input with the attached
 // CredentialState. Missing fields after the merge fail validation so
 // the wire never sees an empty required field.
-func (s *LicensesService) fillActivate(input *LicenseActivateInput) (*LicenseActivateInput, error) {
+func (s *LicenseService) fillActivate(input *LicenseActivateInput) (*LicenseActivateInput, error) {
 	out := LicenseActivateInput{}
 	if input != nil {
 		out = *input
@@ -100,13 +100,13 @@ func (s *LicensesService) fillActivate(input *LicenseActivateInput) (*LicenseAct
 		}
 	}
 	if strings.TrimSpace(out.Email) == "" {
-		return nil, validationFailure("zyins: Licenses.Activate requires Email")
+		return nil, validationFailure("zyins: License.Activate requires Email")
 	}
 	if strings.TrimSpace(out.Keycode) == "" {
-		return nil, validationFailure("zyins: Licenses.Activate requires Keycode")
+		return nil, validationFailure("zyins: License.Activate requires Keycode")
 	}
 	if strings.TrimSpace(out.DeviceID) == "" {
-		return nil, validationFailure("zyins: Licenses.Activate requires DeviceID")
+		return nil, validationFailure("zyins: License.Activate requires DeviceID")
 	}
 	return &out, nil
 }

@@ -123,6 +123,7 @@ CONSTANTS
 const (
 	HeaderAuthorization = "Authorization"
 	HeaderIsaSessionID  = "X-Isa-Session-Id"
+	HeaderDeviceID      = "X-Device-ID"
 	HeaderIsaTimestamp  = "X-Isa-Timestamp"
 	HeaderIsaSignature  = "X-Isa-Signature"
 	BearerAuthScheme    = "Bearer"
@@ -153,12 +154,56 @@ func FormatTimestamp(t time.Time) string
 
 TYPES
 
+type BootstrapInput struct {
+	// Keycode is the per-seat keycode (e.g. SDV-HWH-WDD).
+	Keycode string
+	// Email is the license-owner email (lowercased lookup key server-side).
+	Email string
+	// LicenseKey is the long-lived license key. HMAC key only — never on
+	// the wire.
+	LicenseKey string
+	// DeviceID is the stable per-install device id. Appears in the body
+	// and in the X-Device-ID header.
+	DeviceID string
+	// Method is the uppercase HTTP method, typically "POST".
+	Method string
+	// Path is the request path with leading /v1/, no query string.
+	Path string
+	// Timestamp is unix seconds. Server tolerates 5 minutes of skew.
+	Timestamp int64
+}
+    BootstrapInput mirrors the auth-vector fixture one-for-one. Field ORDER
+    matters for SerializedBody.
+
+type BootstrapSignature struct {
+	// SerializedBody is the JSON body exactly as sent on the wire. Bytes
+	// signed verbatim.
+	SerializedBody string
+	// Canonical is `<ts>.<METHOD> <path>.<body>` — the HMAC input.
+	Canonical string
+	// Hex is lowercase hex HMAC-SHA256 over Canonical, keyed by
+	// LicenseKey.
+	Hex string
+	// Header is the ISA-Signature header value: `t=<ts>,v1=<hex>`.
+	Header string
+}
+    BootstrapSignature returns every intermediate so that conformance tests
+    can assert each stage independently — if a future regression flips the
+    SerializedBody, the failure points at exactly that stage instead of just
+    "hex differs".
+
+func BuildBootstrapSignature(input BootstrapInput) (BootstrapSignature, error)
+    BuildBootstrapSignature reproduces the byte-exact signing flow defined in
+    the auth-vector fixture. Returns an error if any required field is empty —
+    the locked contract requires every field to be present.
+
 type SignRequestInput struct {
 	Method        string
 	Path          string
 	Body          []byte
 	SessionID     string
 	SessionSecret string
+	DeviceID      string
 	Now           time.Time
 }
     SignRequestInput groups the fields needed to compute a signed request.
@@ -168,10 +213,11 @@ type SignRequestInput struct {
 type SignedHeaders struct {
 	Authorization string
 	IsaSessionID  string
+	DeviceID      string
 	IsaTimestamp  string
 	IsaSignature  string
 }
-    SignedHeaders is the four-header bundle emitted by SignRequest.
+    SignedHeaders is the header bundle emitted by SignRequest.
 
 func SignRequest(input SignRequestInput) (SignedHeaders, error)
     SignRequest computes the canonical session-auth headers for a single
@@ -281,6 +327,26 @@ Bearer auth, retry-with-Retry-After backoff, and response envelope extraction
 are the three pieces every product SDK consumer needs but neither buf nor
 protoc-gen-* will emit. Keeping them here — rather than per-product — guarantees
 a single behavior across zyins, rapidsign, and proxy.
+
+Provides: the transparent session interceptor that wraps every outbound product
+call with bootstrap-on-miss + retry-on-401.
+
+The interceptor sits between product packages (zyins, account, rapidsign,
+proxy) and the underlying HTTPDoer. Every product method already calls into
+transport.Doer; wiring SessionInterceptor as the outermost layer is the single
+insertion point that covers all methods without per-call changes.
+
+Behavior:
+    1. On every Do(req): read currentSecret. If nil, Bootstrap via the
+    session.Store (single-flight). Sign the request with the sessionSecret +
+    SignRequest helper. Forward.
+    2. On 401 with code=session_expired in the ProblemDetails body: Invalidate
+    + Bootstrap, replay the original request body once with the new secret.
+    Only one retry — a second 401 is returned to the caller.
+
+The 30-second server-side grace overlap means a freshly-rotated secret is
+accepted alongside the previous one for 30 seconds, so the client doesn't need
+to track the prior secret across rotation.
 
 CONSTANTS
 
@@ -402,6 +468,20 @@ func (r *RetryTransport) Do(req *http.Request) (*http.Response, error)
     Do executes req with retries. The request body is consumed on each attempt
     via req.GetBody (set by http.NewRequest when the body has a known length);
     requests without GetBody are not retried on bodies the client cannot rewind.
+
+type SessionInterceptor struct {
+	// Has unexported fields.
+}
+    SessionInterceptor wraps an inner HTTPDoer with auto-bootstrap and
+    retry-on-401 logic. Construct via NewSessionInterceptor; safe for concurrent
+    use.
+
+func NewSessionInterceptor(store *session.Store, inner HTTPDoer) (*SessionInterceptor, error)
+    NewSessionInterceptor returns an interceptor. Both arguments required.
+
+func (s *SessionInterceptor) Do(req *http.Request) (*http.Response, error)
+    Do signs and forwards the request. Returns the inner response unless a
+    single 401 session_expired retry rebound succeeds.
 
 type Sleeper interface {
 	Sleep(ctx context.Context, d time.Duration) error
@@ -613,8 +693,11 @@ type Applicant struct {
 	Height Height `json:"-"`
 	// Weight in pounds.
 	Weight Weight `json:"-"`
-	// State is the two-letter US postal code (e.g., "NC").
-	State string `json:"state"`
+	// State is the ISO 3166-2:US two-letter postal code. Prefer the
+	// typed catalog constants (e.g., catalog.StateNorthCarolina) over
+	// raw string literals; both forms accept at the field, but the
+	// typed form rejects typos like "North Carolina" at the call site.
+	State State `json:"state"`
 	// Zip is the postal code; required by some product families.
 	Zip string `json:"zip,omitempty"`
 	// NicotineUse is the underlying fact; mapped to wire shape by the
@@ -706,9 +789,15 @@ type CasesService struct {
 func (s *CasesService) Create(ctx context.Context, input *CaseCreateInput, opts ...RunOption) (*CaseCreateResult, error)
     Create creates a new shareable case.
 
+    Deprecated: use Share.
+
 func (s *CasesService) Email(ctx context.Context, input *EmailEnqueueInput, opts ...RunOption) (*EmailEnqueueResult, error)
     Email is the case-share convenience for emailing a case PDF. It targets POST
     /v1/email/enqueue (same as EmailService.Enqueue).
+
+func (s *CasesService) Share(ctx context.Context, input *CaseCreateInput, opts ...RunOption) (*CaseCreateResult, error)
+    Share creates a new shareable case. Canonical verb per the locked SDK syntax
+    (TS canon: isa.zyins.cases.share). Create is retained as a deprecated alias.
 
 type Client struct {
 
@@ -724,10 +813,12 @@ type Client struct {
 	ReferenceData *ReferenceDataService
 	// Usage reads consumption and quota counters.
 	Usage *UsageService
-	// Licenses runs public license-lifecycle calls (Check, Deactivate).
-	// The authenticated self-* surface lands with the LicenseHMAC
-	// transport in a follow-up PR.
-	Licenses *LicensesService
+	// License runs public license-lifecycle calls (Check, Deactivate).
+	// Each device has exactly one license; this singular field is the
+	// canonical SDK surface per the locked SDK syntax (TS canon:
+	// isa.zyins.license). The authenticated self-* surface lands with
+	// the LicenseHMAC transport in a follow-up PR.
+	License *LicenseService
 	// Health exposes the platform readiness probe (/ready). Liveness
 	// (/health) lands in a follow-up PR.
 	Health *HealthService
@@ -821,19 +912,19 @@ type CredentialState struct {
 	// Has unexported fields.
 }
     CredentialState is the per-process credential snapshot shared between the
-    License-HMAC sub-clients and the Licenses ergonomic facade. The reference
+    License-HMAC sub-clients and the License ergonomic facade. The reference
     is stable across the SDK lifetime; the inner fields are mutated in place
     by Refresh* calls so every sub-client observes new credentials without
     re-bootstrap.
 
 func (s *CredentialState) ClearLicenseKey() error
     ClearLicenseKey wipes the stashed license key. Called after a successful
-    Licenses.Deactivate.
+    License.Deactivate.
 
 func (s *CredentialState) OnLicenseRefreshed(listener LicenseRefreshedListener) func()
     OnLicenseRefreshed registers a listener and returns an unsubscribe
     function. Subscribers receive the fresh license key on every successful
-    Licenses.Activate.
+    License.Activate.
 
 func (s *CredentialState) RefreshLicenseKey(licenseKey string) error
     RefreshLicenseKey writes a fresh license key to the in-memory state,
@@ -1117,7 +1208,7 @@ type LicenseActivateInput struct {
 	Keycode  string
 	DeviceID string
 }
-    LicenseActivateInput is the request shape for Licenses.Activate. Every field
+    LicenseActivateInput is the request shape for License.Activate. Every field
     is required; the activation surface mints a fresh license key bound to the
     supplied device fingerprint.
 
@@ -1126,7 +1217,7 @@ type LicenseActivateResult struct {
 	LicenseKey           string `json:"license_key"`
 	RemainingActivations int    `json:"remaining_activations"`
 }
-    LicenseActivateResult is the response shape from Licenses.Activate.
+    LicenseActivateResult is the response shape from License.Activate.
     LicenseKey is auto-stashed into the attached CredentialState (when present)
     so subsequent calls authenticate without a re-bootstrap.
 
@@ -1143,13 +1234,13 @@ type LicenseCheckInput struct {
 	// when supplied, the server validates it against the order.
 	LicenseKey string
 }
-    LicenseCheckInput is the typed request shape for Licenses.Check.
+    LicenseCheckInput is the typed request shape for License.Check.
 
 type LicenseCheckResult struct {
 	// Status is the validation outcome (valid, invalid, inactive).
 	Status LicenseValidationStatus `json:"status"`
 }
-    LicenseCheckResult is the typed response from Licenses.Check.
+    LicenseCheckResult is the typed response from License.Check.
 
 type LicenseCredential struct {
 	Keycode string
@@ -1167,13 +1258,13 @@ type LicenseDeactivateInput struct {
 	// DeviceID is the device fingerprint. Optional; reset on success.
 	DeviceID string
 }
-    LicenseDeactivateInput is the typed request shape for Licenses.Deactivate.
+    LicenseDeactivateInput is the typed request shape for License.Deactivate.
 
 type LicenseDeactivateResult struct {
 	// Status is always "deactivated" on success.
 	Status string `json:"status"`
 }
-    LicenseDeactivateResult is the typed response from Licenses.Deactivate.
+    LicenseDeactivateResult is the typed response from License.Deactivate.
 
 type LicenseError struct{ Base *Error }
     LicenseError signals a license-state problem (locked, inactive, activation
@@ -1196,10 +1287,41 @@ type LicenseRefreshedEvent struct {
 	OrderID    string
 }
     LicenseRefreshedEvent is the payload fired when the SDK observes a fresh
-    license key (typically a return value of Licenses.Activate).
+    license key (typically a return value of License.Activate).
 
 type LicenseRefreshedListener func(LicenseRefreshedEvent)
     LicenseRefreshedListener subscribes to LicenseRefreshedEvent.
+
+type LicenseService struct {
+	// Has unexported fields.
+}
+    LicenseService groups the public BPP license-lifecycle calls (Activate,
+    Check, Deactivate). Authenticated self-* operations (LockSelf, RefreshSelf,
+    etc.) ship after the LicenseHMAC transport lands; this service exposes the
+    no-auth + body-credential surface only.
+
+func (s *LicenseService) Activate(ctx context.Context, input *LicenseActivateInput, opts ...RunOption) (*LicenseActivateResult, error)
+    Activate runs an explicit license activation. With non-nil input the SDK
+    posts the supplied values; with nil input the SDK fills email, keycode, and
+    deviceId from the attached CredentialState (see LicenseService.WithState).
+
+func (s *LicenseService) Check(ctx context.Context, input *LicenseCheckInput, opts ...RunOption) (*LicenseCheckResult, error)
+    Check performs a lightweight phone-home validation. The server does not
+    require authentication for this call; an attached bearer token is harmless
+    and lets one client struct serve every operation.
+
+func (s *LicenseService) Deactivate(ctx context.Context, input *LicenseDeactivateInput, opts ...RunOption) (*LicenseDeactivateResult, error)
+    Deactivate revokes an activation, resets the anti-piracy device record,
+    and marks the order inactive. The server does not require authentication for
+    this call.
+
+func (s *LicenseService) State() *CredentialState
+    State returns the attached CredentialState, or nil when none is set.
+
+func (s *LicenseService) WithState(state *CredentialState) *LicenseService
+    WithState attaches a CredentialState to the service so zero-arg
+    activate/check/deactivate variants can pull credentials and stash the minted
+    license key back into shared state automatically.
 
 type LicenseValidationStatus string
     LicenseValidationStatus mirrors the proto `LicenseStatus` enum
@@ -1212,37 +1334,6 @@ const (
 )
     Enumerated license validation states. Unknown wire values are surfaced
     verbatim so the SDK never drops information.
-
-type LicensesService struct {
-	// Has unexported fields.
-}
-    LicensesService groups the public BPP license-lifecycle calls (PublicCheck,
-    PublicDeactivate). Authenticated self-* operations (LockSelf, RefreshSelf,
-    etc.) ship after the LicenseHMAC transport lands; this service exposes the
-    no-auth + body-credential surface only.
-
-func (s *LicensesService) Activate(ctx context.Context, input *LicenseActivateInput, opts ...RunOption) (*LicenseActivateResult, error)
-    Activate runs an explicit license activation. With non-nil input the SDK
-    posts the supplied values; with nil input the SDK fills email, keycode, and
-    deviceId from the attached CredentialState (see LicensesService.WithState).
-
-func (s *LicensesService) Check(ctx context.Context, input *LicenseCheckInput, opts ...RunOption) (*LicenseCheckResult, error)
-    Check performs a lightweight phone-home validation. The server does not
-    require authentication for this call; an attached bearer token is harmless
-    and lets one client struct serve every operation.
-
-func (s *LicensesService) Deactivate(ctx context.Context, input *LicenseDeactivateInput, opts ...RunOption) (*LicenseDeactivateResult, error)
-    Deactivate revokes an activation, resets the anti-piracy device record,
-    and marks the order inactive. The server does not require authentication for
-    this call.
-
-func (s *LicensesService) State() *CredentialState
-    State returns the attached CredentialState, or nil when none is set.
-
-func (s *LicensesService) WithState(state *CredentialState) *LicensesService
-    WithState attaches a CredentialState to the service so zero-arg
-    activate/check/deactivate variants can pull credentials and stash the minted
-    license key back into shared state automatically.
 
 type LogosGetOption func(*LogosGetOptions)
     LogosGetOption is the functional option for Logos.Get.
@@ -1725,6 +1816,21 @@ const (
 	SexMale   Sex = "male"
 	SexFemale Sex = "female"
 )
+type State = catalog.State
+    State is a re-export of catalog.State so callers can write
+    `zyins.State("NC")` or use the typed catalog constants
+    (`catalog.StateNorthCarolina`) without importing the catalog package
+    directly. The type alias (not a defined type) preserves identity with
+    catalog.State, so values are freely assignable in either direction.
+
+    Idiotproof usage:
+
+    applicant := zyins.Applicant{State: catalog.StateNorthCarolina, /* … */}
+
+    Untyped string constants (`State: "NC"`) keep compiling — Go assigns untyped
+    strings to named string types implicitly. The typed form catches typos like
+    `"North Carolina"` at the catalog lookup edge.
+
 type StaticToken string
     StaticToken is a TokenSource that returns the same token forever. Suitable
     for short-lived programs and tests. Long-running services that rotate
@@ -2247,6 +2353,7 @@ type CallOptions struct {
 type SessionBinding struct {
 	SessionID     string
 	SessionSecret string //nolint:gosec // documented credential field
+	DeviceID      string
 	ProxyOrigin   string
 }
     SessionBinding carries the credentials and origin a Call needs. Built by the

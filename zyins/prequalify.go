@@ -224,7 +224,7 @@ func buildPrequalifyBody(in *PrequalifyInput) (prequalifyWireBody, error) {
 			Sex:          sex,
 			HeightInches: in.Applicant.Height.TotalInches,
 			WeightPounds: in.Applicant.Weight.Pounds,
-			State:        in.Applicant.State,
+			State:        string(in.Applicant.State),
 			Zip:          in.Applicant.Zip,
 			NicotineUse:  in.Applicant.NicotineUse,
 			Medications:  in.Applicant.Medications,
