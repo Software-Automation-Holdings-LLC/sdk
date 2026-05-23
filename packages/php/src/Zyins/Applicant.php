@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Sah\Sdk\Zyins;
 
 use InvalidArgumentException;
+use Sah\Sdk\Catalog\State;
 
 /**
  * Applicant profile prequalify operates on.
@@ -17,9 +18,17 @@ use InvalidArgumentException;
  * Sex / NicotineUsage live here as nested string-backed enums to avoid
  * top-level namespace sprawl; PHP 8.2 enum-as-property is fully
  * readonly-compatible.
+ *
+ * The `$state` constructor parameter accepts either the typed
+ * {@see State} backed enum (idiotproof — no typos) or a raw two-letter
+ * postal code string for backward compatibility. The public
+ * `$state` property is always normalized to the two-letter code so
+ * downstream serialization stays string-typed.
  */
 final readonly class Applicant
 {
+    public string $state;
+
     /**
      * @param Medication[] $medications
      * @param Condition[]  $conditions
@@ -29,12 +38,13 @@ final readonly class Applicant
         public Sex $sex,
         public Height $height,
         public Weight $weight,
-        public string $state,
+        string|State $state,
         public NicotineUsage $nicotineUse,
         public ?string $zip = null,
         public array $medications = [],
         public array $conditions = [],
     ) {
+        $this->state = $state instanceof State ? $state->value : $state;
         if ($this->dob === '') {
             throw new InvalidArgumentException('Applicant.dob must be a non-empty ISO date string');
         }

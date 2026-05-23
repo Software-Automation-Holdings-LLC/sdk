@@ -34,11 +34,25 @@ final readonly class Service
 
     /**
      * Create a new shareable case from quote input + results + products.
+     *
+     * @deprecated Use {@see self::share()} — the canonical verb per the
+     * locked SDK syntax (TS canon: `isa.zyins.cases.share`). This alias
+     * is retained for one minor and will be removed in v0.7.0.
      */
     public function create(CreateInput $input, ?RequestOptions $options = null): CreateResult
     {
         $response = $this->transport->post(self::CREATE_PATH, $input->toWireBody(), $options);
         return CreateResult::fromWire($response->data);
+    }
+
+    /**
+     * Create (share) a shareable case. Canonical verb per the locked
+     * SDK syntax (TS canon: `isa.zyins.cases.share`); equivalent to
+     * {@see self::create()}, which is retained as a deprecated alias.
+     */
+    public function share(CreateInput $input, ?RequestOptions $options = null): CreateResult
+    {
+        return $this->create($input, $options);
     }
 
     /**

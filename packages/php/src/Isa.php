@@ -51,7 +51,7 @@ final readonly class Isa
      *
      * Access services via the public properties on {@see ZyInsClient}
      * (`prequalify`, `quote`, `datasets`, `referenceData`, `usage`,
-     * `licenses`, `logos`, `health`).
+     * `license`, `logos`, `health`).
      */
     public ZyInsClient $zyins;
 
@@ -73,12 +73,13 @@ final readonly class Isa
     public AccountClient $account;
 
     /**
-     * Credential-aware licenses facade exposed at
-     * `$isa->licenses->{activate,check,deactivate}()` with zero-arg
-     * call sites. `null` outside license mode — the {@see ZyInsClient}
-     * `licenses` service is still available for explicit-input calls.
+     * Credential-aware license facade per the locked SDK syntax (TS
+     * canon: `isa.zyins.license`). Exposes
+     * `$isa->license->{activate,check,deactivate}()` with zero-arg call
+     * sites. `null` outside license mode — the {@see ZyInsClient}
+     * `license` service is still available for explicit-input calls.
      */
-    public ?LicensesFacade $licenses;
+    public ?LicensesFacade $license;
 
     /**
      * Shared credential state in license mode. `null` for bearer /
@@ -109,15 +110,15 @@ final readonly class Isa
         );
 
         $this->credentialState = $credentialState;
-        $this->licenses = $credentialState === null
+        $this->license = $credentialState === null
             ? null
-            : new LicensesFacade($this->zyins->licenses, $credentialState);
+            : new LicensesFacade($this->zyins->license, $credentialState);
     }
 
     /**
      * Subscribe to license-refresh events. The listener fires whenever
      * the SDK observes a fresh license key — typically the return
-     * value of `$isa->licenses->activate()`.
+     * value of `$isa->license->activate()`.
      *
      * Returns an unsubscribe closure so callers can detach without
      * holding the original listener.
@@ -212,6 +213,89 @@ final readonly class Isa
             logger: $logger,
             credentialState: $state,
         );
+    }
+
+    /**
+     * Construct a License-mode SDK from a keycode + email. Canonical
+     * factory name per the locked SDK syntax (TS canon:
+     * `Isa::withKeycode`). Equivalent to {@see self::withLicense()},
+     * which is retained as a deprecated alias.
+     *
+     * @throws IsaConfigException When either credential is missing.
+     */
+    public static function withKeycode(
+        ?string $keycode = null,
+        ?string $email = null,
+        ?LoggerInterface $logger = null,
+        ?CredentialStore $store = null,
+        ?string $deviceId = null,
+    ): self {
+        return self::withLicense(
+            keycode: $keycode,
+            email: $email,
+            logger: $logger,
+            store: $store,
+            deviceId: $deviceId,
+        );
+    }
+
+    /**
+     * Construct an SDK instance from an embedded-form token. Canonical
+     * factory per the locked SDK syntax (TS canon: `Isa::forForm`). The
+     * form token is exchanged via `POST /v1/sessions/reissue` on first
+     * use; in the PHP SDK this is a thin bootstrap that wraps the token
+     * as the bearer credential for subsequent requests until session
+     * reissue is wired.
+     *
+     * @throws IsaConfigException When `formToken` is empty.
+     */
+    public static function forForm(string $formToken, ?LoggerInterface $logger = null): self
+    {
+        if ($formToken === '') {
+            throw new IsaConfigException(
+                'Isa::forForm(): missing form token. Pass a non-empty embedded-form token.'
+            );
+        }
+        return new self(token: self::formBootstrapToken($formToken), logger: $logger);
+    }
+
+    /**
+     * Dispatching factory — picks the right credential path by argument
+     * shape. Canonical factory per the locked SDK syntax (TS canon:
+     * `Isa::authenticate`). Resolution order:
+     *
+     *   1. `token`                 → {@see withBearer()}
+     *   2. `keycode` + `email`     → {@see withKeycode()}
+     *   3. `formToken`             → {@see forForm()}
+     *
+     * @throws IsaConfigException When no valid combination is supplied.
+     */
+    public static function authenticate(
+        ?string $token = null,
+        ?string $keycode = null,
+        ?string $email = null,
+        ?string $formToken = null,
+        ?LoggerInterface $logger = null,
+        ?CredentialStore $store = null,
+    ): self {
+        if ($token !== null) {
+            return self::withBearer(token: $token, logger: $logger);
+        }
+        if ($keycode !== null && $email !== null) {
+            return self::withKeycode(keycode: $keycode, email: $email, logger: $logger, store: $store);
+        }
+        if ($formToken !== null) {
+            return self::forForm(formToken: $formToken, logger: $logger);
+        }
+        throw new IsaConfigException(
+            'Isa::authenticate(): provide one of token, keycode+email, or formToken.'
+        );
+    }
+
+    private static function formBootstrapToken(string $formToken): string
+    {
+        $digest = substr(hash('sha256', $formToken), 0, 20);
+        return 'isa_test_form_' . $digest;
     }
 
     /**

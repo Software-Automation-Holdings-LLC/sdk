@@ -51,7 +51,7 @@ final class IsaTest extends TestCase
     {
         putenv('ISA_TOKEN=isa_test_' . 'AAAAAAAAAAAAAAAAAAAA');
         $isa = Isa::fromEnv();
-        self::assertNull($isa->licenses);
+        self::assertNull($isa->license);
     }
 
     public function testFromEnvPicksLicenseWhenLicenseEnvSet(): void
@@ -59,7 +59,7 @@ final class IsaTest extends TestCase
         putenv('ISA_LICENSE_KEYCODE=ABC-123-XYZ');
         putenv('ISA_LICENSE_EMAIL=agent@example.com');
         $isa = Isa::fromEnv();
-        self::assertNotNull($isa->licenses);
+        self::assertNotNull($isa->license);
     }
 
     public function testFromEnvThrowsWhenNothingSet(): void
@@ -71,7 +71,7 @@ final class IsaTest extends TestCase
     public function testWithLicenseExposesFacade(): void
     {
         $isa = Isa::withLicense('ABC-123-XYZ', 'agent@example.com');
-        self::assertNotNull($isa->licenses);
+        self::assertNotNull($isa->license);
     }
 
     public function testWithLicenseGeneratesDeviceIdWhenMissing(): void
@@ -90,7 +90,7 @@ final class IsaTest extends TestCase
         $unsub = $isa->onLicenseRefreshed(function (LicenseRefreshedEvent $e) use (&$captured): void {
             $captured = $e;
         });
-        self::assertNotNull($isa->licenses);
+        self::assertNotNull($isa->license);
         // Drive the state directly — we don't want to hit the network from the unit suite.
         // Reflection-free path: call the credentialState via the facade's underlying state isn't exposed,
         // so we exercise the public surface by triggering refresh through CredentialState (visible to the

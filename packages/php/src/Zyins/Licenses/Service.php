@@ -46,7 +46,7 @@ final readonly class Service
      * @throws \Sah\Sdk\Zyins\Exception\IsaException on 4xx/5xx wire responses.
      *
      * @example
-     * $result = $isa->licenses->check(new CheckInput(
+     * $result = $isa->license->check(new CheckInput(
      *     email: 'john.doe@acme-agency.com',
      *     keycode: 'ABC-123-XYZ',
      * ));

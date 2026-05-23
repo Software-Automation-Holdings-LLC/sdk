@@ -56,7 +56,12 @@ final readonly class ZyInsClient
     public DatasetsService $datasets;
     public ReferenceDataService $referenceData;
     public UsageService $usage;
-    public LicensesService $licenses;
+    /**
+     * Canonical license lifecycle service per the locked SDK syntax (TS
+     * canon: `isa.zyins.license`). A device has exactly one license;
+     * activate, check, and deactivate all go through this property.
+     */
+    public LicensesService $license;
     public LogosService $logos;
     public HealthService $health;
     public BrandingService $branding;
@@ -90,7 +95,7 @@ final readonly class ZyInsClient
         $this->datasets = new DatasetsService($this->transport);
         $this->referenceData = new ReferenceDataService($this->transport);
         $this->usage = new UsageService($this->transport);
-        $this->licenses = new LicensesService($this->transport);
+        $this->license = new LicensesService($this->transport);
         $this->logos = new LogosService(
             http: $httpClient ?? new GuzzleClient(['http_errors' => false]),
             baseUrl: rtrim($baseUrl, '/'),

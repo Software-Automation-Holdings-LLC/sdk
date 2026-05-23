@@ -305,6 +305,16 @@ class BearerClient implements ClientInterface
     public function __construct(private TokenSource $source, private ClientInterface $inner,)
     public function sendRequest(RequestInterface $request) : ResponseInterface
 
+=== Core/Bootstrap.php ===
+namespace Sah\Sdk\Core;
+class Bootstrap
+    public function build(string $keycode, string $email, string $licenseKey, string $deviceId, string $method, string $path, int $timestamp,) : BootstrapSignature
+
+=== Core/BootstrapSignature.php ===
+namespace Sah\Sdk\Core;
+class BootstrapSignature
+    public function __construct(/** JSON body exactly as sent on the wire. Bytes signed verbatim. */ public readonly string $serializedBody, /** `<ts>.<METHOD> <path>.<body>` — the HMAC input. */ public readonly string $canonical, /** Lowercase hex HMAC-SHA256 over canonical, keyed by licenseKey. */ public readonly string $hex, /** `ISA-Signature: t=<ts>,v1=<hex>` — ready-to-set header value. */ public readonly string $header,)
+
 === Core/Clock.php ===
 namespace Sah\Sdk\Core;
 interface Clock
@@ -348,6 +358,27 @@ class RetryClient implements ClientInterface
     public const DEFAULT_BASE_DELAY_MS
     public const DEFAULT_MAX_DELAY_MS
 
+=== Core/Session.php ===
+namespace Sah\Sdk\Core;
+class Session
+    public function __construct(public string $sessionId, public string $sessionSecret, public DateTimeImmutable $expiresAt,)
+
+=== Core/SessionInterceptor.php ===
+namespace Sah\Sdk\Core;
+class SessionInterceptor implements ClientInterface
+    public function __construct(private readonly SessionStore $store, private readonly ClientInterface $inner,)
+    public function sendRequest(RequestInterface $request) : ResponseInterface
+
+=== Core/SessionStore.php ===
+namespace Sah\Sdk\Core;
+class SessionStore
+    public function __construct(private readonly ClientInterface $client, private readonly RequestFactoryInterface $requestFactory, private readonly StreamFactoryInterface $streamFactory, private readonly Clock $clock, private readonly string $baseUrl, private readonly string $keycode, private readonly string $email, private readonly string $licenseKey, private readonly string $deviceId,)
+    public function bootstrapCount() : int
+    public function currentSecret() : ?Session
+    public function bootstrap() : Session
+    public function invalidate() : void
+    public function onActivity() : void
+
 === Core/Sleeper.php ===
 namespace Sah\Sdk\Core;
 interface Sleeper
@@ -380,6 +411,9 @@ class Isa
     public function onLicenseRefreshed(\Closure $listener) : \Closure
     public function withBearer(?string $token = null, ?LoggerInterface $logger = null) : self
     public function withLicense(?string $keycode = null, ?string $email = null, ?LoggerInterface $logger = null, ?CredentialStore $store = null, ?string $deviceId = null,) : self
+    public function withKeycode(?string $keycode = null, ?string $email = null, ?LoggerInterface $logger = null, ?CredentialStore $store = null, ?string $deviceId = null,) : self
+    public function forForm(string $formToken, ?LoggerInterface $logger = null) : self
+    public function authenticate(?string $token = null, ?string $keycode = null, ?string $email = null, ?string $formToken = null, ?LoggerInterface $logger = null, ?CredentialStore $store = null,) : self
     public function withSession(?string $sessionId = null, ?string $sessionSecret = null, ?LoggerInterface $logger = null,) : self
     public function fromEnv(?LoggerInterface $logger = null) : self
 
@@ -756,7 +790,7 @@ class WebhookEvent
 === Zyins/Applicant.php ===
 namespace Sah\Sdk\Zyins;
 class Applicant
-    public function __construct(public string $dob, public Sex $sex, public Height $height, public Weight $weight, public string $state, public NicotineUsage $nicotineUse, public ?string $zip = null, public array $medications = [], public array $conditions = [],)
+    public function __construct(public string $dob, public Sex $sex, public Height $height, public Weight $weight, string|State $state, public NicotineUsage $nicotineUse, public ?string $zip = null, public array $medications = [], public array $conditions = [],)
 
 === Zyins/Auth.php ===
 namespace Sah\Sdk\Zyins;
@@ -804,6 +838,7 @@ namespace Sah\Sdk\Zyins\Cases;
 class Service
     public function __construct(private Transport $transport, private EmailService $emailService,)
     public function create(CreateInput $input, ?RequestOptions $options = null) : CreateResult
+    public function share(CreateInput $input, ?RequestOptions $options = null) : CreateResult
     public function email(EnqueueInput $input, ?RequestOptions $options = null) : EnqueueResult
 
 === Zyins/Condition.php ===

@@ -1,6 +1,6 @@
 # sah/sdk (PHP)
 
-Unified PHP SDK for the ISA Platform. One Composer package, three product
+Unified PHP SDK for the [Best Plan Pro API](https://docs.isaapi.com) — powered by the ZyINS engine. One Composer package, three product
 namespaces: `zyins` (underwriting), `rapidsign` (envelope and document
 workflows), `proxy` (`/v1/call` Algosure-HMAC bridge).
 

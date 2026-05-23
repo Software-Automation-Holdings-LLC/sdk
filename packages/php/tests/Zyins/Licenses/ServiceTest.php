@@ -33,7 +33,7 @@ final class ServiceTest extends TestCase
             idempotency: new FixedKeySource('550e8400-e29b-41d4-a716-446655440000'),
         );
 
-        $result = $client->licenses->check(new CheckInput(
+        $result = $client->license->check(new CheckInput(
             email: 'john.doe@acme-agency.com',
             keycode: 'ABC-123-XYZ',
             deviceId: 'device-1',
@@ -57,7 +57,7 @@ final class ServiceTest extends TestCase
         $http = new MockHttpClient();
         $http->queue(200, json_encode(['data' => ['status' => 'inactive']], JSON_THROW_ON_ERROR));
         $client = new ZyInsClient(token: self::FIXTURE_TOKEN, httpClient: $http);
-        $result = $client->licenses->check(new CheckInput('x@x', 'ABC-123-XYZ'));
+        $result = $client->license->check(new CheckInput('x@x', 'ABC-123-XYZ'));
         self::assertSame('inactive', $result->status);
     }
 
@@ -90,7 +90,7 @@ final class ServiceTest extends TestCase
         $http->queue(500, json_encode(['code' => 'server_error', 'detail' => 'boom'], JSON_THROW_ON_ERROR));
         $client = new ZyInsClient(token: self::FIXTURE_TOKEN, httpClient: $http);
         $this->expectException(IsaException::class);
-        $client->licenses->check(new CheckInput('x@x', 'ABC-123-XYZ'));
+        $client->license->check(new CheckInput('x@x', 'ABC-123-XYZ'));
     }
 
     public function testDeactivateReturnsDeactivatedStatus(): void
@@ -98,7 +98,7 @@ final class ServiceTest extends TestCase
         $http = new MockHttpClient();
         $http->queue(200, json_encode(['status' => 'deactivated'], JSON_THROW_ON_ERROR));
         $client = new ZyInsClient(token: self::FIXTURE_TOKEN, httpClient: $http);
-        $result = $client->licenses->deactivate(new DeactivateInput(
+        $result = $client->license->deactivate(new DeactivateInput(
             email: 'john.doe@acme-agency.com',
             keycode: 'ABC-123-XYZ',
         ));

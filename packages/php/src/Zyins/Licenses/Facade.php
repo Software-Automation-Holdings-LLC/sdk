@@ -20,9 +20,9 @@ use Sah\Sdk\Zyins\RequestOptions;
  * Zero-arg call sites look like:
  *
  *     $isa = Isa::fromEnv();          // reads ISA_LICENSE_* env vars
- *     $result = $isa->zyins->licenses->activate();
- *     $result = $isa->zyins->licenses->check();
- *     $result = $isa->zyins->licenses->deactivate();
+ *     $result = $isa->zyins->license->activate();
+ *     $result = $isa->zyins->license->check();
+ *     $result = $isa->zyins->license->deactivate();
  */
 final readonly class Facade
 {
@@ -65,7 +65,7 @@ final readonly class Facade
         $resolvedEmail = $email ?? $this->state->email;
         if (trim($resolvedKeycode) === '' || trim($resolvedEmail) === '') {
             throw new InvalidArgumentException(
-                'licenses.check requires email + keycode (instance state was empty)'
+                'license.check requires email + keycode (instance state was empty)'
             );
         }
         return $this->service->check(new CheckInput(
@@ -90,7 +90,7 @@ final readonly class Facade
         $resolvedEmail = $email ?? $this->state->email;
         if (trim($resolvedKeycode) === '' || trim($resolvedEmail) === '') {
             throw new InvalidArgumentException(
-                'licenses.deactivate requires email + keycode (instance state was empty)'
+                'license.deactivate requires email + keycode (instance state was empty)'
             );
         }
         $result = $this->service->deactivate(new DeactivateInput(
