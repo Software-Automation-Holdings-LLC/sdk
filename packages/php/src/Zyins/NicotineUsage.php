@@ -5,9 +5,14 @@ declare(strict_types=1);
 namespace Sah\Sdk\Zyins;
 
 /**
- * Nicotine usage tri-state. The wire format negotiates between a
- * legacy boolean and the modern tri-state; the prequalify request is
- * the only place that picks the on-the-wire shape.
+ * Deprecated three-state nicotine usage enum.
+ *
+ * @deprecated Use {@see NicotineUsageInput} with {@see NicotineDuration}.
+ *
+ * Migration:
+ * - `NicotineUsage::None`    → `new NicotineUsageInput(NicotineDuration::Never)`
+ * - `NicotineUsage::Current` → `new NicotineUsageInput(NicotineDuration::Within12Months)`
+ * - `NicotineUsage::Former`  → `new NicotineUsageInput(NicotineDuration::N12To24Months)`
  */
 enum NicotineUsage: string
 {

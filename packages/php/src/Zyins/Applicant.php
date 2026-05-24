@@ -39,7 +39,7 @@ final readonly class Applicant
         public Height $height,
         public Weight $weight,
         string|State $state,
-        public NicotineUsage $nicotineUse,
+        public NicotineUsage|NicotineUsageInput $nicotineUse,
         public ?string $zip = null,
         public array $medications = [],
         public array $conditions = [],

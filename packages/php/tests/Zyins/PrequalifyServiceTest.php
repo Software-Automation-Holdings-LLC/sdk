@@ -13,7 +13,9 @@ use Sah\Sdk\Zyins\Condition;
 use Sah\Sdk\Zyins\Coverage;
 use Sah\Sdk\Zyins\Height;
 use Sah\Sdk\Zyins\Medication;
+use Sah\Sdk\Zyins\NicotineDuration;
 use Sah\Sdk\Zyins\NicotineUsage;
+use Sah\Sdk\Zyins\NicotineUsageInput;
 use Sah\Sdk\Zyins\Prequalify\Input;
 use Sah\Sdk\Zyins\Product;
 use Sah\Sdk\Zyins\ProductType;
@@ -82,10 +84,16 @@ final class PrequalifyServiceTest extends TestCase
         self::assertSame('/v1/prequalify', $request->getUri()->getPath());
         self::assertSame('550e8400-e29b-41d4-a716-446655440000', $request->getHeaderLine('Idempotency-Key'));
         $body = json_decode((string) $request->getBody(), true, flags: JSON_THROW_ON_ERROR);
-        self::assertSame('M', $body['applicant']['sex']);
-        self::assertSame(70, $body['applicant']['height_inches']);
-        self::assertSame(195, $body['applicant']['weight_pounds']);
-        self::assertSame('colonial-penn.final-expense', $body['products']);
+        // 0.5.1 flat wire — no applicant/coverage nesting.
+        self::assertSame('1962-04-18', $body['date_of_birth']);
+        self::assertSame('male', $body['gender']);
+        self::assertSame(70, $body['height']);
+        self::assertSame(195, $body['weight']);
+        self::assertSame(['colonial-penn.final-expense'], $body['products']);
+        self::assertSame('never', $body['nicotine_usage']['last_used']);
+        self::assertArrayHasKey('quote_options', $body);
+        self::assertArrayNotHasKey('applicant', $body);
+        self::assertArrayNotHasKey('coverage', $body);
     }
 
     public function testWithIdempotencyKeyOverride(): void

@@ -12,11 +12,12 @@ promotion, named-args, PSR-18 transport.
 ## Install
 
 ```bash
-composer require sah/sdk:^0.3.0
+composer require sah/sdk:^0.5.0
 ```
 
 (Private Packagist; auto-update is wired to this repository. Tag pattern is
-`sdk/vX.Y.Z` — one tag, one publish per language.)
+`sdk/vX.Y.Z` on isa-platform — one tag, one publish per language. The flat
+`sdk-php` mirror is tagged `vX.Y.Z` for Packagist webhook discovery.)
 
 ## Quick start — bearer mode
 
@@ -56,8 +57,11 @@ $result = $isa->zyins->prequalify->run($input);
 | Factory | Env vars consulted when unset | Wire shape |
 |---|---|---|
 | `Isa::withBearer($token = null)` | `ISA_TOKEN` | `Authorization: Bearer isa_*` |
-| `Isa::withLicense($keycode = null, $email = null)` | `ISA_LICENSE_KEYCODE`, `ISA_LICENSE_EMAIL` | `Authorization: License <b64>` |
+| `Isa::withKeycode($keycode = null, $email = null)` | `ISA_LICENSE_KEYCODE`, `ISA_LICENSE_EMAIL` | `Authorization: License <b64>` |
+| `Isa::withLicense($keycode = null, $email = null)` | `ISA_LICENSE_KEYCODE`, `ISA_LICENSE_EMAIL` | `Authorization: License <b64>` — deprecated alias for `withKeycode` |
 | `Isa::withSession($id = null, $secret = null)` | `ISA_SESSION_ID`, `ISA_SESSION_SECRET` | `Authorization: Session <id>` |
+
+`withKeycode` is the canonical factory for agent-tool (BPP) integrations. `withLicense` is a deprecated alias that will be removed in a future major version. Use `withKeycode` in new code.
 
 Missing env vars raise `Sah\Sdk\Zyins\Exception\IsaConfigException` with the
 exact variable name in the message.

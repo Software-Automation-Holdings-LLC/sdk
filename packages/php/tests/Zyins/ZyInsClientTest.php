@@ -9,10 +9,14 @@ use PHPUnit\Framework\TestCase;
 use Sah\Sdk\Tests\Zyins\Support\FixedKeySource;
 use Sah\Sdk\Tests\Zyins\Support\MockHttpClient;
 use Sah\Sdk\Zyins\Auth;
+use Sah\Sdk\Zyins\ProductCatalog;
+use Sah\Sdk\Zyins\Products\Facade as ProductsFacade;
 use Sah\Sdk\Zyins\ZyInsClient;
 
 #[CoversClass(ZyInsClient::class)]
 #[CoversClass(Auth::class)]
+#[CoversClass(ProductsFacade::class)]
+#[CoversClass(ProductCatalog::class)]
 final class ZyInsClientTest extends TestCase
 {
     /**
@@ -43,8 +47,40 @@ final class ZyInsClientTest extends TestCase
         self::assertNotNull($client->prequalify);
         self::assertNotNull($client->quote);
         self::assertNotNull($client->datasets);
+        self::assertNotNull($client->products);
         self::assertNotNull($client->referenceData);
         self::assertNotNull($client->usage);
+    }
+
+    public function testProductsFacadeFetchesCatalogThroughClient(): void
+    {
+        $http = new MockHttpClient();
+        $http->queue(200, json_encode([
+            'data' => [
+                'products' => [
+                    'fex' => [
+                        [
+                            'identifier' => 'fex-cp',
+                            'carrier' => 'colonial-penn',
+                            'name' => 'CP FEX',
+                            'product' => 'fex',
+                        ],
+                    ],
+                ],
+            ],
+            'request_id' => 'req_products',
+        ], JSON_THROW_ON_ERROR));
+        $client = new ZyInsClient(token: self::FIXTURE_TOKEN, httpClient: $http);
+
+        $product = $client->products->catalog()->findBySlug('fex-cp');
+        $again = $client->products->catalog();
+        $request = $http->lastRequest();
+
+        self::assertSame('colonial-penn', $product->brand);
+        self::assertSame(1, count($http->requests));
+        self::assertSame('/v1/reference-data', $request->getUri()->getPath());
+        self::assertSame('include=products', $request->getUri()->getQuery());
+        self::assertSame($again, $client->products->catalog());
     }
 
     public function testClientAttachesBearerAndVersionHeaders(): void

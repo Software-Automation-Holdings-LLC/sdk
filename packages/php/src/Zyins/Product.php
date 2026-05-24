@@ -24,9 +24,24 @@ final readonly class Product
     }
 
     /**
-     * Render a list of products to the prequalify wire string — a
-     * `|`-joined list of wire tokens. The shape is the engine's stable
-     * contract; locking it in here keeps call sites out of the regex.
+     * Returns the wire token array the prequalify body's `products` field accepts.
+     * Prefer this over {@see toWireString()} — the server takes `string[]`, not a
+     * joined string.
+     *
+     * @param  Product[] $products
+     * @return string[]
+     */
+    public static function toWireArray(array $products): array
+    {
+        if ($products === []) {
+            throw new InvalidArgumentException('Product::toWireArray: at least one product is required');
+        }
+        return array_values(array_map(static fn (Product $p): string => $p->wireToken, $products));
+    }
+
+    /**
+     * @deprecated Use {@see toWireArray()} instead. The server's `products` field is
+     *             `string[]`; joining with `|` is a legacy convention. Will be removed in v0.7.0.
      *
      * @param Product[] $products
      */

@@ -18,6 +18,7 @@ use Sah\Sdk\Zyins\Logos\Service as LogosService;
 use Sah\Sdk\Zyins\Preferences\Service as PreferencesService;
 use Sah\Sdk\Zyins\Logging\DebugLogger;
 use Sah\Sdk\Zyins\Prequalify\Service as PrequalifyService;
+use Sah\Sdk\Zyins\Products\Facade as ProductsFacade;
 use Sah\Sdk\Zyins\Quote\Service as QuoteService;
 use Sah\Sdk\Zyins\ReferenceData\Service as ReferenceDataService;
 use Sah\Sdk\Zyins\Usage\Service as UsageService;
@@ -51,9 +52,12 @@ final readonly class ZyInsClient
     /** API version the SDK pins to today. Override per-request via {@see RequestOptions::withVersion()}. */
     public const DEFAULT_API_VERSION = '2026-05-18';
 
+    private const REFERENCE_DATA_PATH = '/v1/reference-data';
+
     public PrequalifyService $prequalify;
     public QuoteService $quote;
     public DatasetsService $datasets;
+    public ProductsFacade $products;
     public ReferenceDataService $referenceData;
     public UsageService $usage;
     /**
@@ -93,6 +97,9 @@ final readonly class ZyInsClient
         $this->prequalify = new PrequalifyService($this->transport);
         $this->quote = new QuoteService($this->transport);
         $this->datasets = new DatasetsService($this->transport);
+        $this->products = new ProductsFacade(
+            fn (array $query): array => $this->fetchReferenceData($query)
+        );
         $this->referenceData = new ReferenceDataService($this->transport);
         $this->usage = new UsageService($this->transport);
         $this->license = new LicensesService($this->transport);
@@ -219,6 +226,19 @@ final readonly class ZyInsClient
             return null;
         }
         return $value;
+    }
+
+    /**
+     * @param  array<string,mixed> $query
+     * @return array<string,mixed>
+     */
+    private function fetchReferenceData(array $query): array
+    {
+        $queryString = http_build_query($query);
+        $path = self::REFERENCE_DATA_PATH . ($queryString === '' ? '' : '?' . $queryString);
+        /** @var array<string,mixed> $data */
+        $data = $this->transport->get($path)->data;
+        return $data;
     }
 
     private static function defaultUserAgent(): string

@@ -100,8 +100,8 @@ final class TransportTest extends TestCase
         $client->prequalify->run($input);
         $body = json_decode((string) $http->lastRequest()->getBody(), true, flags: JSON_THROW_ON_ERROR);
         self::assertIsArray($body);
-        self::assertIsArray($body['applicant']);
-        self::assertArrayNotHasKey('zip', $body['applicant']);
+        // 0.5.1 flat wire — zip is a top-level optional field
+        self::assertArrayNotHasKey('zip', $body);
     }
 
     public function testPrequalifyMedicationsAndConditionsUseCamelCaseWireKeys(): void
@@ -126,13 +126,14 @@ final class TransportTest extends TestCase
         $client->prequalify->run($input);
         $body = json_decode((string) $http->lastRequest()->getBody(), true, flags: JSON_THROW_ON_ERROR);
         self::assertIsArray($body);
-        $med = $body['applicant']['medications'][0];
+        // 0.5.1 flat wire — medications/conditions are top-level
+        $med = $body['medications'][0];
         self::assertSame('LOSARTAN', $med['name']);
         self::assertArrayHasKey('firstFill', $med);
         self::assertArrayHasKey('lastFill', $med);
         self::assertArrayNotHasKey('first_fill', $med);
         self::assertArrayNotHasKey('last_fill', $med);
-        $cond = $body['applicant']['conditions'][0];
+        $cond = $body['conditions'][0];
         self::assertArrayHasKey('wasDiagnosed', $cond);
         self::assertArrayHasKey('lastTreatment', $cond);
         self::assertArrayNotHasKey('was_diagnosed', $cond);

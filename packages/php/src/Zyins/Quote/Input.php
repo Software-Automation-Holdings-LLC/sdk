@@ -7,6 +7,8 @@ namespace Sah\Sdk\Zyins\Quote;
 use InvalidArgumentException;
 use Sah\Sdk\Zyins\Applicant;
 use Sah\Sdk\Zyins\Coverage;
+use Sah\Sdk\Zyins\NicotineDuration;
+use Sah\Sdk\Zyins\NicotineUsageInput;
 use Sah\Sdk\Zyins\Product;
 
 /**
@@ -42,7 +44,7 @@ final readonly class Input
             'height_inches' => $this->applicant->height->totalInches,
             'weight_pounds' => $this->applicant->weight->pounds,
             'state' => $this->applicant->state,
-            'nicotine_use' => $this->applicant->nicotineUse->value,
+            'nicotine_use' => $this->serializeNicotineUse(),
         ];
         if ($this->applicant->zip !== null) {
             $applicant['zip'] = $this->applicant->zip;
@@ -55,5 +57,19 @@ final readonly class Input
                 'amount' => $this->coverage->amount,
             ],
         ];
+    }
+
+    private function serializeNicotineUse(): string
+    {
+        $nicotineUse = $this->applicant->nicotineUse;
+        if (! $nicotineUse instanceof NicotineUsageInput) {
+            return $nicotineUse->value;
+        }
+
+        return match ($nicotineUse->lastUsed) {
+            NicotineDuration::Never => 'none',
+            NicotineDuration::Within12Months => 'current',
+            default => 'former',
+        };
     }
 }

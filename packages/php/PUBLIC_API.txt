@@ -790,7 +790,7 @@ class WebhookEvent
 === Zyins/Applicant.php ===
 namespace Sah\Sdk\Zyins;
 class Applicant
-    public function __construct(public string $dob, public Sex $sex, public Height $height, public Weight $weight, string|State $state, public NicotineUsage $nicotineUse, public ?string $zip = null, public array $medications = [], public array $conditions = [],)
+    public function __construct(public string $dob, public Sex $sex, public Height $height, public Weight $weight, string|State $state, public NicotineUsage|NicotineUsageInput $nicotineUse, public ?string $zip = null, public array $medications = [], public array $conditions = [],)
 
 === Zyins/Auth.php ===
 namespace Sah\Sdk\Zyins;
@@ -1054,9 +1054,23 @@ namespace Sah\Sdk\Zyins;
 class Medication
     public function __construct(public string $name, public string $use, public string $firstFill, public string $lastFill,)
 
+=== Zyins/NicotineDuration.php ===
+namespace Sah\Sdk\Zyins;
+enum NicotineDuration : string
+
+=== Zyins/NicotineProductUsage.php ===
+namespace Sah\Sdk\Zyins;
+class NicotineProductUsage
+    public function __construct(/** * Product type (e.g. 'CIGARETTE', 'CIGAR', 'PIPE', 'CHEWING TOBACCO', * 'NICOTINE PATCH', 'NICOTINE GUM', 'MEDICAL MARIJUANA', * 'RECREATIONAL MARIJUANA'). */ public string $type, /** How often the product is used. */ public string $frequency,)
+
 === Zyins/NicotineUsage.php ===
 namespace Sah\Sdk\Zyins;
 enum NicotineUsage : string
+
+=== Zyins/NicotineUsageInput.php ===
+namespace Sah\Sdk\Zyins;
+class NicotineUsageInput
+    public function __construct(public NicotineDuration $lastUsed, public array $productUsage = [],)
 
 === Zyins/Pagination/CursorIterator.php ===
 namespace Sah\Sdk\Zyins\Pagination;
@@ -1129,11 +1143,30 @@ class Service
 namespace Sah\Sdk\Zyins;
 class Product
     public function __construct(public string $brand, public ProductType $type, public string $wireToken, public string $displayName,)
+    public function toWireArray(array $products) : array
     public function toWireString(array $products) : string
+
+=== Zyins/ProductCatalog.php ===
+namespace Sah\Sdk\Zyins;
+class ProductCatalog
+    public function default() : self
+    public function fromDatasets(array $bundle) : self
+    public function find(string $brand, ProductType $type) : Product
+    public function tryFind(string $brand, ProductType $type) : ?Product
+    public function findBySlug(string $slug) : Product
+    public function tryFindBySlug(string $slug) : ?Product
+    public function list() : array
 
 === Zyins/ProductType.php ===
 namespace Sah\Sdk\Zyins;
 enum ProductType : string
+
+=== Zyins/Products/Facade.php ===
+namespace Sah\Sdk\Zyins\Products;
+class Facade
+    public function __construct(private readonly mixed $datasetsGet)
+    public function catalog() : ProductCatalog
+    public function refresh() : ProductCatalog
 
 === Zyins/Quote/Input.php ===
 namespace Sah\Sdk\Zyins\Quote;
@@ -1152,6 +1185,10 @@ namespace Sah\Sdk\Zyins\Quote;
 class Service
     public function __construct(private Transport $transport)
     public function run(Input $input, ?RequestOptions $options = null) : Result
+
+=== Zyins/QuoteType.php ===
+namespace Sah\Sdk\Zyins;
+enum QuoteType : string
 
 === Zyins/RawResponse.php ===
 namespace Sah\Sdk\Zyins;

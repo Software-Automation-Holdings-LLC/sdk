@@ -9,7 +9,11 @@ use Sah\Sdk\Zyins\Applicant;
 use Sah\Sdk\Zyins\Condition;
 use Sah\Sdk\Zyins\Coverage;
 use Sah\Sdk\Zyins\Medication;
+use Sah\Sdk\Zyins\NicotineDuration;
+use Sah\Sdk\Zyins\NicotineUsage;
+use Sah\Sdk\Zyins\NicotineUsageInput;
 use Sah\Sdk\Zyins\Product;
+use Sah\Sdk\Zyins\QuoteType;
 
 /**
  * Inputs accepted by `prequalify->run()`.
@@ -35,57 +39,102 @@ final readonly class Input
     }
 
     /**
-     * Serialize to the wire body shape. Top-level applicant fields are
-     * the engine's documented snake_case contract (`height_inches`,
-     * `weight_pounds`, `nicotine_use`); nested medication and condition
-     * objects pass through with their canonical camelCase property names
-     * (`firstFill`, `lastFill`, `wasDiagnosed`, `lastTreatment`) to match
-     * the canonical JS SDK at `packages/zyins/js/src/prequalify.ts`. The
-     * SDK locks this shape so call sites never touch wire keys directly.
+     * Serialize to the flat wire body the server expects (0.5.1+).
      *
-     * The optional `zip` field is omitted when null rather than serialized
-     * as `"zip": null`, mirroring the JS SDK's conditional-spread behavior
-     * and avoiding strict-schema rejection on the server.
+     * Wire shape:
+     * ```json
+     * {
+     *   "date_of_birth": "YYYY-MM-DD",
+     *   "gender": "male" | "female",
+     *   "height": <inches>,
+     *   "weight": <pounds>,
+     *   "state": "<state>",
+     *   "nicotine_usage": { "last_used": "<NicotineLastUsed>", ... },
+     *   "products": ["<slug>", ...],
+     *   "conditions": [...],
+     *   "medications": [...],
+     *   "quote_options": { "amounts": ["<amount>"], "quote_type": "..." }
+     * }
+     * ```
+     *
+     * Auth credentials belong in HMAC headers only — never in the body.
+     * No `applicant`/`coverage` nesting per ADR-035.
      *
      * @return array<string,mixed>
      */
     public function toWireBody(): array
     {
-        $applicant = [
-            'dob' => $this->applicant->dob,
-            'sex' => $this->applicant->sex->wireCode(),
-            'height_inches' => $this->applicant->height->totalInches,
-            'weight_pounds' => $this->applicant->weight->pounds,
-            'state' => $this->applicant->state,
-            'nicotine_use' => $this->applicant->nicotineUse->value,
-            'medications' => array_map(
-                static fn (Medication $m): array => [
-                    'name' => $m->name,
-                    'use' => $m->use,
-                    'firstFill' => $m->firstFill,
-                    'lastFill' => $m->lastFill,
-                ],
-                $this->applicant->medications,
-            ),
-            'conditions' => array_map(
+        $payload = [
+            'date_of_birth' => $this->applicant->dob,
+            'gender'        => $this->applicant->sex->value,
+            'height'        => $this->applicant->height->totalInches,
+            'weight'        => $this->applicant->weight->pounds,
+            'state'         => $this->applicant->state,
+            'nicotine_usage' => $this->serializeNicotineUsage(),
+            'products'      => Product::toWireArray($this->products),
+            'conditions'    => array_map(
                 static fn (Condition $c): array => [
-                    'name' => $c->name,
+                    'name'         => $c->name,
                     'wasDiagnosed' => $c->wasDiagnosed,
                     'lastTreatment' => $c->lastTreatment,
                 ],
                 $this->applicant->conditions,
             ),
+            'medications'   => array_map(
+                static fn (Medication $m): array => [
+                    'name'      => $m->name,
+                    'use'       => $m->use,
+                    'firstFill' => $m->firstFill,
+                    'lastFill'  => $m->lastFill,
+                ],
+                $this->applicant->medications,
+            ),
+            'quote_options' => $this->serializeQuoteOptions(),
         ];
+
         if ($this->applicant->zip !== null) {
-            $applicant['zip'] = $this->applicant->zip;
+            $payload['zip'] = $this->applicant->zip;
         }
+
+        return $payload;
+    }
+
+    /** @return array<string,mixed> */
+    private function serializeNicotineUsage(): array
+    {
+        $nicotineUse = $this->applicant->nicotineUse;
+
+        if ($nicotineUse instanceof NicotineUsageInput) {
+            $result = ['last_used' => $nicotineUse->lastUsed->value];
+            if ($nicotineUse->productUsage !== []) {
+                $result['product_usage'] = array_map(
+                    static fn (object $p): array => ['type' => $p->type, 'frequency' => $p->frequency],
+                    $nicotineUse->productUsage,
+                );
+            }
+            return $result;
+        }
+
+        // Deprecated NicotineUsage enum — map to nearest NicotineDuration bucket.
+        $lastUsed = match ($nicotineUse) {
+            NicotineUsage::None    => NicotineDuration::Never,
+            NicotineUsage::Current => NicotineDuration::Within12Months,
+            NicotineUsage::Former  => NicotineDuration::N12To24Months,
+        };
+
+        return ['last_used' => $lastUsed->value];
+    }
+
+    /** @return array<string,mixed> */
+    private function serializeQuoteOptions(): array
+    {
+        $quoteType = $this->coverage->isFaceValue()
+            ? QuoteType::FaceAmounts
+            : QuoteType::MonthlyBudget;
+
         return [
-            'products' => Product::toWireString($this->products),
-            'applicant' => $applicant,
-            'coverage' => [
-                'type' => $this->coverage->type,
-                'amount' => $this->coverage->amount,
-            ],
+            'amounts'    => [(string) $this->coverage->amount],
+            'quote_type' => $quoteType->value,
         ];
     }
 }
