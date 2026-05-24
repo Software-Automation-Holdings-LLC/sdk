@@ -25,7 +25,16 @@ from ..core.errors import (
     RateLimitError,
     ValidationError,
 )
-from .applicant import Applicant, Condition, Medication, NicotineUsage, Sex
+from .applicant import (
+    Applicant,
+    Condition,
+    Medication,
+    NicotineDuration,
+    NicotineProductUsage,
+    NicotineUsage,
+    NicotineUsageInput,
+    Sex,
+)
 from .branding import BrandingDetail
 from .cases import (
     CaseCreateInput,
@@ -34,7 +43,7 @@ from .cases import (
     EmailEnqueueResult,
 )
 from .client import DEFAULT_BASE_URL, ZyInsClient
-from .coverage import Coverage, CoverageType
+from .coverage import Coverage, CoverageType, QuoteType
 from .datasets import Dataset
 from .health import ProbeResult, ReadinessResult
 from .licenses import (
@@ -46,7 +55,8 @@ from .licenses import (
 from .licenses_facade import LicenseActivateResult
 from .preferences import PreferencesResult, PreferencesSetInput
 from .prequalify import PrequalifyInput, PrequalifyPlan, PrequalifyResult
-from .product import Product, ProductSelection, ProductType
+from .product import Product, ProductCatalog, ProductSelection, ProductType
+from .products import ProductsFacade
 from .quote import QuotedPlan, QuoteInput, QuoteResult
 from .reference_data import ReferenceDataResponse
 from .usage import UsageSummary
@@ -96,7 +106,10 @@ __all__ = [
     "LicenseDeactivateResult",
     "LicenseError",
     "Medication",
+    "NicotineDuration",
+    "NicotineProductUsage",
     "NicotineUsage",
+    "NicotineUsageInput",
     "PreferencesResult",
     "PreferencesSetInput",
     "PrequalifyError",
@@ -105,10 +118,13 @@ __all__ = [
     "PrequalifyResult",
     "ProbeResult",
     "Product",
+    "ProductCatalog",
     "ProductSelection",
     "ProductType",
+    "ProductsFacade",
     "QuoteInput",
     "QuoteResult",
+    "QuoteType",
     "QuotedPlan",
     "RateLimitError",
     "RawResponse",

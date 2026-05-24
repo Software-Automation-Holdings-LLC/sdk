@@ -39,7 +39,6 @@ from .zyins.credential_state import (
 from .zyins.licenses_facade import LicenseFacade
 from .zyins.logos import LogosSubClient
 from .zyins.prequalify import PrequalifyInput, PrequalifyResult, parse_prequalify_response
-from .zyins.prequalify_legacy_blob import encode_legacy_blob, parse_legacy_blob_response
 from .zyins.quote import QuoteInput, QuoteResult, parse_quote_response
 
 __all__ = [
@@ -530,13 +529,12 @@ class ZyinsNamespace:
 
 
 class _PrequalifyCallable:
-    """``isa.zyins.prequalify`` — callable with a ``legacy_blob`` companion.
+    """``isa.zyins.prequalify`` — callable with raw-response variant.
 
-    The default call shape is::
+    Usage::
 
-        isa.zyins.prequalify(input)              # → Envelope[PrequalifyResult]
-        isa.zyins.prequalify.with_raw_response(input)
-        isa.zyins.prequalify.legacy_blob(payload)  # → Envelope[PrequalifyResult]
+        isa.zyins.prequalify(input)                       # → Envelope[PrequalifyResult]
+        isa.zyins.prequalify.with_raw_response(input)     # → tuple[Envelope, RawResponse]
     """
 
     _PATH = "/v1/prequalify"
@@ -574,26 +572,6 @@ class _PrequalifyCallable:
             parse=parse_prequalify_response,
             idempotency_key=idempotency_key,
         )
-
-    def legacy_blob(
-        self,
-        encoded_payload: dict[str, Any],
-        *,
-        idempotency_key: str | None = None,
-    ) -> Envelope[PrequalifyResult]:
-        """Run prequalify with a pre-encoded payload (bpp2.0 encoder shape).
-
-        Same path, headers, and response parsing as the typed variant.
-        """
-        env, _raw = _run(
-            ns=self._ns,
-            method="POST",
-            path=self._PATH,
-            body_provider=lambda: encode_legacy_blob(encoded_payload),
-            parse=parse_legacy_blob_response,
-            idempotency_key=idempotency_key,
-        )
-        return env
 
 
 class _Quote:

@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "sah-sdk"
-version = "0.5.0"
+version = "0.5.2"
 description = "Unified Python SDK for ISA APIs (zyins, rapidsign, proxy)."
 readme = "README.md"
 license = { text = "Apache-2.0" }

@@ -5,18 +5,37 @@ from __future__ import annotations
 import json
 from typing import Any
 
-from ..zyins.applicant import Applicant, sex_wire_code
+from ..zyins.applicant import Applicant, NicotineUsageInput
 
 
 def applicant_to_wire_dict(applicant: Applicant) -> dict[str, Any]:
-    """Serialize an applicant for prequalify/quote request bodies."""
+    """Serialize an applicant for legacy request bodies.
+
+    .. deprecated::
+        New code should use the flat wire serialization in
+        ``prequalify._serialize_wire_body``. This helper exists only for
+        code paths (e.g. quote) that have not yet migrated to the flat
+        shape.
+    """
+    nicotine_use = applicant.nicotine_use
+    # Accept both NicotineUsageInput (modern) and NicotineUsage (deprecated).
+    nicotine_value: str | dict[str, Any]
+    if isinstance(nicotine_use, NicotineUsageInput):
+        nicotine_value = {"last_used": nicotine_use.last_used.value}
+        if nicotine_use.product_usage:
+            nicotine_value["product_usage"] = [
+                {"type": p.type, "frequency": p.frequency} for p in nicotine_use.product_usage
+            ]
+    else:
+        nicotine_value = nicotine_use.value
+
     payload: dict[str, Any] = {
         "dob": applicant.dob,
-        "sex": sex_wire_code(applicant.sex),
+        "sex": applicant.sex.value,
         "height_inches": applicant.height_inches,
         "weight_pounds": applicant.weight_pounds,
         "state": applicant.state,
-        "nicotine_use": applicant.nicotine_use.value,
+        "nicotine_use": nicotine_value,
         "medications": [m.model_dump() for m in applicant.medications],
         "conditions": [c.model_dump() for c in applicant.conditions],
     }

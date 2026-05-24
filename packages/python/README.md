@@ -10,14 +10,24 @@ naming (`snake_case`) and pydantic v2 models.
 pip install sah-sdk
 ```
 
+> **GitHub Packages fallback.** Until `sah-sdk` is fully published on PyPI, install directly from the source repository:
+>
+> ```bash
+> pip install "git+https://github.com/Software-Automation-Holdings-LLC/sdk.git@sdk/v0.5.0#subdirectory=packages/python"
+> ```
+>
+> The wire surface is identical either way; only the install command changes.
+
 ## Quick start
 
 ```python
-from sah_sdk.zyins import ZyInsClient, Applicant, Coverage, PrequalifyInput, Sex
+import os
+from sah_sdk.zyins import Isa, Applicant, Coverage, PrequalifyInput, Sex
 
-client = ZyInsClient("isa_live_<your-token>")
+# Reads ISA_TOKEN from the environment — no explicit token needed.
+isa = Isa.with_bearer()
 
-result = client.prequalify.run(PrequalifyInput(
+result = isa.zyins.prequalify(PrequalifyInput(
     applicant=Applicant(
         dob="1962-04-18",
         sex=Sex.MALE,
@@ -30,13 +40,12 @@ result = client.prequalify.run(PrequalifyInput(
     products="colonial-penn.final-expense",
 ))
 
-for plan in result.plans:
+for plan in result.data.plans:
     print(plan.brand, plan.tier, plan.monthly_premium)
 ```
 
-The token alone is enough — `Authorization: Bearer <token>`,
-`Idempotency-Key`, and the date-pinned `Version` header are set
-automatically.
+`Isa.with_bearer()` reads `ISA_TOKEN` from the environment. `Authorization: Bearer <token>`,
+`Idempotency-Key`, and the date-pinned `Version` header are set automatically.
 
 ## Auth deviation from the TS SDK
 

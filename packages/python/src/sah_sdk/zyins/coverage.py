@@ -21,6 +21,16 @@ class CoverageType(str, Enum):
     MONTHLY_BUDGET = "monthly_budget"
 
 
+class QuoteType(str, Enum):
+    """Wire discriminator for the ``quote_options.quote_type`` field.
+
+    Values mirror the server's ``QuoteType`` enum exactly.
+    """
+
+    FACE_AMOUNTS = "face_amounts"
+    MONTHLY_BUDGET = "monthly_budget"
+
+
 class Coverage(BaseModel):
     """Coverage request — either a face value or a monthly budget.
 

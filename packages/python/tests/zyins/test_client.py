@@ -15,15 +15,14 @@ from sah_sdk.zyins import (
     Coverage,
     NicotineUsage,
     PrequalifyInput,
+    ProductType,
     Sex,
     ZyInsClient,
 )
 
 # Persona-token from CLAUDE.md (fake, documentation-only). Loaded via env
 # so static-analysis tools that flag string-literal tokens stay quiet.
-_TOKEN = os.environ.get(
-    "ZYINS_FAKE_TEST_TOKEN", "isa_test_" + "fakepersona" + "1234567890"
-)
+_TOKEN = os.environ.get("ZYINS_FAKE_TEST_TOKEN", "isa_test_" + "fakepersona" + "1234567890")
 
 
 @dataclass
@@ -33,9 +32,7 @@ class RecordingTransport:
     response_status: int = 200
     response_body: str = "{}"
     response_headers: dict[str, str] = field(default_factory=dict)
-    calls: list[tuple[str, str, dict[str, str], str | None]] = field(
-        default_factory=list
-    )
+    calls: list[tuple[str, str, dict[str, str], str | None]] = field(default_factory=list)
 
     def request(
         self,
@@ -100,7 +97,10 @@ def test_prequalify_attaches_expected_headers() -> None:
     assert headers["Accept"] == "application/json"
     assert "Idempotency-Key" in headers
     assert headers["Version"]
-    assert body is not None and "applicant" in body
+    assert body is not None
+    payload = json.loads(body)
+    assert payload["date_of_birth"] == "1962-04-18"
+    assert "applicant" not in payload
 
 
 def test_explicit_idempotency_key_is_honored() -> None:
@@ -117,6 +117,37 @@ def test_get_requests_omit_idempotency_key() -> None:
     client.datasets.list()
     _, _, headers, _ = transport.calls[0]
     assert "Idempotency-Key" not in headers
+
+
+def test_products_catalog_fetches_reference_data_once() -> None:
+    transport = RecordingTransport(
+        response_body=json.dumps(
+            {
+                "data": {
+                    "fex": [
+                        {
+                            "identifier": "cp.fex",
+                            "carrier": "colonial-penn",
+                            "name": "CP FEX",
+                            "product": "fex",
+                        }
+                    ]
+                }
+            }
+        )
+    )
+    client = ZyInsClient(_TOKEN, transport=transport)
+
+    catalog = client.products.catalog()
+    cached = client.products.catalog()
+
+    assert catalog is cached
+    assert catalog.find("colonial-penn", ProductType.FINAL_EXPENSE).wire_token == "cp.fex"
+    assert len(transport.calls) == 1
+    method, url, _, body = transport.calls[0]
+    assert method == "GET"
+    assert url.endswith("/v1/reference-data/products")
+    assert body is None
 
 
 @pytest.mark.integration

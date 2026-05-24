@@ -10,6 +10,7 @@ Python than a validator.
 
 from __future__ import annotations
 
+import warnings
 from enum import Enum
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
@@ -18,19 +19,80 @@ from sah_sdk.catalog.states import State
 
 
 class Sex(str, Enum):
-    """Applicant biological sex. Wire format uses ``M`` / ``F``."""
+    """Applicant biological sex. Wire format emits ``male`` / ``female``."""
 
     MALE = "male"
     FEMALE = "female"
 
 
 def sex_wire_code(sex: Sex) -> str:
-    """Return the single-letter wire code (``'M'`` / ``'F'``)."""
+    """Return the single-letter wire code (``'M'`` / ``'F'``).
+
+    .. deprecated::
+        The server accepts ``male``/``female`` directly.  Emit
+        ``sex.value`` instead.  This helper will be removed in v0.7.0.
+    """
+    warnings.warn(
+        "sex_wire_code is deprecated; emit sex.value ('male'/'female') directly. "
+        "This helper will be removed in v0.7.0.",
+        DeprecationWarning,
+        stacklevel=2,
+    )
     return "M" if sex is Sex.MALE else "F"
 
 
+class NicotineDuration(str, Enum):
+    """How long ago the applicant last used any nicotine product.
+
+    Values mirror the server's ``NicotineLastUsed`` enum exactly.
+    """
+
+    NEVER = "never"
+    WITHIN_12_MONTHS = "within_12_months"
+    N12_TO_24_MONTHS = "12_to_24_months"
+    N24_TO_36_MONTHS = "24_to_36_months"
+    N36_TO_48_MONTHS = "36_to_48_months"
+    N48_TO_60_MONTHS = "48_to_60_months"
+    OVER_60_MONTHS = "over_60_months"
+
+
+class NicotineProductUsage(BaseModel):
+    """Detailed usage record for a single nicotine product type."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    type: str = Field(..., description="Product type (e.g. 'CIGARETTE', 'CIGAR').")
+    frequency: str = Field(..., description="How often the product is used.")
+
+
+class NicotineUsageInput(BaseModel):
+    """Structured nicotine usage state the prequalify engine consumes.
+
+    For never-users: ``NicotineUsageInput(last_used=NicotineDuration.NEVER)``.
+    For current users: ``NicotineUsageInput(last_used=NicotineDuration.WITHIN_12_MONTHS, product_usage=[...])``.
+    """
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    last_used: NicotineDuration
+    product_usage: tuple[NicotineProductUsage, ...] = Field(default_factory=tuple)
+
+
 class NicotineUsage(str, Enum):
-    """Applicant nicotine usage. Tri-state on the modern wire."""
+    """Deprecated three-state nicotine enum.
+
+    .. deprecated::
+        Use :class:`NicotineUsageInput` with :class:`NicotineDuration`.
+
+        Migration:
+
+        - ``NicotineUsage.NONE`` →
+          ``NicotineUsageInput(last_used=NicotineDuration.NEVER)``
+        - ``NicotineUsage.CURRENT`` →
+          ``NicotineUsageInput(last_used=NicotineDuration.WITHIN_12_MONTHS)``
+        - ``NicotineUsage.FORMER`` →
+          ``NicotineUsageInput(last_used=NicotineDuration.N12_TO_24_MONTHS)``
+    """
 
     NONE = "none"
     CURRENT = "current"
@@ -72,9 +134,13 @@ class Applicant(BaseModel):
     All fields are required for a useful evaluation; the engine refuses
     requests that omit any of them, so they are non-optional at the
     model level (except ``zip``, ``medications``, ``conditions``).
+
+    ``nicotine_use`` accepts either a :class:`NicotineUsageInput` (modern,
+    full duration + product detail) or the deprecated :class:`NicotineUsage`
+    enum for migration compatibility.
     """
 
-    model_config = ConfigDict(extra="forbid", frozen=True)
+    model_config = ConfigDict(extra="forbid", frozen=True, arbitrary_types_allowed=True)
 
     dob: str = Field(
         ..., description="Date of birth as an ISO 8601 date (e.g. '1962-04-18')."
@@ -96,7 +162,9 @@ class Applicant(BaseModel):
     zip: str | None = Field(
         default=None, description="ZIP code; required by some product families."
     )
-    nicotine_use: NicotineUsage = NicotineUsage.NONE
+    nicotine_use: NicotineUsageInput | NicotineUsage = Field(
+        default_factory=lambda: NicotineUsageInput(last_used=NicotineDuration.NEVER)
+    )
     medications: tuple[Medication, ...] = Field(default_factory=tuple)
     conditions: tuple[Condition, ...] = Field(default_factory=tuple)
 

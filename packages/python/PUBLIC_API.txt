@@ -379,6 +379,13 @@ class EmailSubClient
 === zyins/applicant.py ===
 class Sex(str, Enum)
 def sex_wire_code(sex: Sex) -> str
+class NicotineDuration(str, Enum)
+class NicotineProductUsage(BaseModel)
+    type: str
+    frequency: str
+class NicotineUsageInput(BaseModel)
+    last_used: NicotineDuration
+    product_usage: tuple[NicotineProductUsage, ...]
 class NicotineUsage(str, Enum)
 class Medication(BaseModel)
     name: str
@@ -396,7 +403,7 @@ class Applicant(BaseModel)
     weight_pounds: int
     state: State | str
     zip: str | None
-    nicotine_use: NicotineUsage
+    nicotine_use: NicotineUsageInput | NicotineUsage
     medications: tuple[Medication, ...]
     conditions: tuple[Condition, ...]
 
@@ -466,6 +473,7 @@ class CaseSubClient
 
 === zyins/coverage.py ===
 class CoverageType(str, Enum)
+class QuoteType(str, Enum)
 class Coverage(BaseModel)
     type: CoverageType
     amount: int
@@ -605,10 +613,6 @@ class PrequalifyResult(BaseModel)
     request_id: str
 def parse_prequalify_response(body: str) -> PrequalifyResult
 
-=== zyins/prequalify_legacy_blob.py ===
-def encode_legacy_blob(encoded_payload: dict[str, Any]) -> str
-def parse_legacy_blob_response(body: str) -> PrequalifyResult
-
 === zyins/product.py ===
 class ProductType(str, Enum)
 class Product(BaseModel)
@@ -620,8 +624,22 @@ class ProductSelection
     def of(cls, product: Product) -> ProductSelection
     def many(cls, products: Iterable[Product]) -> ProductSelection
     def list(self) -> tuple[Product, ...]
+    def to_wire_array(self) -> tuple[str, ...]
     def to_wire_string(self) -> str
+class ProductCatalog
+    def default(cls) -> ProductCatalog
+    def from_datasets(cls, bundle: Mapping[str, Any]) -> ProductCatalog
+    def find(self, brand: str, product_type: ProductType) -> Product
+    def try_find(self, brand: str, product_type: ProductType) -> Product | None
+    def find_by_slug(self, slug: str) -> Product
+    def try_find_by_slug(self, slug: str) -> Product | None
+    def list(self) -> tuple[Product, ...]
 def default_catalog() -> tuple[Product, ...]
+
+=== zyins/products.py ===
+class ProductsFacade
+    def catalog(self) -> ProductCatalog
+    def refresh(self) -> ProductCatalog
 
 === zyins/quote.py ===
 class QuoteInput(BaseModel)
