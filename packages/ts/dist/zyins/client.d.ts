@@ -19,7 +19,7 @@
 import { type AuthContext } from './auth';
 import { type Transport } from './transport';
 import { type Clock } from '../core';
-import { type PrequalifyLegacyBlobRequest, type PrequalifyRequest, type PrequalifyResult } from './prequalify';
+import { type PrequalifyRequest, type PrequalifyResult } from './prequalify';
 import { type LicenseActivateRequest, type LicenseActivateResult, type LicenseCheckRequest, type LicenseCheckResult, type LicenseDeactivateRequest, type LicenseDeactivateResult } from './license';
 import { type ReadinessResult } from './health';
 import { type CaseEmailRequest, type CaseEmailResult } from './case';
@@ -88,13 +88,6 @@ export declare class ZyInsClient {
     constructor(options: ZyInsClientOptions);
     /** Run a prequalify call. See `PrequalifyRequest` for input shape. */
     prequalify(request: PrequalifyRequest): Promise<PrequalifyResult>;
-    /**
-     * Run a prequalify call from a pre-encoded legacy payload. Mirrors
-     * `prequalify` but accepts an opaque encoded blob produced by a legacy
-     * encoder (e.g. bpp2.0's `prepEncObj` / `prepEncObjV2`) and sends it as
-     * the request body verbatim. Returns the same typed `PrequalifyResult`.
-     */
-    prequalifyLegacyBlob(request: PrequalifyLegacyBlobRequest): Promise<PrequalifyResult>;
     /** Internal: produce the shared context object every operation needs. */
     private context;
 }

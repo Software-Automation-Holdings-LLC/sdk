@@ -18,6 +18,14 @@
  * no `options.preserveExactAmount` flag — the SDK locks in the right
  * bucketing.
  */
+/**
+ * Wire discriminator for the `quote_options.quote_type` field.
+ * Values mirror the server's `QuoteType` enum exactly.
+ */
+export declare enum QuoteType {
+    FaceAmounts = "face_amounts",
+    MonthlyBudget = "monthly_budget"
+}
 /** Coverage requested by death benefit (face value in USD). */
 export interface FaceValueCoverage {
     readonly type: 'face_value';

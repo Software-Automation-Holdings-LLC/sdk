@@ -26,10 +26,11 @@ import { type DebugLogger, type EnvReader, type LogSink } from './logger';
 import { type Envelope, type RawResponseResult } from './envelope';
 import { type Transport } from './transport';
 import { type LogosFetch } from './logos';
-import { type PrequalifyRequest, type PrequalifyLegacyBlobRequest, type PrequalifyResult } from './prequalify';
+import { type PrequalifyRequest, type PrequalifyResult } from './prequalify';
 import { WebhooksService } from '../rapidsign/webhooks';
 import { type ProxyCallOptions, type ProxyCallResult } from '../proxy/call';
 import { BrandingFacade, DatasetsFacade, PreferencesFacade, CasesFacade, EmailFacade, LicenseFacade, LogosFacade } from './isaNamespaces';
+import { ProductsFacade } from './products';
 import { AccountNamespace } from '../account';
 /** Constructor options for `Isa`. */
 export interface IsaOptions {
@@ -276,12 +277,14 @@ export declare class ZyInsNamespace {
     readonly email: EmailFacade;
     /**
      * `isa.zyins.prequalify` — callable that runs the prequalify decision
-     * from a typed `PrequalifyRequest`. Carries a `legacyBlob` property for
-     * consumers (bpp2.0) whose long-standing encoder produces the wire
-     * payload directly and would have to restructure their call site to use
-     * the typed shape.
+     * from a typed `PrequalifyRequest`.
      */
     readonly prequalify: PrequalifyCallable;
+    /**
+     * `isa.zyins.products` — live product catalog built from server datasets.
+     * `catalog()` fetches once and memoizes; `refresh()` forces a re-fetch.
+     */
+    readonly products: ProductsFacade;
     /**
      * `isa.zyins.license` — license lifecycle (activate / check / deactivate).
      *
@@ -297,18 +300,10 @@ export declare class ZyInsNamespace {
 }
 /**
  * Shape of `isa.zyins.prequalify` — a callable for the typed prequalify
- * call, plus a `legacyBlob` sub-method that accepts a pre-encoded payload
- * verbatim. Both variants return the same `Envelope<PrequalifyResult>`.
+ * call. Returns `Envelope<PrequalifyResult>`.
  */
 export interface PrequalifyCallable {
     (request: PrequalifyRequest): Promise<Envelope<PrequalifyResult>>;
-    /**
-     * Run a prequalify call from a pre-encoded payload (bpp2.0's
-     * `prepEncObj` / `prepEncObjV2`). The encoded payload is JSON-serialized
-     * and POSTed to `/v1/prequalify` verbatim; the server accepts both the
-     * typed and the legacy-blob shapes on the same path.
-     */
-    legacyBlob(request: PrequalifyLegacyBlobRequest): Promise<Envelope<PrequalifyResult>>;
 }
 /** Top-level helper to add `.withRawResponse` siblings ergonomically. */
 export interface RawCallable<TArgs extends unknown[], TResult> {

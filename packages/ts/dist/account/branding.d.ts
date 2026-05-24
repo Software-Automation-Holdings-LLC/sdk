@@ -1,5 +1,5 @@
 /**
- * `isa.account.branding` — `GET /v1/branding`.
+ * `isa.account.branding` — `GET /v2/branding`.
  *
  * Whitelabel configuration for the calling license: agency name, logo URL,
  * theme colors. Identity comes from License-HMAC auth headers; the request

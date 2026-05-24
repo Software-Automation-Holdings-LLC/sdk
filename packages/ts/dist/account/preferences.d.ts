@@ -1,5 +1,6 @@
 /**
- * `isa.account.preferences` — `GET` / `POST /v1/preferences`.
+ * `isa.account.preferences` — `GET /v2/preferences/restore` (lookup) and
+ * `POST /v2/preferences/backup` (set).
  *
  * Per-license opaque settings document, partitioned by caller-supplied
  * `scope`. bpp2.0 passes `scope: "bpp"`; future surfaces (eApp, agent

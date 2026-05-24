@@ -1,5 +1,5 @@
 /**
- * Tier 3 branding operations — GET `/v1/branding`.
+ * Tier 3 branding operations — GET `/v2/branding`.
  *
  * Branding is per-license-order whitelabel configuration: agency name, logo
  * URL, colors, and product restrictions. Identity comes from the

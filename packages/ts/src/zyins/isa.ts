@@ -58,7 +58,6 @@ import { defaultTransport, type Transport } from './transport';
 import { type LogosFetch } from './logos';
 import {
   type PrequalifyRequest,
-  type PrequalifyLegacyBlobRequest,
   type PrequalifyResult,
 } from './prequalify';
 import { WebhooksService } from '../rapidsign/webhooks';
@@ -75,9 +74,9 @@ import {
   CasesFacade,
   EmailFacade,
   LicenseFacade,
-
   LogosFacade,
 } from './isaNamespaces';
+import { ProductsFacade } from './products';
 import { AccountNamespace } from '../account';
 import { buildAccountNamespace } from '../account/factory';
 
@@ -530,12 +529,14 @@ export class ZyInsNamespace {
   public readonly email: EmailFacade;
   /**
    * `isa.zyins.prequalify` — callable that runs the prequalify decision
-   * from a typed `PrequalifyRequest`. Carries a `legacyBlob` property for
-   * consumers (bpp2.0) whose long-standing encoder produces the wire
-   * payload directly and would have to restructure their call site to use
-   * the typed shape.
+   * from a typed `PrequalifyRequest`.
    */
   public readonly prequalify: PrequalifyCallable;
+  /**
+   * `isa.zyins.products` — live product catalog built from server datasets.
+   * `catalog()` fetches once and memoizes; `refresh()` forces a re-fetch.
+   */
+  public readonly products: ProductsFacade;
   /**
    * `isa.zyins.license` — license lifecycle (activate / check / deactivate).
    *
@@ -560,6 +561,7 @@ export class ZyInsNamespace {
     this.cases = new CasesFacade(this.clientOnce);
     this.email = new EmailFacade(this.clientOnce);
     this.prequalify = buildPrequalifyCallable(this.clientOnce);
+    this.products = new ProductsFacade(this.datasets);
     this.license = buildLicenseFacade(opts);
     this.logos = new LogosFacade(
       opts.baseUrl ?? DEFAULT_ZYINS_BASE_URL,
@@ -579,43 +581,19 @@ export class ZyInsNamespace {
 
 /**
  * Shape of `isa.zyins.prequalify` — a callable for the typed prequalify
- * call, plus a `legacyBlob` sub-method that accepts a pre-encoded payload
- * verbatim. Both variants return the same `Envelope<PrequalifyResult>`.
+ * call. Returns `Envelope<PrequalifyResult>`.
  */
 export interface PrequalifyCallable {
   (request: PrequalifyRequest): Promise<Envelope<PrequalifyResult>>;
-  /**
-   * Run a prequalify call from a pre-encoded payload (bpp2.0's
-   * `prepEncObj` / `prepEncObjV2`). The encoded payload is JSON-serialized
-   * and POSTed to `/v1/prequalify` verbatim; the server accepts both the
-   * typed and the legacy-blob shapes on the same path.
-   */
-  legacyBlob(
-    request: PrequalifyLegacyBlobRequest,
-  ): Promise<Envelope<PrequalifyResult>>;
 }
 
-/**
- * Build the `prequalify` callable with the `legacyBlob` property attached.
- * The same `clientOnce` thunk backs both entry points so they share one
- * lazily-constructed client (and therefore one resolved auth context).
- */
+/** Build the `prequalify` callable backed by the lazily-constructed client. */
 function buildPrequalifyCallable(clientOnce: () => ZyInsClient): PrequalifyCallable {
-  const callable = (async (
-    request: PrequalifyRequest,
-  ): Promise<Envelope<PrequalifyResult>> => {
+  return async (request: PrequalifyRequest): Promise<Envelope<PrequalifyResult>> => {
     const client = clientOnce();
     const result = await client.prequalify(request);
     return wrapEnvelope(result, result.requestId, result.idempotencyKey);
-  }) as PrequalifyCallable;
-  callable.legacyBlob = async (
-    request: PrequalifyLegacyBlobRequest,
-  ): Promise<Envelope<PrequalifyResult>> => {
-    const client = clientOnce();
-    const result = await client.prequalifyLegacyBlob(request);
-    return wrapEnvelope(result, result.requestId, result.idempotencyKey);
   };
-  return callable;
 }
 
 /** Top-level helper to add `.withRawResponse` siblings ergonomically. */

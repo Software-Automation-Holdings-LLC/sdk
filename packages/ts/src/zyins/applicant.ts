@@ -11,25 +11,75 @@
 import type { State } from '../catalog/states';
 
 /**
- * Applicant biological sex. Wire format uses single-letter codes; the
- * `WireCode` accessor performs that mapping so call sites never spell `"M"`
- * or `"F"` inline.
+ * Applicant biological sex. The server accepts `male` and `female`
+ * (canonical lowercase per ADR-012) and normalises legacy single-letter codes
+ * (`M`, `F`) transparently. The SDK emits only the canonical form.
  */
 export enum Sex {
   Male = 'male',
   Female = 'female',
 }
 
-/** Single-letter wire code for the prequalify body. */
-export function sexWireCode(sex: Sex): 'M' | 'F' {
-  return sex === Sex.Male ? 'M' : 'F';
+/**
+ * How long ago the applicant last used any nicotine product.
+ * Values mirror the server's `NicotineLastUsed` enum exactly; the SDK
+ * re-exports them under a friendlier name so callers never spell raw strings.
+ */
+export enum NicotineDuration {
+  Never = 'never',
+  Within12Months = 'within_12_months',
+  N12To24Months = '12_to_24_months',
+  N24To36Months = '24_to_36_months',
+  N36To48Months = '36_to_48_months',
+  N48To60Months = '48_to_60_months',
+  Over60Months = 'over_60_months',
 }
 
 /**
- * Nicotine usage. The wire format collapses this to a yes/no in legacy paths
- * and a tri-state in the modern path. Tier 3 callers state the underlying
- * fact (None / Current / Former); the prequalify builder maps to the wire
- * shape negotiated for the current API version.
+ * Detailed usage record for a single nicotine product type.
+ * Applicable only when {@link NicotineDuration.Within12Months} is selected.
+ */
+export interface NicotineProductUsage {
+  /**
+   * Product type. Valid values are returned by `GET /v1/datasets/nicotine_options`
+   * (e.g., `CIGARETTE`, `CIGAR`, `PIPE`, `CHEWING TOBACCO`, `NICOTINE PATCH`,
+   * `NICOTINE GUM`, `MEDICAL MARIJUANA`, `RECREATIONAL MARIJUANA`).
+   */
+  type: string;
+  /**
+   * How often the product is used. Valid values are returned by the same
+   * nicotine options dataset.
+   */
+  frequency: string;
+}
+
+/**
+ * Nicotine usage state the prequalify engine consumes.
+ *
+ * For never-users pass `{ lastUsed: NicotineDuration.Never }`.
+ * For current users pass `{ lastUsed: NicotineDuration.Within12Months,
+ * productUsage: [...] }`.
+ */
+export interface NicotineUsageInput {
+  /** When nicotine was last used. */
+  lastUsed: NicotineDuration;
+  /**
+   * Per-product detail. Required by the server only when
+   * `lastUsed === NicotineDuration.Within12Months`; ignored otherwise.
+   */
+  productUsage?: ReadonlyArray<NicotineProductUsage>;
+}
+
+/**
+ * @deprecated Use {@link NicotineUsageInput} with {@link NicotineDuration}.
+ *
+ * The old three-state enum (`None / Current / Former`) did not capture the
+ * duration granularity the server requires. Existing callers can migrate by
+ * replacing:
+ *   - `NicotineUsage.None` → `{ lastUsed: NicotineDuration.Never }`
+ *   - `NicotineUsage.Current` → `{ lastUsed: NicotineDuration.Within12Months }`
+ *   - `NicotineUsage.Former` → `{ lastUsed: NicotineDuration.N12To24Months }`
+ *     (or the appropriate duration bucket)
  */
 export enum NicotineUsage {
   None = 'none',
@@ -134,7 +184,12 @@ export interface Applicant {
   state: State | (string & {});
   /** ZIP code; required by some product families. */
   zip?: string;
-  nicotineUse: NicotineUsage;
+  /**
+   * Nicotine usage state. Pass a {@link NicotineUsageInput} for the modern
+   * API (full duration + product detail). The deprecated {@link NicotineUsage}
+   * enum is still accepted at the type level for migration compatibility.
+   */
+  nicotineUse: NicotineUsageInput | NicotineUsage;
   /** Optional medications list; defaults to none. */
   medications?: ReadonlyArray<Medication>;
   /** Optional conditions list; defaults to none. */

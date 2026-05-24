@@ -1,5 +1,5 @@
 /**
- * Tier 3 branding operations — GET `/v1/branding`.
+ * Tier 3 branding operations — GET `/v2/branding`.
  *
  * Branding is per-license-order whitelabel configuration: agency name, logo
  * URL, colors, and product restrictions. Identity comes from the
@@ -15,7 +15,7 @@ import { fromHttpResponse } from './errors';
 import { boolField, isRecord, parseJsonResponse, stringField, unwrapEnvelope } from './response';
 import { buildLicenseHMACHeaders } from '../core';
 import { systemClock } from '../core';
-const BRANDING_PATH = '/v1/branding';
+const BRANDING_PATH = '/v2/branding';
 /** Fetch the whitelabel branding for the caller's license. */
 export async function lookup(ctx) {
     const headers = await buildLicenseHMACHeaders(ctx.auth.licenseKey, ctx.auth.orderId, ctx.auth.email, 'GET', BRANDING_PATH, '', ctx.auth.deviceId, ctx.clock ?? systemClock);

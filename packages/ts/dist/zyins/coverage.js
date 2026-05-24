@@ -18,6 +18,15 @@
  * no `options.preserveExactAmount` flag — the SDK locks in the right
  * bucketing.
  */
+/**
+ * Wire discriminator for the `quote_options.quote_type` field.
+ * Values mirror the server's `QuoteType` enum exactly.
+ */
+export var QuoteType;
+(function (QuoteType) {
+    QuoteType["FaceAmounts"] = "face_amounts";
+    QuoteType["MonthlyBudget"] = "monthly_budget";
+})(QuoteType || (QuoteType = {}));
 /** Static-factory container for Coverage construction. */
 export const Coverage = {
     /**

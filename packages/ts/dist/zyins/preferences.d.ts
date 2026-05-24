@@ -1,5 +1,5 @@
 /**
- * Tier 3 preferences operations — `/v1/preferences`.
+ * Tier 3 preferences operations — `GET /v2/preferences/restore` + `POST /v2/preferences/backup`.
  *
  * Preferences are an opaque JSON document stored per (email,
  * license_order). The SDK does not interpret the document; callers

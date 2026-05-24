@@ -1,5 +1,5 @@
 /**
- * Tier 3 branding operations — GET `/v1/branding`.
+ * Tier 3 branding operations — GET `/v2/branding`.
  *
  * Branding is per-license-order whitelabel configuration: agency name, logo
  * URL, colors, and product restrictions. Identity comes from the
@@ -19,7 +19,7 @@ import { boolField, isRecord, parseJsonResponse, stringField, unwrapEnvelope } f
 import { buildLicenseHMACHeaders } from '../core';
 import { type Clock, systemClock } from '../core';
 
-const BRANDING_PATH = '/v1/branding';
+const BRANDING_PATH = '/v2/branding';
 
 /** Whitelabel detail returned by `branding.lookup`. */
 export interface BrandingDetail {

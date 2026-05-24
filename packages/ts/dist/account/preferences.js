@@ -1,5 +1,6 @@
 /**
- * `isa.account.preferences` — `GET` / `POST /v1/preferences`.
+ * `isa.account.preferences` — `GET /v2/preferences/restore` (lookup) and
+ * `POST /v2/preferences/backup` (set).
  *
  * Per-license opaque settings document, partitioned by caller-supplied
  * `scope`. bpp2.0 passes `scope: "bpp"`; future surfaces (eApp, agent
@@ -14,13 +15,14 @@ import { deriveIdempotencyKey } from '../zyins/idempotency';
 import { unwrapEnvelope } from '../zyins/response';
 import { buildLicenseHMACHeaders } from '../core';
 import { systemClock } from '../core';
-const PREFERENCES_PATH = '/v1/preferences';
+const PREFERENCES_RESTORE_PATH = '/v2/preferences/restore';
+const PREFERENCES_BACKUP_PATH = '/v2/preferences/backup';
 /** Fetch the preferences document for the supplied scope. */
 export async function lookup(request, ctx) {
     if (!request || typeof request.scope !== 'string' || request.scope.length === 0) {
         throw new Error('account: preferences.lookup requires a non-empty scope');
     }
-    const path = `${PREFERENCES_PATH}?scope=${encodeURIComponent(request.scope)}`;
+    const path = `${PREFERENCES_RESTORE_PATH}?scope=${encodeURIComponent(request.scope)}`;
     const headers = await buildLicenseHMACHeaders(ctx.auth.licenseKey, ctx.auth.orderId, ctx.auth.email, 'GET', path, '', ctx.auth.deviceId, ctx.clock ?? systemClock);
     const response = await ctx.transport({
         url: `${ctx.baseUrl}${path}`,
@@ -48,9 +50,9 @@ export async function set(request, ctx) {
             op: `preferences_set:${request.scope}`,
             body,
         }));
-    const headers = await buildLicenseHMACHeaders(ctx.auth.licenseKey, ctx.auth.orderId, ctx.auth.email, 'POST', PREFERENCES_PATH, body, ctx.auth.deviceId, ctx.clock ?? systemClock);
+    const headers = await buildLicenseHMACHeaders(ctx.auth.licenseKey, ctx.auth.orderId, ctx.auth.email, 'POST', PREFERENCES_BACKUP_PATH, body, ctx.auth.deviceId, ctx.clock ?? systemClock);
     const response = await ctx.transport({
-        url: `${ctx.baseUrl}${PREFERENCES_PATH}`,
+        url: `${ctx.baseUrl}${PREFERENCES_BACKUP_PATH}`,
         method: 'POST',
         headers: {
             ...headers,

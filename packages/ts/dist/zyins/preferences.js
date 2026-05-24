@@ -1,5 +1,5 @@
 /**
- * Tier 3 preferences operations — `/v1/preferences`.
+ * Tier 3 preferences operations — `GET /v2/preferences/restore` + `POST /v2/preferences/backup`.
  *
  * Preferences are an opaque JSON document stored per (email,
  * license_order). The SDK does not interpret the document; callers
@@ -15,12 +15,13 @@ import { deriveIdempotencyKey } from './idempotency';
 import { isRecord, parseJsonResponse, unwrapEnvelope } from './response';
 import { buildLicenseHMACHeaders } from '../core';
 import { systemClock } from '../core';
-const PREFERENCES_PATH = '/v1/preferences';
+const PREFERENCES_RESTORE_PATH = '/v2/preferences/restore';
+const PREFERENCES_BACKUP_PATH = '/v2/preferences/backup';
 /** Fetch the caller's preferences document. */
 export async function lookup(ctx) {
-    const headers = await buildLicenseHMACHeaders(ctx.auth.licenseKey, ctx.auth.orderId, ctx.auth.email, 'GET', PREFERENCES_PATH, '', ctx.auth.deviceId, ctx.clock ?? systemClock);
+    const headers = await buildLicenseHMACHeaders(ctx.auth.licenseKey, ctx.auth.orderId, ctx.auth.email, 'GET', PREFERENCES_RESTORE_PATH, '', ctx.auth.deviceId, ctx.clock ?? systemClock);
     const response = await ctx.transport({
-        url: `${ctx.baseUrl}${PREFERENCES_PATH}`,
+        url: `${ctx.baseUrl}${PREFERENCES_RESTORE_PATH}`,
         method: 'GET',
         headers: { ...headers, Accept: 'application/json' },
         body: '',
@@ -38,9 +39,9 @@ export async function set(request, ctx) {
     const body = JSON.stringify({ prefs: request.prefs });
     const idempotencyKey = ctx.idempotencyKey ??
         (await deriveIdempotencyKey({ deviceId: ctx.auth.deviceId, op: 'preferences_set', body }));
-    const headers = await buildLicenseHMACHeaders(ctx.auth.licenseKey, ctx.auth.orderId, ctx.auth.email, 'POST', PREFERENCES_PATH, body, ctx.auth.deviceId, ctx.clock ?? systemClock);
+    const headers = await buildLicenseHMACHeaders(ctx.auth.licenseKey, ctx.auth.orderId, ctx.auth.email, 'POST', PREFERENCES_BACKUP_PATH, body, ctx.auth.deviceId, ctx.clock ?? systemClock);
     const response = await ctx.transport({
-        url: `${ctx.baseUrl}${PREFERENCES_PATH}`,
+        url: `${ctx.baseUrl}${PREFERENCES_BACKUP_PATH}`,
         method: 'POST',
         headers: {
             ...headers,

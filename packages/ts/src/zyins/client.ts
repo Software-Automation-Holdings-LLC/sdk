@@ -22,8 +22,6 @@ import { type Transport, defaultTransport } from './transport';
 import { type Clock, systemClock } from '../core';
 import {
   prequalify,
-  prequalifyLegacyBlob,
-  type PrequalifyLegacyBlobRequest,
   type PrequalifyRequest,
   type PrequalifyResult,
 } from './prequalify';
@@ -137,18 +135,6 @@ export class ZyInsClient {
   /** Run a prequalify call. See `PrequalifyRequest` for input shape. */
   async prequalify(request: PrequalifyRequest): Promise<PrequalifyResult> {
     return prequalify(request, this.context());
-  }
-
-  /**
-   * Run a prequalify call from a pre-encoded legacy payload. Mirrors
-   * `prequalify` but accepts an opaque encoded blob produced by a legacy
-   * encoder (e.g. bpp2.0's `prepEncObj` / `prepEncObjV2`) and sends it as
-   * the request body verbatim. Returns the same typed `PrequalifyResult`.
-   */
-  async prequalifyLegacyBlob(
-    request: PrequalifyLegacyBlobRequest,
-  ): Promise<PrequalifyResult> {
-    return prequalifyLegacyBlob(request, this.context());
   }
 
   /** Internal: produce the shared context object every operation needs. */

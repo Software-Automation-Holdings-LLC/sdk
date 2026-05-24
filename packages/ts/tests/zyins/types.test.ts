@@ -3,7 +3,6 @@ import {
   Height,
   Weight,
   Sex,
-  sexWireCode,
 } from "../../src/zyins/applicant";
 import { Coverage } from "../../src/zyins/coverage";
 import { isAuthContext } from "../../src/zyins/auth";
@@ -31,10 +30,10 @@ describe("Height / Weight factories", () => {
   });
 });
 
-describe("Sex wire mapping", () => {
-  it("maps the enum to single-letter wire codes", () => {
-    expect(sexWireCode(Sex.Male)).toBe("M");
-    expect(sexWireCode(Sex.Female)).toBe("F");
+describe("Sex canonical wire values", () => {
+  it("Sex enum values are lowercase canonical strings the server accepts", () => {
+    expect(Sex.Male).toBe("male");
+    expect(Sex.Female).toBe("female");
   });
 });
 

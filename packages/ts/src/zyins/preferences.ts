@@ -1,5 +1,5 @@
 /**
- * Tier 3 preferences operations — `/v1/preferences`.
+ * Tier 3 preferences operations — `GET /v2/preferences/restore` + `POST /v2/preferences/backup`.
  *
  * Preferences are an opaque JSON document stored per (email,
  * license_order). The SDK does not interpret the document; callers
@@ -19,7 +19,8 @@ import { isRecord, parseJsonResponse, unwrapEnvelope } from './response';
 import { buildLicenseHMACHeaders } from '../core';
 import { type Clock, systemClock } from '../core';
 
-const PREFERENCES_PATH = '/v1/preferences';
+const PREFERENCES_RESTORE_PATH = '/v2/preferences/restore';
+const PREFERENCES_BACKUP_PATH = '/v2/preferences/backup';
 
 /** Opaque preferences document. */
 export type PreferencesDocument = Record<string, unknown>;
@@ -51,13 +52,13 @@ export async function lookup(ctx: PreferencesContext): Promise<PreferencesLookup
     ctx.auth.orderId,
     ctx.auth.email,
     'GET',
-    PREFERENCES_PATH,
+    PREFERENCES_RESTORE_PATH,
     '',
     ctx.auth.deviceId,
     ctx.clock ?? systemClock,
   );
   const response = await ctx.transport({
-    url: `${ctx.baseUrl}${PREFERENCES_PATH}`,
+    url: `${ctx.baseUrl}${PREFERENCES_RESTORE_PATH}`,
     method: 'GET',
     headers: { ...headers, Accept: 'application/json' },
     body: '',
@@ -85,13 +86,13 @@ export async function set(
     ctx.auth.orderId,
     ctx.auth.email,
     'POST',
-    PREFERENCES_PATH,
+    PREFERENCES_BACKUP_PATH,
     body,
     ctx.auth.deviceId,
     ctx.clock ?? systemClock,
   );
   const response = await ctx.transport({
-    url: `${ctx.baseUrl}${PREFERENCES_PATH}`,
+    url: `${ctx.baseUrl}${PREFERENCES_BACKUP_PATH}`,
     method: 'POST',
     headers: {
       ...headers,

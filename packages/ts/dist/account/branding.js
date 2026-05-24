@@ -1,5 +1,5 @@
 /**
- * `isa.account.branding` — `GET /v1/branding`.
+ * `isa.account.branding` — `GET /v2/branding`.
  *
  * Whitelabel configuration for the calling license: agency name, logo URL,
  * theme colors. Identity comes from License-HMAC auth headers; the request
@@ -16,7 +16,7 @@ import { fromHttpResponse } from '../zyins/errors';
 import { boolField, firstStringField, isRecord, stringField, unwrapEnvelope } from '../zyins/response';
 import { buildLicenseHMACHeaders } from '../core';
 import { systemClock } from '../core';
-const BRANDING_PATH = '/v1/branding';
+const BRANDING_PATH = '/v2/branding';
 /** Fetch the whitelabel branding for the caller's license. */
 export async function lookup(request, ctx) {
     const query = request?.source ? `?source=${encodeURIComponent(request.source)}` : '';

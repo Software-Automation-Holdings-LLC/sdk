@@ -8,11 +8,12 @@
  */
 export { ZyInsClient, DEFAULT_ZYINS_BASE_URL, type ZyInsClientOptions } from './client';
 export { isAuthContext, type AuthContext } from './auth';
-export { Sex, NicotineUsage, Height, Weight, sexWireCode, type Applicant, type Medication, type Condition, } from './applicant';
-export { Coverage, type FaceValueCoverage, type MonthlyBudgetCoverage, } from './coverage';
-export { ProductCatalog, ProductSelection, ProductType, type Product, } from './product';
+export { Sex, NicotineUsage, NicotineDuration, Height, Weight, type Applicant, type Medication, type Condition, type NicotineUsageInput, type NicotineProductUsage, } from './applicant';
+export { Coverage, QuoteType, type FaceValueCoverage, type MonthlyBudgetCoverage, } from './coverage';
+export { ProductCatalog, ProductSelection, ProductType, type Product, type RawProductEntry, } from './product';
+export { ProductsFacade } from './products';
 export { ZyInsError, LicenseError, PrequalifyError, RateLimitedError, fromHttpResponse, fromProblemDetails, type LicenseErrorCode, type PrequalifyErrorCode, } from './errors';
-export { type PrequalifyRequest, type PrequalifyLegacyBlobRequest, type PrequalifyResult, type PrequalifyPlan, } from './prequalify';
+export { type PrequalifyRequest, type PrequalifyResult, type PrequalifyPlan, } from './prequalify';
 export { type LicenseActivateRequest, type LicenseActivateResult, type LicenseActivateAuth, type LicenseCheckRequest, type LicenseCheckResult, type LicenseDeactivateRequest, type LicenseDeactivateResult, type LicenseValidationStatus, } from './license';
 export { getReadiness, type ReadinessResult, type ProbeResult, type ServingStatus, type HealthContext, } from './health';
 export { type CaseEmailRequest, type CaseEmailResult, } from './case';

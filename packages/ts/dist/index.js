@@ -34,8 +34,8 @@ export { resolveBearerIdentity, resolveLicenseIdentity, ENV_VAR_NAMES, } from '.
 export { IsaError, IsaApiError, IsaConfigError, IsaIdempotencyConflictError, IsaNotActivatedError, } from './zyins/apiError';
 export { canonicalString, formatTimestamp, signRequest, } from './core/auth/signRequest';
 // --- Value types / domain primitives (zyins-flavored, public) ----------
-export { Sex, NicotineUsage, Height, Weight, sexWireCode, } from './zyins/applicant';
-export { Coverage, } from './zyins/coverage';
+export { Sex, NicotineUsage, NicotineDuration, Height, Weight, } from './zyins/applicant';
+export { Coverage, QuoteType, } from './zyins/coverage';
 export { ProductCatalog, ProductSelection, ProductType, } from './zyins/product';
 // --- Generated catalogs -------------------------------------------------
 // Every name in this block is produced by `scripts/gen-catalog.mjs`. See

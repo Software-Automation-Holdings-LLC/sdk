@@ -1633,8 +1633,8 @@ export { type IsaIdentity, type BearerIdentity, type LicenseIdentity, resolveBea
 export { IsaError, IsaApiError, IsaConfigError, IsaIdempotencyConflictError, IsaNotActivatedError, type IsaNotActivatedCode, } from './zyins/apiError';
 export { type Envelope, type RawResponse, type RawResponseResult, } from './zyins/envelope';
 export { canonicalString, formatTimestamp, signRequest, type SignClock, type SignRequestHeaders, type SignRequestInput, type SignRequestResult, } from './core/auth/signRequest';
-export { Sex, NicotineUsage, Height, Weight, sexWireCode, type Applicant, type Medication, type Condition, } from './zyins/applicant';
-export { Coverage, type FaceValueCoverage, type MonthlyBudgetCoverage, } from './zyins/coverage';
+export { Sex, NicotineUsage, NicotineDuration, Height, Weight, type Applicant, type Medication, type Condition, type NicotineUsageInput, type NicotineProductUsage, } from './zyins/applicant';
+export { Coverage, QuoteType, type FaceValueCoverage, type MonthlyBudgetCoverage, } from './zyins/coverage';
 export { ProductCatalog, ProductSelection, ProductType, type Product as ZyinsProduct, } from './zyins/product';
 export { type LogosGetOptions, type LogosFetch, type LogosResponse, } from './zyins/logos';
 export { Product, Products, type ProductMetadata, State, States, type StateMetadata, ProductCarriers, type ProductCarrierMetadata, ConditionCategories, type ConditionCategoryMetadata, MedicationUses, type MedicationUseMetadata, Scope, ScopeDescriptions, SignEvent, SignEventLabels, ErrorCode, ErrorAdviceCodes, ErrorDocUrls, } from './catalog';
@@ -2585,21 +2585,71 @@ export declare class IsaIdempotencyConflictError extends IsaApiError {
  */
 import type { State } from '../catalog/states';
 /**
- * Applicant biological sex. Wire format uses single-letter codes; the
- * `WireCode` accessor performs that mapping so call sites never spell `"M"`
- * or `"F"` inline.
+ * Applicant biological sex. The server accepts `male` and `female`
+ * (canonical lowercase per ADR-012) and normalises legacy single-letter codes
+ * (`M`, `F`) transparently. The SDK emits only the canonical form.
  */
 export declare enum Sex {
     Male = "male",
     Female = "female"
 }
-/** Single-letter wire code for the prequalify body. */
-export declare function sexWireCode(sex: Sex): 'M' | 'F';
 /**
- * Nicotine usage. The wire format collapses this to a yes/no in legacy paths
- * and a tri-state in the modern path. Tier 3 callers state the underlying
- * fact (None / Current / Former); the prequalify builder maps to the wire
- * shape negotiated for the current API version.
+ * How long ago the applicant last used any nicotine product.
+ * Values mirror the server's `NicotineLastUsed` enum exactly; the SDK
+ * re-exports them under a friendlier name so callers never spell raw strings.
+ */
+export declare enum NicotineDuration {
+    Never = "never",
+    Within12Months = "within_12_months",
+    N12To24Months = "12_to_24_months",
+    N24To36Months = "24_to_36_months",
+    N36To48Months = "36_to_48_months",
+    N48To60Months = "48_to_60_months",
+    Over60Months = "over_60_months"
+}
+/**
+ * Detailed usage record for a single nicotine product type.
+ * Applicable only when {@link NicotineDuration.Within12Months} is selected.
+ */
+export interface NicotineProductUsage {
+    /**
+     * Product type. Valid values are returned by `GET /v1/datasets/nicotine_options`
+     * (e.g., `CIGARETTE`, `CIGAR`, `PIPE`, `CHEWING TOBACCO`, `NICOTINE PATCH`,
+     * `NICOTINE GUM`, `MEDICAL MARIJUANA`, `RECREATIONAL MARIJUANA`).
+     */
+    type: string;
+    /**
+     * How often the product is used. Valid values are returned by the same
+     * nicotine options dataset.
+     */
+    frequency: string;
+}
+/**
+ * Nicotine usage state the prequalify engine consumes.
+ *
+ * For never-users pass `{ lastUsed: NicotineDuration.Never }`.
+ * For current users pass `{ lastUsed: NicotineDuration.Within12Months,
+ * productUsage: [...] }`.
+ */
+export interface NicotineUsageInput {
+    /** When nicotine was last used. */
+    lastUsed: NicotineDuration;
+    /**
+     * Per-product detail. Required by the server only when
+     * `lastUsed === NicotineDuration.Within12Months`; ignored otherwise.
+     */
+    productUsage?: ReadonlyArray<NicotineProductUsage>;
+}
+/**
+ * @deprecated Use {@link NicotineUsageInput} with {@link NicotineDuration}.
+ *
+ * The old three-state enum (`None / Current / Former`) did not capture the
+ * duration granularity the server requires. Existing callers can migrate by
+ * replacing:
+ *   - `NicotineUsage.None` → `{ lastUsed: NicotineDuration.Never }`
+ *   - `NicotineUsage.Current` → `{ lastUsed: NicotineDuration.Within12Months }`
+ *   - `NicotineUsage.Former` → `{ lastUsed: NicotineDuration.N12To24Months }`
+ *     (or the appropriate duration bucket)
  */
 export declare enum NicotineUsage {
     None = "none",
@@ -2678,7 +2728,12 @@ export interface Applicant {
     state: State | (string & {});
     /** ZIP code; required by some product families. */
     zip?: string;
-    nicotineUse: NicotineUsage;
+    /**
+     * Nicotine usage state. Pass a {@link NicotineUsageInput} for the modern
+     * API (full duration + product detail). The deprecated {@link NicotineUsage}
+     * enum is still accepted at the type level for migration compatibility.
+     */
+    nicotineUse: NicotineUsageInput | NicotineUsage;
     /** Optional medications list; defaults to none. */
     medications?: ReadonlyArray<Medication>;
     /** Optional conditions list; defaults to none. */
@@ -2889,7 +2944,7 @@ export declare function create(request: CaseCreateRequest, ctx: CasesContext): P
 import { type AuthContext } from './auth';
 import { type Transport } from './transport';
 import { type Clock } from '../core';
-import { type PrequalifyLegacyBlobRequest, type PrequalifyRequest, type PrequalifyResult } from './prequalify';
+import { type PrequalifyRequest, type PrequalifyResult } from './prequalify';
 import { type LicenseActivateRequest, type LicenseActivateResult, type LicenseCheckRequest, type LicenseCheckResult, type LicenseDeactivateRequest, type LicenseDeactivateResult } from './license';
 import { type ReadinessResult } from './health';
 import { type CaseEmailRequest, type CaseEmailResult } from './case';
@@ -2958,13 +3013,6 @@ export declare class ZyInsClient {
     constructor(options: ZyInsClientOptions);
     /** Run a prequalify call. See `PrequalifyRequest` for input shape. */
     prequalify(request: PrequalifyRequest): Promise<PrequalifyResult>;
-    /**
-     * Run a prequalify call from a pre-encoded legacy payload. Mirrors
-     * `prequalify` but accepts an opaque encoded blob produced by a legacy
-     * encoder (e.g. bpp2.0's `prepEncObj` / `prepEncObjV2`) and sends it as
-     * the request body verbatim. Returns the same typed `PrequalifyResult`.
-     */
-    prequalifyLegacyBlob(request: PrequalifyLegacyBlobRequest): Promise<PrequalifyResult>;
     /** Internal: produce the shared context object every operation needs. */
     private context;
 }
@@ -3051,6 +3099,14 @@ export {};
  * no `options.preserveExactAmount` flag — the SDK locks in the right
  * bucketing.
  */
+/**
+ * Wire discriminator for the `quote_options.quote_type` field.
+ * Values mirror the server's `QuoteType` enum exactly.
+ */
+export declare enum QuoteType {
+    FaceAmounts = "face_amounts",
+    MonthlyBudget = "monthly_budget"
+}
 /** Coverage requested by death benefit (face value in USD). */
 export interface FaceValueCoverage {
     readonly type: 'face_value';
@@ -3491,11 +3547,12 @@ export declare function deriveIdempotencyKey(args: {
  */
 export { ZyInsClient, DEFAULT_ZYINS_BASE_URL, type ZyInsClientOptions } from './client';
 export { isAuthContext, type AuthContext } from './auth';
-export { Sex, NicotineUsage, Height, Weight, sexWireCode, type Applicant, type Medication, type Condition, } from './applicant';
-export { Coverage, type FaceValueCoverage, type MonthlyBudgetCoverage, } from './coverage';
-export { ProductCatalog, ProductSelection, ProductType, type Product, } from './product';
+export { Sex, NicotineUsage, NicotineDuration, Height, Weight, type Applicant, type Medication, type Condition, type NicotineUsageInput, type NicotineProductUsage, } from './applicant';
+export { Coverage, QuoteType, type FaceValueCoverage, type MonthlyBudgetCoverage, } from './coverage';
+export { ProductCatalog, ProductSelection, ProductType, type Product, type RawProductEntry, } from './product';
+export { ProductsFacade } from './products';
 export { ZyInsError, LicenseError, PrequalifyError, RateLimitedError, fromHttpResponse, fromProblemDetails, type LicenseErrorCode, type PrequalifyErrorCode, } from './errors';
-export { type PrequalifyRequest, type PrequalifyLegacyBlobRequest, type PrequalifyResult, type PrequalifyPlan, } from './prequalify';
+export { type PrequalifyRequest, type PrequalifyResult, type PrequalifyPlan, } from './prequalify';
 export { type LicenseActivateRequest, type LicenseActivateResult, type LicenseActivateAuth, type LicenseCheckRequest, type LicenseCheckResult, type LicenseDeactivateRequest, type LicenseDeactivateResult, type LicenseValidationStatus, } from './license';
 export { getReadiness, type ReadinessResult, type ProbeResult, type ServingStatus, type HealthContext, } from './health';
 export { type CaseEmailRequest, type CaseEmailResult, } from './case';
@@ -3536,10 +3593,11 @@ import { type DebugLogger, type EnvReader, type LogSink } from './logger';
 import { type Envelope, type RawResponseResult } from './envelope';
 import { type Transport } from './transport';
 import { type LogosFetch } from './logos';
-import { type PrequalifyRequest, type PrequalifyLegacyBlobRequest, type PrequalifyResult } from './prequalify';
+import { type PrequalifyRequest, type PrequalifyResult } from './prequalify';
 import { WebhooksService } from '../rapidsign/webhooks';
 import { type ProxyCallOptions, type ProxyCallResult } from '../proxy/call';
 import { BrandingFacade, DatasetsFacade, PreferencesFacade, CasesFacade, EmailFacade, LicenseFacade, LogosFacade } from './isaNamespaces';
+import { ProductsFacade } from './products';
 import { AccountNamespace } from '../account';
 /** Constructor options for `Isa`. */
 export interface IsaOptions {
@@ -3786,12 +3844,14 @@ export declare class ZyInsNamespace {
     readonly email: EmailFacade;
     /**
      * `isa.zyins.prequalify` — callable that runs the prequalify decision
-     * from a typed `PrequalifyRequest`. Carries a `legacyBlob` property for
-     * consumers (bpp2.0) whose long-standing encoder produces the wire
-     * payload directly and would have to restructure their call site to use
-     * the typed shape.
+     * from a typed `PrequalifyRequest`.
      */
     readonly prequalify: PrequalifyCallable;
+    /**
+     * `isa.zyins.products` — live product catalog built from server datasets.
+     * `catalog()` fetches once and memoizes; `refresh()` forces a re-fetch.
+     */
+    readonly products: ProductsFacade;
     /**
      * `isa.zyins.license` — license lifecycle (activate / check / deactivate).
      *
@@ -3807,18 +3867,10 @@ export declare class ZyInsNamespace {
 }
 /**
  * Shape of `isa.zyins.prequalify` — a callable for the typed prequalify
- * call, plus a `legacyBlob` sub-method that accepts a pre-encoded payload
- * verbatim. Both variants return the same `Envelope<PrequalifyResult>`.
+ * call. Returns `Envelope<PrequalifyResult>`.
  */
 export interface PrequalifyCallable {
     (request: PrequalifyRequest): Promise<Envelope<PrequalifyResult>>;
-    /**
-     * Run a prequalify call from a pre-encoded payload (bpp2.0's
-     * `prepEncObj` / `prepEncObjV2`). The encoded payload is JSON-serialized
-     * and POSTed to `/v1/prequalify` verbatim; the server accepts both the
-     * typed and the legacy-blob shapes on the same path.
-     */
-    legacyBlob(request: PrequalifyLegacyBlobRequest): Promise<Envelope<PrequalifyResult>>;
 }
 /** Top-level helper to add `.withRawResponse` siblings ergonomically. */
 export interface RawCallable<TArgs extends unknown[], TResult> {
@@ -4341,8 +4393,7 @@ export declare function set(request: PreferencesSetRequest, ctx: PreferencesCont
  *
  * Replaces the inline payload assembly in bpp2.0's `analyzeCase`
  * (`src/lib/data.js:1315`). The before-state spreads HTTP, header, license,
- * and serialization concerns across the call site; this module isolates
- * them.
+ * and serialization concerns across the call site; this module isolates them.
  *
  * Inputs: a typed `PrequalifyRequest` (applicant, coverage, products).
  * Output: a typed `PrequalifyResult` (plans, ranking, declines).
@@ -4350,6 +4401,7 @@ export declare function set(request: PreferencesSetRequest, ctx: PreferencesCont
  * Locked invariants (per ADR-035):
  *  - The wire body is built by the SDK; the call site never sees it.
  *  - The idempotency key is derived from sessionId:op:body-hash.
+ *  - Auth credentials live in HMAC headers only — never in the request body.
  *  - Errors are typed; ERR_* strings and ProblemDetails JSON both funnel
  *    through `fromHttpResponse`.
  */
@@ -4364,15 +4416,6 @@ export interface PrequalifyRequest {
     applicant: Applicant;
     coverage: Coverage;
     products: ProductSelection;
-}
-/** Inputs accepted by `prequalifyLegacyBlob`. */
-export interface PrequalifyLegacyBlobRequest {
-    /**
-     * The pre-encoded prequalify payload produced by a legacy caller's own
-     * encoder (e.g. bpp2.0's `prepEncObj` / `prepEncObjV2`). Serialized to
-     * JSON verbatim and sent as the request body.
-     */
-    encodedPayload: Record<string, unknown>;
 }
 /** One plan returned by the engine. */
 export interface PrequalifyPlan {
@@ -4411,26 +4454,17 @@ export interface PrequalifyContext {
  * signs the request, and parses the response into typed plans.
  */
 export declare function prequalify(request: PrequalifyRequest, ctx: PrequalifyContext): Promise<PrequalifyResult>;
-/**
- * Run a prequalify call from a pre-encoded payload. Same path, same
- * headers, same response shape as the typed `prequalify`.
- */
-export declare function prequalifyLegacyBlob(request: PrequalifyLegacyBlobRequest, ctx: PrequalifyContext): Promise<PrequalifyResult>;
 //# sourceMappingURL=prequalify.d.ts.map
 === dist/zyins/product.d.ts ===
 /**
  * Tier 3 Product types and catalog.
  *
- * The prequalify wire accepts a "product string" — a regex-anchored
- * brand+type expression that filters which carrier/plan combinations the
- * engine evaluates. bpp2.0 today assembles that string inline:
+ * `Product` represents a single product offered by a carrier; the `wireToken`
+ * is the engine's canonical identifier string used in the prequalify request's
+ * `products` array. Multiple products compose via `ProductSelection`.
  *
- *     productStr.replace(/\s/g, '.').replace(/\$/g, '.[a-zA-Z\\-\\s\\*0-9]+$')
- *
- * Tier 3 hides the regex by exposing a typed `Product` with brand+type
- * fields and a `ProductCatalog.find(brand, type)` lookup. Multiple products
- * compose via `ProductSelection`, which knows how to render itself into the
- * wire format. The call site never spells the regex.
+ * The catalog can be constructed from the static default list or from a live
+ * server datasets bundle via `ProductCatalog.fromDatasets(bundle)`.
  */
 /**
  * Coarse product type. The wire format uses underscore-separated lowercase
@@ -4464,8 +4498,9 @@ export interface Product {
 }
 /**
  * One or more `Product` values selected for a single prequalify call.
- * `ProductSelection.toWireString()` produces the regex-anchored expression
- * the engine accepts; callers never assemble it manually.
+ *
+ * Produce the wire `products` array via `list().map(p => p.wireToken)`.
+ * `toWireArray()` is a convenience shorthand for that expression.
  */
 export declare class ProductSelection {
     private readonly products;
@@ -4477,20 +4512,42 @@ export declare class ProductSelection {
     /** Read-only view of the underlying products. */
     list(): ReadonlyArray<Product>;
     /**
-     * Render to the prequalify wire string. The shape — a `|`-joined list of
-     * `<brand>.<type>` tokens — is the engine's stable contract; we lock it in
-     * here so call sites never reach into the regex.
+     * Returns the wire token array the prequalify body's `products` field accepts.
+     * Prefer this over `toWireString()` — the server takes `string[]`, not a
+     * joined string.
+     */
+    toWireArray(): ReadonlyArray<string>;
+    /**
+     * @deprecated Use `toWireArray()` instead. The server's `products` field
+     * is `string[]`; joining with `|` is a legacy caller convention that the
+     * SDK no longer needs. This method will be removed in v0.7.0.
      */
     toWireString(): string;
 }
 /**
- * In-memory catalog of known products. The default catalog ships with the
- * SDK; the constructor accepts an override for tests and for consumers that
- * add a custom-tenant product.
+ * Raw product entry as returned by `GET /v2/reference-data` under
+ * `data.datasets.products.data[type][n]`. Used exclusively by
+ * `ProductCatalog.fromDatasets`; consumers never construct this directly.
+ */
+export interface RawProductEntry {
+    /** Engine identifier / wire token (e.g., `"fex-aetna-accendo"`). */
+    identifier: string;
+    /** Carrier brand slug (e.g., `"aetna"`). */
+    carrier: string;
+    /** Human-readable product name (e.g., `"Aetna Accendo Final Expense"`). */
+    name: string;
+    /** Product class key (e.g., `"fex"`, `"term"`, `"medsup"`). */
+    product: string;
+}
+/**
+ * In-memory catalog of known products.
  *
- * `find(brand, type)` is the only documented entry point; the underlying
- * array is intentionally not exported. New product onboarding ships as an
- * SDK release, not as caller-side configuration.
+ * Two construction paths:
+ *   - `ProductCatalog.Default` — the static built-in list; always available.
+ *   - `ProductCatalog.fromDatasets(bundle)` — built from a live datasets
+ *     bundle so the catalog stays in sync with the server.
+ *
+ * `find(brand, type)` and `findBySlug(slug)` are the documented entry points.
  */
 export declare class ProductCatalog {
     private readonly products;
@@ -4498,16 +4555,70 @@ export declare class ProductCatalog {
     /** The default catalog shipped with the SDK. */
     static readonly Default: ProductCatalog;
     /**
+     * Build a catalog from a datasets bundle returned by
+     * `isa.zyins.datasets.get()`.
+     *
+     * The `products` field in the bundle is a map of product-class keys to
+     * arrays of raw product entry objects. Each entry is mapped to a `Product`
+     * with `wireToken = entry.identifier`, `brand = entry.carrier`,
+     * `displayName = entry.name`. Entries missing required fields are silently
+     * skipped.
+     */
+    static fromDatasets(bundle: {
+        products: Readonly<Record<string, unknown>>;
+    }): ProductCatalog;
+    /**
      * Look up a product by brand and type. Throws if no match exists; callers
      * who need a soft-miss path should call `tryFind` instead.
      */
     find(brand: string, type: ProductType): Product;
     /** Soft variant of `find`; returns `undefined` if no match exists. */
     tryFind(brand: string, type: ProductType): Product | undefined;
+    /**
+     * Look up a product by its wire token slug (e.g., `"fex-aetna-accendo"`).
+     * Throws if no match exists; use `tryFindBySlug` for a soft-miss path.
+     */
+    findBySlug(slug: string): Product;
+    /** Soft variant of `findBySlug`; returns `undefined` if no match exists. */
+    tryFindBySlug(slug: string): Product | undefined;
     /** All products in the catalog (read-only). */
     list(): ReadonlyArray<Product>;
 }
 //# sourceMappingURL=product.d.ts.map
+=== dist/zyins/products.d.ts ===
+/**
+ * `isa.zyins.products` — live product catalog built from server datasets.
+ *
+ * `catalog()` calls `isa.zyins.datasets.get({ include: ['products'] })` once
+ * and memoizes the resulting `ProductCatalog` for the lifetime of the facade
+ * instance. Subsequent calls return the cached catalog without a network
+ * round-trip.
+ *
+ * The catalog is invalidated only on facade recreation (i.e. `Isa` instance
+ * recreation). For long-lived processes that need fresh product lists, call
+ * `refresh()` to force a re-fetch.
+ */
+import { ProductCatalog } from './product';
+import { type DatasetsFacade } from './isaNamespaces';
+/** `isa.zyins.products` — live product catalog with memoization. */
+export declare class ProductsFacade {
+    private readonly datasets;
+    private cached;
+    private inflight;
+    constructor(datasets: DatasetsFacade);
+    /**
+     * Returns the `ProductCatalog` built from the server's products dataset.
+     * The first call fetches from `GET /v2/reference-data`; subsequent calls
+     * return the memoized result instantly.
+     */
+    catalog(): Promise<ProductCatalog>;
+    /**
+     * Evict the cached catalog and re-fetch on the next `catalog()` call.
+     * Returns the freshly fetched `ProductCatalog`.
+     */
+    refresh(): Promise<ProductCatalog>;
+}
+//# sourceMappingURL=products.d.ts.map
 === dist/zyins/react/useZyIns.d.ts ===
 /**
  * React Tier 3 binding for the ZyINS client.

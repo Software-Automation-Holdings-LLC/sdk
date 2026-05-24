@@ -125,25 +125,7 @@ describe('.withRawResponse variant (Phase 2 §5.4)', () => {
   });
 });
 
-describe('isa.zyins.prequalify.legacyBlob', () => {
-  it('POSTs an opaque encoded payload to /v1/prequalify and returns an envelope', async () => {
-    let capturedBody: string | undefined;
-    let capturedUrl: string | undefined;
-    const isa = await buildIsa({
-      transport: async (req) => {
-        capturedBody = req.body;
-        capturedUrl = req.url;
-        return { status: 200, body: OK_BODY, headers: {} };
-      },
-    });
-    const opaque: Record<string, unknown> = { foo: 'bar', n: 42 };
-    const envelope = await isa.zyins.prequalify.legacyBlob({ encodedPayload: opaque });
-    expect(capturedBody).toBe(JSON.stringify(opaque));
-    expect(capturedUrl).toMatch(/\/v1\/prequalify$/);
-    expect(envelope.requestId).toBe('req_test_iso');
-    expect(envelope.data.plans[0]?.brand).toBe('colonial-penn');
-  });
-});
+// legacyBlob was removed in 0.5.1. The typed prequalify path is the only surface.
 
 describe('Concurrency safety (Phase 2 §12)', () => {
   it('runs 100 parallel calls and returns 100 distinct request IDs', async () => {

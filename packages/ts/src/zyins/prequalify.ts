@@ -3,8 +3,7 @@
  *
  * Replaces the inline payload assembly in bpp2.0's `analyzeCase`
  * (`src/lib/data.js:1315`). The before-state spreads HTTP, header, license,
- * and serialization concerns across the call site; this module isolates
- * them.
+ * and serialization concerns across the call site; this module isolates them.
  *
  * Inputs: a typed `PrequalifyRequest` (applicant, coverage, products).
  * Output: a typed `PrequalifyResult` (plans, ranking, declines).
@@ -12,12 +11,13 @@
  * Locked invariants (per ADR-035):
  *  - The wire body is built by the SDK; the call site never sees it.
  *  - The idempotency key is derived from sessionId:op:body-hash.
+ *  - Auth credentials live in HMAC headers only — never in the request body.
  *  - Errors are typed; ERR_* strings and ProblemDetails JSON both funnel
  *    through `fromHttpResponse`.
  */
 
-import { type Applicant, sexWireCode } from './applicant';
-import { type Coverage } from './coverage';
+import { type Applicant, NicotineUsage, type NicotineUsageInput, NicotineDuration } from './applicant';
+import { type Coverage, QuoteType } from './coverage';
 import { type ProductSelection } from './product';
 import { type AuthContext } from './auth';
 import { type Transport } from './transport';
@@ -31,16 +31,6 @@ export interface PrequalifyRequest {
   applicant: Applicant;
   coverage: Coverage;
   products: ProductSelection;
-}
-
-/** Inputs accepted by `prequalifyLegacyBlob`. */
-export interface PrequalifyLegacyBlobRequest {
-  /**
-   * The pre-encoded prequalify payload produced by a legacy caller's own
-   * encoder (e.g. bpp2.0's `prepEncObj` / `prepEncObjV2`). Serialized to
-   * JSON verbatim and sent as the request body.
-   */
-  encodedPayload: Record<string, unknown>;
 }
 
 /** One plan returned by the engine. */
@@ -88,23 +78,11 @@ export async function prequalify(
   request: PrequalifyRequest,
   ctx: PrequalifyContext,
 ): Promise<PrequalifyResult> {
-  const body = serializePrequalifyBody(request, ctx.auth);
-  return prequalifyBody(body, ctx);
+  const body = serializeWireBody(request);
+  return executePrequalify(body, ctx);
 }
 
-/**
- * Run a prequalify call from a pre-encoded payload. Same path, same
- * headers, same response shape as the typed `prequalify`.
- */
-export async function prequalifyLegacyBlob(
-  request: PrequalifyLegacyBlobRequest,
-  ctx: PrequalifyContext,
-): Promise<PrequalifyResult> {
-  const body = JSON.stringify(request.encodedPayload);
-  return prequalifyBody(body, ctx);
-}
-
-async function prequalifyBody(
+async function executePrequalify(
   body: string,
   ctx: PrequalifyContext,
 ): Promise<PrequalifyResult> {
@@ -126,31 +104,86 @@ async function prequalifyBody(
 }
 
 /**
- * Serialize the prequalify request to the wire body. Pulled into a separate
- * function so the idempotency key is computed over the exact bytes that go
- * on the wire.
+ * Serialize the prequalify request to the flat wire body expected by the
+ * server. Auth credentials belong in HMAC headers (built separately in
+ * `buildPrequalifyHeaders`) — they MUST NOT appear in the body.
+ *
+ * Wire shape (verified against server PrequalifyRequest struct):
+ * ```json
+ * {
+ *   "date_of_birth": "YYYY-MM-DD",
+ *   "gender": "male" | "female",
+ *   "height": <inches>,
+ *   "weight": <pounds>,
+ *   "state": "<state>",
+ *   "zip": "<zip>",              // optional
+ *   "nicotine_usage": { "last_used": "<NicotineLastUsed>", "product_usage": [...] },
+ *   "products": ["<slug>", ...],
+ *   "conditions": [...],
+ *   "medications": [...],
+ *   "quote_options": { "amounts": ["<amount>"], "quote_type": "face_amounts" | "monthly_budget" }
+ * }
+ * ```
  */
-function serializePrequalifyBody(request: PrequalifyRequest, auth: AuthContext): string {
+function serializeWireBody(request: PrequalifyRequest): string {
   const { applicant, coverage, products } = request;
-  const payload = {
-    license_key: auth.licenseKey,
-    order_id: auth.orderId,
-    email: auth.email,
-    products: products.toWireString(),
-    applicant: {
-      dob: applicant.dob,
-      sex: sexWireCode(applicant.sex),
-      height_inches: applicant.height.totalInches,
-      weight_pounds: applicant.weight.pounds,
-      state: applicant.state,
-      ...(applicant.zip !== undefined && { zip: applicant.zip }),
-      nicotine_use: applicant.nicotineUse,
-      medications: applicant.medications ?? [],
-      conditions: applicant.conditions ?? [],
-    },
-    coverage: { type: coverage.type, amount: coverage.amount },
+  const payload: Record<string, unknown> = {
+    date_of_birth: applicant.dob,
+    gender: applicant.sex as string,
+    height: applicant.height.totalInches,
+    weight: applicant.weight.pounds,
+    state: applicant.state,
+    nicotine_usage: serializeNicotineUsage(applicant.nicotineUse),
+    products: products.toWireArray(),
+    conditions: applicant.conditions ?? [],
+    medications: applicant.medications ?? [],
+    quote_options: serializeQuoteOptions(coverage),
   };
+  if (applicant.zip !== undefined) {
+    payload['zip'] = applicant.zip;
+  }
   return JSON.stringify(payload);
+}
+
+function serializeNicotineUsage(
+  nicotineUse: Applicant['nicotineUse'],
+): { last_used: string; product_usage?: Array<{ type: string; frequency: string }> } {
+  // Modern structured input
+  if (typeof nicotineUse === 'object' && nicotineUse !== null) {
+    const input = nicotineUse as NicotineUsageInput;
+    const result: { last_used: string; product_usage?: Array<{ type: string; frequency: string }> } = {
+      last_used: input.lastUsed as string,
+    };
+    if (input.productUsage !== undefined && input.productUsage.length > 0) {
+      result.product_usage = input.productUsage.map((p) => ({
+        type: p.type,
+        frequency: p.frequency,
+      }));
+    }
+    return result;
+  }
+
+  // Deprecated enum — map to the closest NicotineLastUsed value
+  const legacy = nicotineUse as NicotineUsage;
+  switch (legacy) {
+    case NicotineUsage.None:
+      return { last_used: NicotineDuration.Never };
+    case NicotineUsage.Current:
+      return { last_used: NicotineDuration.Within12Months };
+    case NicotineUsage.Former:
+      return { last_used: NicotineDuration.N12To24Months };
+    default:
+      return { last_used: NicotineDuration.Never };
+  }
+}
+
+function serializeQuoteOptions(
+  coverage: Coverage,
+): { amounts: string[]; quote_type: string } {
+  return {
+    amounts: [String(coverage.amount)],
+    quote_type: coverage.type === 'face_value' ? QuoteType.FaceAmounts : QuoteType.MonthlyBudget,
+  };
 }
 
 /** Build the per-request headers (auth + idempotency + content-type). */
@@ -177,38 +210,33 @@ async function buildPrequalifyHeaders(args: {
   };
 }
 
-interface RawPrequalifyPlan {
-  brand?: unknown;
-  tier?: unknown;
-  monthly_premium?: unknown;
-  face_value?: unknown;
-  product_token?: unknown;
-}
+const toStr = (v: unknown): string => (typeof v === 'string' ? v : '');
+const toNum = (v: unknown): number => (typeof v === 'number' ? v : 0);
 
-interface RawPrequalifyResponse {
-  plans?: ReadonlyArray<RawPrequalifyPlan>;
-  request_id?: unknown;
-}
+const isRecord = (v: unknown): v is Record<string, unknown> =>
+  v !== null && typeof v === 'object' && !Array.isArray(v);
 
 /** Coerce the engine's JSON response into the typed shape. */
-function parsePrequalifyResponse(body: string): Omit<PrequalifyResult, "idempotencyKey"> {
-  let parsed: RawPrequalifyResponse;
+function parsePrequalifyResponse(body: string): Omit<PrequalifyResult, 'idempotencyKey'> {
+  let parsed: unknown;
   try {
-    parsed = JSON.parse(body) as RawPrequalifyResponse;
+    parsed = JSON.parse(body);
   } catch (err) {
     throw new Error(`ZyIns prequalify: failed to parse response body: ${(err as Error).message}`);
   }
-  const plans = Array.isArray(parsed.plans) ? parsed.plans.map(coercePlan) : [];
-  const requestId = typeof parsed.request_id === 'string' ? parsed.request_id : '';
+  const root = isRecord(parsed) ? parsed : {};
+  const plans = Array.isArray(root['plans']) ? root['plans'].map(coercePlan) : [];
+  const requestId = toStr(root['request_id']);
   return { plans, requestId };
 }
 
-function coercePlan(raw: RawPrequalifyPlan): PrequalifyPlan {
+function coercePlan(raw: unknown): PrequalifyPlan {
+  const r = isRecord(raw) ? raw : {};
   return {
-    brand: typeof raw.brand === 'string' ? raw.brand : '',
-    tier: typeof raw.tier === 'string' ? raw.tier : '',
-    monthlyPremium: typeof raw.monthly_premium === 'number' ? raw.monthly_premium : 0,
-    faceValue: typeof raw.face_value === 'number' ? raw.face_value : 0,
-    productToken: typeof raw.product_token === 'string' ? raw.product_token : '',
+    brand: toStr(r['brand']),
+    tier: toStr(r['tier']),
+    monthlyPremium: toNum(r['monthly_premium']),
+    faceValue: toNum(r['face_value']),
+    productToken: toStr(r['product_token']),
   };
 }

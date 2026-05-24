@@ -8,24 +8,40 @@
  * prequalify builder is the only consumer that knows how to serialize them.
  */
 /**
- * Applicant biological sex. Wire format uses single-letter codes; the
- * `WireCode` accessor performs that mapping so call sites never spell `"M"`
- * or `"F"` inline.
+ * Applicant biological sex. The server accepts `male` and `female`
+ * (canonical lowercase per ADR-012) and normalises legacy single-letter codes
+ * (`M`, `F`) transparently. The SDK emits only the canonical form.
  */
 export var Sex;
 (function (Sex) {
     Sex["Male"] = "male";
     Sex["Female"] = "female";
 })(Sex || (Sex = {}));
-/** Single-letter wire code for the prequalify body. */
-export function sexWireCode(sex) {
-    return sex === Sex.Male ? 'M' : 'F';
-}
 /**
- * Nicotine usage. The wire format collapses this to a yes/no in legacy paths
- * and a tri-state in the modern path. Tier 3 callers state the underlying
- * fact (None / Current / Former); the prequalify builder maps to the wire
- * shape negotiated for the current API version.
+ * How long ago the applicant last used any nicotine product.
+ * Values mirror the server's `NicotineLastUsed` enum exactly; the SDK
+ * re-exports them under a friendlier name so callers never spell raw strings.
+ */
+export var NicotineDuration;
+(function (NicotineDuration) {
+    NicotineDuration["Never"] = "never";
+    NicotineDuration["Within12Months"] = "within_12_months";
+    NicotineDuration["N12To24Months"] = "12_to_24_months";
+    NicotineDuration["N24To36Months"] = "24_to_36_months";
+    NicotineDuration["N36To48Months"] = "36_to_48_months";
+    NicotineDuration["N48To60Months"] = "48_to_60_months";
+    NicotineDuration["Over60Months"] = "over_60_months";
+})(NicotineDuration || (NicotineDuration = {}));
+/**
+ * @deprecated Use {@link NicotineUsageInput} with {@link NicotineDuration}.
+ *
+ * The old three-state enum (`None / Current / Former`) did not capture the
+ * duration granularity the server requires. Existing callers can migrate by
+ * replacing:
+ *   - `NicotineUsage.None` → `{ lastUsed: NicotineDuration.Never }`
+ *   - `NicotineUsage.Current` → `{ lastUsed: NicotineDuration.Within12Months }`
+ *   - `NicotineUsage.Former` → `{ lastUsed: NicotineDuration.N12To24Months }`
+ *     (or the appropriate duration bucket)
  */
 export var NicotineUsage;
 (function (NicotineUsage) {

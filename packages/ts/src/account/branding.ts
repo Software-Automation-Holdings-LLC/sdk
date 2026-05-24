@@ -1,5 +1,5 @@
 /**
- * `isa.account.branding` — `GET /v1/branding`.
+ * `isa.account.branding` — `GET /v2/branding`.
  *
  * Whitelabel configuration for the calling license: agency name, logo URL,
  * theme colors. Identity comes from License-HMAC auth headers; the request
@@ -20,7 +20,7 @@ import { boolField, firstStringField, isRecord, stringField, unwrapEnvelope } fr
 import { buildLicenseHMACHeaders } from '../core';
 import { type Clock, systemClock } from '../core';
 
-const BRANDING_PATH = '/v1/branding';
+const BRANDING_PATH = '/v2/branding';
 
 /** Whitelabel detail returned by `account.branding.lookup`. */
 export interface BrandingDetail {

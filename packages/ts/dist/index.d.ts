@@ -26,8 +26,8 @@ export { type IsaIdentity, type BearerIdentity, type LicenseIdentity, resolveBea
 export { IsaError, IsaApiError, IsaConfigError, IsaIdempotencyConflictError, IsaNotActivatedError, type IsaNotActivatedCode, } from './zyins/apiError';
 export { type Envelope, type RawResponse, type RawResponseResult, } from './zyins/envelope';
 export { canonicalString, formatTimestamp, signRequest, type SignClock, type SignRequestHeaders, type SignRequestInput, type SignRequestResult, } from './core/auth/signRequest';
-export { Sex, NicotineUsage, Height, Weight, sexWireCode, type Applicant, type Medication, type Condition, } from './zyins/applicant';
-export { Coverage, type FaceValueCoverage, type MonthlyBudgetCoverage, } from './zyins/coverage';
+export { Sex, NicotineUsage, NicotineDuration, Height, Weight, type Applicant, type Medication, type Condition, type NicotineUsageInput, type NicotineProductUsage, } from './zyins/applicant';
+export { Coverage, QuoteType, type FaceValueCoverage, type MonthlyBudgetCoverage, } from './zyins/coverage';
 export { ProductCatalog, ProductSelection, ProductType, type Product as ZyinsProduct, } from './zyins/product';
 export { type LogosGetOptions, type LogosFetch, type LogosResponse, } from './zyins/logos';
 export { Product, Products, type ProductMetadata, State, States, type StateMetadata, ProductCarriers, type ProductCarrierMetadata, ConditionCategories, type ConditionCategoryMetadata, MedicationUses, type MedicationUseMetadata, Scope, ScopeDescriptions, SignEvent, SignEventLabels, ErrorCode, ErrorAdviceCodes, ErrorDocUrls, } from './catalog';

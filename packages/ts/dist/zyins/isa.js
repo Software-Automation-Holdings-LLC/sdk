@@ -29,6 +29,7 @@ import { defaultTransport } from './transport';
 import { WebhooksService } from '../rapidsign/webhooks';
 import { assertSessionIdentityForProxyCall, proxyCall as runProxyCall, } from '../proxy/call';
 import { BrandingFacade, DatasetsFacade, PreferencesFacade, CasesFacade, EmailFacade, LicenseFacade, LogosFacade, } from './isaNamespaces';
+import { ProductsFacade } from './products';
 import { buildAccountNamespace } from '../account/factory';
 /**
  * Unified SDK entry point.
@@ -332,12 +333,14 @@ export class ZyInsNamespace {
     email;
     /**
      * `isa.zyins.prequalify` — callable that runs the prequalify decision
-     * from a typed `PrequalifyRequest`. Carries a `legacyBlob` property for
-     * consumers (bpp2.0) whose long-standing encoder produces the wire
-     * payload directly and would have to restructure their call site to use
-     * the typed shape.
+     * from a typed `PrequalifyRequest`.
      */
     prequalify;
+    /**
+     * `isa.zyins.products` — live product catalog built from server datasets.
+     * `catalog()` fetches once and memoizes; `refresh()` forces a re-fetch.
+     */
+    products;
     /**
      * `isa.zyins.license` — license lifecycle (activate / check / deactivate).
      *
@@ -362,6 +365,7 @@ export class ZyInsNamespace {
         this.cases = new CasesFacade(this.clientOnce);
         this.email = new EmailFacade(this.clientOnce);
         this.prequalify = buildPrequalifyCallable(this.clientOnce);
+        this.products = new ProductsFacade(this.datasets);
         this.license = buildLicenseFacade(opts);
         this.logos = new LogosFacade(opts.baseUrl ?? DEFAULT_ZYINS_BASE_URL, opts.logosFetch);
     }
@@ -372,23 +376,13 @@ export class ZyInsNamespace {
         return { data: result, response: synthesizeRawResponse(result.requestId) };
     };
 }
-/**
- * Build the `prequalify` callable with the `legacyBlob` property attached.
- * The same `clientOnce` thunk backs both entry points so they share one
- * lazily-constructed client (and therefore one resolved auth context).
- */
+/** Build the `prequalify` callable backed by the lazily-constructed client. */
 function buildPrequalifyCallable(clientOnce) {
-    const callable = (async (request) => {
+    return async (request) => {
         const client = clientOnce();
         const result = await client.prequalify(request);
         return wrapEnvelope(result, result.requestId, result.idempotencyKey);
-    });
-    callable.legacyBlob = async (request) => {
-        const client = clientOnce();
-        const result = await client.prequalifyLegacyBlob(request);
-        return wrapEnvelope(result, result.requestId, result.idempotencyKey);
     };
-    return callable;
 }
 /**
  * Wrap a result in an envelope. Populates both the deprecated bare-name

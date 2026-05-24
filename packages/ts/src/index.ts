@@ -100,15 +100,18 @@ export {
 export {
   Sex,
   NicotineUsage,
+  NicotineDuration,
   Height,
   Weight,
-  sexWireCode,
   type Applicant,
   type Medication,
   type Condition,
+  type NicotineUsageInput,
+  type NicotineProductUsage,
 } from './zyins/applicant';
 export {
   Coverage,
+  QuoteType,
   type FaceValueCoverage,
   type MonthlyBudgetCoverage,
 } from './zyins/coverage';

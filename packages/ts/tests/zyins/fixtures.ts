@@ -10,7 +10,7 @@ import type { AuthContext } from '../../src/zyins/auth';
 import {
   type Applicant,
   Sex,
-  NicotineUsage,
+  NicotineDuration,
   Height,
   Weight,
 } from '../../src/zyins/applicant';
@@ -30,7 +30,7 @@ export const TEST_APPLICANT: Applicant = {
   height: Height.fromFeetInches(5, 10),
   weight: Weight.fromPounds(195),
   state: 'NC',
-  nicotineUse: NicotineUsage.None,
+  nicotineUse: { lastUsed: NicotineDuration.Never },
 };
 
 export const TEST_COVERAGE = Coverage.faceValue(100_000);

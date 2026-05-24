@@ -14,16 +14,19 @@ export { isAuthContext, type AuthContext } from './auth';
 export {
   Sex,
   NicotineUsage,
+  NicotineDuration,
   Height,
   Weight,
-  sexWireCode,
   type Applicant,
   type Medication,
   type Condition,
+  type NicotineUsageInput,
+  type NicotineProductUsage,
 } from './applicant';
 
 export {
   Coverage,
+  QuoteType,
   type FaceValueCoverage,
   type MonthlyBudgetCoverage,
 } from './coverage';
@@ -33,7 +36,10 @@ export {
   ProductSelection,
   ProductType,
   type Product,
+  type RawProductEntry,
 } from './product';
+
+export { ProductsFacade } from './products';
 
 export {
   ZyInsError,
@@ -48,7 +54,6 @@ export {
 
 export {
   type PrequalifyRequest,
-  type PrequalifyLegacyBlobRequest,
   type PrequalifyResult,
   type PrequalifyPlan,
 } from './prequalify';

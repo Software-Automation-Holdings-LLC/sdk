@@ -8,9 +8,10 @@
  */
 export { ZyInsClient, DEFAULT_ZYINS_BASE_URL } from './client';
 export { isAuthContext } from './auth';
-export { Sex, NicotineUsage, Height, Weight, sexWireCode, } from './applicant';
-export { Coverage, } from './coverage';
+export { Sex, NicotineUsage, NicotineDuration, Height, Weight, } from './applicant';
+export { Coverage, QuoteType, } from './coverage';
 export { ProductCatalog, ProductSelection, ProductType, } from './product';
+export { ProductsFacade } from './products';
 export { ZyInsError, LicenseError, PrequalifyError, RateLimitedError, fromHttpResponse, fromProblemDetails, } from './errors';
 export { getReadiness, } from './health';
 export { defaultTransport, } from './transport';
