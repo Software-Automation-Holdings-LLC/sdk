@@ -112,19 +112,20 @@ export {
 export {
   Coverage,
   QuoteType,
+  isMulti,
+  type CoverageInput,
+  type CoverageType,
+  type SingleCoverage,
+  type MultiCoverage,
   type FaceValueCoverage,
   type MonthlyBudgetCoverage,
 } from './zyins/coverage';
 export {
-  ProductCatalog,
   ProductSelection,
   ProductType,
-  // The legacy zyins `Product` interface (brand + type + wireToken + label)
-  // is re-exported as `ZyinsProduct` because the generated catalog below
-  // claims the unprefixed `Product` symbol as a slug-valued string enum.
-  // Existing consumers that imported `Product` for the wire-string regex
-  // helpers should switch to `ZyinsProduct` or use `ProductSelection`.
-  type Product as ZyinsProduct,
+  Products,
+  type Product,
+  type ProductTypeValue,
 } from './zyins/product';
 
 // --- Logos (public images; no auth) ------------------------------------
@@ -139,8 +140,12 @@ export {
 // `src/catalog/` for the source modules and `docs/SDK_DESIGN.md` §5.1
 // for the named-export contract.
 export {
-  Product,
-  Products,
+  // Legacy flat slug enum + accessor from `src/catalog/products.ts`.
+  // The typed Product interface and nested `Products` namespace exported
+  // above (from `./zyins/product`) shadow these names; consumers needing the
+  // legacy flat enum should import from `./catalog/products` directly.
+  Product as ProductSlug,
+  Products as ProductSlugs,
   type ProductMetadata,
   State,
   States,

@@ -1,64 +1,71 @@
 /**
- * Tier 3 Coverage discriminated union.
+ * Coverage — single or multi-amount, face-value or monthly budget.
  *
- * The prequalify wire format accepts either a face-value (dollar amount of
- * death benefit) or a monthly budget (dollar amount the applicant is willing
- * to pay per month). Each shape requires a different bucket-math step before
- * it hits the engine: face values are rounded to standard bands, monthly
- * budgets are converted to a premium ceiling.
+ * The locked design lets one prequalify call probe several coverage amounts
+ * at once: face values (death benefits) or monthly budgets (premium
+ * ceilings). The wire shape is uniform: `quote_options.amounts: string[]`
+ * with `quote_type` set to one of `face_amounts` / `monthly_budget`.
  *
- * Tier 3 hides that math behind two factories:
+ * Call sites:
  *
- *   Coverage.faceValue(100_000)
- *   Coverage.monthlyBudget(50)
+ *   Coverage.faceValue(100_000)           // single
+ *   Coverage.faceValues([15_000, 25_000])  // multi
+ *   Coverage.monthlyBudget(50)             // single
+ *   Coverage.monthlyBudgets([50, 75, 100]) // multi
  *
- * The call site never serializes "face_value" or chooses a bucket; the
- * prequalify builder reads the `type` discriminator and emits the right
- * wire fields. Per ADR-035's "invariants over options" doctrine, there is
- * no `options.preserveExactAmount` flag — the SDK locks in the right
- * bucketing.
+ * The SDK selects the result envelope shape (`SinglePrequalifyResult` vs
+ * `MultiPrequalifyResult`) from the input discriminator — no caller flags.
  */
-/**
- * Wire discriminator for the `quote_options.quote_type` field.
- * Values mirror the server's `QuoteType` enum exactly.
- */
+/** Wire discriminator for `quote_options.quote_type`. */
 export declare enum QuoteType {
     FaceAmounts = "face_amounts",
     MonthlyBudget = "monthly_budget"
 }
-/** Coverage requested by death benefit (face value in USD). */
-export interface FaceValueCoverage {
-    readonly type: 'face_value';
-    /** The face value the applicant wants, in whole US dollars. */
+/** Internal — string-form of the type discriminator carried on every input. */
+export type CoverageType = 'face_value' | 'monthly_budget';
+/** Single coverage amount. */
+export interface SingleCoverage {
+    readonly type: CoverageType;
     readonly amount: number;
 }
-/** Coverage requested by monthly budget (USD per month). */
-export interface MonthlyBudgetCoverage {
-    readonly type: 'monthly_budget';
-    /** The monthly premium the applicant can afford, in whole US dollars. */
-    readonly amount: number;
+/** Multiple coverage amounts probed in one call. */
+export interface MultiCoverage {
+    readonly type: CoverageType;
+    readonly amounts: readonly number[];
 }
-/**
- * Coverage union. Tier 3 callers construct via the static factories
- * `Coverage.faceValue` and `Coverage.monthlyBudget`; the discriminator is
- * managed by the SDK.
- */
-export type Coverage = FaceValueCoverage | MonthlyBudgetCoverage;
-/** Static-factory container for Coverage construction. */
+/** Coverage input accepted by `Isa.zyins.prequalify`. */
+export type CoverageInput = SingleCoverage | MultiCoverage;
+/** Backwards-compatibility alias — the type read by older call sites. */
+export type Coverage = CoverageInput;
+/** @deprecated retained for type-name compatibility. */
+export type FaceValueCoverage = SingleCoverage & {
+    type: 'face_value';
+};
+/** @deprecated retained for type-name compatibility. */
+export type MonthlyBudgetCoverage = SingleCoverage & {
+    type: 'monthly_budget';
+};
+/** Type guard for multi-amount coverage. */
+export declare function isMulti(c: CoverageInput): c is MultiCoverage;
+/** Static factories for Coverage. */
 export declare const Coverage: {
-    /**
-     * Coverage by face value (death benefit). The amount is rounded to a
-     * whole dollar; sub-dollar inputs are an error.
-     */
-    readonly faceValue: (amount: number) => FaceValueCoverage;
-    /**
-     * Coverage by monthly budget. The amount is rounded to a whole dollar;
-     * sub-dollar inputs are an error.
-     */
-    readonly monthlyBudget: (amount: number) => MonthlyBudgetCoverage;
-    /** Type guard for face-value coverage. */
-    readonly isFaceValue: (coverage: Coverage) => coverage is FaceValueCoverage;
-    /** Type guard for monthly-budget coverage. */
-    readonly isMonthlyBudget: (coverage: Coverage) => coverage is MonthlyBudgetCoverage;
+    /** Single face-value coverage. */
+    readonly faceValue: (amount: number) => SingleCoverage;
+    /** Multiple face-value coverages probed in one call. */
+    readonly faceValues: (amounts: readonly number[]) => MultiCoverage;
+    /** Single monthly-budget coverage. */
+    readonly monthlyBudget: (amount: number) => SingleCoverage;
+    /** Multiple monthly-budget coverages probed in one call. */
+    readonly monthlyBudgets: (amounts: readonly number[]) => MultiCoverage;
+    /** Type guard — true when the input is a face-value coverage. */
+    readonly isFaceValue: (c: CoverageInput) => c is SingleCoverage & {
+        type: "face_value";
+    };
+    /** Type guard — true when the input is a monthly-budget coverage. */
+    readonly isMonthlyBudget: (c: CoverageInput) => c is SingleCoverage & {
+        type: "monthly_budget";
+    };
+    /** Type guard — true when the input is a multi-amount coverage. */
+    readonly isMulti: typeof isMulti;
 };
 //# sourceMappingURL=coverage.d.ts.map

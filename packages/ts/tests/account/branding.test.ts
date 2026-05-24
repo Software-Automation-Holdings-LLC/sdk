@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { account, recordingTransport } from './helpers';
 
 describe('isa.account.branding.lookup', () => {
-  it('GETs /v1/branding with License-HMAC headers and parses the response', async () => {
+  it('GETs /v2/branding with License-HMAC headers and parses the response', async () => {
     const body = JSON.stringify({
       imo_name: 'Acme Agency',
       imo_logo: 'https://cdn.example/logo.png',
@@ -22,14 +22,14 @@ describe('isa.account.branding.lookup', () => {
     expect(result.primaryColor).toBe('#111');
     expect(result.hideAffiliateLeads).toBe(true);
     expect(requests[0]!.method).toBe('GET');
-    expect(requests[0]!.url).toBe('https://test.example/v1/branding');
+    expect(requests[0]!.url).toBe('https://test.example/v2/branding');
     expect(requests[0]!.headers).toHaveProperty('X-Device-Signature');
   });
 
   it('forwards the optional source query parameter', async () => {
     const { transport, requests } = recordingTransport(200, '{}');
     await account(transport).branding.lookup({ source: 'mountain-life' });
-    expect(requests[0]!.url).toBe('https://test.example/v1/branding?source=mountain-life');
+    expect(requests[0]!.url).toBe('https://test.example/v2/branding?source=mountain-life');
   });
 
   it('falls back to main_color when primary_color is absent', async () => {

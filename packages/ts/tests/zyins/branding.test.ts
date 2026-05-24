@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { client, recordingTransport } from './client-test-helpers';
 
 describe('ZyInsClient.branding.lookup', () => {
-  it('GETs /v1/branding and parses snake_case fields', async () => {
+  it('GETs /v2/branding and parses snake_case fields', async () => {
     const body = JSON.stringify({
       imo_name: 'Acme Agency',
       imo_logo: 'https://cdn.example/logo.png',
@@ -23,7 +23,7 @@ describe('ZyInsClient.branding.lookup', () => {
     expect(result.hideAffiliateLeads).toBe(true);
     expect(result.preventProductSelection).toBe(false);
     expect(requests[0]!.method).toBe('GET');
-    expect(requests[0]!.url).toBe('https://test.example/v1/branding');
+    expect(requests[0]!.url).toBe('https://test.example/v2/branding');
   });
 
   it('accepts the ADR-012 enveloped shape', async () => {

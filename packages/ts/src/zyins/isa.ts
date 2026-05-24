@@ -77,6 +77,11 @@ import {
   LogosFacade,
 } from './isaNamespaces';
 import { ProductsFacade } from './products';
+import {
+  type ClientVersionListener,
+  type ClientVersionStatus,
+  evaluateClientVersion,
+} from './clientVersion';
 import { AccountNamespace } from '../account';
 import { buildAccountNamespace } from '../account/factory';
 
@@ -127,6 +132,13 @@ export interface IsaOptions {
    * logos therefore uses a dedicated facade injected via this option.
    */
   logosFetch?: LogosFetch;
+  /**
+   * Consumer-supplied build identifier (typically a short git hash or
+   * SDK release tag) used by the client-version negotiation surface. When
+   * set, the SDK inspects `X-Client-Current` / `X-Client-Minimum`
+   * response headers and fires `onClientVersionMismatch` listeners.
+   */
+  clientVersion?: string;
 }
 
 /** Optional transport/facade overrides accepted by `Isa` factories. */
@@ -150,6 +162,8 @@ export interface IsaFactoryOptions {
    * factory can be exercised without a live HTTP layer.
    */
   transport?: Transport;
+  /** Consumer-supplied build identifier for client-version negotiation. */
+  clientVersion?: string;
 }
 
 /**
@@ -192,8 +206,13 @@ export class Isa {
    */
   public readonly credentialState: IsaCredentialState | undefined;
 
+  /** Consumer-supplied build identifier for client-version negotiation. */
+  public readonly clientVersion: string | undefined;
+  private clientVersionListeners: ClientVersionListener[] = [];
+
   private constructor(opts: IsaOptions) {
     this.identity = opts.identity;
+    this.clientVersion = opts.clientVersion;
     this.logger =
       opts.logger ??
       debugLoggerFromEnv(opts.env ?? processEnv, opts.logSink ?? stderrSink);
@@ -201,11 +220,14 @@ export class Isa {
     if (this.credentialState && opts.onLicenseRefreshed) {
       this.credentialState.onLicenseRefreshed(opts.onLicenseRefreshed);
     }
+    const wrappedTransport = opts.transport
+      ? this.wrapTransportForVersion(opts.transport)
+      : undefined;
     const nsOpts: ZyInsNamespaceOptions = { identity: opts.identity };
     if (opts.baseUrl !== undefined) nsOpts.baseUrl = opts.baseUrl;
     if (this.logger !== undefined) nsOpts.logger = this.logger;
     if (this.credentialState !== undefined) nsOpts.credentialState = this.credentialState;
-    if (opts.transport !== undefined) nsOpts.transport = opts.transport;
+    if (wrappedTransport !== undefined) nsOpts.transport = wrappedTransport;
     if (opts.logosFetch !== undefined) nsOpts.logosFetch = opts.logosFetch;
     this.zyins = new ZyInsNamespace(nsOpts);
     this.rapidsign = new RapidSignNamespace();
@@ -221,6 +243,42 @@ export class Isa {
       ...(this.credentialState !== undefined && { credentialState: this.credentialState }),
     });
     this.webhooks = new WebhooksService();
+  }
+
+  /**
+   * Subscribe to client-version mismatch events. The listener fires on the
+   * first response that carries `X-Client-Current` / `X-Client-Minimum`
+   * headers that disagree with the consumer's claimed {@link clientVersion}.
+   *
+   * The returned function unsubscribes the listener.
+   */
+  onClientVersionMismatch(listener: ClientVersionListener): () => void {
+    this.clientVersionListeners.push(listener);
+    return () => {
+      this.clientVersionListeners = this.clientVersionListeners.filter(
+        (l) => l !== listener,
+      );
+    };
+  }
+
+  /** Internal — transport wrapper that detects version-skew headers. */
+  private wrapTransportForVersion(inner: Transport): Transport {
+    return async (request) => {
+      const response = await inner(request);
+      const status = evaluateClientVersion(response.headers, this.clientVersion);
+      if (status) this.emitClientVersion(status);
+      return response;
+    };
+  }
+
+  private emitClientVersion(status: ClientVersionStatus): void {
+    for (const l of this.clientVersionListeners) {
+      try {
+        l(status);
+      } catch {
+        // Listener errors must not propagate into transport calls.
+      }
+    }
   }
 
   /** Subscribe to `onLicenseRefreshed` after construction. */

@@ -9,6 +9,12 @@
  */
 
 export { Product, Products, type ProductMetadata } from './products';
+export {
+  ProductType,
+  Products as ProductsByType,
+  type Product as TypedProduct,
+  type ProductTypeValue,
+} from './productsByType';
 export { State, States, type StateMetadata } from './states';
 export { ProductCarriers, type ProductCarrierMetadata } from './carriers';
 export { ConditionCategories, type ConditionCategoryMetadata } from './conditions';

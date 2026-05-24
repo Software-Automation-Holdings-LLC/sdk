@@ -1,61 +1,76 @@
 /**
- * Tier 3 Coverage discriminated union.
+ * Coverage — single or multi-amount, face-value or monthly budget.
  *
- * The prequalify wire format accepts either a face-value (dollar amount of
- * death benefit) or a monthly budget (dollar amount the applicant is willing
- * to pay per month). Each shape requires a different bucket-math step before
- * it hits the engine: face values are rounded to standard bands, monthly
- * budgets are converted to a premium ceiling.
+ * The locked design lets one prequalify call probe several coverage amounts
+ * at once: face values (death benefits) or monthly budgets (premium
+ * ceilings). The wire shape is uniform: `quote_options.amounts: string[]`
+ * with `quote_type` set to one of `face_amounts` / `monthly_budget`.
  *
- * Tier 3 hides that math behind two factories:
+ * Call sites:
  *
- *   Coverage.faceValue(100_000)
- *   Coverage.monthlyBudget(50)
+ *   Coverage.faceValue(100_000)           // single
+ *   Coverage.faceValues([15_000, 25_000])  // multi
+ *   Coverage.monthlyBudget(50)             // single
+ *   Coverage.monthlyBudgets([50, 75, 100]) // multi
  *
- * The call site never serializes "face_value" or chooses a bucket; the
- * prequalify builder reads the `type` discriminator and emits the right
- * wire fields. Per ADR-035's "invariants over options" doctrine, there is
- * no `options.preserveExactAmount` flag — the SDK locks in the right
- * bucketing.
+ * The SDK selects the result envelope shape (`SinglePrequalifyResult` vs
+ * `MultiPrequalifyResult`) from the input discriminator — no caller flags.
  */
-/**
- * Wire discriminator for the `quote_options.quote_type` field.
- * Values mirror the server's `QuoteType` enum exactly.
- */
+/** Wire discriminator for `quote_options.quote_type`. */
 export var QuoteType;
 (function (QuoteType) {
     QuoteType["FaceAmounts"] = "face_amounts";
     QuoteType["MonthlyBudget"] = "monthly_budget";
 })(QuoteType || (QuoteType = {}));
-/** Static-factory container for Coverage construction. */
+/** Type guard for multi-amount coverage. */
+export function isMulti(c) {
+    return Array.isArray(c.amounts);
+}
+function ensurePositive(label, amount) {
+    if (!Number.isFinite(amount) || amount <= 0) {
+        throw new Error(`${label}: amount must be a positive number`);
+    }
+    return Math.round(amount);
+}
+/** Static factories for Coverage. */
 export const Coverage = {
-    /**
-     * Coverage by face value (death benefit). The amount is rounded to a
-     * whole dollar; sub-dollar inputs are an error.
-     */
+    /** Single face-value coverage. */
     faceValue(amount) {
-        if (!Number.isFinite(amount) || amount <= 0) {
-            throw new Error('Coverage.faceValue: amount must be a positive number');
-        }
-        return { type: 'face_value', amount: Math.round(amount) };
+        return { type: 'face_value', amount: ensurePositive('Coverage.faceValue', amount) };
     },
-    /**
-     * Coverage by monthly budget. The amount is rounded to a whole dollar;
-     * sub-dollar inputs are an error.
-     */
+    /** Multiple face-value coverages probed in one call. */
+    faceValues(amounts) {
+        if (amounts.length === 0) {
+            throw new Error('Coverage.faceValues: at least one amount required');
+        }
+        return {
+            type: 'face_value',
+            amounts: amounts.map((a) => ensurePositive('Coverage.faceValues', a)),
+        };
+    },
+    /** Single monthly-budget coverage. */
     monthlyBudget(amount) {
-        if (!Number.isFinite(amount) || amount <= 0) {
-            throw new Error('Coverage.monthlyBudget: amount must be a positive number');
+        return { type: 'monthly_budget', amount: ensurePositive('Coverage.monthlyBudget', amount) };
+    },
+    /** Multiple monthly-budget coverages probed in one call. */
+    monthlyBudgets(amounts) {
+        if (amounts.length === 0) {
+            throw new Error('Coverage.monthlyBudgets: at least one amount required');
         }
-        return { type: 'monthly_budget', amount: Math.round(amount) };
+        return {
+            type: 'monthly_budget',
+            amounts: amounts.map((a) => ensurePositive('Coverage.monthlyBudgets', a)),
+        };
     },
-    /** Type guard for face-value coverage. */
-    isFaceValue(coverage) {
-        return coverage.type === 'face_value';
+    /** Type guard — true when the input is a face-value coverage. */
+    isFaceValue(c) {
+        return c.type === 'face_value' && !isMulti(c);
     },
-    /** Type guard for monthly-budget coverage. */
-    isMonthlyBudget(coverage) {
-        return coverage.type === 'monthly_budget';
+    /** Type guard — true when the input is a monthly-budget coverage. */
+    isMonthlyBudget(c) {
+        return c.type === 'monthly_budget' && !isMulti(c);
     },
+    /** Type guard — true when the input is a multi-amount coverage. */
+    isMulti,
 };
 //# sourceMappingURL=coverage.js.map

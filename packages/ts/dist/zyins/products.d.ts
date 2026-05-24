@@ -1,33 +1,25 @@
 /**
- * `isa.zyins.products` — live product catalog built from server datasets.
+ * `isa.zyins.products` — typed product catalog facade.
  *
- * `catalog()` calls `isa.zyins.datasets.get({ include: ['products'] })` once
- * and memoizes the resulting `ProductCatalog` for the lifetime of the facade
- * instance. Subsequent calls return the cached catalog without a network
- * round-trip.
+ * The nested-by-type catalog (`Products.Fex.AetnaAccendo`, …) is generated
+ * from the canonical product list and shipped inside the SDK; live calls
+ * are unnecessary for the typed shape. This facade exposes the catalog and
+ * the helper lookups for parity with prior callers.
  *
- * The catalog is invalidated only on facade recreation (i.e. `Isa` instance
- * recreation). For long-lived processes that need fresh product lists, call
- * `refresh()` to force a re-fetch.
+ * `refresh()` is a no-op today; it remains in the surface so future
+ * server-driven catalog refresh lands without an API-shape change.
  */
-import { ProductCatalog } from './product';
-import { type DatasetsFacade } from './isaNamespaces';
-/** `isa.zyins.products` — live product catalog with memoization. */
+import { Products, type Product, type ProductTypeValue } from './product';
+/** `isa.zyins.products` — typed catalog access. */
 export declare class ProductsFacade {
-    private readonly datasets;
-    private cached;
-    private inflight;
-    constructor(datasets: DatasetsFacade);
-    /**
-     * Returns the `ProductCatalog` built from the server's products dataset.
-     * The first call fetches from `GET /v2/reference-data`; subsequent calls
-     * return the memoized result instantly.
-     */
-    catalog(): Promise<ProductCatalog>;
-    /**
-     * Evict the cached catalog and re-fetch on the next `catalog()` call.
-     * Returns the freshly fetched `ProductCatalog`.
-     */
-    refresh(): Promise<ProductCatalog>;
+    constructor(_deps?: unknown);
+    /** Returns the nested-by-type catalog. */
+    catalog(): typeof Products;
+    /** Resolve a product by wire-token slug. */
+    byWireToken(token: string): Product | undefined;
+    /** Resolve a product by legacy display name within a type. */
+    byLegacy(productType: ProductTypeValue, displayName: string): Product | undefined;
+    /** No-op today — the catalog is statically embedded. */
+    refresh(): Promise<typeof Products>;
 }
 //# sourceMappingURL=products.d.ts.map

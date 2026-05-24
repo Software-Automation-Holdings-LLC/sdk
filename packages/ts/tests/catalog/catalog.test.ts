@@ -9,8 +9,8 @@
 
 import { describe, it, expect } from 'vitest';
 import {
-  Product,
-  Products,
+  ProductSlug as Product,
+  ProductSlugs as Products,
   State,
   States,
   ProductCarriers,

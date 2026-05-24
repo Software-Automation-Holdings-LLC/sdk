@@ -2,13 +2,13 @@ import { describe, expect, it } from 'vitest';
 import { client, recordingTransport } from './client-test-helpers';
 
 describe('ZyInsClient.preferences.lookup', () => {
-  it('GETs /v1/preferences and returns prefs', async () => {
+  it('GETs /v2/preferences/restore and returns prefs', async () => {
     const body = JSON.stringify({ prefs: { theme: 'dark', density: 'compact' } });
     const { transport, requests } = recordingTransport(200, body);
     const result = await client(transport).preferences.lookup();
     expect(result.prefs).toEqual({ theme: 'dark', density: 'compact' });
     expect(requests[0]!.method).toBe('GET');
-    expect(requests[0]!.url).toBe('https://test.example/v1/preferences');
+    expect(requests[0]!.url).toBe('https://test.example/v2/preferences/restore');
   });
 
   it('accepts the ADR-012 enveloped shape', async () => {
@@ -28,12 +28,12 @@ describe('ZyInsClient.preferences.lookup', () => {
 });
 
 describe('ZyInsClient.preferences.set', () => {
-  it('POSTs /v1/preferences with the prefs body and an Idempotency-Key', async () => {
+  it('POSTs /v2/preferences/backup with the prefs body and an Idempotency-Key', async () => {
     const { transport, requests } = recordingTransport(200, JSON.stringify({ prefs: { a: 1 } }));
     const result = await client(transport).preferences.set({ prefs: { a: 1 } });
     expect(result.prefs).toEqual({ a: 1 });
     expect(requests[0]!.method).toBe('POST');
-    expect(requests[0]!.url).toBe('https://test.example/v1/preferences');
+    expect(requests[0]!.url).toBe('https://test.example/v2/preferences/backup');
     expect(requests[0]!.headers['Idempotency-Key']).toBeTruthy();
     const sent: unknown = JSON.parse(requests[0]!.body);
     expect(sent).toEqual({ prefs: { a: 1 } });

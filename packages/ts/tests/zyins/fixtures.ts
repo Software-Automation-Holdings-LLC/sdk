@@ -15,7 +15,7 @@ import {
   Weight,
 } from '../../src/zyins/applicant';
 import { Coverage } from '../../src/zyins/coverage';
-import { ProductCatalog, ProductSelection, ProductType } from '../../src/zyins/product';
+import { Products, ProductSelection } from '../../src/zyins/product';
 
 export const TEST_AUTH: AuthContext = {
   licenseKey: 'LIC-ABC-123',
@@ -35,8 +35,6 @@ export const TEST_APPLICANT: Applicant = {
 
 export const TEST_COVERAGE = Coverage.faceValue(100_000);
 
-export const TEST_PRODUCTS = ProductSelection.of(
-  ProductCatalog.Default.find('colonial-penn', ProductType.FinalExpense),
-);
+export const TEST_PRODUCTS = ProductSelection.of([Products.Fex.AetnaAccendo!]);
 
 export const FIXED_CLOCK = (): number => 1_700_000_000_000;

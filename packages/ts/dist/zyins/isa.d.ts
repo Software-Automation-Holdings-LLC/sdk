@@ -31,6 +31,7 @@ import { WebhooksService } from '../rapidsign/webhooks';
 import { type ProxyCallOptions, type ProxyCallResult } from '../proxy/call';
 import { BrandingFacade, DatasetsFacade, PreferencesFacade, CasesFacade, EmailFacade, LicenseFacade, LogosFacade } from './isaNamespaces';
 import { ProductsFacade } from './products';
+import { type ClientVersionListener } from './clientVersion';
 import { AccountNamespace } from '../account';
 /** Constructor options for `Isa`. */
 export interface IsaOptions {
@@ -79,6 +80,13 @@ export interface IsaOptions {
      * logos therefore uses a dedicated facade injected via this option.
      */
     logosFetch?: LogosFetch;
+    /**
+     * Consumer-supplied build identifier (typically a short git hash or
+     * SDK release tag) used by the client-version negotiation surface. When
+     * set, the SDK inspects `X-Client-Current` / `X-Client-Minimum`
+     * response headers and fires `onClientVersionMismatch` listeners.
+     */
+    clientVersion?: string;
 }
 /** Optional transport/facade overrides accepted by `Isa` factories. */
 export interface IsaFactoryOptions {
@@ -101,6 +109,8 @@ export interface IsaFactoryOptions {
      * factory can be exercised without a live HTTP layer.
      */
     transport?: Transport;
+    /** Consumer-supplied build identifier for client-version negotiation. */
+    clientVersion?: string;
 }
 /**
  * Unified SDK entry point.
@@ -141,7 +151,21 @@ export declare class Isa {
      * session identities.
      */
     readonly credentialState: IsaCredentialState | undefined;
+    /** Consumer-supplied build identifier for client-version negotiation. */
+    readonly clientVersion: string | undefined;
+    private clientVersionListeners;
     private constructor();
+    /**
+     * Subscribe to client-version mismatch events. The listener fires on the
+     * first response that carries `X-Client-Current` / `X-Client-Minimum`
+     * headers that disagree with the consumer's claimed {@link clientVersion}.
+     *
+     * The returned function unsubscribes the listener.
+     */
+    onClientVersionMismatch(listener: ClientVersionListener): () => void;
+    /** Internal — transport wrapper that detects version-skew headers. */
+    private wrapTransportForVersion;
+    private emitClientVersion;
     /** Subscribe to `onLicenseRefreshed` after construction. */
     onLicenseRefreshed(listener: LicenseRefreshedListener): () => void;
     /**

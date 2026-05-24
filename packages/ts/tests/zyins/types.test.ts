@@ -7,7 +7,7 @@ import {
 import { Coverage } from "../../src/zyins/coverage";
 import { isAuthContext } from "../../src/zyins/auth";
 import {
-  ProductCatalog,
+  Products,
   ProductSelection,
   ProductType,
 } from "../../src/zyins/product";
@@ -58,25 +58,27 @@ describe("Coverage discriminated union", () => {
   });
 });
 
-describe("ProductCatalog and ProductSelection", () => {
-  it("finds a product by brand and type", () => {
-    const product = ProductCatalog.Default.find("colonial-penn", ProductType.FinalExpense);
-    expect(product.wireToken).toBe("colonial-penn.final-expense");
+describe("Products catalog and ProductSelection (v0.5.3)", () => {
+  it("looks up a product by wire token", () => {
+    const product = Products.byWireToken('fex-aetna-accendo');
+    expect(product?.wireToken).toBe('fex-aetna-accendo');
+    expect(product?.productType).toBe(ProductType.FinalExpense);
   });
 
-  it("throws on unknown product", () => {
-    expect(() => ProductCatalog.Default.find("not-a-brand", ProductType.Term)).toThrow();
+  it("returns undefined for unknown wire token", () => {
+    expect(Products.byWireToken('not-a-token')).toBeUndefined();
   });
 
-  it("produces a stable wire string for a selection", () => {
-    const a = ProductCatalog.Default.find("colonial-penn", ProductType.FinalExpense);
-    const b = ProductCatalog.Default.find("mutual-of-omaha", ProductType.FinalExpense);
-    const selection = ProductSelection.many([a, b]);
-    expect(selection.toWireString()).toBe("colonial-penn.final-expense|mutual-of-omaha.final-expense");
+  it("emits a stable wire payload for a selection", () => {
+    const fields = ProductSelection.of([
+      Products.Fex['AetnaAccendo']!,
+      Products.Fex['AmericoEaglePremier']!,
+    ]).toWireFields();
+    expect(fields.products).toEqual(['fex-aetna-accendo', 'fex-americo-eagle-premier']);
   });
 
   it("refuses an empty selection", () => {
-    expect(() => ProductSelection.many([])).toThrow();
+    expect(() => ProductSelection.of([])).toThrow();
   });
 });
 

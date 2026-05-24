@@ -1,56 +1,35 @@
 /**
- * `isa.zyins.products` — live product catalog built from server datasets.
+ * `isa.zyins.products` — typed product catalog facade.
  *
- * `catalog()` calls `isa.zyins.datasets.get({ include: ['products'] })` once
- * and memoizes the resulting `ProductCatalog` for the lifetime of the facade
- * instance. Subsequent calls return the cached catalog without a network
- * round-trip.
+ * The nested-by-type catalog (`Products.Fex.AetnaAccendo`, …) is generated
+ * from the canonical product list and shipped inside the SDK; live calls
+ * are unnecessary for the typed shape. This facade exposes the catalog and
+ * the helper lookups for parity with prior callers.
  *
- * The catalog is invalidated only on facade recreation (i.e. `Isa` instance
- * recreation). For long-lived processes that need fresh product lists, call
- * `refresh()` to force a re-fetch.
+ * `refresh()` is a no-op today; it remains in the surface so future
+ * server-driven catalog refresh lands without an API-shape change.
  */
-import { ProductCatalog } from './product';
-/** `isa.zyins.products` — live product catalog with memoization. */
+import { Products } from './product';
+/** `isa.zyins.products` — typed catalog access. */
 export class ProductsFacade {
-    datasets;
-    cached;
-    inflight;
-    constructor(datasets) {
-        this.datasets = datasets;
+    // Constructor accepts an opaque dependency so the namespace wiring stays
+    // identical between releases; we don't read from it today.
+    constructor(_deps) { }
+    /** Returns the nested-by-type catalog. */
+    catalog() {
+        return Products;
     }
-    /**
-     * Returns the `ProductCatalog` built from the server's products dataset.
-     * The first call fetches from `GET /v2/reference-data`; subsequent calls
-     * return the memoized result instantly.
-     */
-    async catalog() {
-        if (this.cached !== undefined)
-            return this.cached;
-        if (this.inflight !== undefined)
-            return this.inflight;
-        this.inflight = this.datasets
-            .get({ include: ['products'] })
-            .then((bundle) => {
-            const cat = ProductCatalog.fromDatasets(bundle);
-            this.cached = cat;
-            this.inflight = undefined;
-            return cat;
-        })
-            .catch((err) => {
-            this.inflight = undefined;
-            throw err;
-        });
-        return this.inflight;
+    /** Resolve a product by wire-token slug. */
+    byWireToken(token) {
+        return Products.byWireToken(token);
     }
-    /**
-     * Evict the cached catalog and re-fetch on the next `catalog()` call.
-     * Returns the freshly fetched `ProductCatalog`.
-     */
+    /** Resolve a product by legacy display name within a type. */
+    byLegacy(productType, displayName) {
+        return Products.byLegacy(productType, displayName);
+    }
+    /** No-op today — the catalog is statically embedded. */
     async refresh() {
-        this.cached = undefined;
-        this.inflight = undefined;
-        return this.catalog();
+        return Products;
     }
 }
 //# sourceMappingURL=products.js.map

@@ -27,16 +27,21 @@ export {
 export {
   Coverage,
   QuoteType,
+  isMulti,
+  type CoverageInput,
+  type CoverageType,
+  type SingleCoverage,
+  type MultiCoverage,
   type FaceValueCoverage,
   type MonthlyBudgetCoverage,
 } from './coverage';
 
 export {
-  ProductCatalog,
   ProductSelection,
   ProductType,
+  Products,
   type Product,
-  type RawProductEntry,
+  type ProductTypeValue,
 } from './product';
 
 export { ProductsFacade } from './products';
@@ -56,7 +61,17 @@ export {
   type PrequalifyRequest,
   type PrequalifyResult,
   type PrequalifyPlan,
+  type Plan,
+  type PrequalifyOptions,
+  type PrequalifyResultMeta,
+  type SinglePrequalifyResult,
+  type MultiPrequalifyResult,
 } from './prequalify';
+
+export {
+  type ClientVersionStatus,
+  type ClientVersionListener,
+} from './clientVersion';
 
 export {
   type LicenseActivateRequest,

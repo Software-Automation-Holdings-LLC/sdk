@@ -35,13 +35,18 @@ export { IsaError, IsaApiError, IsaConfigError, IsaIdempotencyConflictError, Isa
 export { canonicalString, formatTimestamp, signRequest, } from './core/auth/signRequest';
 // --- Value types / domain primitives (zyins-flavored, public) ----------
 export { Sex, NicotineUsage, NicotineDuration, Height, Weight, } from './zyins/applicant';
-export { Coverage, QuoteType, } from './zyins/coverage';
-export { ProductCatalog, ProductSelection, ProductType, } from './zyins/product';
+export { Coverage, QuoteType, isMulti, } from './zyins/coverage';
+export { ProductSelection, ProductType, Products, } from './zyins/product';
 // --- Generated catalogs -------------------------------------------------
 // Every name in this block is produced by `scripts/gen-catalog.mjs`. See
 // `src/catalog/` for the source modules and `docs/SDK_DESIGN.md` §5.1
 // for the named-export contract.
-export { Product, Products, State, States, ProductCarriers, ConditionCategories, MedicationUses, Scope, ScopeDescriptions, SignEvent, SignEventLabels, ErrorCode, ErrorAdviceCodes, ErrorDocUrls, } from './catalog';
+export { 
+// Legacy flat slug enum + accessor from `src/catalog/products.ts`.
+// The typed Product interface and nested `Products` namespace exported
+// above (from `./zyins/product`) shadow these names; consumers needing the
+// legacy flat enum should import from `./catalog/products` directly.
+Product as ProductSlug, Products as ProductSlugs, State, States, ProductCarriers, ConditionCategories, MedicationUses, Scope, ScopeDescriptions, SignEvent, SignEventLabels, ErrorCode, ErrorAdviceCodes, ErrorDocUrls, } from './catalog';
 // --- Debug logger / env reader -----------------------------------------
 export { debugLoggerFromEnv, makeLogger, redactHeaders, redactBody, redactBodyString, processEnv, stderrSink, } from './zyins/logger';
 //# sourceMappingURL=index.js.map

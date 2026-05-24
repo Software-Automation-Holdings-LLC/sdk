@@ -62,17 +62,38 @@ async function buildIsa(
   return isa;
 }
 
+// SDK v0.5.3 wire shape: data.results[<amount>]: Plan[]; meta carries the
+// amount list, processing time, and total product count. The flat-`plans`
+// shape was retired with v0.5.0 — see prequalify.parsePrequalifyResponse.
 const OK_BODY = JSON.stringify({
-  plans: [
-    {
-      brand: 'colonial-penn',
-      tier: 'preferred',
-      monthly_premium: 42,
-      face_value: 100_000,
-      product_token: 'colonial-penn.final-expense',
+  data: {
+    meta: {
+      amounts: ['100000'],
+      processing_time_ms: 25,
+      quote_type: 'face_amounts',
+      total_products: 1,
     },
-  ],
+    results: {
+      '100000': [
+        {
+          brand: 'colonial-penn',
+          name: 'Colonial Penn Final Expense',
+          plan: 'PREFERRED',
+          plan_group: null,
+          death_benefit: 100000,
+          monthly_price: '$42.00',
+          default_pricing_key: 'MONTHLY-EFT',
+          id: 'fex-colonial-penn-final-expense',
+          index: 0,
+          is_excluded: false,
+          logo_url: '',
+          plan_info: {},
+        },
+      ],
+    },
+  },
   request_id: 'req_test_iso',
+  idempotency_key: 'idem_test',
 });
 
 describe('Envelope<T>', () => {

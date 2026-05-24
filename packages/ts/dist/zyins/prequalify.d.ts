@@ -1,62 +1,108 @@
 /**
  * Tier 3 prequalify operation.
  *
- * Replaces the inline payload assembly in bpp2.0's `analyzeCase`
- * (`src/lib/data.js:1315`). The before-state spreads HTTP, header, license,
- * and serialization concerns across the call site; this module isolates them.
+ * Builds the wire body, signs the request, calls `/v1/prequalify`, and
+ * parses the response into one of two result shapes:
+ *   - `SinglePrequalifyResult` — single coverage amount.
+ *   - `MultiPrequalifyResult` — multiple amounts probed together.
  *
- * Inputs: a typed `PrequalifyRequest` (applicant, coverage, products).
- * Output: a typed `PrequalifyResult` (plans, ranking, declines).
- *
- * Locked invariants (per ADR-035):
+ * Locked invariants (per ADR-035, post-lock v0.5.3 spec):
  *  - The wire body is built by the SDK; the call site never sees it.
  *  - The idempotency key is derived from sessionId:op:body-hash.
  *  - Auth credentials live in HMAC headers only — never in the request body.
- *  - Errors are typed; ERR_* strings and ProblemDetails JSON both funnel
- *    through `fromHttpResponse`.
+ *  - `products` accepts only typed wire tokens — regex semantics are gone.
+ *  - Server response shape is `{ data: { meta, results: { <amount>: [...] } },
+ *    request_id, idempotency_key }`.
  */
 import { type Applicant } from './applicant';
-import { type Coverage } from './coverage';
-import { type ProductSelection } from './product';
+import { type CoverageInput, type CoverageType } from './coverage';
+import { type ProductSelection, type Product, type ProductTypeValue } from './product';
 import { type AuthContext } from './auth';
 import { type Transport } from './transport';
 import { type Clock } from '../core';
+/** Optional per-call knobs that map onto the server's filter primitives. */
+export interface PrequalifyOptions {
+    /** Restrict to a single product class (server `only_product_class`). */
+    onlyProductClass?: ProductTypeValue;
+    /** Include one or more product classes (server `include_product_class`). */
+    includeProductClass?: readonly ProductTypeValue[];
+    /** Server-side `min_rank` filter (string per server contract). */
+    minRank?: string;
+    /** Include products flagged unreleased. */
+    showUnreleased?: boolean;
+    /** Skip the health-based underwriting layer (preview rates without HBU). */
+    skipHealthBasedUnderwriting?: boolean;
+}
 /** Inputs accepted by `prequalify`. */
 export interface PrequalifyRequest {
     applicant: Applicant;
-    coverage: Coverage;
+    coverage: CoverageInput;
     products: ProductSelection;
+    options?: PrequalifyOptions;
 }
 /** One plan returned by the engine. */
-export interface PrequalifyPlan {
-    /** Carrier brand (e.g., "colonial-penn"). */
+export interface Plan {
     brand: string;
-    /** Plan tier within the carrier (e.g., "preferred-plus"). */
-    tier: string;
-    /** Monthly premium in USD (the bucketed amount the engine quoted). */
-    monthlyPremium: number;
-    /** Face value the premium applies to, in whole US dollars. */
-    faceValue: number;
-    /** Underlying product wire token; useful for routing into eApp. */
-    productToken: string;
+    name: string;
+    plan: string;
+    planGroup: string | null;
+    deathBenefit: number;
+    monthlyPrice: number | undefined;
+    defaultPricingKey: string;
+    /** Server identifier — typically the product wire token. */
+    id: string;
+    index: number;
+    isExcluded: boolean;
+    logoUrl: string;
+    planInfo: Record<string, readonly string[]>;
+    pricing: Record<string, {
+        monthly: number;
+        [k: string]: unknown;
+    }>;
+    /** Hydrated typed catalog product when `id` matches a known wire token. */
+    product?: Product;
+    /** Forward-compatible raw fields the server emits but we don't yet model. */
+    raw: Record<string, unknown>;
 }
-/** Output of `prequalify`. */
-export interface PrequalifyResult {
-    /** Plans the applicant qualified for, ordered as the engine returns them. */
-    plans: ReadonlyArray<PrequalifyPlan>;
-    /** Engine request id for correlation with server-side logs. */
+/** Backwards-compat alias — older call sites used `PrequalifyPlan`. */
+export type PrequalifyPlan = Plan;
+/** Aggregate meta from `data.meta`. */
+export interface PrequalifyResultMeta {
+    amounts: number[];
+    processingTimeMs: number;
+    quoteType: CoverageType;
+    totalProducts: number;
+}
+/** Result shape for a single-amount prequalify call. */
+export interface SinglePrequalifyResult {
+    readonly kind: 'single';
+    amount: number;
+    plans: Plan[];
+    meta: PrequalifyResultMeta;
     requestId: string;
-    /** Idempotency key sent on the wire request. Propagated into the Envelope
-     *  so callers can round-trip the key without parsing raw headers. */
     idempotencyKey: string;
 }
+/** Result shape for a multi-amount prequalify call. */
+export interface MultiPrequalifyResult {
+    readonly kind: 'multi';
+    amounts: number[];
+    byAmount: Map<number, Plan[]>;
+    /** Flattened convenience — every plan across every amount. */
+    plans: Plan[];
+    forAmount(n: number): Plan[];
+    meta: PrequalifyResultMeta;
+    requestId: string;
+    idempotencyKey: string;
+}
+/** Union returned by `prequalify`. */
+export type PrequalifyResult = SinglePrequalifyResult | MultiPrequalifyResult;
 /** Shared knobs the client passes through to the prequalify call. */
 export interface PrequalifyContext {
     baseUrl: string;
     auth: AuthContext;
     transport: Transport;
     clock: Clock;
-    /** Optional override; defaults to the derived key (`deriveIdempotencyKey`). */
+    /** Optional override; defaults to the derived key. */
     idempotencyKey?: string;
 }
 /**

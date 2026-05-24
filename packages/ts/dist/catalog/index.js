@@ -8,6 +8,7 @@
  *   - (barrel re-export of every catalog module in this directory)
  */
 export { Product, Products } from './products';
+export { ProductType, Products as ProductsByType, } from './productsByType';
 export { State, States } from './states';
 export { ProductCarriers } from './carriers';
 export { ConditionCategories } from './conditions';

@@ -848,12 +848,170 @@ ${docEntries}
 }
 
 // ---------------------------------------------------------------------------
+// Products-by-type (nested catalog with typed Product objects)
+// ---------------------------------------------------------------------------
+
+function genProductsByType() {
+  const path = join(INSURANCE_REPO, 'v2_products.json');
+  const raw = tryReadJson(path);
+  const sources = ['insurance/v2_products.json'];
+  if (!raw) {
+    gaps.push('ProductsByType: v2_products.json not found — emitting empty nested catalog.');
+    writeFile('productsByType.ts', HEADER(sources) + emptyProductsByTypeModule());
+    return;
+  }
+  const TYPE_MAP = {
+    fex: { tsKey: 'FinalExpense', nsKey: 'Fex' },
+    medsup: { tsKey: 'MedicareSupplement', nsKey: 'Medsup' },
+    preneed: { tsKey: 'Preneed', nsKey: 'Preneed' },
+    term: { tsKey: 'Term', nsKey: 'Term' },
+  };
+
+  function carrierFrom(displayName) {
+    const words = displayName.split(/\s+/);
+    if (words.length <= 1) return displayName;
+    return words[0].length >= 3 ? words[0] : `${words[0]} ${words[1]}`;
+  }
+
+  const namespaces = { Fex: [], Medsup: [], Preneed: [], Term: [] };
+  for (const [wireType, list] of Object.entries(raw)) {
+    if (!Array.isArray(list)) continue;
+    const tm = TYPE_MAP[wireType];
+    if (!tm) continue;
+    for (const entry of list) {
+      if (!entry || typeof entry !== 'object') continue;
+      const displayName = String(entry.name || '');
+      const identifier = String(entry.identifier || '');
+      if (!displayName || !identifier) continue;
+      namespaces[tm.nsKey].push({
+        enumKey: pascal(displayName),
+        wireToken: identifier,
+        displayName,
+        ctorName: tm.tsKey,
+        carrier: carrierFrom(displayName),
+      });
+    }
+    namespaces[tm.nsKey].sort((a, b) => a.enumKey.localeCompare(b.enumKey));
+  }
+
+  function bagBody(items, ctorName) {
+    return items.map((p) =>
+      `  ${p.enumKey}: Object.freeze({ wireToken: ${JSON.stringify(p.wireToken)}, displayName: ${JSON.stringify(p.displayName)}, productType: ProductType.${ctorName}, carrier: ${JSON.stringify(p.carrier)} }) as Product,`,
+    ).join('\n');
+  }
+
+  const module = `${HEADER(sources)}
+/** Coarse product family. The \`wireToken\` is the server's class identifier. */
+export const ProductType = {
+  FinalExpense:       { wireToken: 'fex',     displayName: 'Final Expense',       namespaceKey: 'Fex'     },
+  MedicareSupplement: { wireToken: 'medsup',  displayName: 'Medicare Supplement', namespaceKey: 'Medsup'  },
+  Preneed:            { wireToken: 'preneed', displayName: 'Preneed',             namespaceKey: 'Preneed' },
+  Term:               { wireToken: 'term',    displayName: 'Term',                namespaceKey: 'Term'    },
+} as const;
+
+export type ProductTypeValue = (typeof ProductType)[keyof typeof ProductType];
+
+/** A typed product. Stable across SDK releases inside one wire major. */
+export interface Product {
+  readonly wireToken: string;
+  readonly displayName: string;
+  readonly productType: ProductTypeValue;
+  /** Carrier brand extracted from the display name (first 1–2 words). */
+  readonly carrier: string;
+}
+
+const FEX_PRODUCTS = {
+${bagBody(namespaces.Fex, 'FinalExpense')}
+} as const;
+
+const MEDSUP_PRODUCTS = {
+${bagBody(namespaces.Medsup, 'MedicareSupplement')}
+} as const;
+
+const PRENEED_PRODUCTS = {
+${bagBody(namespaces.Preneed, 'Preneed')}
+} as const;
+
+const TERM_PRODUCTS = {
+${bagBody(namespaces.Term, 'Term')}
+} as const;
+
+type ProductBag = Readonly<Record<string, Product>>;
+
+const ALL_PRODUCTS: readonly Product[] = Object.freeze([
+  ...Object.values(FEX_PRODUCTS),
+  ...Object.values(MEDSUP_PRODUCTS),
+  ...Object.values(PRENEED_PRODUCTS),
+  ...Object.values(TERM_PRODUCTS),
+]);
+
+const BY_WIRE_TOKEN: Readonly<Record<string, Product>> = Object.freeze(
+  Object.fromEntries(ALL_PRODUCTS.map((p) => [p.wireToken, p])),
+);
+
+export const Products = Object.freeze({
+  Fex: FEX_PRODUCTS as ProductBag,
+  Medsup: MEDSUP_PRODUCTS as ProductBag,
+  Preneed: PRENEED_PRODUCTS as ProductBag,
+  Term: TERM_PRODUCTS as ProductBag,
+  all(): readonly Product[] { return ALL_PRODUCTS; },
+  byWireToken(token: string): Product | undefined { return BY_WIRE_TOKEN[token]; },
+  byLegacy(productType: ProductTypeValue, displayName: string): Product | undefined {
+    const ns = (Products as unknown as Record<string, ProductBag>)[productType.namespaceKey];
+    if (!ns) return undefined;
+    const needle = displayName.toLowerCase();
+    for (const p of Object.values(ns)) {
+      if (p.displayName.toLowerCase() === needle) return p;
+    }
+    return undefined;
+  },
+}) as Readonly<{
+  Fex: ProductBag;
+  Medsup: ProductBag;
+  Preneed: ProductBag;
+  Term: ProductBag;
+  all: () => readonly Product[];
+  byWireToken: (token: string) => Product | undefined;
+  byLegacy: (productType: ProductTypeValue, displayName: string) => Product | undefined;
+}>;
+`;
+  writeFile('productsByType.ts', module);
+}
+
+function emptyProductsByTypeModule() {
+  return `
+export const ProductType = {
+  FinalExpense:       { wireToken: 'fex',     displayName: 'Final Expense',       namespaceKey: 'Fex'     },
+  MedicareSupplement: { wireToken: 'medsup',  displayName: 'Medicare Supplement', namespaceKey: 'Medsup'  },
+  Preneed:            { wireToken: 'preneed', displayName: 'Preneed',             namespaceKey: 'Preneed' },
+  Term:               { wireToken: 'term',    displayName: 'Term',                namespaceKey: 'Term'    },
+} as const;
+export type ProductTypeValue = (typeof ProductType)[keyof typeof ProductType];
+export interface Product { readonly wireToken: string; readonly displayName: string; readonly productType: ProductTypeValue; readonly carrier: string; }
+type ProductBag = Readonly<Record<string, Product>>;
+const EMPTY: ProductBag = Object.freeze({});
+export const Products = Object.freeze({
+  Fex: EMPTY, Medsup: EMPTY, Preneed: EMPTY, Term: EMPTY,
+  all(): readonly Product[] { return []; },
+  byWireToken(_t: string): Product | undefined { return undefined; },
+  byLegacy(_pt: ProductTypeValue, _n: string): Product | undefined { return undefined; },
+});
+`;
+}
+
+// ---------------------------------------------------------------------------
 // Index barrel
 // ---------------------------------------------------------------------------
 
 function genIndex() {
   const module = `${HEADER(['(barrel re-export of every catalog module in this directory)'])}
 export { Product, Products, type ProductMetadata } from './products';
+export {
+  ProductType,
+  Products as ProductsByType,
+  type Product as TypedProduct,
+  type ProductTypeValue,
+} from './productsByType';
 export { State, States, type StateMetadata } from './states';
 export { ProductCarriers, type ProductCarrierMetadata } from './carriers';
 export { ConditionCategories, type ConditionCategoryMetadata } from './conditions';
@@ -872,6 +1030,7 @@ export { ErrorCode, ErrorAdviceCodes, ErrorDocUrls } from './errors';
 ensureDir(CATALOG_DIR);
 genStates();
 genProducts();
+genProductsByType();
 genConditionsAndMedicationUses();
 genScopes();
 genSignEvents();

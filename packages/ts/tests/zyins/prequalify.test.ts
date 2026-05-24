@@ -33,12 +33,7 @@ describe('ZyInsClient.prequalify', () => {
   it('hits /v1/prequalify with the License HMAC headers', async () => {
     const { transport, calls } = recordingTransport({
       status: 200,
-      body: JSON.stringify({
-        plans: [
-          { brand: 'colonial-penn', tier: 'preferred', monthly_premium: 42, face_value: 100_000, product_token: 'colonial-penn.final-expense' },
-        ],
-        request_id: 'req_test_1',
-      }),
+      body: JSON.stringify({data:{meta:{amounts:["100000"],processing_time_ms:25,quote_type:"face_amounts",total_products:1},results:{"100000":[{brand:"colonial-penn",name:"Colonial Penn",plan:"PREFERRED",plan_group:null,death_benefit:100000,monthly_price:"$42.00",default_pricing_key:"MONTHLY",id:"fex-colonial-penn",index:0,is_excluded:false,logo_url:"",plan_info:{}}]}},request_id:"req_test_1",idempotency_key:"idem_1"}),
     });
     const client = new ZyInsClient({
       auth: TEST_AUTH,
@@ -166,7 +161,9 @@ describe('prequalify wire body — flat schema conformance', () => {
     weight: 195,
     state: 'NC',
     nicotine_usage: { last_used: 'never' },
-    products: ['colonial-penn.final-expense'],
+    // TEST_PRODUCTS uses Products.Fex.AetnaAccendo from the v053 catalog
+    // (type-prefixed wireToken). Update this fixture if TEST_PRODUCTS changes.
+    products: ['fex-aetna-accendo'],
     conditions: [],
     medications: [],
     quote_options: { amounts: ['100000'], quote_type: 'face_amounts' },

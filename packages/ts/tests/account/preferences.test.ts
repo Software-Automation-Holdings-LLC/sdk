@@ -2,13 +2,13 @@ import { describe, expect, it } from 'vitest';
 import { account, recordingTransport } from './helpers';
 
 describe('isa.account.preferences.lookup', () => {
-  it('GETs /v1/preferences with the scope query parameter', async () => {
+  it('GETs /v2/preferences/restore with the scope query parameter', async () => {
     const body = JSON.stringify({ prefs: { theme: 'dark' } });
     const { transport, requests } = recordingTransport(200, body);
     const result = await account(transport).preferences.lookup({ scope: 'bpp' });
     expect(result.prefs).toEqual({ theme: 'dark' });
     expect(requests[0]!.method).toBe('GET');
-    expect(requests[0]!.url).toBe('https://test.example/v1/preferences?scope=bpp');
+    expect(requests[0]!.url).toBe('https://test.example/v2/preferences/restore?scope=bpp');
     expect(requests[0]!.headers).toHaveProperty('X-Device-Signature');
   });
 
@@ -39,7 +39,7 @@ describe('isa.account.preferences.lookup', () => {
 });
 
 describe('isa.account.preferences.set', () => {
-  it('POSTs /v1/preferences with scope + prefs and a derived Idempotency-Key', async () => {
+  it('POSTs /v2/preferences/backup with scope + prefs and a derived Idempotency-Key', async () => {
     const { transport, requests } = recordingTransport(200, JSON.stringify({ ok: true }));
     const result = await account(transport).preferences.set({
       scope: 'bpp',
@@ -47,7 +47,7 @@ describe('isa.account.preferences.set', () => {
     });
     expect(result).toEqual({ ok: true });
     expect(requests[0]!.method).toBe('POST');
-    expect(requests[0]!.url).toBe('https://test.example/v1/preferences');
+    expect(requests[0]!.url).toBe('https://test.example/v2/preferences/backup');
     expect(requests[0]!.headers['Idempotency-Key']).toBeTruthy();
     const sent: unknown = JSON.parse(requests[0]!.body);
     expect(sent).toEqual({ scope: 'bpp', prefs: { a: 1 } });
