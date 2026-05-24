@@ -594,6 +594,23 @@ var (
 
 FUNCTIONS
 
+func AllCoverageTypeValues() []string
+    AllCoverageTypeValues returns every canonical wire value for CoverageType.
+
+func AllNicotineUsageValues() []string
+    AllNicotineUsageValues returns every canonical wire value for NicotineUsage.
+
+func AllProductTypeValues() []string
+    AllProductTypeValues returns every canonical wire value for ProductType.
+
+func AllSexValues() []string
+    AllSexValues returns every canonical wire value for the Sex enum.
+
+    Go's type system represents enums as typed string constants; there is no
+    reflection path to enumerate them. This helper is the single source of truth
+    for the full Sex value set, consumed by the conformance enum-parity harness
+    to verify cross-language consistency.
+
 func LicensesFromEnv() (CredentialSnapshot, error)
     LicensesFromEnv reads ISA_LICENSE_KEYCODE and ISA_LICENSE_EMAIL from the
     environment and returns a partially-filled snapshot. Missing envs surface as
@@ -646,12 +663,10 @@ func NewWeight(pounds int) (Weight, error)
     NewWeight constructs a Weight from a positive pound count.
 
 func SexWireCode(s Sex) (string, error)
-    SexWireCode returns the single-letter wire token for s, or an error if
-    s is not a recognized Sex value. Callers must surface the error rather
-    than silently shipping a default — an unknown value almost always means a
-    caller bug (uninitialized field, untyped string cast, or a value sourced
-    from external data without validation), and the previous default-to-female
-    behavior masked these bugs at the wire.
+    SexWireCode returns the canonical wire string for s.
+
+    Deprecated: Use string(sex) directly. Sex values are already the canonical
+    wire tokens ("male"/"female") as of v0.5.1. Will be removed in v0.7.0.
 
 func WithBearer() (Option, error)
     WithBearer reads ISA_TOKEN from the environment and returns an Option that
@@ -700,9 +715,18 @@ type Applicant struct {
 	State State `json:"state"`
 	// Zip is the postal code; required by some product families.
 	Zip string `json:"zip,omitempty"`
-	// NicotineUse is the underlying fact; mapped to wire shape by the
-	// prequalify builder.
-	NicotineUse NicotineUsage `json:"nicotine_use"`
+	// NicotineUse is the underlying fact; mapped to the wire shape by the
+	// prequalify builder. Set via NicotineUsageInput for 0.5.1+.
+	//
+	// Deprecated: NicotineUsageLegacy accepts the old NicotineUsage enum.
+	// Will be removed in v0.7.0.
+	NicotineUse NicotineUsageInput `json:"-"`
+	// NicotineUsageLegacy holds the deprecated three-value enum when the
+	// caller has not yet migrated to NicotineUsageInput.
+	//
+	// Deprecated: Use NicotineUse (NicotineUsageInput) instead. Will be
+	// removed in v0.7.0.
+	NicotineUsageLegacy NicotineUsage `json:"-"`
 	// Medications is the applicant's drug list; may be empty.
 	Medications []Medication `json:"medications,omitempty"`
 	// Conditions is the applicant's medical history; may be empty.
@@ -808,6 +832,9 @@ type Client struct {
 	// Datasets reads the read-only datasets surface (conditions,
 	// medications, brands, plans).
 	Datasets *DatasetsService
+	// Products provides a memoized product catalog fetched from the
+	// server once and cached for subsequent calls.
+	Products *ProductsService
 	// ReferenceData reads engine reference tables (states, products,
 	// nicotine modes).
 	ReferenceData *ReferenceDataService
@@ -1402,16 +1429,48 @@ func (s *MemoryCredentialStore) Remove(key string) error
 func (s *MemoryCredentialStore) Set(key, value string) error
     Set stores value under key. Never returns an error in this impl.
 
+type NicotineDuration string
+    NicotineDuration is the seven-bucket duration encoding for nicotine use
+    history. It is the preferred form for the 0.5.1 wire.
+
+const (
+	NicotineNever          NicotineDuration = "never"
+	NicotineWithin12Months NicotineDuration = "within_12_months"
+	Nicotine12To24Months   NicotineDuration = "12_to_24_months"
+	Nicotine24To36Months   NicotineDuration = "24_to_36_months"
+	Nicotine36To48Months   NicotineDuration = "36_to_48_months"
+	Nicotine48To60Months   NicotineDuration = "48_to_60_months"
+	NicotineOver60Months   NicotineDuration = "over_60_months"
+)
+type NicotineProductUsage struct {
+	// Type is the product name (e.g., "cigarettes", "cigars").
+	Type string `json:"type"`
+	// Frequency is a descriptive rate (e.g., "daily", "occasional").
+	Frequency string `json:"frequency"`
+}
+    NicotineProductUsage records how frequently a specific nicotine product type
+    is used. Used inside NicotineUsageInput.
+
 type NicotineUsage string
-    NicotineUsage captures current/former/none nicotine status. The wire format
-    collapses this to yes/no in legacy paths and a tri-state in the modern path;
-    callers state the underlying fact and the SDK maps.
+    NicotineUsage captures current/former/none nicotine status.
+
+    Deprecated: Use NicotineUsageInput with NicotineDuration constants. Will be
+    removed in v0.7.0.
 
 const (
 	NicotineNone    NicotineUsage = "none"
 	NicotineCurrent NicotineUsage = "current"
 	NicotineFormer  NicotineUsage = "former"
 )
+type NicotineUsageInput struct {
+	// LastUsed is the duration bucket for the most recent nicotine use.
+	LastUsed NicotineDuration
+	// ProductUsage is an optional breakdown by product type.
+	ProductUsage []NicotineProductUsage
+}
+    NicotineUsageInput is the structured, duration-aware nicotine input for the
+    0.5.1 wire. Prefer this over the deprecated NicotineUsage enum for new code.
+
 type Option func(*options) error
     Option mutates an *options block during NewClient. The functional- options
     pattern keeps the public constructor signature compact while allowing
@@ -1550,17 +1609,6 @@ type PrequalifyService struct {
     PrequalifyService is the typed sub-service exposing the prequalify
     operation. Constructed by NewClient; do not construct directly.
 
-func (s *PrequalifyService) LegacyBlob(ctx context.Context, encodedPayload map[string]any, opts ...RunOption) (*PrequalifyResult, error)
-    LegacyBlob runs a prequalify call from a pre-encoded payload produced by a
-    legacy encoder (e.g., bpp2.0's prepEncObj / prepEncObjV2). The payload is
-    JSON-marshaled verbatim; the SDK supplies the standard transport stack —
-    auth headers, idempotency key, error funnel, and envelope unwrapping.
-
-    This entry point exists so long-standing consumers do not have to
-    restructure their encoder to take advantage of the SDK. The server accepts
-    both the typed and legacy-blob shapes on the same path; new code should
-    prefer Run(ctx, *PrequalifyInput).
-
 func (s *PrequalifyService) Run(ctx context.Context, input *PrequalifyInput, opts ...RunOption) (*PrequalifyResult, error)
     Run executes a prequalify request and returns the typed result. Validation
     runs locally before the request hits the wire; missing required fields yield
@@ -1609,6 +1657,37 @@ type Product struct {
     Product is a single carrier/type combination offered through the prequalify
     engine.
 
+type ProductCatalog struct {
+	// Has unexported fields.
+}
+    ProductCatalog is an in-memory catalog of known products. Construct via
+    DefaultProductCatalog or ProductCatalogFromDatasets.
+
+func DefaultProductCatalog() *ProductCatalog
+    DefaultProductCatalog returns the static built-in catalog shipped with the
+    SDK.
+
+func ProductCatalogFromDatasets(bundle map[string]any) *ProductCatalog
+    ProductCatalogFromDatasets builds a catalog from a datasets bundle returned
+    by `client.Datasets.Get(ctx, include: []string{"products"})`. The products
+    field is a map of product-class keys to arrays of raw product entry objects.
+    Entries missing required fields are skipped.
+
+func (c *ProductCatalog) Find(brand string, t ProductType) (Product, error)
+    Find returns the product matching brand and type, or an error.
+
+func (c *ProductCatalog) FindBySlug(slug string) (Product, error)
+    FindBySlug returns the product matching the wire token slug, or an error.
+
+func (c *ProductCatalog) List() []Product
+    List returns all products in the catalog.
+
+func (c *ProductCatalog) TryFind(brand string, t ProductType) *Product
+    TryFind returns the product matching brand and type, or nil.
+
+func (c *ProductCatalog) TryFindBySlug(slug string) *Product
+    TryFindBySlug returns the product matching the wire token slug, or nil.
+
 type ProductSelection struct {
 	// Has unexported fields.
 }
@@ -1624,7 +1703,14 @@ func (p ProductSelection) Products() []Product
 
 func (p ProductSelection) WireString() string
     WireString renders the prequalify wire string: a `|`-joined list of product
-    tokens. The shape is the engine's stable contract.
+    tokens.
+
+    Deprecated: Use WireTokens() which returns []string matching the 0.5.1 wire
+    body's products field. Will be removed in v0.7.0.
+
+func (p ProductSelection) WireTokens() []string
+    WireTokens returns the product wire tokens as a string slice for the 0.5.1
+    flat wire body's `products` field.
 
 type ProductType string
     ProductType is the coarse product category. Wire format uses
@@ -1638,6 +1724,21 @@ const (
 	ProductUniversal          ProductType = "universal"
 	ProductIndexed            ProductType = "indexed"
 )
+type ProductsService struct {
+	// Has unexported fields.
+}
+    ProductsService provides a memoized product catalog fetched once from the
+    server and reused across calls. Access via Client.Products.
+
+func (s *ProductsService) Catalog(ctx context.Context) (*ProductCatalog, error)
+    Catalog returns the cached product catalog, fetching it from the server on
+    the first call. Subsequent calls return the cached value without a network
+    round-trip until Refresh is called.
+
+func (s *ProductsService) Refresh(ctx context.Context) (*ProductCatalog, error)
+    Refresh discards the cached catalog and fetches a fresh copy from the
+    server. Safe to call concurrently; only one fetch runs at a time.
+
 type QuoteInput struct {
 	// Applicant is the underwriting profile; same shape as prequalify.
 	Applicant Applicant
@@ -1808,9 +1909,8 @@ type SessionCredential struct {
     mode signs requests with.
 
 type Sex string
-    Sex is the applicant's biological sex. The wire format uses single- letter
-    codes; SexWireCode performs that mapping so call sites never spell `"M"` or
-    `"F"` inline.
+    Sex is the applicant's biological sex. The canonical wire values are "male"
+    and "female" — emit string(sex) directly at the wire layer.
 
 const (
 	SexMale   Sex = "male"

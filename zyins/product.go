@@ -2,6 +2,7 @@ package zyins
 
 import (
 	"errors"
+	"fmt"
 	"strings"
 )
 
@@ -86,14 +87,23 @@ func NewProductSelectionFromProducts(products ...Product) (ProductSelection, err
 	return ProductSelection{products: out}, nil
 }
 
-// WireString renders the prequalify wire string: a `|`-joined list of
-// product tokens. The shape is the engine's stable contract.
-func (p ProductSelection) WireString() string {
-	tokens := make([]string, 0, len(p.products))
-	for _, prod := range p.products {
-		tokens = append(tokens, prod.WireToken)
+// WireTokens returns the product wire tokens as a string slice for the
+// 0.5.1 flat wire body's `products` field.
+func (p ProductSelection) WireTokens() []string {
+	tokens := make([]string, len(p.products))
+	for i, prod := range p.products {
+		tokens[i] = prod.WireToken
 	}
-	return strings.Join(tokens, "|")
+	return tokens
+}
+
+// WireString renders the prequalify wire string: a `|`-joined list of
+// product tokens.
+//
+// Deprecated: Use WireTokens() which returns []string matching the
+// 0.5.1 wire body's products field. Will be removed in v0.7.0.
+func (p ProductSelection) WireString() string {
+	return strings.Join(p.WireTokens(), "|")
 }
 
 // Products returns a read-only view of the selection contents.
@@ -105,3 +115,138 @@ func (p ProductSelection) Products() []Product {
 
 // Len returns the number of products in the selection.
 func (p ProductSelection) Len() int { return len(p.products) }
+
+// ProductCatalog is an in-memory catalog of known products.
+// Construct via DefaultProductCatalog or ProductCatalogFromDatasets.
+type ProductCatalog struct {
+	products []Product
+}
+
+// DefaultProductCatalog returns the static built-in catalog shipped
+// with the SDK.
+func DefaultProductCatalog() *ProductCatalog {
+	return &ProductCatalog{products: defaultProducts()}
+}
+
+// ProductCatalogFromDatasets builds a catalog from a datasets bundle
+// returned by `client.Datasets.Get(ctx, include: []string{"products"})`.
+// The products field is a map of product-class keys to arrays of raw
+// product entry objects. Entries missing required fields are skipped.
+func ProductCatalogFromDatasets(bundle map[string]any) *ProductCatalog {
+	raw, _ := bundle["products"].(map[string]any)
+	if raw == nil {
+		return &ProductCatalog{}
+	}
+	var products []Product
+	for _, v := range raw {
+		entries, ok := v.([]any)
+		if !ok {
+			continue
+		}
+		for _, e := range entries {
+			entry, ok := e.(map[string]any)
+			if !ok {
+				continue
+			}
+			p := rawEntryToProduct(entry)
+			if p != nil {
+				products = append(products, *p)
+			}
+		}
+	}
+	return &ProductCatalog{products: products}
+}
+
+// Find returns the product matching brand and type, or an error.
+func (c *ProductCatalog) Find(brand string, t ProductType) (Product, error) {
+	p := c.TryFind(brand, t)
+	if p == nil {
+		return Product{}, fmt.Errorf("zyins: ProductCatalog.Find: no product matches brand=%q type=%q", brand, string(t))
+	}
+	return *p, nil
+}
+
+// TryFind returns the product matching brand and type, or nil.
+func (c *ProductCatalog) TryFind(brand string, t ProductType) *Product {
+	for i := range c.products {
+		if c.products[i].Brand == brand && c.products[i].Type == t {
+			p := c.products[i]
+			return &p
+		}
+	}
+	return nil
+}
+
+// FindBySlug returns the product matching the wire token slug, or an error.
+func (c *ProductCatalog) FindBySlug(slug string) (Product, error) {
+	p := c.TryFindBySlug(slug)
+	if p == nil {
+		return Product{}, fmt.Errorf("zyins: ProductCatalog.FindBySlug: no product matches slug=%q", slug)
+	}
+	return *p, nil
+}
+
+// TryFindBySlug returns the product matching the wire token slug, or nil.
+func (c *ProductCatalog) TryFindBySlug(slug string) *Product {
+	for i := range c.products {
+		if c.products[i].WireToken == slug {
+			p := c.products[i]
+			return &p
+		}
+	}
+	return nil
+}
+
+// List returns all products in the catalog.
+func (c *ProductCatalog) List() []Product {
+	out := make([]Product, len(c.products))
+	copy(out, c.products)
+	return out
+}
+
+func rawEntryToProduct(entry map[string]any) *Product {
+	identifier, _ := entry["identifier"].(string)
+	carrier, _ := entry["carrier"].(string)
+	name, _ := entry["name"].(string)
+	if identifier == "" || carrier == "" || name == "" {
+		return nil
+	}
+	productClass, _ := entry["product"].(string)
+	productType, ok := mapProductClass(productClass)
+	if !ok {
+		return nil
+	}
+	return &Product{
+		Brand:       carrier,
+		Type:        productType,
+		WireToken:   identifier,
+		DisplayName: name,
+	}
+}
+
+func mapProductClass(cls string) (ProductType, bool) {
+	switch strings.ToLower(cls) {
+	case "fex":
+		return ProductFinalExpense, true
+	case "term":
+		return ProductTerm, true
+	case "wl", "whole_life", "wholelife":
+		return ProductWholeLife, true
+	case "medsup", "medicare_supplement":
+		return ProductMedicareSupplement, true
+	case "ul", "universal":
+		return ProductUniversal, true
+	case "indexed":
+		return ProductIndexed, true
+	default:
+		return "", false
+	}
+}
+
+func defaultProducts() []Product {
+	return []Product{
+		{Brand: "colonial-penn", Type: ProductFinalExpense, WireToken: "colonial-penn.final-expense", DisplayName: "Colonial Penn Final Expense"},
+		{Brand: "mutual-of-omaha", Type: ProductFinalExpense, WireToken: "mutual-of-omaha.final-expense", DisplayName: "Mutual of Omaha Final Expense"},
+		{Brand: "aetna", Type: ProductMedicareSupplement, WireToken: "aetna.medicare-supplement", DisplayName: "Aetna Medicare Supplement"},
+	}
+}

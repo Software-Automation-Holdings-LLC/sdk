@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 )
@@ -44,7 +45,7 @@ func validApplicant(t *testing.T) Applicant {
 		Height:      h,
 		Weight:      w,
 		State:       "NC",
-		NicotineUse: NicotineNone,
+		NicotineUse: NicotineUsageInput{LastUsed: NicotineNever},
 	}
 }
 
@@ -116,7 +117,9 @@ func TestPrequalify_Run_HappyPath(t *testing.T) {
 	if err := json.Unmarshal(captured.body, &decoded); err != nil {
 		t.Fatalf("body unmarshal: %v", err)
 	}
-	if decoded["products"] != "colonial-penn.final-expense" {
+	// 0.5.1 flat wire: products is a string array.
+	prods, _ := decoded["products"].([]any)
+	if len(prods) != 1 || prods[0] != "colonial-penn.final-expense" {
 		t.Errorf("body.products = %v", decoded["products"])
 	}
 }
@@ -156,7 +159,9 @@ func TestPrequalify_Run_ServerValidationErrorTyped(t *testing.T) {
 }
 
 func TestQuote_Run_HappyPath(t *testing.T) {
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+	var captured []byte
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		captured, _ = io.ReadAll(r.Body)
 		w.Header().Set("Content-Type", "application/json")
 		_, _ = w.Write([]byte(`{
 			"data": {
@@ -181,6 +186,21 @@ func TestQuote_Run_HappyPath(t *testing.T) {
 	}
 	if result.MonthlyPremiumCents != 5295 || result.QuoteID != "q_01HZ" {
 		t.Errorf("unexpected result: %+v", result)
+	}
+	var decoded struct {
+		Applicant struct {
+			Sex         string        `json:"sex"`
+			NicotineUse NicotineUsage `json:"nicotine_use"`
+		} `json:"applicant"`
+	}
+	if err := json.Unmarshal(captured, &decoded); err != nil {
+		t.Fatalf("quote body unmarshal: %v", err)
+	}
+	if decoded.Applicant.Sex != "M" {
+		t.Errorf("quote applicant.sex = %q, want M", decoded.Applicant.Sex)
+	}
+	if decoded.Applicant.NicotineUse != NicotineNone {
+		t.Errorf("quote applicant.nicotine_use = %q, want %q", decoded.Applicant.NicotineUse, NicotineNone)
 	}
 }
 
@@ -305,18 +325,87 @@ func TestClient_RespectsContextCancellation(t *testing.T) {
 func TestPrequalify_WireBody_CarriesFlattenedApplicant(t *testing.T) {
 	cov, _ := NewFaceValueCoverage(100_000)
 	sel, _ := NewProductSelection("a.b", "c.d")
+	applicant := validApplicant(t)
+	applicant.Conditions = []Condition{{Name: "diabetes", WasDiagnosed: "2020", LastTreatment: "2024"}}
+	applicant.Medications = []Medication{{Name: "metformin", Use: "current", FirstFill: "2020", LastFill: "2024"}}
 	body, err := buildPrequalifyBody(&PrequalifyInput{
-		Applicant: validApplicant(t),
+		Applicant: applicant,
 		Coverage:  cov,
 		Products:  sel,
 	})
 	if err != nil {
 		t.Fatalf("buildPrequalifyBody: %v", err)
 	}
-	if body.Applicant.Sex != "M" || body.Applicant.HeightInches != 70 || body.Applicant.WeightPounds != 195 {
-		t.Errorf("applicant flatten wrong: %+v", body.Applicant)
+	// 0.5.1 flat wire — top-level fields, no applicant nesting.
+	if body.Gender != "male" || body.Height != 70 || body.Weight != 195 {
+		t.Errorf("flat wire fields wrong: gender=%q height=%d weight=%d", body.Gender, body.Height, body.Weight)
 	}
-	if body.Products != "a.b|c.d" {
-		t.Errorf("products wire = %q", body.Products)
+	if len(body.Products) != 2 || body.Products[0] != "a.b" || body.Products[1] != "c.d" {
+		t.Errorf("products wire = %v, want [a.b c.d]", body.Products)
+	}
+	if body.NicotineUsage.LastUsed != "never" {
+		t.Errorf("nicotine_usage.last_used = %q, want never", body.NicotineUsage.LastUsed)
+	}
+	raw, err := json.Marshal(body)
+	if err != nil {
+		t.Fatalf("body marshal: %v", err)
+	}
+	if strings.Contains(string(raw), "wasDiagnosed") || strings.Contains(string(raw), "firstFill") {
+		t.Fatalf("medical history used camelCase JSON keys: %s", raw)
+	}
+	if !strings.Contains(string(raw), "was_diagnosed") || !strings.Contains(string(raw), "first_fill") {
+		t.Fatalf("medical history missing snake_case JSON keys: %s", raw)
+	}
+}
+
+func TestProductsService_CatalogDedupesConcurrentFetch(t *testing.T) {
+	const callers = 5
+	var (
+		mu       sync.Mutex
+		requests int
+	)
+	release := make(chan struct{})
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		mu.Lock()
+		requests++
+		mu.Unlock()
+		<-release
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"data":{"products":{"fex":[{"identifier":"colonial-penn.final-expense","carrier":"colonial-penn","name":"Colonial Penn","product":"fex"}]}}}`))
+	}))
+	defer srv.Close()
+
+	c := newTestClient(t, srv)
+	start := make(chan struct{})
+	ready := make(chan struct{}, callers)
+	errs := make(chan error, callers)
+	var wg sync.WaitGroup
+	for i := 0; i < callers; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			ready <- struct{}{}
+			<-start
+			_, err := c.Products.Catalog(context.Background())
+			errs <- err
+		}()
+	}
+	for i := 0; i < callers; i++ {
+		<-ready
+	}
+	close(start)
+	close(release)
+	wg.Wait()
+	close(errs)
+	for err := range errs {
+		if err != nil {
+			t.Fatalf("Catalog: %v", err)
+		}
+	}
+	mu.Lock()
+	got := requests
+	mu.Unlock()
+	if got != 1 {
+		t.Errorf("catalog requests = %d, want 1", got)
 	}
 }

@@ -186,53 +186,99 @@ func (s *PrequalifyService) RunWithRawResponse(
 	return env, captureRawResponse(httpResp), nil
 }
 
-// prequalifyWireBody is the on-wire JSON shape for the prequalify
-// request. Kept private so external callers can never construct one
-// directly — the SDK builds it from the typed PrequalifyInput.
+// prequalifyWireBody is the flat on-wire JSON shape for the prequalify
+// request per the 0.5.1 wire contract (ADR-035). No applicant/coverage
+// nesting; credentials belong in HMAC headers only.
 type prequalifyWireBody struct {
-	Applicant prequalifyWireApplicant `json:"applicant"`
-	Coverage  Coverage                `json:"coverage"`
-	Products  string                  `json:"products"`
+	DateOfBirth   string                  `json:"date_of_birth"`
+	Gender        string                  `json:"gender"`
+	Height        int                     `json:"height"`
+	Weight        int                     `json:"weight"`
+	State         string                  `json:"state"`
+	Zip           string                  `json:"zip,omitempty"`
+	NicotineUsage prequalifyNicotineUsage `json:"nicotine_usage"`
+	Products      []string                `json:"products"`
+	Conditions    []prequalifyCondition   `json:"conditions,omitempty"`
+	Medications   []prequalifyMedication  `json:"medications,omitempty"`
+	QuoteOptions  prequalifyQuoteOptions  `json:"quote_options"`
 }
 
-// prequalifyWireApplicant flattens the Applicant struct to the keys the
-// engine expects (e.g., wire-coded sex, height_inches, weight_pounds).
-type prequalifyWireApplicant struct {
-	DOB          string        `json:"dob"`
-	Sex          string        `json:"sex"`
-	HeightInches int           `json:"height_inches"`
-	WeightPounds int           `json:"weight_pounds"`
-	State        string        `json:"state"`
-	Zip          string        `json:"zip,omitempty"`
-	NicotineUse  NicotineUsage `json:"nicotine_use"`
-	Medications  []Medication  `json:"medications,omitempty"`
-	Conditions   []Condition   `json:"conditions,omitempty"`
+type prequalifyNicotineUsage struct {
+	LastUsed     string                 `json:"last_used"`
+	ProductUsage []NicotineProductUsage `json:"product_usage,omitempty"`
 }
 
-// buildPrequalifyBody renders the wire body from the typed input. It
-// returns an error when a field cannot be encoded (e.g., an unknown Sex
-// value) so the SDK fails fast at the call site rather than shipping a
-// silently-corrupted request.
+type prequalifyCondition struct {
+	Name          string `json:"name"`
+	WasDiagnosed  string `json:"was_diagnosed"`
+	LastTreatment string `json:"last_treatment"`
+}
+
+type prequalifyMedication struct {
+	Name      string `json:"name"`
+	Use       string `json:"use"`
+	FirstFill string `json:"first_fill"`
+	LastFill  string `json:"last_fill"`
+}
+
+type prequalifyQuoteOptions struct {
+	Amounts   []string `json:"amounts"`
+	QuoteType string   `json:"quote_type"`
+}
+
+// buildPrequalifyBody renders the flat wire body from the typed input.
 func buildPrequalifyBody(in *PrequalifyInput) (prequalifyWireBody, error) {
-	sex, err := SexWireCode(in.Applicant.Sex)
-	if err != nil {
-		return prequalifyWireBody{}, err
+	if in.Applicant.Sex != SexMale && in.Applicant.Sex != SexFemale {
+		return prequalifyWireBody{}, fmt.Errorf("zyins: unknown Sex value %q", string(in.Applicant.Sex))
 	}
-	return prequalifyWireBody{
-		Applicant: prequalifyWireApplicant{
-			DOB:          in.Applicant.DOB,
-			Sex:          sex,
-			HeightInches: in.Applicant.Height.TotalInches,
-			WeightPounds: in.Applicant.Weight.Pounds,
-			State:        string(in.Applicant.State),
-			Zip:          in.Applicant.Zip,
-			NicotineUse:  in.Applicant.NicotineUse,
-			Medications:  in.Applicant.Medications,
-			Conditions:   in.Applicant.Conditions,
+
+	nicotineIn := in.Applicant.resolveNicotineUsageInput()
+	nicotineWire := prequalifyNicotineUsage{LastUsed: string(nicotineIn.LastUsed)}
+	if len(nicotineIn.ProductUsage) > 0 {
+		nicotineWire.ProductUsage = nicotineIn.ProductUsage
+	}
+
+	conds := make([]prequalifyCondition, len(in.Applicant.Conditions))
+	for i, c := range in.Applicant.Conditions {
+		conds[i] = prequalifyCondition{
+			Name:          c.Name,
+			WasDiagnosed:  c.WasDiagnosed,
+			LastTreatment: c.LastTreatment,
+		}
+	}
+
+	meds := make([]prequalifyMedication, len(in.Applicant.Medications))
+	for i, m := range in.Applicant.Medications {
+		meds[i] = prequalifyMedication{
+			Name:      m.Name,
+			Use:       m.Use,
+			FirstFill: m.FirstFill,
+			LastFill:  m.LastFill,
+		}
+	}
+
+	quoteType := "face_amounts"
+	if in.Coverage.IsMonthlyBudget() {
+		quoteType = "monthly_budget"
+	}
+
+	body := prequalifyWireBody{
+		DateOfBirth:   in.Applicant.DOB,
+		Gender:        string(in.Applicant.Sex),
+		Height:        in.Applicant.Height.TotalInches,
+		Weight:        in.Applicant.Weight.Pounds,
+		State:         string(in.Applicant.State),
+		Zip:           in.Applicant.Zip,
+		NicotineUsage: nicotineWire,
+		Products:      in.Products.WireTokens(),
+		Conditions:    conds,
+		Medications:   meds,
+		QuoteOptions: prequalifyQuoteOptions{
+			Amounts:   []string{fmt.Sprintf("%d", in.Coverage.Amount)},
+			QuoteType: quoteType,
 		},
-		Coverage: in.Coverage,
-		Products: in.Products.WireString(),
-	}, nil
+	}
+	return body, nil
 }
 
 // decodePrequalifyResponse parses the engine's JSON response. The

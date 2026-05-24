@@ -4,17 +4,17 @@ import "testing"
 
 func TestSexWireCode_MapsMaleAndFemale(t *testing.T) {
 	got, err := SexWireCode(SexMale)
-	if err != nil || got != "M" {
-		t.Errorf("SexWireCode(Male) = (%q, %v), want (M, nil)", got, err)
+	if err != nil || got != "male" {
+		t.Errorf("SexWireCode(Male) = (%q, %v), want (male, nil)", got, err)
 	}
 	got, err = SexWireCode(SexFemale)
-	if err != nil || got != "F" {
-		t.Errorf("SexWireCode(Female) = (%q, %v), want (F, nil)", got, err)
+	if err != nil || got != "female" {
+		t.Errorf("SexWireCode(Female) = (%q, %v), want (female, nil)", got, err)
 	}
 }
 
 func TestSexWireCode_UnknownValueReturnsError(t *testing.T) {
-	cases := []Sex{"", "unknown", "MALE", "f", "x"}
+	cases := []Sex{"", "unknown", "MALE", "f", "x", "M", "F"}
 	for _, s := range cases {
 		got, err := SexWireCode(s)
 		if err == nil {
@@ -35,7 +35,7 @@ func TestApplicant_Validate_RejectsUnknownSex(t *testing.T) {
 		Height:      h,
 		Weight:      w,
 		State:       "NC",
-		NicotineUse: NicotineNone,
+		NicotineUse: NicotineUsageInput{LastUsed: NicotineNever},
 	}
 	if err := a.validate(); err == nil {
 		t.Errorf("validate() accepted unknown Sex value")
@@ -87,7 +87,7 @@ func TestApplicant_Validate_RequiresFields(t *testing.T) {
 			Height:      h,
 			Weight:      w,
 			State:       "NC",
-			NicotineUse: NicotineNone,
+			NicotineUse: NicotineUsageInput{LastUsed: NicotineNever},
 		}
 	}
 	a := full()
@@ -101,7 +101,7 @@ func TestApplicant_Validate_RequiresFields(t *testing.T) {
 		"missing height":   func(a *Applicant) { a.Height = Height{} },
 		"missing weight":   func(a *Applicant) { a.Weight = Weight{} },
 		"missing state":    func(a *Applicant) { a.State = "" },
-		"missing nicotine": func(a *Applicant) { a.NicotineUse = "" },
+		"missing nicotine": func(a *Applicant) { a.NicotineUse = NicotineUsageInput{}; a.NicotineUsageLegacy = "" },
 	}
 	for name, mutate := range cases {
 		t.Run(name, func(t *testing.T) {
@@ -111,5 +111,72 @@ func TestApplicant_Validate_RequiresFields(t *testing.T) {
 				t.Errorf("expected validation error after %s", name)
 			}
 		})
+	}
+}
+
+func TestNicotineDuration_Values(t *testing.T) {
+	cases := []struct {
+		constant NicotineDuration
+		wire     string
+	}{
+		{NicotineNever, "never"},
+		{NicotineWithin12Months, "within_12_months"},
+		{Nicotine12To24Months, "12_to_24_months"},
+		{Nicotine24To36Months, "24_to_36_months"},
+		{Nicotine36To48Months, "36_to_48_months"},
+		{Nicotine48To60Months, "48_to_60_months"},
+		{NicotineOver60Months, "over_60_months"},
+	}
+	for _, c := range cases {
+		if string(c.constant) != c.wire {
+			t.Errorf("NicotineDuration %q has wire value %q, want %q", c.constant, string(c.constant), c.wire)
+		}
+	}
+}
+
+func TestApplicant_LegacyNicotine_MapsToInput(t *testing.T) {
+	h, _ := NewHeight(5, 10)
+	w, _ := NewWeight(195)
+	a := Applicant{
+		DOB:                 "1962-04-18",
+		Sex:                 SexMale,
+		Height:              h,
+		Weight:              w,
+		State:               "NC",
+		NicotineUsageLegacy: NicotineNone,
+	}
+	if err := a.validate(); err != nil {
+		t.Fatalf("legacy nicotine should pass validate: %v", err)
+	}
+	resolved := a.resolveNicotineUsageInput()
+	if resolved.LastUsed != NicotineNever {
+		t.Errorf("NicotineNone should resolve to NicotineNever, got %q", resolved.LastUsed)
+	}
+
+	a.NicotineUsageLegacy = NicotineCurrent
+	if a.resolveNicotineUsageInput().LastUsed != NicotineWithin12Months {
+		t.Errorf("NicotineCurrent should resolve to NicotineWithin12Months")
+	}
+
+	a.NicotineUsageLegacy = NicotineFormer
+	if a.resolveNicotineUsageInput().LastUsed != Nicotine12To24Months {
+		t.Errorf("NicotineFormer should resolve to Nicotine12To24Months")
+	}
+}
+
+func TestApplicant_Validate_RejectsUnknownLegacyNicotine(t *testing.T) {
+	h, _ := NewHeight(5, 10)
+	w, _ := NewWeight(195)
+	a := Applicant{
+		DOB:                 "1962-04-18",
+		Sex:                 SexMale,
+		Height:              h,
+		Weight:              w,
+		State:               "NC",
+		NicotineUsageLegacy: NicotineUsage("sometimes"),
+	}
+
+	if err := a.validate(); err == nil {
+		t.Fatalf("validate accepted unknown legacy nicotine value")
 	}
 }

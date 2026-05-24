@@ -36,6 +36,9 @@ type Client struct {
 	// Datasets reads the read-only datasets surface (conditions,
 	// medications, brands, plans).
 	Datasets *DatasetsService
+	// Products provides a memoized product catalog fetched from the
+	// server once and cached for subsequent calls.
+	Products *ProductsService
 	// ReferenceData reads engine reference tables (states, products,
 	// nicotine modes).
 	ReferenceData *ReferenceDataService
@@ -258,6 +261,7 @@ func NewClient(opts ...Option) (*Client, error) {
 	c.Prequalify = &PrequalifyService{client: c}
 	c.Quote = &QuoteService{client: c}
 	c.Datasets = &DatasetsService{client: c}
+	c.Products = &ProductsService{client: c}
 	c.ReferenceData = &ReferenceDataService{client: c}
 	c.Usage = &UsageService{client: c}
 	c.License = &LicenseService{client: c}

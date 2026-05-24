@@ -20,7 +20,7 @@ type httpDoer = coretransport.HTTPDoer
 
 // userAgentHeader is the canonical SDK User-Agent string. The version
 // suffix is fixed at build time; bump it on each release.
-const userAgentHeader = "isa-sdk-zyins-go/0.1.0"
+const userAgentHeader = "isa-sdk-zyins-go/0.5.1"
 
 // jsonContentType is the wire media type for ZyINS requests and
 // responses. The server accepts application/problem+json on errors

@@ -22,9 +22,8 @@ import (
 // catches typos like `"North Carolina"` at the catalog lookup edge.
 type State = catalog.State
 
-// Sex is the applicant's biological sex. The wire format uses single-
-// letter codes; SexWireCode performs that mapping so call sites never
-// spell `"M"` or `"F"` inline.
+// Sex is the applicant's biological sex. The canonical wire values are
+// "male" and "female" — emit string(sex) directly at the wire layer.
 type Sex string
 
 const (
@@ -32,26 +31,57 @@ const (
 	SexFemale Sex = "female"
 )
 
-// SexWireCode returns the single-letter wire token for s, or an error
-// if s is not a recognized Sex value. Callers must surface the error
-// rather than silently shipping a default — an unknown value almost
-// always means a caller bug (uninitialized field, untyped string cast,
-// or a value sourced from external data without validation), and the
-// previous default-to-female behavior masked these bugs at the wire.
+// SexWireCode returns the canonical wire string for s.
+//
+// Deprecated: Use string(sex) directly. Sex values are already the
+// canonical wire tokens ("male"/"female") as of v0.5.1. Will be removed
+// in v0.7.0.
 func SexWireCode(s Sex) (string, error) {
 	switch s {
-	case SexMale:
-		return "M", nil
-	case SexFemale:
-		return "F", nil
+	case SexMale, SexFemale:
+		return string(s), nil
 	default:
 		return "", fmt.Errorf("zyins: SexWireCode: unknown Sex value %q (must be %q or %q)", string(s), string(SexMale), string(SexFemale))
 	}
 }
 
-// NicotineUsage captures current/former/none nicotine status. The wire
-// format collapses this to yes/no in legacy paths and a tri-state in
-// the modern path; callers state the underlying fact and the SDK maps.
+// NicotineDuration is the seven-bucket duration encoding for nicotine
+// use history. It is the preferred form for the 0.5.1 wire.
+type NicotineDuration string
+
+const (
+	NicotineNever          NicotineDuration = "never"
+	NicotineWithin12Months NicotineDuration = "within_12_months"
+	Nicotine12To24Months   NicotineDuration = "12_to_24_months"
+	Nicotine24To36Months   NicotineDuration = "24_to_36_months"
+	Nicotine36To48Months   NicotineDuration = "36_to_48_months"
+	Nicotine48To60Months   NicotineDuration = "48_to_60_months"
+	NicotineOver60Months   NicotineDuration = "over_60_months"
+)
+
+// NicotineProductUsage records how frequently a specific nicotine
+// product type is used. Used inside NicotineUsageInput.
+type NicotineProductUsage struct {
+	// Type is the product name (e.g., "cigarettes", "cigars").
+	Type string `json:"type"`
+	// Frequency is a descriptive rate (e.g., "daily", "occasional").
+	Frequency string `json:"frequency"`
+}
+
+// NicotineUsageInput is the structured, duration-aware nicotine input
+// for the 0.5.1 wire. Prefer this over the deprecated NicotineUsage
+// enum for new code.
+type NicotineUsageInput struct {
+	// LastUsed is the duration bucket for the most recent nicotine use.
+	LastUsed NicotineDuration
+	// ProductUsage is an optional breakdown by product type.
+	ProductUsage []NicotineProductUsage
+}
+
+// NicotineUsage captures current/former/none nicotine status.
+//
+// Deprecated: Use NicotineUsageInput with NicotineDuration constants.
+// Will be removed in v0.7.0.
 type NicotineUsage string
 
 const (
@@ -152,9 +182,18 @@ type Applicant struct {
 	State State `json:"state"`
 	// Zip is the postal code; required by some product families.
 	Zip string `json:"zip,omitempty"`
-	// NicotineUse is the underlying fact; mapped to wire shape by the
-	// prequalify builder.
-	NicotineUse NicotineUsage `json:"nicotine_use"`
+	// NicotineUse is the underlying fact; mapped to the wire shape by the
+	// prequalify builder. Set via NicotineUsageInput for 0.5.1+.
+	//
+	// Deprecated: NicotineUsageLegacy accepts the old NicotineUsage enum.
+	// Will be removed in v0.7.0.
+	NicotineUse NicotineUsageInput `json:"-"`
+	// NicotineUsageLegacy holds the deprecated three-value enum when the
+	// caller has not yet migrated to NicotineUsageInput.
+	//
+	// Deprecated: Use NicotineUse (NicotineUsageInput) instead. Will be
+	// removed in v0.7.0.
+	NicotineUsageLegacy NicotineUsage `json:"-"`
 	// Medications is the applicant's drug list; may be empty.
 	Medications []Medication `json:"medications,omitempty"`
 	// Conditions is the applicant's medical history; may be empty.
@@ -186,8 +225,37 @@ func (a *Applicant) validate() error {
 	if a.State == "" {
 		return errors.New("zyins: applicant.State is required")
 	}
-	if a.NicotineUse == "" {
-		return errors.New("zyins: applicant.NicotineUse is required")
+	if a.NicotineUse.LastUsed == "" && a.NicotineUsageLegacy == "" {
+		return errors.New("zyins: applicant.NicotineUse or NicotineUsageLegacy is required")
+	}
+	if a.NicotineUse.LastUsed == "" {
+		switch a.NicotineUsageLegacy {
+		case NicotineNone, NicotineCurrent, NicotineFormer:
+		default:
+			return fmt.Errorf("zyins: applicant.NicotineUsageLegacy must be %q, %q, or %q, got %q", NicotineNone, NicotineCurrent, NicotineFormer, a.NicotineUsageLegacy)
+		}
 	}
 	return nil
+}
+
+// resolveNicotineUsageInput returns the NicotineUsageInput to serialize,
+// mapping NicotineUsageLegacy to the nearest duration bucket when the
+// caller used the deprecated field.
+func (a *Applicant) resolveNicotineUsageInput() NicotineUsageInput {
+	if a.NicotineUse.LastUsed != "" {
+		return a.NicotineUse
+	}
+	// Legacy enum → nearest 0.5.1 bucket.
+	var d NicotineDuration
+	switch a.NicotineUsageLegacy {
+	case NicotineNone:
+		d = NicotineNever
+	case NicotineCurrent:
+		d = NicotineWithin12Months
+	case NicotineFormer:
+		d = Nicotine12To24Months
+	default:
+		return NicotineUsageInput{}
+	}
+	return NicotineUsageInput{LastUsed: d}
 }

@@ -11,6 +11,11 @@ import (
 // quotePath is the canonical path for the quote operation.
 const quotePath = "/v1/quote"
 
+const (
+	quoteSexMale   = "M"
+	quoteSexFemale = "F"
+)
+
 // QuoteService is the typed sub-service for the quote operation.
 // Quote finalizes a premium for one chosen plan after a prequalify run
 // has selected the carrier/tier combination.
@@ -78,29 +83,7 @@ func (s *QuoteService) Run(ctx context.Context, input *QuoteInput, opts ...RunOp
 		}}
 	}
 
-	sex, err := SexWireCode(input.Applicant.Sex)
-	if err != nil {
-		return nil, &ValidationError{Base: &Error{
-			Code:    ErrorCodeValidationError,
-			Message: err.Error(),
-		}}
-	}
-	body := quoteWireBody{
-		Applicant: prequalifyWireApplicant{
-			DOB:          input.Applicant.DOB,
-			Sex:          sex,
-			HeightInches: input.Applicant.Height.TotalInches,
-			WeightPounds: input.Applicant.Weight.Pounds,
-			State:        string(input.Applicant.State),
-			Zip:          input.Applicant.Zip,
-			NicotineUse:  input.Applicant.NicotineUse,
-			Medications:  input.Applicant.Medications,
-			Conditions:   input.Applicant.Conditions,
-		},
-		Coverage:     input.Coverage,
-		ProductToken: input.ProductToken,
-	}
-
+	body := buildQuoteBody(input)
 	ro := runOptions{}
 	for _, o := range opts {
 		if o != nil {
@@ -147,27 +130,7 @@ func (s *QuoteService) RunWithRawResponse(
 			Code: ErrorCodeValidationError, Message: "zyins: QuoteInput.ProductToken is required",
 		}}
 	}
-	sex, err := SexWireCode(input.Applicant.Sex)
-	if err != nil {
-		return nil, nil, &ValidationError{Base: &Error{
-			Code: ErrorCodeValidationError, Message: err.Error(),
-		}}
-	}
-	body := quoteWireBody{
-		Applicant: prequalifyWireApplicant{
-			DOB:          input.Applicant.DOB,
-			Sex:          sex,
-			HeightInches: input.Applicant.Height.TotalInches,
-			WeightPounds: input.Applicant.Weight.Pounds,
-			State:        string(input.Applicant.State),
-			Zip:          input.Applicant.Zip,
-			NicotineUse:  input.Applicant.NicotineUse,
-			Medications:  input.Applicant.Medications,
-			Conditions:   input.Applicant.Conditions,
-		},
-		Coverage:     input.Coverage,
-		ProductToken: input.ProductToken,
-	}
+	body := buildQuoteBody(input)
 	ro := runOptions{}
 	for _, o := range opts {
 		if o != nil {
@@ -194,9 +157,63 @@ func (s *QuoteService) RunWithRawResponse(
 
 // quoteWireBody is the on-wire JSON shape for the quote request.
 type quoteWireBody struct {
-	Applicant    prequalifyWireApplicant `json:"applicant"`
-	Coverage     Coverage                `json:"coverage"`
-	ProductToken string                  `json:"product_token"`
+	Applicant    quoteWireApplicant `json:"applicant"`
+	Coverage     Coverage           `json:"coverage"`
+	ProductToken string             `json:"product_token"`
+}
+
+// quoteWireApplicant is the applicant sub-object for the quote endpoint.
+type quoteWireApplicant struct {
+	DOB          string        `json:"dob"`
+	Sex          string        `json:"sex"`
+	HeightInches int           `json:"height_inches"`
+	WeightPounds int           `json:"weight_pounds"`
+	State        string        `json:"state"`
+	Zip          string        `json:"zip,omitempty"`
+	NicotineUse  NicotineUsage `json:"nicotine_use"`
+	Medications  []Medication  `json:"medications,omitempty"`
+	Conditions   []Condition   `json:"conditions,omitempty"`
+}
+
+// buildQuoteBody renders the wire body for the quote endpoint.
+func buildQuoteBody(input *QuoteInput) quoteWireBody {
+	return quoteWireBody{
+		Applicant: quoteWireApplicant{
+			DOB:          input.Applicant.DOB,
+			Sex:          quoteSexWireCode(input.Applicant.Sex),
+			HeightInches: input.Applicant.Height.TotalInches,
+			WeightPounds: input.Applicant.Weight.Pounds,
+			State:        string(input.Applicant.State),
+			Zip:          input.Applicant.Zip,
+			NicotineUse:  quoteNicotineUsage(input.Applicant.resolveNicotineUsageInput()),
+			Medications:  input.Applicant.Medications,
+			Conditions:   input.Applicant.Conditions,
+		},
+		Coverage:     input.Coverage,
+		ProductToken: input.ProductToken,
+	}
+}
+
+func quoteSexWireCode(sex Sex) string {
+	switch sex {
+	case SexMale:
+		return quoteSexMale
+	case SexFemale:
+		return quoteSexFemale
+	default:
+		return ""
+	}
+}
+
+func quoteNicotineUsage(usage NicotineUsageInput) NicotineUsage {
+	switch usage.LastUsed {
+	case NicotineNever:
+		return NicotineNone
+	case NicotineWithin12Months:
+		return NicotineCurrent
+	default:
+		return NicotineFormer
+	}
 }
 
 // decodeQuoteResponse parses the server response, unwrapping the

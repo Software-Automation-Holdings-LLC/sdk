@@ -70,3 +70,40 @@ func TestProductSelection_FromProducts(t *testing.T) {
 		t.Errorf("ProductSelection leaked internal slice; brand mutated")
 	}
 }
+
+func TestProductCatalog_TryFindReturnsCopy(t *testing.T) {
+	catalog := DefaultProductCatalog()
+	p := catalog.TryFind("colonial-penn", ProductFinalExpense)
+	if p == nil {
+		t.Fatalf("expected product")
+	}
+
+	p.Brand = "mutated"
+
+	got, err := catalog.Find("colonial-penn", ProductFinalExpense)
+	if err != nil {
+		t.Fatalf("Find: %v", err)
+	}
+	if got.Brand != "colonial-penn" {
+		t.Errorf("TryFind leaked catalog storage; brand = %q", got.Brand)
+	}
+}
+
+func TestProductCatalogFromDatasets_SkipsUnknownProductClass(t *testing.T) {
+	catalog := ProductCatalogFromDatasets(map[string]any{
+		"products": map[string]any{
+			"unknown": []any{
+				map[string]any{
+					"identifier": "carrier.unknown",
+					"carrier":    "carrier",
+					"name":       "Unknown Product",
+					"product":    "unexpected",
+				},
+			},
+		},
+	})
+
+	if got := catalog.List(); len(got) != 0 {
+		t.Fatalf("unknown product class was included: %+v", got)
+	}
+}
