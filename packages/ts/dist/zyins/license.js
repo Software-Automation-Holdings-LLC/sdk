@@ -1,23 +1,24 @@
 /**
- * Tier 3 license operations — proto-backed (`/v1/licenses/activate`,
- * `/v1/licenses/check`, `/v1/licenses/deactivate`).
+ * Tier 3 license operations — bootstrap endpoints at
+ * `/v2/licenses/{activate,check,deactivate}`.
  *
- * The TS/JS surface is singular (`isa.zyins.license`) — a device has exactly
- * one license, not a collection. The wire paths remain plural for backward
- * compatibility with the deployed server; only the SDK names changed.
+ * These three operations sit OUTSIDE AuthMiddleware on the server: activate
+ * is the call that MINTS the licenseKey, so we cannot sign requests with a
+ * credential we do not yet have. Headers carry only Idempotency-Key and the
+ * device id; no HMAC signature, no Authorization header.
  *
- * The proto definitions for the request and response shapes live in
- * `shared/schemas/api/zyins/v1/licenses.proto`.
+ * The public TypeScript shape for `LicenseActivateResult` is preserved for
+ * bpp2.0's `useSoftwareActivator.js`, which reads `result.auth.licenseKey`.
+ * Only the wire parsing adapts to the v2 envelope shape.
  */
 import { fromHttpResponse } from './errors';
 import { deriveIdempotencyKey } from './idempotency';
 import { parseJsonResponse, unwrapEnvelope as unwrapParsedEnvelope } from './response';
-import { buildLicenseHMACHeaders } from '../core';
-import { systemClock } from '../core';
-const LICENSES_ACTIVATE_PATH = '/v1/licenses/activate';
-const LICENSES_CHECK_PATH = '/v1/licenses/check';
-const LICENSES_DEACTIVATE_PATH = '/v1/licenses/deactivate';
-const DEACTIVATED_STATUS = 'deactivated';
+import { stripQuotes } from '../core/license/deviceAuth';
+const LICENSES_ACTIVATE_PATH = '/v2/licenses/activate';
+const LICENSES_CHECK_PATH = '/v2/licenses/check';
+const LICENSES_DEACTIVATE_PATH = '/v2/licenses/deactivate';
+const DEACTIVATED_STATUS = 'inactive';
 /**
  * Activate a license on a new device. The server mints a license key,
  * decrements the order's remaining-activations counter, and returns
@@ -118,7 +119,7 @@ function serializeActivate(request) {
     return {
         email: request.email,
         keycode: request.keycode,
-        device_id: request.deviceId,
+        deviceId: request.deviceId,
     };
 }
 function serializeCheck(request) {
@@ -127,9 +128,9 @@ function serializeCheck(request) {
         keycode: request.keycode,
     };
     if (request.deviceId)
-        payload['device_id'] = request.deviceId;
+        payload['deviceId'] = request.deviceId;
     if (request.licenseKey)
-        payload['license_key'] = request.licenseKey;
+        payload['licenseKey'] = request.licenseKey;
     return payload;
 }
 function serializeDeactivate(request) {
@@ -138,7 +139,7 @@ function serializeDeactivate(request) {
         keycode: request.keycode,
     };
     if (request.deviceId)
-        payload['device_id'] = request.deviceId;
+        payload['deviceId'] = request.deviceId;
     return payload;
 }
 function parseActivate(body) {
@@ -147,22 +148,12 @@ function parseActivate(body) {
     if (typeof status !== 'string' || status === '') {
         throw new Error('zyins: license.activate response missing status field');
     }
-    const remaining = data.remaining_activations ?? data.remainingActivations;
-    if (typeof remaining !== 'number') {
-        throw new Error('zyins: license.activate response missing remainingActivations');
-    }
-    const auth = data.auth;
-    if (!auth || typeof auth !== 'object') {
-        throw new Error('zyins: license.activate response missing auth block');
-    }
-    const licenseKey = auth.license_key ?? auth.licenseKey;
-    if (typeof licenseKey !== 'string' || licenseKey === '') {
-        throw new Error('zyins: license.activate response missing auth.licenseKey');
-    }
+    const licenseKey = typeof data.licenseKey === 'string' ? data.licenseKey : '';
+    const remainingActivations = typeof data.remainingActivations === 'number' ? data.remainingActivations : 0;
     return {
         status,
         auth: { licenseKey },
-        remainingActivations: remaining,
+        remainingActivations,
     };
 }
 function parseCheck(body) {
@@ -176,10 +167,12 @@ function parseCheck(body) {
 function parseDeactivate(body) {
     const data = unwrapEnvelope(body);
     const status = data.status;
-    if (status !== DEACTIVATED_STATUS) {
-        throw new Error('zyins: license.deactivate response missing deactivated status');
+    // v2 returns "inactive" on success; accept the legacy "deactivated" too
+    // so a server still serving the old wire word does not break consumers.
+    if (status !== DEACTIVATED_STATUS && status !== 'deactivated') {
+        throw new Error('zyins: license.deactivate response missing inactive status');
     }
-    return { status };
+    return { status: status };
 }
 function unwrapEnvelope(body) {
     if (!body) {
@@ -187,13 +180,21 @@ function unwrapEnvelope(body) {
     }
     return unwrapParsedEnvelope(parseJsonResponse(body, 'license'));
 }
-async function buildHeaders(args) {
-    const signed = await buildLicenseHMACHeaders(args.ctx.auth.licenseKey, args.ctx.auth.orderId, args.ctx.auth.email, 'POST', args.path, args.body, args.ctx.auth.deviceId, args.ctx.clock ?? systemClock);
-    return {
-        ...signed,
+// buildHeaders emits ONLY the bootstrap-safe headers for the v2 license
+// endpoints. These three operations sit outside AuthMiddleware on the
+// server: activate is what mints the licenseKey, so signing here would
+// require a credential the client does not yet have. The server tracks
+// the activation slot by X-Device-ID; no Authorization, no signature.
+function buildHeaders(args) {
+    const headers = {
         'Content-Type': 'application/json',
         Accept: 'application/json',
         'Idempotency-Key': args.idempotencyKey,
     };
+    const deviceId = args.ctx.auth.deviceId;
+    if (deviceId) {
+        headers['X-Device-ID'] = stripQuotes(deviceId);
+    }
+    return headers;
 }
 //# sourceMappingURL=license.js.map

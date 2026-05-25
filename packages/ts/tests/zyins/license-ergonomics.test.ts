@@ -58,8 +58,8 @@ function recording(
 
 const ACTIVATE_BODY = JSON.stringify({
   status: 'active',
+  licenseKey: 'LK-FRESH',
   remainingActivations: 1,
-  auth: { licenseKey: 'LK-FRESH' },
 });
 
 describe('isa.zyins.license ergonomics', () => {
@@ -80,7 +80,7 @@ describe('isa.zyins.license ergonomics', () => {
     const body = jsonObject(requests[0]!.body);
     expect(body['email']).toBe(TEST_AUTH.email);
     expect(body['keycode']).toBe(TEST_AUTH.licenseKey);
-    expect(body['device_id']).toBe(TEST_AUTH.deviceId);
+    expect(body['deviceId']).toBe(TEST_AUTH.deviceId);
   });
 
   it('activate() stashes the fresh license key into shared AuthContext', async () => {
@@ -133,7 +133,7 @@ describe('isa.zyins.license ergonomics', () => {
   it('activate() does not stash credentials for non-active responses', async () => {
     const { transport } = recording(
       200,
-      JSON.stringify({ status: 'locked', remainingActivations: 0, auth: { licenseKey: 'LK-LOCKED' } }),
+      JSON.stringify({ status: 'locked', licenseKey: 'LK-LOCKED', remainingActivations: 0 }),
     );
     const isa = await Isa.withKeycode(
       {
@@ -303,8 +303,8 @@ describe('isa.zyins.license ergonomics', () => {
     expect(isa.credentialState?.auth.licenseKey).toBe('LK-PERSISTED');
     await isa.zyins.license.check();
     const body = jsonObject(requests[0]!.body);
-    expect(body['device_id']).toBe('persistent-device-id');
-    expect(body['license_key']).toBe('LK-PERSISTED');
+    expect(body['deviceId']).toBe('persistent-device-id');
+    expect(body['licenseKey']).toBe('LK-PERSISTED');
   });
 
   it('Isa.fromEnv selects license mode when ISA_LICENSE_* is set', async () => {

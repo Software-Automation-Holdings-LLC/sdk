@@ -54,13 +54,13 @@ describe('isa.zyins.license namespace', () => {
     expect(typeof isa.zyins.license.deactivate).toBe('function');
   });
 
-  it('delegates activate() to POST /v1/licenses/activate', async () => {
+  it('delegates activate() to POST /v2/licenses/activate', async () => {
     const { transport, requests } = recording(
       200,
       JSON.stringify({
         status: 'active',
+        licenseKey: 'LK-1',
         remainingActivations: 1,
-        auth: { licenseKey: 'LK-1' },
       }),
     );
     const isa = await buildIsa(transport);
@@ -70,10 +70,10 @@ describe('isa.zyins.license namespace', () => {
       deviceId: TEST_AUTH.deviceId,
     });
     expect(result.auth.licenseKey).toBe('LK-1');
-    expect(requests[0]!.url).toContain('/v1/licenses/activate');
+    expect(requests[0]!.url).toContain('/v2/licenses/activate');
   });
 
-  it('delegates check() to POST /v1/licenses/check', async () => {
+  it('delegates check() to POST /v2/licenses/check', async () => {
     const { transport, requests } = recording(200, JSON.stringify({ status: 'active' }));
     const isa = await buildIsa(transport);
     const result = await isa.zyins.license.check({
@@ -81,10 +81,10 @@ describe('isa.zyins.license namespace', () => {
       keycode: TEST_AUTH.licenseKey,
     });
     expect(result.status).toBe('active');
-    expect(requests[0]!.url).toContain('/v1/licenses/check');
+    expect(requests[0]!.url).toContain('/v2/licenses/check');
   });
 
-  it('delegates deactivate() to POST /v1/licenses/deactivate', async () => {
+  it('delegates deactivate() to POST /v2/licenses/deactivate', async () => {
     const { transport, requests } = recording(200, JSON.stringify({ status: 'deactivated' }));
     const isa = await buildIsa(transport);
     const result = await isa.zyins.license.deactivate({
@@ -92,6 +92,6 @@ describe('isa.zyins.license namespace', () => {
       keycode: TEST_AUTH.licenseKey,
     });
     expect(result.status).toBe('deactivated');
-    expect(requests[0]!.url).toContain('/v1/licenses/deactivate');
+    expect(requests[0]!.url).toContain('/v2/licenses/deactivate');
   });
 });

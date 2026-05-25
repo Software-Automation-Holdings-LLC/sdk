@@ -1,13 +1,15 @@
 /**
- * Tier 3 license operations — proto-backed (`/v1/licenses/activate`,
- * `/v1/licenses/check`, `/v1/licenses/deactivate`).
+ * Tier 3 license operations — bootstrap endpoints at
+ * `/v2/licenses/{activate,check,deactivate}`.
  *
- * The TS/JS surface is singular (`isa.zyins.license`) — a device has exactly
- * one license, not a collection. The wire paths remain plural for backward
- * compatibility with the deployed server; only the SDK names changed.
+ * These three operations sit OUTSIDE AuthMiddleware on the server: activate
+ * is the call that MINTS the licenseKey, so we cannot sign requests with a
+ * credential we do not yet have. Headers carry only Idempotency-Key and the
+ * device id; no HMAC signature, no Authorization header.
  *
- * The proto definitions for the request and response shapes live in
- * `shared/schemas/api/zyins/v1/licenses.proto`.
+ * The public TypeScript shape for `LicenseActivateResult` is preserved for
+ * bpp2.0's `useSoftwareActivator.js`, which reads `result.auth.licenseKey`.
+ * Only the wire parsing adapts to the v2 envelope shape.
  */
 import { type AuthContext } from './auth';
 import { type Transport } from './transport';

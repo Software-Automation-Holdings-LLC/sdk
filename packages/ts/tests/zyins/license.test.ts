@@ -18,13 +18,16 @@ function jsonObject(raw: string): Record<string, unknown> {
 }
 
 describe('ZyInsClient.license.activate', () => {
+  // v2 wire shape: licenseKey + remainingActivations live at the top level
+  // of the data envelope; the SDK surfaces them as { auth: { licenseKey } }
+  // for bpp2.0 backward compat.
   const ACTIVATE_OK = JSON.stringify({
     status: 'active',
+    licenseKey: 'LIC-NEW-7890',
     remainingActivations: 2,
-    auth: { licenseKey: 'LIC-NEW-7890' },
   });
 
-  it('POSTs JSON to /v1/licenses/activate with email + keycode + device_id', async () => {
+  it('POSTs JSON to /v2/licenses/activate with email + keycode + deviceId', async () => {
     const { transport, requests } = recordingTransport(200, ACTIVATE_OK);
     const c = client(transport);
     const result = await c.license.activate({
@@ -37,20 +40,22 @@ describe('ZyInsClient.license.activate', () => {
     expect(result.auth.licenseKey).toBe('LIC-NEW-7890');
     expect(requests).toHaveLength(1);
     expect(requests[0]!.method).toBe('POST');
-    expect(requests[0]!.url).toBe('https://test.example/v1/licenses/activate');
+    expect(requests[0]!.url).toBe('https://test.example/v2/licenses/activate');
     expect(requests[0]!.headers['Content-Type']).toBe('application/json');
     expect(requests[0]!.headers['Idempotency-Key']).toBeTruthy();
+    expect(requests[0]!.headers['X-Device-ID']).toBe('device-xyz-123');
+    expect(requests[0]!.headers['Authorization']).toBeUndefined();
     const payload = jsonObject(requests[0]!.body);
     expect(payload['email']).toBe('john.doe@acme-agency.com');
     expect(payload['keycode']).toBe('ABC-123-XYZ');
-    expect(payload['device_id']).toBe('device-xyz-123');
+    expect(payload['deviceId']).toBe('device-xyz-123');
   });
 
   it('accepts the ADR-012 envelope shape', async () => {
     const { transport } = recordingTransport(
       200,
       JSON.stringify({
-        data: { status: 'active', remainingActivations: 0, auth: { licenseKey: 'LK-1' } },
+        data: { status: 'active', licenseKey: 'LK-1', remainingActivations: 0 },
       }),
     );
     const c = client(transport);
@@ -63,23 +68,6 @@ describe('ZyInsClient.license.activate', () => {
     expect(result.remainingActivations).toBe(0);
   });
 
-  it('accepts snake_case activation fields from the server', async () => {
-    const { transport } = recordingTransport(
-      200,
-      JSON.stringify({
-        data: { status: 'active', remaining_activations: 1, auth: { license_key: 'LK-2' } },
-      }),
-    );
-    const c = client(transport);
-    const result = await c.license.activate({
-      email: 'x@x',
-      keycode: 'ABC-123-XYZ',
-      deviceId: 'd',
-    });
-    expect(result.auth.licenseKey).toBe('LK-2');
-    expect(result.remainingActivations).toBe(1);
-  });
-
   it('rejects missing deviceId', async () => {
     const { transport } = recordingTransport(200, ACTIVATE_OK);
     const c = client(transport);
@@ -88,12 +76,12 @@ describe('ZyInsClient.license.activate', () => {
     ).rejects.toThrow(/deviceId/);
   });
 
-  it('rejects malformed success responses', async () => {
-    const { transport } = recordingTransport(200, JSON.stringify({ status: 'active' }));
+  it('rejects responses missing the status field', async () => {
+    const { transport } = recordingTransport(200, JSON.stringify({ licenseKey: 'lk' }));
     const c = client(transport);
     await expect(
       c.license.activate({ email: 'x@x', keycode: 'ABC-123-XYZ', deviceId: 'd' }),
-    ).rejects.toThrow(/remainingActivations/);
+    ).rejects.toThrow(/status/);
   });
 
   it('surfaces 4xx as a typed error', async () => {
@@ -120,7 +108,7 @@ describe('ZyInsClient.license.activate', () => {
 });
 
 describe('ZyInsClient.license.check', () => {
-  it('POSTs JSON to /v1/licenses/check with email + keycode', async () => {
+  it('POSTs JSON to /v2/licenses/check with email + keycode', async () => {
     const { transport, requests } = recordingTransport(200, JSON.stringify({ status: 'valid' }));
     const c = client(transport);
     const result = await c.license.check({
@@ -131,13 +119,13 @@ describe('ZyInsClient.license.check', () => {
     expect(result.status).toBe('valid');
     expect(requests).toHaveLength(1);
     expect(requests[0]!.method).toBe('POST');
-    expect(requests[0]!.url).toBe('https://test.example/v1/licenses/check');
+    expect(requests[0]!.url).toBe('https://test.example/v2/licenses/check');
     expect(requests[0]!.headers['Content-Type']).toBe('application/json');
     expect(requests[0]!.headers['Idempotency-Key']).toBeTruthy();
     const payload = jsonObject(requests[0]!.body);
     expect(payload['email']).toBe('john.doe@acme-agency.com');
     expect(payload['keycode']).toBe('ABC-123-XYZ');
-    expect(payload['device_id']).toBe('device-1');
+    expect(payload['deviceId']).toBe('device-1');
   });
 
   it('accepts the ADR-012 envelope shape', async () => {
@@ -164,18 +152,18 @@ describe('ZyInsClient.license.check', () => {
 });
 
 describe('ZyInsClient.license.deactivate', () => {
-  it('POSTs JSON to /v1/licenses/deactivate and returns the status', async () => {
+  it('POSTs JSON to /v2/licenses/deactivate and returns the inactive status', async () => {
     const { transport, requests } = recordingTransport(
       200,
-      JSON.stringify({ status: 'deactivated' }),
+      JSON.stringify({ status: 'inactive' }),
     );
     const c = client(transport);
     const result = await c.license.deactivate({
       email: 'john.doe@acme-agency.com',
       keycode: 'ABC-123-XYZ',
     });
-    expect(result.status).toBe('deactivated');
-    expect(requests[0]!.url).toBe('https://test.example/v1/licenses/deactivate');
+    expect(result.status).toBe('inactive');
+    expect(requests[0]!.url).toBe('https://test.example/v2/licenses/deactivate');
     expect(requests[0]!.headers['Idempotency-Key']).toBeTruthy();
   });
 
@@ -188,6 +176,6 @@ describe('ZyInsClient.license.deactivate', () => {
   it('rejects malformed success responses', async () => {
     const { transport } = recordingTransport(200, '{}');
     const c = client(transport);
-    await expect(c.license.deactivate({ email: 'x@x', keycode: 'ABC-123-XYZ' })).rejects.toThrow(/deactivated/);
+    await expect(c.license.deactivate({ email: 'x@x', keycode: 'ABC-123-XYZ' })).rejects.toThrow(/inactive/);
   });
 });
