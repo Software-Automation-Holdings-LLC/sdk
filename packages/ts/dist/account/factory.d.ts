@@ -11,6 +11,7 @@
  */
 import { type IsaIdentity } from '../zyins/envFactory';
 import { type IsaCredentialState } from '../zyins/credentialState';
+import { type Transport } from '../zyins/transport';
 import { AccountNamespace } from './index';
 /** Inputs the unified `Isa` factory hands down for namespace construction. */
 export interface AccountFactoryOptions {
@@ -25,6 +26,7 @@ export interface AccountFactoryOptions {
      * the namespace.
      */
     credentialState?: IsaCredentialState;
+    transport?: Transport;
 }
 /** Build the `isa.account` namespace from the unified `Isa` options. */
 export declare function buildAccountNamespace(opts: AccountFactoryOptions): AccountNamespace;

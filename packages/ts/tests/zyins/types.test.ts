@@ -7,9 +7,9 @@ import {
 import { Coverage } from "../../src/zyins/coverage";
 import { isAuthContext } from "../../src/zyins/auth";
 import {
+  ProductClass,
   Products,
   ProductSelection,
-  ProductType,
 } from "../../src/zyins/product";
 
 describe("Height / Weight factories", () => {
@@ -62,7 +62,7 @@ describe("Products catalog and ProductSelection (v0.5.3)", () => {
   it("looks up a product by wire token", () => {
     const product = Products.byWireToken('fex-aetna-accendo');
     expect(product?.wireToken).toBe('fex-aetna-accendo');
-    expect(product?.productType).toBe(ProductType.FinalExpense);
+    expect(product?.productType).toBe(ProductClass.FinalExpense);
   });
 
   it("returns undefined for unknown wire token", () => {
@@ -70,10 +70,12 @@ describe("Products catalog and ProductSelection (v0.5.3)", () => {
   });
 
   it("emits a stable wire payload for a selection", () => {
-    const fields = ProductSelection.of([
-      Products.Fex['AetnaAccendo']!,
-      Products.Fex['AmericoEaglePremier']!,
-    ]).toWireFields();
+    const aetna = Products.Fex['AetnaAccendo'];
+    const americo = Products.Fex['AmericoEaglePremier'];
+    if (!aetna || !americo) {
+      throw new Error('Missing expected Fex fixtures in generated Products catalog');
+    }
+    const fields = ProductSelection.of([aetna, americo]).toWireFields();
     expect(fields.products).toEqual(['fex-aetna-accendo', 'fex-americo-eagle-premier']);
   });
 

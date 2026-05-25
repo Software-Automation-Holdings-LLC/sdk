@@ -74,6 +74,7 @@ export class Isa {
     /** Consumer-supplied build identifier for client-version negotiation. */
     clientVersion;
     clientVersionListeners = [];
+    clientVersionMismatchEmitted = false;
     constructor(opts) {
         this.identity = opts.identity;
         this.clientVersion = opts.clientVersion;
@@ -84,9 +85,10 @@ export class Isa {
         if (this.credentialState && opts.onLicenseRefreshed) {
             this.credentialState.onLicenseRefreshed(opts.onLicenseRefreshed);
         }
-        const wrappedTransport = opts.transport
-            ? this.wrapTransportForVersion(opts.transport)
-            : undefined;
+        const baseTransport = opts.transport ?? defaultTransport();
+        const wrappedTransport = this.clientVersion
+            ? this.wrapTransportForVersion(baseTransport)
+            : baseTransport;
         const nsOpts = { identity: opts.identity };
         if (opts.baseUrl !== undefined)
             nsOpts.baseUrl = opts.baseUrl;
@@ -94,8 +96,7 @@ export class Isa {
             nsOpts.logger = this.logger;
         if (this.credentialState !== undefined)
             nsOpts.credentialState = this.credentialState;
-        if (wrappedTransport !== undefined)
-            nsOpts.transport = wrappedTransport;
+        nsOpts.transport = wrappedTransport;
         if (opts.logosFetch !== undefined)
             nsOpts.logosFetch = opts.logosFetch;
         this.zyins = new ZyInsNamespace(nsOpts);
@@ -110,6 +111,7 @@ export class Isa {
             ...(opts.deviceId !== undefined && { deviceId: opts.deviceId }),
             ...(opts.orderId !== undefined && { orderId: opts.orderId }),
             ...(this.credentialState !== undefined && { credentialState: this.credentialState }),
+            transport: wrappedTransport,
         });
         this.webhooks = new WebhooksService();
     }
@@ -131,8 +133,10 @@ export class Isa {
         return async (request) => {
             const response = await inner(request);
             const status = evaluateClientVersion(response.headers, this.clientVersion);
-            if (status)
+            if (status && !this.clientVersionMismatchEmitted) {
+                this.clientVersionMismatchEmitted = true;
                 this.emitClientVersion(status);
+            }
             return response;
         };
     }

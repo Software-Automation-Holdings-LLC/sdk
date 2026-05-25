@@ -874,17 +874,34 @@ function genProductsByType() {
   }
 
   const namespaces = { Fex: [], Medsup: [], Preneed: [], Term: [] };
+  const unknownTypes = new Set();
+  const seenByNs = { Fex: new Set(), Medsup: new Set(), Preneed: new Set(), Term: new Set() };
+  const seenWireTokens = new Set();
   for (const [wireType, list] of Object.entries(raw)) {
     if (!Array.isArray(list)) continue;
     const tm = TYPE_MAP[wireType];
-    if (!tm) continue;
+    if (!tm) {
+      unknownTypes.add(wireType);
+      continue;
+    }
     for (const entry of list) {
       if (!entry || typeof entry !== 'object') continue;
       const displayName = String(entry.name || '');
       const identifier = String(entry.identifier || '');
       if (!displayName || !identifier) continue;
+      const enumKey = pascal(displayName);
+      if (seenByNs[tm.nsKey].has(enumKey)) {
+        throw new Error(
+          `ProductsByType: duplicate enumKey '${enumKey}' in namespace '${tm.nsKey}'`,
+        );
+      }
+      if (seenWireTokens.has(identifier)) {
+        throw new Error(`ProductsByType: duplicate wireToken '${identifier}'`);
+      }
+      seenByNs[tm.nsKey].add(enumKey);
+      seenWireTokens.add(identifier);
       namespaces[tm.nsKey].push({
-        enumKey: pascal(displayName),
+        enumKey,
         wireToken: identifier,
         displayName,
         ctorName: tm.tsKey,
@@ -892,6 +909,11 @@ function genProductsByType() {
       });
     }
     namespaces[tm.nsKey].sort((a, b) => a.enumKey.localeCompare(b.enumKey));
+  }
+  if (unknownTypes.size > 0) {
+    gaps.push(
+      `ProductsByType: unsupported product classes found (${[...unknownTypes].sort().join(', ')}). Update TYPE_MAP.`,
+    );
   }
 
   function bagBody(items, ctorName) {

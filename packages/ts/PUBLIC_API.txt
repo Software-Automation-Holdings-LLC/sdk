@@ -16,7 +16,7 @@ export { type AuthContext, isAuthContext } from '../zyins/auth';
 //# sourceMappingURL=auth.d.ts.map
 === dist/account/branding.d.ts ===
 /**
- * `isa.account.branding` — `GET /v1/branding`.
+ * `isa.account.branding` — `GET /v2/branding`.
  *
  * Whitelabel configuration for the calling license: agency name, logo URL,
  * theme colors. Identity comes from License-HMAC auth headers; the request
@@ -207,6 +207,7 @@ export declare function enqueue(request: EmailEnqueueRequest, ctx: EmailContext)
  */
 import { type IsaIdentity } from '../zyins/envFactory';
 import { type IsaCredentialState } from '../zyins/credentialState';
+import { type Transport } from '../zyins/transport';
 import { AccountNamespace } from './index';
 /** Inputs the unified `Isa` factory hands down for namespace construction. */
 export interface AccountFactoryOptions {
@@ -221,6 +222,7 @@ export interface AccountFactoryOptions {
      * the namespace.
      */
     credentialState?: IsaCredentialState;
+    transport?: Transport;
 }
 /** Build the `isa.account` namespace from the unified `Isa` options. */
 export declare function buildAccountNamespace(opts: AccountFactoryOptions): AccountNamespace;
@@ -312,7 +314,8 @@ export type { BrandingDetail, BrandingLookupRequest, PreferencesLookupRequest, P
 //# sourceMappingURL=index.d.ts.map
 === dist/account/preferences.d.ts ===
 /**
- * `isa.account.preferences` — `GET` / `POST /v1/preferences`.
+ * `isa.account.preferences` — `GET /v2/preferences/restore` (lookup) and
+ * `POST /v2/preferences/backup` (set).
  *
  * Per-license opaque settings document, partitioned by caller-supplied
  * `scope`. bpp2.0 passes `scope: "bpp"`; future surfaces (eApp, agent
@@ -493,6 +496,7 @@ export declare const ErrorDocUrls: Readonly<Record<ErrorCode, string>>;
  *   - (barrel re-export of every catalog module in this directory)
  */
 export { Product, Products, type ProductMetadata } from './products';
+export { ProductType, Products as ProductsByType, type Product as TypedProduct, type ProductTypeValue, } from './productsByType';
 export { State, States, type StateMetadata } from './states';
 export { ProductCarriers, type ProductCarrierMetadata } from './carriers';
 export { ConditionCategories, type ConditionCategoryMetadata } from './conditions';
@@ -697,6 +701,60 @@ export declare const Products: Readonly<{
     metadata(p: Product): ProductMetadata;
 }>;
 //# sourceMappingURL=products.d.ts.map
+=== dist/catalog/productsByType.d.ts ===
+/**
+ * Generated catalog module — do not hand-edit; rerun the generator.
+ *
+ * Produced by `packages/ts/scripts/gen-catalog.mjs`.
+ * Regenerate with `npm run gen:catalog` (runs automatically before `build`).
+ *
+ * Source data:
+ *   - insurance/v2_products.json
+ */
+/** Coarse product family. The `wireToken` is the server's class identifier. */
+export declare const ProductType: {
+    readonly FinalExpense: {
+        readonly wireToken: "fex";
+        readonly displayName: "Final Expense";
+        readonly namespaceKey: "Fex";
+    };
+    readonly MedicareSupplement: {
+        readonly wireToken: "medsup";
+        readonly displayName: "Medicare Supplement";
+        readonly namespaceKey: "Medsup";
+    };
+    readonly Preneed: {
+        readonly wireToken: "preneed";
+        readonly displayName: "Preneed";
+        readonly namespaceKey: "Preneed";
+    };
+    readonly Term: {
+        readonly wireToken: "term";
+        readonly displayName: "Term";
+        readonly namespaceKey: "Term";
+    };
+};
+export type ProductTypeValue = (typeof ProductType)[keyof typeof ProductType];
+/** A typed product. Stable across SDK releases inside one wire major. */
+export interface Product {
+    readonly wireToken: string;
+    readonly displayName: string;
+    readonly productType: ProductTypeValue;
+    /** Carrier brand extracted from the display name (first 1–2 words). */
+    readonly carrier: string;
+}
+type ProductBag = Readonly<Record<string, Product>>;
+export declare const Products: Readonly<{
+    Fex: ProductBag;
+    Medsup: ProductBag;
+    Preneed: ProductBag;
+    Term: ProductBag;
+    all: () => readonly Product[];
+    byWireToken: (token: string) => Product | undefined;
+    byLegacy: (productType: ProductTypeValue, displayName: string) => Product | undefined;
+}>;
+export {};
+//# sourceMappingURL=productsByType.d.ts.map
 === dist/catalog/scopes.d.ts ===
 /**
  * Generated catalog module — do not hand-edit; rerun the generator.
@@ -1634,10 +1692,10 @@ export { IsaError, IsaApiError, IsaConfigError, IsaIdempotencyConflictError, Isa
 export { type Envelope, type RawResponse, type RawResponseResult, } from './zyins/envelope';
 export { canonicalString, formatTimestamp, signRequest, type SignClock, type SignRequestHeaders, type SignRequestInput, type SignRequestResult, } from './core/auth/signRequest';
 export { Sex, NicotineUsage, NicotineDuration, Height, Weight, type Applicant, type Medication, type Condition, type NicotineUsageInput, type NicotineProductUsage, } from './zyins/applicant';
-export { Coverage, QuoteType, type FaceValueCoverage, type MonthlyBudgetCoverage, } from './zyins/coverage';
-export { ProductCatalog, ProductSelection, ProductType, type Product as ZyinsProduct, } from './zyins/product';
+export { Coverage, QuoteType, isMulti, type CoverageInput, type CoverageType, type SingleCoverage, type MultiCoverage, type FaceValueCoverage, type MonthlyBudgetCoverage, } from './zyins/coverage';
+export { ProductSelection, ProductClass, ProductType, Products, type Product, type ProductClassValue, } from './zyins/product';
 export { type LogosGetOptions, type LogosFetch, type LogosResponse, } from './zyins/logos';
-export { Product, Products, type ProductMetadata, State, States, type StateMetadata, ProductCarriers, type ProductCarrierMetadata, ConditionCategories, type ConditionCategoryMetadata, MedicationUses, type MedicationUseMetadata, Scope, ScopeDescriptions, SignEvent, SignEventLabels, ErrorCode, ErrorAdviceCodes, ErrorDocUrls, } from './catalog';
+export { Product as ProductSlug, Products as ProductSlugs, type ProductMetadata, State, States, type StateMetadata, ProductCarriers, type ProductCarrierMetadata, ConditionCategories, type ConditionCategoryMetadata, MedicationUses, type MedicationUseMetadata, Scope, ScopeDescriptions, SignEvent, SignEventLabels, ErrorCode, ErrorAdviceCodes, ErrorDocUrls, } from './catalog';
 export { type DebugLogger, type EnvReader, type LogSink, debugLoggerFromEnv, makeLogger, redactHeaders, redactBody, redactBodyString, processEnv, stderrSink, } from './zyins/logger';
 //# sourceMappingURL=index.d.ts.map
 === dist/proxy/algosure/embedded.d.ts ===
@@ -2795,7 +2853,7 @@ export declare function isAuthContext(value: unknown): value is AuthContext;
 //# sourceMappingURL=auth.d.ts.map
 === dist/zyins/branding.d.ts ===
 /**
- * Tier 3 branding operations — GET `/v1/branding`.
+ * Tier 3 branding operations — GET `/v2/branding`.
  *
  * Branding is per-license-order whitelabel configuration: agency name, logo
  * URL, colors, and product restrictions. Identity comes from the
@@ -3078,69 +3136,112 @@ declare class CasesSubClient {
 }
 export {};
 //# sourceMappingURL=client.d.ts.map
+=== dist/zyins/clientVersion.d.ts ===
+/**
+ * Client-version negotiation surface.
+ *
+ * The server emits two response headers — `X-Client-Current` (latest known
+ * SDK build hash) and `X-Client-Minimum` (strict floor). When the consumer
+ * has supplied a `clientVersion` to {@link Isa}, the transport compares the
+ * consumer's identifier against these signals and emits a typed event when the
+ * consumer differs from the server's published version signals.
+ *
+ * Hashes are opaque and cannot be ordered client-side. Differences therefore
+ * produce soft notifications only.
+ */
+/** Server-emitted client-version mismatch event. */
+export interface ClientVersionStatus {
+    /** Server's "latest" hash from `X-Client-Current`. */
+    current: string;
+    /** Server's "minimum acceptable" hash from `X-Client-Minimum`. */
+    minimum: string;
+    /** Consumer-supplied identifier (Isa constructor option). */
+    ours: string;
+    level: 'soft';
+}
+/** Listener registered via `Isa.onClientVersionMismatch`. */
+export type ClientVersionListener = (status: ClientVersionStatus) => void;
+/**
+ * Evaluate the server's headers against the consumer's claimed version.
+ * Returns `undefined` when no mismatch is detected (or no consumer version
+ * is supplied).
+ *
+ * Because the server sends opaque hashes instead of ordered semver values, the
+ * SDK cannot prove a non-matching client is below `minimum`; it can only report
+ * a soft mismatch.
+ */
+export declare function evaluateClientVersion(headers: Record<string, string>, ours: string | undefined): ClientVersionStatus | undefined;
+//# sourceMappingURL=clientVersion.d.ts.map
 === dist/zyins/coverage.d.ts ===
 /**
- * Tier 3 Coverage discriminated union.
+ * Coverage — single or multi-amount, face-value or monthly budget.
  *
- * The prequalify wire format accepts either a face-value (dollar amount of
- * death benefit) or a monthly budget (dollar amount the applicant is willing
- * to pay per month). Each shape requires a different bucket-math step before
- * it hits the engine: face values are rounded to standard bands, monthly
- * budgets are converted to a premium ceiling.
+ * The locked design lets one prequalify call probe several coverage amounts
+ * at once: face values (death benefits) or monthly budgets (premium
+ * ceilings). The wire shape is uniform: `quote_options.amounts: string[]`
+ * with `quote_type` set to one of `face_amounts` / `monthly_budget`.
  *
- * Tier 3 hides that math behind two factories:
+ * Call sites:
  *
- *   Coverage.faceValue(100_000)
- *   Coverage.monthlyBudget(50)
+ *   Coverage.faceValue(100_000)           // single
+ *   Coverage.faceValues([15_000, 25_000])  // multi
+ *   Coverage.monthlyBudget(50)             // single
+ *   Coverage.monthlyBudgets([50, 75, 100]) // multi
  *
- * The call site never serializes "face_value" or chooses a bucket; the
- * prequalify builder reads the `type` discriminator and emits the right
- * wire fields. Per ADR-035's "invariants over options" doctrine, there is
- * no `options.preserveExactAmount` flag — the SDK locks in the right
- * bucketing.
+ * The SDK selects the result envelope shape (`SinglePrequalifyResult` vs
+ * `MultiPrequalifyResult`) from the input discriminator — no caller flags.
  */
-/**
- * Wire discriminator for the `quote_options.quote_type` field.
- * Values mirror the server's `QuoteType` enum exactly.
- */
+/** Wire discriminator for `quote_options.quote_type`. */
 export declare enum QuoteType {
     FaceAmounts = "face_amounts",
     MonthlyBudget = "monthly_budget"
 }
-/** Coverage requested by death benefit (face value in USD). */
-export interface FaceValueCoverage {
-    readonly type: 'face_value';
-    /** The face value the applicant wants, in whole US dollars. */
+/** Internal — string-form of the type discriminator carried on every input. */
+export type CoverageType = 'face_value' | 'monthly_budget';
+/** Single coverage amount. */
+export interface SingleCoverage {
+    readonly type: CoverageType;
     readonly amount: number;
 }
-/** Coverage requested by monthly budget (USD per month). */
-export interface MonthlyBudgetCoverage {
-    readonly type: 'monthly_budget';
-    /** The monthly premium the applicant can afford, in whole US dollars. */
-    readonly amount: number;
+/** Multiple coverage amounts probed in one call. */
+export interface MultiCoverage {
+    readonly type: CoverageType;
+    readonly amounts: readonly number[];
 }
-/**
- * Coverage union. Tier 3 callers construct via the static factories
- * `Coverage.faceValue` and `Coverage.monthlyBudget`; the discriminator is
- * managed by the SDK.
- */
-export type Coverage = FaceValueCoverage | MonthlyBudgetCoverage;
-/** Static-factory container for Coverage construction. */
+/** Coverage input accepted by `Isa.zyins.prequalify`. */
+export type CoverageInput = SingleCoverage | MultiCoverage;
+/** Backwards-compatibility alias — the type read by older call sites. */
+export type Coverage = CoverageInput;
+/** @deprecated retained for type-name compatibility. */
+export type FaceValueCoverage = SingleCoverage & {
+    type: 'face_value';
+};
+/** @deprecated retained for type-name compatibility. */
+export type MonthlyBudgetCoverage = SingleCoverage & {
+    type: 'monthly_budget';
+};
+/** Type guard for multi-amount coverage. */
+export declare function isMulti(c: CoverageInput): c is MultiCoverage;
+/** Static factories for Coverage. */
 export declare const Coverage: {
-    /**
-     * Coverage by face value (death benefit). The amount is rounded to a
-     * whole dollar; sub-dollar inputs are an error.
-     */
-    readonly faceValue: (amount: number) => FaceValueCoverage;
-    /**
-     * Coverage by monthly budget. The amount is rounded to a whole dollar;
-     * sub-dollar inputs are an error.
-     */
-    readonly monthlyBudget: (amount: number) => MonthlyBudgetCoverage;
-    /** Type guard for face-value coverage. */
-    readonly isFaceValue: (coverage: Coverage) => coverage is FaceValueCoverage;
-    /** Type guard for monthly-budget coverage. */
-    readonly isMonthlyBudget: (coverage: Coverage) => coverage is MonthlyBudgetCoverage;
+    /** Single face-value coverage. */
+    readonly faceValue: (amount: number) => SingleCoverage;
+    /** Multiple face-value coverages probed in one call. */
+    readonly faceValues: (amounts: readonly number[]) => MultiCoverage;
+    /** Single monthly-budget coverage. */
+    readonly monthlyBudget: (amount: number) => SingleCoverage;
+    /** Multiple monthly-budget coverages probed in one call. */
+    readonly monthlyBudgets: (amounts: readonly number[]) => MultiCoverage;
+    /** Type guard — true when the input is a face-value coverage. */
+    readonly isFaceValue: (c: CoverageInput) => c is SingleCoverage & {
+        type: "face_value";
+    };
+    /** Type guard — true when the input is a monthly-budget coverage. */
+    readonly isMonthlyBudget: (c: CoverageInput) => c is SingleCoverage & {
+        type: "monthly_budget";
+    };
+    /** Type guard — true when the input is a multi-amount coverage. */
+    readonly isMulti: typeof isMulti;
 };
 //# sourceMappingURL=coverage.d.ts.map
 === dist/zyins/credentialState.d.ts ===
@@ -3548,11 +3649,12 @@ export declare function deriveIdempotencyKey(args: {
 export { ZyInsClient, DEFAULT_ZYINS_BASE_URL, type ZyInsClientOptions } from './client';
 export { isAuthContext, type AuthContext } from './auth';
 export { Sex, NicotineUsage, NicotineDuration, Height, Weight, type Applicant, type Medication, type Condition, type NicotineUsageInput, type NicotineProductUsage, } from './applicant';
-export { Coverage, QuoteType, type FaceValueCoverage, type MonthlyBudgetCoverage, } from './coverage';
-export { ProductCatalog, ProductSelection, ProductType, type Product, type RawProductEntry, } from './product';
+export { Coverage, QuoteType, isMulti, type CoverageInput, type CoverageType, type SingleCoverage, type MultiCoverage, type FaceValueCoverage, type MonthlyBudgetCoverage, } from './coverage';
+export { ProductSelection, ProductClass, ProductType, Products, type Product, type ProductClassValue, } from './product';
 export { ProductsFacade } from './products';
 export { ZyInsError, LicenseError, PrequalifyError, RateLimitedError, fromHttpResponse, fromProblemDetails, type LicenseErrorCode, type PrequalifyErrorCode, } from './errors';
-export { type PrequalifyRequest, type PrequalifyResult, type PrequalifyPlan, } from './prequalify';
+export { type PrequalifyRequest, type PrequalifyResult, type PrequalifyPlan, type Plan, type PrequalifyOptions, type PrequalifyResultMeta, type SinglePrequalifyResult, type MultiPrequalifyResult, } from './prequalify';
+export { type ClientVersionStatus, type ClientVersionListener, } from './clientVersion';
 export { type LicenseActivateRequest, type LicenseActivateResult, type LicenseActivateAuth, type LicenseCheckRequest, type LicenseCheckResult, type LicenseDeactivateRequest, type LicenseDeactivateResult, type LicenseValidationStatus, } from './license';
 export { getReadiness, type ReadinessResult, type ProbeResult, type ServingStatus, type HealthContext, } from './health';
 export { type CaseEmailRequest, type CaseEmailResult, } from './case';
@@ -3598,6 +3700,7 @@ import { WebhooksService } from '../rapidsign/webhooks';
 import { type ProxyCallOptions, type ProxyCallResult } from '../proxy/call';
 import { BrandingFacade, DatasetsFacade, PreferencesFacade, CasesFacade, EmailFacade, LicenseFacade, LogosFacade } from './isaNamespaces';
 import { ProductsFacade } from './products';
+import { type ClientVersionListener } from './clientVersion';
 import { AccountNamespace } from '../account';
 /** Constructor options for `Isa`. */
 export interface IsaOptions {
@@ -3646,6 +3749,13 @@ export interface IsaOptions {
      * logos therefore uses a dedicated facade injected via this option.
      */
     logosFetch?: LogosFetch;
+    /**
+     * Consumer-supplied build identifier (typically a short git hash or
+     * SDK release tag) used by the client-version negotiation surface. When
+     * set, the SDK inspects `X-Client-Current` / `X-Client-Minimum`
+     * response headers and fires `onClientVersionMismatch` listeners.
+     */
+    clientVersion?: string;
 }
 /** Optional transport/facade overrides accepted by `Isa` factories. */
 export interface IsaFactoryOptions {
@@ -3668,6 +3778,8 @@ export interface IsaFactoryOptions {
      * factory can be exercised without a live HTTP layer.
      */
     transport?: Transport;
+    /** Consumer-supplied build identifier for client-version negotiation. */
+    clientVersion?: string;
 }
 /**
  * Unified SDK entry point.
@@ -3708,7 +3820,22 @@ export declare class Isa {
      * session identities.
      */
     readonly credentialState: IsaCredentialState | undefined;
+    /** Consumer-supplied build identifier for client-version negotiation. */
+    readonly clientVersion: string | undefined;
+    private clientVersionListeners;
+    private clientVersionMismatchEmitted;
     private constructor();
+    /**
+     * Subscribe to client-version mismatch events. The listener fires on the
+     * first response that carries `X-Client-Current` / `X-Client-Minimum`
+     * headers that disagree with the consumer's claimed {@link clientVersion}.
+     *
+     * The returned function unsubscribes the listener.
+     */
+    onClientVersionMismatch(listener: ClientVersionListener): () => void;
+    /** Internal — transport wrapper that detects version-skew headers. */
+    private wrapTransportForVersion;
+    private emitClientVersion;
     /** Subscribe to `onLicenseRefreshed` after construction. */
     onLicenseRefreshed(listener: LicenseRefreshedListener): () => void;
     /**
@@ -4350,7 +4477,7 @@ export declare class LogosSubClient {
 //# sourceMappingURL=logos.d.ts.map
 === dist/zyins/preferences.d.ts ===
 /**
- * Tier 3 preferences operations — `/v1/preferences`.
+ * Tier 3 preferences operations — `GET /v2/preferences/restore` + `POST /v2/preferences/backup`.
  *
  * Preferences are an opaque JSON document stored per (email,
  * license_order). The SDK does not interpret the document; callers
@@ -4391,62 +4518,158 @@ export declare function set(request: PreferencesSetRequest, ctx: PreferencesCont
 /**
  * Tier 3 prequalify operation.
  *
- * Replaces the inline payload assembly in bpp2.0's `analyzeCase`
- * (`src/lib/data.js:1315`). The before-state spreads HTTP, header, license,
- * and serialization concerns across the call site; this module isolates them.
+ * Builds the wire body, signs the request, calls `/v1/prequalify`, and
+ * parses the response into one of two result shapes:
+ *   - `SinglePrequalifyResult` — single coverage amount.
+ *   - `MultiPrequalifyResult` — multiple amounts probed together.
  *
- * Inputs: a typed `PrequalifyRequest` (applicant, coverage, products).
- * Output: a typed `PrequalifyResult` (plans, ranking, declines).
- *
- * Locked invariants (per ADR-035):
+ * Locked invariants (per ADR-035, post-lock v0.5.3 spec):
  *  - The wire body is built by the SDK; the call site never sees it.
  *  - The idempotency key is derived from sessionId:op:body-hash.
  *  - Auth credentials live in HMAC headers only — never in the request body.
- *  - Errors are typed; ERR_* strings and ProblemDetails JSON both funnel
- *    through `fromHttpResponse`.
+ *  - `products` accepts only typed wire tokens — regex semantics are gone.
+ *  - Server response shape is `{ data: { meta, results: { <amount>: [...] } },
+ *    request_id, idempotency_key }`.
  */
 import { type Applicant } from './applicant';
-import { type Coverage } from './coverage';
-import { type ProductSelection } from './product';
+import { type CoverageInput, type CoverageType } from './coverage';
+import { type ProductSelection, type Product, type ProductClassValue } from './product';
 import { type AuthContext } from './auth';
 import { type Transport } from './transport';
 import { type Clock } from '../core';
+/** Optional per-call knobs that map onto the server's filter primitives. */
+export interface PrequalifyOptions {
+    /** Restrict to a single product class (server `only_product_class`). */
+    onlyProductClass?: ProductClassValue;
+    /** Include one or more product classes (server `include_product_class`). */
+    includeProductClass?: readonly ProductClassValue[];
+    /** Server-side `min_rank` filter (string per server contract). */
+    minRank?: string;
+    /** Include products flagged unreleased. */
+    showUnreleased?: boolean;
+    /** Skip the health-based underwriting layer (preview rates without HBU). */
+    skipHealthBasedUnderwriting?: boolean;
+}
 /** Inputs accepted by `prequalify`. */
 export interface PrequalifyRequest {
     applicant: Applicant;
-    coverage: Coverage;
+    coverage: CoverageInput;
     products: ProductSelection;
+    options?: PrequalifyOptions;
+}
+/**
+ * One price the server quoted for a `(rate_class, mode)` pair.
+ *
+ * `cents` is the server display string parsed to integer minor units (e.g.
+ * `"$64.05"` → `6405`). `display` is the server string verbatim — never
+ * synthesized — so consumer UIs render exactly what the carrier intended,
+ * including any commas, locale formatting, or "N/A" fallbacks.
+ */
+export interface PriceEntry {
+    /** Integer minor units. `0` for unparseable / missing / "NA" / "0" prices. */
+    cents: number;
+    /** Server display string verbatim. `"N/A"` when the price was missing/unparseable. */
+    display: string;
+}
+/**
+ * Resolved pricing view for a `Plan`.
+ *
+ * The server emits `pricing[rate_class][mode] = "$XX.XX"` plus a sibling
+ * `default_pricing_key` mode and `pricing_ranks` per rate class. Rate-class
+ * and mode keys are CARRIER-SPECIFIC and emerge per carrier without notice;
+ * the SDK preserves them verbatim — never lowercases, aliases, or remaps.
+ *
+ * Resolution rules (see `resolveDefaultPricing`):
+ *  1. `rate_class` = `"default"` if present, else first key of `classes` in
+ *     insertion order, else `"default"` (with empty classes/modes).
+ *  2. `mode` = the server's `default_pricing_key` if it exists in the chosen
+ *     class; else `"MONTHLY"` if present; else first key of `classes[rate_class]`
+ *     in insertion order; else `""`.
+ *  3. `cents`/`display` shortcut to `classes[rate_class][mode]` for the
+ *     common "show me the headline price" path.
+ *  4. `modes` is an alias to `classes[rate_class]` — same object reference,
+ *     not a deep copy. Mutation is undefined behavior.
+ */
+export interface ResolvedPricing {
+    /** Shortcut to `classes[rate_class][mode].cents`. */
+    cents: number;
+    /** Shortcut to `classes[rate_class][mode].display`. */
+    display: string;
+    /** Verbatim server mode key (e.g. `"MONTHLY"`, `"MONTHLY-EFT"`). */
+    mode: string;
+    /** Verbatim server rate-class key (e.g. `"default"`, `"super-preferred"`). */
+    rate_class: string;
+    /** Server's full per-class pricing table, with `cents` parsed per mode. */
+    classes: Record<string, Record<string, PriceEntry>>;
+    /** Alias view of `classes[rate_class]` — same reference, not a copy. */
+    modes: Record<string, PriceEntry>;
 }
 /** One plan returned by the engine. */
-export interface PrequalifyPlan {
-    /** Carrier brand (e.g., "colonial-penn"). */
+export interface Plan {
     brand: string;
-    /** Plan tier within the carrier (e.g., "preferred-plus"). */
-    tier: string;
-    /** Monthly premium in USD (the bucketed amount the engine quoted). */
-    monthlyPremium: number;
-    /** Face value the premium applies to, in whole US dollars. */
-    faceValue: number;
-    /** Underlying product wire token; useful for routing into eApp. */
-    productToken: string;
+    name: string;
+    plan: string;
+    planGroup: string | null;
+    deathBenefit: number;
+    /** Resolved server pricing — see `ResolvedPricing`. */
+    pricing: ResolvedPricing;
+    /**
+     * Server's per-rate-class rank values, verbatim. Keys mirror
+     * `pricing.classes`. Numeric ranks pass through; nulls pass through.
+     */
+    pricingRanks: Record<string, number | null>;
+    /** Verbatim server `default_pricing_key`; equals `pricing.mode` post-resolution. */
+    defaultPricingKey: string;
+    /** Server identifier — typically the product wire token. */
+    id: string;
+    index: number;
+    isExcluded: boolean;
+    logoUrl: string;
+    planInfo: Record<string, readonly string[]>;
+    /** Hydrated typed catalog product when `id` matches a known wire token. */
+    product?: Product;
+    /** Forward-compatible raw fields the server emits but we don't yet model. */
+    raw: Record<string, unknown>;
 }
-/** Output of `prequalify`. */
-export interface PrequalifyResult {
-    /** Plans the applicant qualified for, ordered as the engine returns them. */
-    plans: ReadonlyArray<PrequalifyPlan>;
-    /** Engine request id for correlation with server-side logs. */
+/** Backwards-compat alias — older call sites used `PrequalifyPlan`. */
+export type PrequalifyPlan = Plan;
+/** Aggregate meta from `data.meta`. */
+export interface PrequalifyResultMeta {
+    amounts: number[];
+    processingTimeMs: number;
+    quoteType: CoverageType;
+    totalProducts: number;
+}
+/** Result shape for a single-amount prequalify call. */
+export interface SinglePrequalifyResult {
+    readonly kind: 'single';
+    amount: number;
+    plans: Plan[];
+    meta: PrequalifyResultMeta;
     requestId: string;
-    /** Idempotency key sent on the wire request. Propagated into the Envelope
-     *  so callers can round-trip the key without parsing raw headers. */
     idempotencyKey: string;
 }
+/** Result shape for a multi-amount prequalify call. */
+export interface MultiPrequalifyResult {
+    readonly kind: 'multi';
+    amounts: number[];
+    byAmount: Map<number, Plan[]>;
+    /** Flattened convenience — every plan across every amount. */
+    plans: Plan[];
+    forAmount(n: number): Plan[];
+    meta: PrequalifyResultMeta;
+    requestId: string;
+    idempotencyKey: string;
+}
+/** Union returned by `prequalify`. */
+export type PrequalifyResult = SinglePrequalifyResult | MultiPrequalifyResult;
 /** Shared knobs the client passes through to the prequalify call. */
 export interface PrequalifyContext {
     baseUrl: string;
     auth: AuthContext;
     transport: Transport;
     clock: Clock;
-    /** Optional override; defaults to the derived key (`deriveIdempotencyKey`). */
+    /** Optional override; defaults to the derived key. */
     idempotencyKey?: string;
 }
 /**
@@ -4457,18 +4680,79 @@ export declare function prequalify(request: PrequalifyRequest, ctx: PrequalifyCo
 //# sourceMappingURL=prequalify.d.ts.map
 === dist/zyins/product.d.ts ===
 /**
- * Tier 3 Product types and catalog.
+ * Typed product catalog + selection.
  *
- * `Product` represents a single product offered by a carrier; the `wireToken`
- * is the engine's canonical identifier string used in the prequalify request's
- * `products` array. Multiple products compose via `ProductSelection`.
+ * `Product` is a typed object — never a bare string. Each product carries
+ * its wire token, display name, type, and carrier. Selection composes via
+ * `ProductSelection.of` / `byTypes` / `fromMix` — all of which round-trip
+ * through `toWireFields()` into the prequalify request body.
  *
- * The catalog can be constructed from the static default list or from a live
- * server datasets bundle via `ProductCatalog.fromDatasets(bundle)`.
+ * The flat catalog and nested-by-type access surfaces live in
+ * `src/catalog/productsByType.ts` (re-exported below). Per the locked design,
+ * regex / string-based product matching is gone; the server treats `products`
+ * as an exact-slug list.
  */
+export { ProductType as ProductClass, type ProductTypeValue as ProductClassValue, type Product, Products, } from '../catalog/productsByType';
+import type { Product, ProductTypeValue as ProductClassValue } from '../catalog/productsByType';
+export { ProductType } from './productType';
 /**
- * Coarse product type. The wire format uses underscore-separated lowercase
- * codes; the SDK maps the enum to the code at serialization time.
+ * One or more products selected for a single prequalify call.
+ *
+ * Three construction modes:
+ *   - `ProductSelection.of(products)` — pick specific products.
+ *   - `ProductSelection.byTypes(types)` — pick every product of one or
+ *     more types.
+ *   - `ProductSelection.fromMix({types, plus})` — types as a base plus
+ *     explicit overrides.
+ *
+ * The selection serializes to two wire fields (`products[]` and/or
+ * `include_product_class[]`) via {@link toWireFields}; serialization is
+ * internal to the SDK and never exposed to call sites.
+ */
+export declare class ProductSelection {
+    private readonly explicit;
+    private readonly types;
+    private constructor();
+    /** Pick specific products by their typed `Product` object. */
+    static of(products: readonly Product[]): ProductSelection;
+    /** Pick all products of one or more types. */
+    static byTypes(types: readonly ProductClassValue[]): ProductSelection;
+    /** Hybrid — types as the base, with extra explicit products bolted on. */
+    static fromMix(opts: {
+        types?: readonly ProductClassValue[];
+        plus?: readonly Product[];
+    }): ProductSelection;
+}
+//# sourceMappingURL=product.d.ts.map
+=== dist/zyins/products.d.ts ===
+/**
+ * `isa.zyins.products` — typed product catalog facade.
+ *
+ * The nested-by-type catalog (`Products.Fex.AetnaAccendo`, …) is generated
+ * from the canonical product list and shipped inside the SDK; live calls
+ * are unnecessary for the typed shape. This facade exposes the catalog and
+ * the helper lookups for parity with prior callers.
+ *
+ * `refresh()` is a no-op today; it remains in the surface so future
+ * server-driven catalog refresh lands without an API-shape change.
+ */
+import { Products, type Product, type ProductClassValue } from './product';
+/** `isa.zyins.products` — typed catalog access. */
+export declare class ProductsFacade {
+    constructor(_deps?: unknown);
+    /** Returns the nested-by-type catalog. */
+    catalog(): typeof Products;
+    /** Resolve a product by wire-token slug. */
+    byWireToken(token: string): Product | undefined;
+    /** Resolve a product by legacy display name within a type. */
+    byLegacy(productClass: ProductClassValue, displayName: string): Product | undefined;
+    /** No-op today — the catalog is statically embedded. */
+    refresh(): Promise<typeof Products>;
+}
+//# sourceMappingURL=products.d.ts.map
+=== dist/zyins/productType.d.ts ===
+/**
+ * Coarse life-insurance product type retained for cross-SDK enum parity.
  */
 export declare enum ProductType {
     FinalExpense = "final_expense",
@@ -4478,147 +4762,7 @@ export declare enum ProductType {
     Universal = "universal",
     Indexed = "indexed"
 }
-/**
- * A single product offered by a carrier. The `wireToken` is the engine's
- * canonical brand-and-type string; `displayName` is for surfaces. Internal
- * regex-anchoring details live in the catalog and never escape Tier 3.
- */
-export interface Product {
-    /** Carrier brand identifier (e.g., "colonial-penn"). */
-    readonly brand: string;
-    /** Product type. */
-    readonly type: ProductType;
-    /**
-     * The wire token the prequalify body accepts. Stable across SDK versions
-     * within the same wire major version.
-     */
-    readonly wireToken: string;
-    /** Human-readable name for UI rendering. */
-    readonly displayName: string;
-}
-/**
- * One or more `Product` values selected for a single prequalify call.
- *
- * Produce the wire `products` array via `list().map(p => p.wireToken)`.
- * `toWireArray()` is a convenience shorthand for that expression.
- */
-export declare class ProductSelection {
-    private readonly products;
-    constructor(products: ReadonlyArray<Product>);
-    /** Construct from a single product (the common case). */
-    static of(product: Product): ProductSelection;
-    /** Construct from many products (carrier comparison). */
-    static many(products: ReadonlyArray<Product>): ProductSelection;
-    /** Read-only view of the underlying products. */
-    list(): ReadonlyArray<Product>;
-    /**
-     * Returns the wire token array the prequalify body's `products` field accepts.
-     * Prefer this over `toWireString()` — the server takes `string[]`, not a
-     * joined string.
-     */
-    toWireArray(): ReadonlyArray<string>;
-    /**
-     * @deprecated Use `toWireArray()` instead. The server's `products` field
-     * is `string[]`; joining with `|` is a legacy caller convention that the
-     * SDK no longer needs. This method will be removed in v0.7.0.
-     */
-    toWireString(): string;
-}
-/**
- * Raw product entry as returned by `GET /v2/reference-data` under
- * `data.datasets.products.data[type][n]`. Used exclusively by
- * `ProductCatalog.fromDatasets`; consumers never construct this directly.
- */
-export interface RawProductEntry {
-    /** Engine identifier / wire token (e.g., `"fex-aetna-accendo"`). */
-    identifier: string;
-    /** Carrier brand slug (e.g., `"aetna"`). */
-    carrier: string;
-    /** Human-readable product name (e.g., `"Aetna Accendo Final Expense"`). */
-    name: string;
-    /** Product class key (e.g., `"fex"`, `"term"`, `"medsup"`). */
-    product: string;
-}
-/**
- * In-memory catalog of known products.
- *
- * Two construction paths:
- *   - `ProductCatalog.Default` — the static built-in list; always available.
- *   - `ProductCatalog.fromDatasets(bundle)` — built from a live datasets
- *     bundle so the catalog stays in sync with the server.
- *
- * `find(brand, type)` and `findBySlug(slug)` are the documented entry points.
- */
-export declare class ProductCatalog {
-    private readonly products;
-    constructor(products: ReadonlyArray<Product>);
-    /** The default catalog shipped with the SDK. */
-    static readonly Default: ProductCatalog;
-    /**
-     * Build a catalog from a datasets bundle returned by
-     * `isa.zyins.datasets.get()`.
-     *
-     * The `products` field in the bundle is a map of product-class keys to
-     * arrays of raw product entry objects. Each entry is mapped to a `Product`
-     * with `wireToken = entry.identifier`, `brand = entry.carrier`,
-     * `displayName = entry.name`. Entries missing required fields are silently
-     * skipped.
-     */
-    static fromDatasets(bundle: {
-        products: Readonly<Record<string, unknown>>;
-    }): ProductCatalog;
-    /**
-     * Look up a product by brand and type. Throws if no match exists; callers
-     * who need a soft-miss path should call `tryFind` instead.
-     */
-    find(brand: string, type: ProductType): Product;
-    /** Soft variant of `find`; returns `undefined` if no match exists. */
-    tryFind(brand: string, type: ProductType): Product | undefined;
-    /**
-     * Look up a product by its wire token slug (e.g., `"fex-aetna-accendo"`).
-     * Throws if no match exists; use `tryFindBySlug` for a soft-miss path.
-     */
-    findBySlug(slug: string): Product;
-    /** Soft variant of `findBySlug`; returns `undefined` if no match exists. */
-    tryFindBySlug(slug: string): Product | undefined;
-    /** All products in the catalog (read-only). */
-    list(): ReadonlyArray<Product>;
-}
-//# sourceMappingURL=product.d.ts.map
-=== dist/zyins/products.d.ts ===
-/**
- * `isa.zyins.products` — live product catalog built from server datasets.
- *
- * `catalog()` calls `isa.zyins.datasets.get({ include: ['products'] })` once
- * and memoizes the resulting `ProductCatalog` for the lifetime of the facade
- * instance. Subsequent calls return the cached catalog without a network
- * round-trip.
- *
- * The catalog is invalidated only on facade recreation (i.e. `Isa` instance
- * recreation). For long-lived processes that need fresh product lists, call
- * `refresh()` to force a re-fetch.
- */
-import { ProductCatalog } from './product';
-import { type DatasetsFacade } from './isaNamespaces';
-/** `isa.zyins.products` — live product catalog with memoization. */
-export declare class ProductsFacade {
-    private readonly datasets;
-    private cached;
-    private inflight;
-    constructor(datasets: DatasetsFacade);
-    /**
-     * Returns the `ProductCatalog` built from the server's products dataset.
-     * The first call fetches from `GET /v2/reference-data`; subsequent calls
-     * return the memoized result instantly.
-     */
-    catalog(): Promise<ProductCatalog>;
-    /**
-     * Evict the cached catalog and re-fetch on the next `catalog()` call.
-     * Returns the freshly fetched `ProductCatalog`.
-     */
-    refresh(): Promise<ProductCatalog>;
-}
-//# sourceMappingURL=products.d.ts.map
+//# sourceMappingURL=productType.d.ts.map
 === dist/zyins/react/useZyIns.d.ts ===
 /**
  * React Tier 3 binding for the ZyINS client.

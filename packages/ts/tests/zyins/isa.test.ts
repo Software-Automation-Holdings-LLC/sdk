@@ -126,6 +126,67 @@ describe('Isa.account namespace configuration', () => {
   });
 });
 
+describe('client-version mismatch notifications', () => {
+  it('emits at most once per Isa instance', async () => {
+    const statuses: string[] = [];
+    const isa = await Isa.withKeycode(
+      {
+        keycode: TEST_AUTH.licenseKey,
+        email: TEST_AUTH.email,
+        deviceId: TEST_AUTH.deviceId,
+        orderId: TEST_AUTH.orderId,
+        licenseKey: TEST_AUTH.licenseKey,
+        transport: async () => ({
+          status: 200,
+          body: OK_BODY,
+          headers: { 'x-client-current': 'current-hash' },
+        }),
+      },
+      licenseEnv(),
+      { clientVersion: 'old-hash' },
+    );
+    isa.onClientVersionMismatch((status) => statuses.push(status.level));
+
+    await isa.zyins.prequalify({
+      applicant: TEST_APPLICANT,
+      coverage: TEST_COVERAGE,
+      products: TEST_PRODUCTS,
+    });
+    await isa.zyins.prequalify({
+      applicant: TEST_APPLICANT,
+      coverage: TEST_COVERAGE,
+      products: TEST_PRODUCTS,
+    });
+
+    expect(statuses).toEqual(['soft']);
+  });
+
+  it('wraps account namespace transport for client-version headers', async () => {
+    const statuses: string[] = [];
+    const isa = await Isa.withKeycode(
+      {
+        keycode: TEST_AUTH.licenseKey,
+        email: TEST_AUTH.email,
+        deviceId: TEST_AUTH.deviceId,
+        orderId: TEST_AUTH.orderId,
+        licenseKey: TEST_AUTH.licenseKey,
+        transport: async () => ({
+          status: 200,
+          body: JSON.stringify({ data: { imo_name: 'Acme Agency' } }),
+          headers: { 'x-client-current': 'current-hash' },
+        }),
+      },
+      licenseEnv(),
+      { clientVersion: 'old-hash' },
+    );
+    isa.onClientVersionMismatch((status) => statuses.push(status.level));
+
+    await isa.account.branding.lookup();
+
+    expect(statuses).toEqual(['soft']);
+  });
+});
+
 describe('.withRawResponse variant (Phase 2 §5.4)', () => {
   it('returns { data, response } with status/headers/url', async () => {
     const isa = await buildIsa({

@@ -10,7 +10,7 @@ export { ZyInsClient, DEFAULT_ZYINS_BASE_URL, type ZyInsClientOptions } from './
 export { isAuthContext, type AuthContext } from './auth';
 export { Sex, NicotineUsage, NicotineDuration, Height, Weight, type Applicant, type Medication, type Condition, type NicotineUsageInput, type NicotineProductUsage, } from './applicant';
 export { Coverage, QuoteType, isMulti, type CoverageInput, type CoverageType, type SingleCoverage, type MultiCoverage, type FaceValueCoverage, type MonthlyBudgetCoverage, } from './coverage';
-export { ProductSelection, ProductType, Products, type Product, type ProductTypeValue, } from './product';
+export { ProductSelection, ProductClass, ProductType, Products, type Product, type ProductClassValue, } from './product';
 export { ProductsFacade } from './products';
 export { ZyInsError, LicenseError, PrequalifyError, RateLimitedError, fromHttpResponse, fromProblemDetails, type LicenseErrorCode, type PrequalifyErrorCode, } from './errors';
 export { type PrequalifyRequest, type PrequalifyResult, type PrequalifyPlan, type Plan, type PrequalifyOptions, type PrequalifyResultMeta, type SinglePrequalifyResult, type MultiPrequalifyResult, } from './prequalify';

@@ -36,7 +36,7 @@ export { canonicalString, formatTimestamp, signRequest, } from './core/auth/sign
 // --- Value types / domain primitives (zyins-flavored, public) ----------
 export { Sex, NicotineUsage, NicotineDuration, Height, Weight, } from './zyins/applicant';
 export { Coverage, QuoteType, isMulti, } from './zyins/coverage';
-export { ProductSelection, ProductType, Products, } from './zyins/product';
+export { ProductSelection, ProductClass, ProductType, Products, } from './zyins/product';
 // --- Generated catalogs -------------------------------------------------
 // Every name in this block is produced by `scripts/gen-catalog.mjs`. See
 // `src/catalog/` for the source modules and `docs/SDK_DESIGN.md` §5.1

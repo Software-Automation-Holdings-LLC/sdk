@@ -38,10 +38,11 @@ export {
 
 export {
   ProductSelection,
+  ProductClass,
   ProductType,
   Products,
   type Product,
-  type ProductTypeValue,
+  type ProductClassValue,
 } from './product';
 
 export { ProductsFacade } from './products';

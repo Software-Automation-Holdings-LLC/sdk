@@ -166,9 +166,10 @@ function parsePrequalifyResponse(body, coverage, idempotencyKey) {
     }
     if (isMulti(coverage)) {
         const amounts = coverage.amounts.slice().map((n) => Math.round(n));
+        const fallbackPlans = byAmount.size === 1 ? byAmount.values().next().value : undefined;
         const flat = [];
         for (const a of amounts) {
-            const list = byAmount.get(a) ?? [];
+            const list = byAmount.get(a) ?? fallbackPlans ?? [];
             for (const p of list)
                 flat.push(p);
         }
@@ -181,7 +182,7 @@ function parsePrequalifyResponse(body, coverage, idempotencyKey) {
                 if (!amounts.includes(n)) {
                     throw new Error(`MultiPrequalifyResult.forAmount: amount ${n} not requested; available: ${amounts.join(', ')}`);
                 }
-                return byAmount.get(n) ?? [];
+                return byAmount.get(n) ?? fallbackPlans ?? [];
             },
             meta,
             requestId,
@@ -210,7 +211,7 @@ function parseMeta(raw) {
     }
     const amountsRaw = Array.isArray(raw['amounts']) ? raw['amounts'] : [];
     const amounts = amountsRaw
-        .map((v) => Number(typeof v === 'string' ? v : v))
+        .map((v) => Number(v))
         .filter((n) => Number.isFinite(n));
     const quoteTypeRaw = toStr(raw['quote_type']);
     const quoteType = quoteTypeRaw === 'monthly_budget' ? 'monthly_budget' : 'face_value';
@@ -221,44 +222,168 @@ function parseMeta(raw) {
         totalProducts: toNum(raw['total_products']),
     };
 }
+/**
+ * Sentinel display for missing/unparseable prices.
+ *
+ * Carriers occasionally emit `"NA"`, `""`, `null`, `0`, or `"0"` for modes
+ * they don't quote. The SDK normalizes all of these to the same `"N/A"`
+ * display so consumers can render with a single conditional.
+ */
+const PRICE_NA_DISPLAY = 'N/A';
+/**
+ * Parse a server price into a `PriceEntry`.
+ *
+ * `cents` conversion strips `$` and `,`, then `Math.round(parseFloat(s) * 100)`.
+ * Anything that doesn't parse to a finite positive (or zero) number — `"NA"`,
+ * `"N/A"`, empty string, `null`, `0`, `"0"`, garbage — yields
+ * `{ cents: 0, display: "N/A" }`.
+ *
+ * `display` preserves the server string verbatim when the price is valid
+ * (commas, locale formatting, leading `$`, all kept), so consumer UIs render
+ * exactly what the carrier intended.
+ */
+function parsePriceEntry(raw) {
+    if (raw === null || raw === undefined) {
+        return { cents: 0, display: PRICE_NA_DISPLAY };
+    }
+    if (typeof raw === 'number') {
+        if (!Number.isFinite(raw) || raw === 0) {
+            return { cents: 0, display: PRICE_NA_DISPLAY };
+        }
+        return { cents: Math.round(raw * 100), display: `$${raw.toFixed(2)}` };
+    }
+    if (typeof raw !== 'string') {
+        return { cents: 0, display: PRICE_NA_DISPLAY };
+    }
+    const trimmed = raw.trim();
+    if (trimmed === '' || trimmed === '0' || /^na$/i.test(trimmed) || /^n\/a$/i.test(trimmed)) {
+        return { cents: 0, display: PRICE_NA_DISPLAY };
+    }
+    const cleaned = trimmed.replace(/[$,]/g, '');
+    const parsed = parseFloat(cleaned);
+    if (!Number.isFinite(parsed) || parsed === 0) {
+        return { cents: 0, display: PRICE_NA_DISPLAY };
+    }
+    return { cents: Math.round(parsed * 100), display: trimmed };
+}
+/**
+ * Build the `classes` map by parsing every `pricing[class][mode]` entry.
+ *
+ * Insertion order is preserved (V8 / spec object iteration is insertion-order
+ * for string keys), which matters: the resolver falls back to "first key in
+ * insertion order" when no preferred key is present.
+ */
+function buildClasses(pricingRaw) {
+    const classes = {};
+    for (const [className, modesRaw] of Object.entries(pricingRaw)) {
+        if (!isRecord(modesRaw))
+            continue;
+        const modes = {};
+        for (const [modeName, priceRaw] of Object.entries(modesRaw)) {
+            modes[modeName] = parsePriceEntry(priceRaw);
+        }
+        classes[className] = modes;
+    }
+    return classes;
+}
+/** Default rate-class key used when neither server nor classes can supply one. */
+const DEFAULT_RATE_CLASS = 'default';
+/** Preferred mode fallback when no `default_pricing_key` is present. */
+const FALLBACK_MODE = 'MONTHLY';
+/**
+ * Apply the resolution rules from the spec:
+ *  - rate_class: prefer `"default"` → first-class-in-order → `"default"` empty.
+ *  - mode: prefer server's `default_pricing_key` → `"MONTHLY"` → first-mode-in-order → `""`.
+ *  - cents/display: shortcut to the chosen `classes[rate_class][mode]`.
+ *  - modes: alias (same reference) to `classes[rate_class]`.
+ */
+function resolveDefaultPricing(classes, serverDefaultKey) {
+    const classNames = Object.keys(classes);
+    if (classNames.length === 0) {
+        return {
+            cents: 0,
+            display: PRICE_NA_DISPLAY,
+            mode: '',
+            rate_class: DEFAULT_RATE_CLASS,
+            classes,
+            modes: {},
+        };
+    }
+    const rate_class = DEFAULT_RATE_CLASS in classes ? DEFAULT_RATE_CLASS : classNames[0];
+    const modes = classes[rate_class];
+    const modeNames = Object.keys(modes);
+    let mode;
+    if (serverDefaultKey !== '' && serverDefaultKey in modes) {
+        mode = serverDefaultKey;
+    }
+    else if (FALLBACK_MODE in modes) {
+        mode = FALLBACK_MODE;
+    }
+    else if (modeNames.length > 0) {
+        mode = modeNames[0];
+    }
+    else {
+        mode = '';
+    }
+    const entry = mode === '' ? undefined : modes[mode];
+    return {
+        cents: entry?.cents ?? 0,
+        display: entry?.display ?? PRICE_NA_DISPLAY,
+        mode,
+        rate_class,
+        classes,
+        modes,
+    };
+}
+/** Pass through `pricing_ranks` verbatim — numbers stay numbers, nulls stay null. */
+function parsePricingRanks(raw) {
+    const out = {};
+    if (!isRecord(raw))
+        return out;
+    for (const [k, v] of Object.entries(raw)) {
+        if (v === null || v === undefined) {
+            out[k] = null;
+        }
+        else if (typeof v === 'number' && Number.isFinite(v)) {
+            out[k] = v;
+        }
+        else if (typeof v === 'string') {
+            const n = Number(v);
+            out[k] = Number.isFinite(n) ? n : null;
+        }
+        else {
+            out[k] = null;
+        }
+    }
+    return out;
+}
 function coercePlan(raw) {
     const r = isRecord(raw) ? raw : {};
     const id = toStr(r['id']);
-    const monthlyPriceRaw = r['monthly_price'];
-    let monthlyPrice;
-    if (typeof monthlyPriceRaw === 'number') {
-        monthlyPrice = monthlyPriceRaw;
-    }
-    else if (typeof monthlyPriceRaw === 'string') {
-        const cleaned = monthlyPriceRaw.replace(/[^0-9.]/g, '');
-        monthlyPrice = cleaned === '' ? undefined : Number(cleaned);
-    }
     const planInfoRaw = isRecord(r['plan_info']) ? r['plan_info'] : {};
     const planInfo = {};
     for (const [k, v] of Object.entries(planInfoRaw)) {
         planInfo[k] = Array.isArray(v) ? v.map((x) => toStr(x)) : [];
     }
     const pricingRaw = isRecord(r['pricing']) ? r['pricing'] : {};
-    const pricing = {};
-    for (const [k, v] of Object.entries(pricingRaw)) {
-        if (isRecord(v)) {
-            pricing[k] = { ...v, monthly: toNum(v['monthly']) };
-        }
-    }
+    const classes = buildClasses(pricingRaw);
+    const serverDefaultKey = toStr(r['default_pricing_key']);
+    const pricing = resolveDefaultPricing(classes, serverDefaultKey);
+    const pricingRanks = parsePricingRanks(r['pricing_ranks']);
     const plan = {
         brand: toStr(r['brand']),
         name: toStr(r['name']),
         plan: toStr(r['plan']),
         planGroup: typeof r['plan_group'] === 'string' ? toStr(r['plan_group']) : null,
         deathBenefit: toNum(r['death_benefit']),
-        monthlyPrice,
-        defaultPricingKey: toStr(r['default_pricing_key']),
+        pricing,
+        pricingRanks,
+        defaultPricingKey: pricing.mode,
         id,
         index: toNum(r['index']),
         isExcluded: toBool(r['is_excluded']),
         logoUrl: toStr(r['logo_url']),
         planInfo,
-        pricing,
         raw: r,
     };
     const hydrated = id ? Products.byWireToken(id) : undefined;

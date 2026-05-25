@@ -11,8 +11,9 @@
  * regex / string-based product matching is gone; the server treats `products`
  * as an exact-slug list.
  */
-export { ProductType, type ProductTypeValue, type Product, Products, } from '../catalog/productsByType';
-import type { Product, ProductTypeValue } from '../catalog/productsByType';
+export { ProductType as ProductClass, type ProductTypeValue as ProductClassValue, type Product, Products, } from '../catalog/productsByType';
+import type { Product, ProductTypeValue as ProductClassValue } from '../catalog/productsByType';
+export { ProductType } from './productType';
 /**
  * One or more products selected for a single prequalify call.
  *
@@ -28,16 +29,16 @@ import type { Product, ProductTypeValue } from '../catalog/productsByType';
  * internal to the SDK and never exposed to call sites.
  */
 export declare class ProductSelection {
-    readonly explicit: readonly Product[];
-    readonly types: readonly ProductTypeValue[];
+    private readonly explicit;
+    private readonly types;
     private constructor();
     /** Pick specific products by their typed `Product` object. */
     static of(products: readonly Product[]): ProductSelection;
     /** Pick all products of one or more types. */
-    static byTypes(types: readonly ProductTypeValue[]): ProductSelection;
+    static byTypes(types: readonly ProductClassValue[]): ProductSelection;
     /** Hybrid — types as the base, with extra explicit products bolted on. */
     static fromMix(opts: {
-        types?: readonly ProductTypeValue[];
+        types?: readonly ProductClassValue[];
         plus?: readonly Product[];
     }): ProductSelection;
 }

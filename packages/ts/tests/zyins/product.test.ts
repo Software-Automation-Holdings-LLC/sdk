@@ -8,7 +8,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   Products,
-  ProductType,
+  ProductClass,
   ProductSelection,
   type Product,
 } from '../../src/zyins/product';
@@ -45,10 +45,10 @@ describe('Products catalog', () => {
 
   it('byLegacy is case-insensitive on display name within a type', () => {
     const accendo = Products.Fex['AetnaAccendo'] as Product;
-    const found = Products.byLegacy(ProductType.FinalExpense, accendo.displayName.toLowerCase());
+    const found = Products.byLegacy(ProductClass.FinalExpense, accendo.displayName.toLowerCase());
     expect(found?.wireToken).toBe(accendo.wireToken);
     expect(
-      Products.byLegacy(ProductType.Term, accendo.displayName),
+      Products.byLegacy(ProductClass.Term, accendo.displayName),
     ).toBeUndefined();
   });
 });
@@ -61,7 +61,7 @@ describe('ProductSelection factories', () => {
   });
 
   it('byTypes() emits include_product_class[]', () => {
-    const sel = ProductSelection.byTypes([ProductType.FinalExpense, ProductType.Term]);
+    const sel = ProductSelection.byTypes([ProductClass.FinalExpense, ProductClass.Term]);
     expect(sel.toWireFields()).toEqual({
       include_product_class: ['fex', 'term'],
     });
@@ -70,9 +70,24 @@ describe('ProductSelection factories', () => {
   it('fromMix() emits both fields', () => {
     const accendo = Products.Fex['AetnaAccendo'] as Product;
     const sel = ProductSelection.fromMix({
-      types: [ProductType.Term],
+      types: [ProductClass.Term],
       plus: [accendo],
     });
+    expect(sel.toWireFields()).toEqual({
+      products: [accendo.wireToken],
+      include_product_class: ['term'],
+    });
+  });
+
+  it('copies inputs so later caller mutation cannot change wire fields', () => {
+    const accendo = Products.Fex['AetnaAccendo'] as Product;
+    const products = [accendo];
+    const types = [ProductClass.Term];
+    const sel = ProductSelection.fromMix({ types, plus: products });
+
+    products.pop();
+    types.pop();
+
     expect(sel.toWireFields()).toEqual({
       products: [accendo.wireToken],
       include_product_class: ['term'],

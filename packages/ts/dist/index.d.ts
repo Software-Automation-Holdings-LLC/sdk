@@ -28,7 +28,7 @@ export { type Envelope, type RawResponse, type RawResponseResult, } from './zyin
 export { canonicalString, formatTimestamp, signRequest, type SignClock, type SignRequestHeaders, type SignRequestInput, type SignRequestResult, } from './core/auth/signRequest';
 export { Sex, NicotineUsage, NicotineDuration, Height, Weight, type Applicant, type Medication, type Condition, type NicotineUsageInput, type NicotineProductUsage, } from './zyins/applicant';
 export { Coverage, QuoteType, isMulti, type CoverageInput, type CoverageType, type SingleCoverage, type MultiCoverage, type FaceValueCoverage, type MonthlyBudgetCoverage, } from './zyins/coverage';
-export { ProductSelection, ProductType, Products, type Product, type ProductTypeValue, } from './zyins/product';
+export { ProductSelection, ProductClass, ProductType, Products, type Product, type ProductClassValue, } from './zyins/product';
 export { type LogosGetOptions, type LogosFetch, type LogosResponse, } from './zyins/logos';
 export { Product as ProductSlug, Products as ProductSlugs, type ProductMetadata, State, States, type StateMetadata, ProductCarriers, type ProductCarrierMetadata, ConditionCategories, type ConditionCategoryMetadata, MedicationUses, type MedicationUseMetadata, Scope, ScopeDescriptions, SignEvent, SignEventLabels, ErrorCode, ErrorAdviceCodes, ErrorDocUrls, } from './catalog';
 export { type DebugLogger, type EnvReader, type LogSink, debugLoggerFromEnv, makeLogger, redactHeaders, redactBody, redactBodyString, processEnv, stderrSink, } from './zyins/logger';

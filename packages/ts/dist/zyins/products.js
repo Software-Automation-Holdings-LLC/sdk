@@ -24,8 +24,8 @@ export class ProductsFacade {
         return Products.byWireToken(token);
     }
     /** Resolve a product by legacy display name within a type. */
-    byLegacy(productType, displayName) {
-        return Products.byLegacy(productType, displayName);
+    byLegacy(productClass, displayName) {
+        return Products.byLegacy(productClass, displayName);
     }
     /** No-op today — the catalog is statically embedded. */
     async refresh() {

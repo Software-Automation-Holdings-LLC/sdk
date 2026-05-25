@@ -35,6 +35,10 @@ export const TEST_APPLICANT: Applicant = {
 
 export const TEST_COVERAGE = Coverage.faceValue(100_000);
 
-export const TEST_PRODUCTS = ProductSelection.of([Products.Fex.AetnaAccendo!]);
+const AETNA_ACCENDO = Products.Fex.AetnaAccendo;
+if (!AETNA_ACCENDO) {
+  throw new Error('Missing test fixture product: Products.Fex.AetnaAccendo');
+}
+export const TEST_PRODUCTS = ProductSelection.of([AETNA_ACCENDO]);
 
 export const FIXED_CLOCK = (): number => 1_700_000_000_000;

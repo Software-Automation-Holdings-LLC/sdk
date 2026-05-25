@@ -10,7 +10,7 @@
  * server-driven catalog refresh lands without an API-shape change.
  */
 
-import { Products, type Product, type ProductTypeValue } from './product';
+import { Products, type Product, type ProductClassValue } from './product';
 
 /** `isa.zyins.products` — typed catalog access. */
 export class ProductsFacade {
@@ -29,8 +29,8 @@ export class ProductsFacade {
   }
 
   /** Resolve a product by legacy display name within a type. */
-  byLegacy(productType: ProductTypeValue, displayName: string): Product | undefined {
-    return Products.byLegacy(productType, displayName);
+  byLegacy(productClass: ProductClassValue, displayName: string): Product | undefined {
+    return Products.byLegacy(productClass, displayName);
   }
 
   /** No-op today — the catalog is statically embedded. */

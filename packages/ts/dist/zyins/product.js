@@ -11,7 +11,8 @@
  * regex / string-based product matching is gone; the server treats `products`
  * as an exact-slug list.
  */
-export { ProductType, Products, } from '../catalog/productsByType';
+export { ProductType as ProductClass, Products, } from '../catalog/productsByType';
+export { ProductType } from './productType';
 /**
  * One or more products selected for a single prequalify call.
  *
@@ -30,8 +31,8 @@ export class ProductSelection {
     explicit;
     types;
     constructor(explicit, types) {
-        this.explicit = explicit;
-        this.types = types;
+        this.explicit = [...explicit];
+        this.types = [...types];
     }
     /** Pick specific products by their typed `Product` object. */
     static of(products) {

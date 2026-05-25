@@ -94,6 +94,59 @@ describe('ZyInsClient.prequalify', () => {
     );
   });
 
+  it('falls back to a single server amount bucket for one-value multi coverage', async () => {
+    const { transport } = recordingTransport({
+      status: 200,
+      body: JSON.stringify({
+        data: {
+          meta: {
+            amounts: ['100001'],
+            processing_time_ms: 25,
+            quote_type: 'face_amounts',
+            total_products: 1,
+          },
+          results: {
+            '100001': [
+              {
+                brand: 'colonial-penn',
+                name: 'Colonial Penn',
+                plan: 'PREFERRED',
+                plan_group: null,
+                death_benefit: 100001,
+                monthly_price: '$42.00',
+                default_pricing_key: 'MONTHLY',
+                id: 'fex-colonial-penn',
+                index: 0,
+                is_excluded: false,
+                logo_url: '',
+                plan_info: {},
+              },
+            ],
+          },
+        },
+        request_id: 'req_test_1',
+        idempotency_key: 'idem_1',
+      }),
+    });
+    const client = new ZyInsClient({
+      auth: TEST_AUTH,
+      baseUrl: 'https://test.example',
+      transport,
+      clock: FIXED_CLOCK,
+    });
+
+    const result = await client.prequalify({
+      applicant: TEST_APPLICANT,
+      coverage: Coverage.faceValues([100_000]),
+      products: TEST_PRODUCTS,
+    });
+
+    expect(result.kind).toBe('multi');
+    if (result.kind !== 'multi') return;
+    expect(result.plans).toHaveLength(1);
+    expect(result.forAmount(100_000)).toHaveLength(1);
+  });
+
   it('maps ProblemDetails 400 to PrequalifyError(validation_error)', async () => {
     const { transport } = recordingTransport({
       status: 400,

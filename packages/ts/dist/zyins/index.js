@@ -10,7 +10,7 @@ export { ZyInsClient, DEFAULT_ZYINS_BASE_URL } from './client';
 export { isAuthContext } from './auth';
 export { Sex, NicotineUsage, NicotineDuration, Height, Weight, } from './applicant';
 export { Coverage, QuoteType, isMulti, } from './coverage';
-export { ProductSelection, ProductType, Products, } from './product';
+export { ProductSelection, ProductClass, ProductType, Products, } from './product';
 export { ProductsFacade } from './products';
 export { ZyInsError, LicenseError, PrequalifyError, RateLimitedError, fromHttpResponse, fromProblemDetails, } from './errors';
 export { getReadiness, } from './health';

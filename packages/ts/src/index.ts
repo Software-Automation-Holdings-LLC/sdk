@@ -122,10 +122,11 @@ export {
 } from './zyins/coverage';
 export {
   ProductSelection,
+  ProductClass,
   ProductType,
   Products,
   type Product,
-  type ProductTypeValue,
+  type ProductClassValue,
 } from './zyins/product';
 
 // --- Logos (public images; no auth) ------------------------------------

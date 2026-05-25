@@ -14,6 +14,7 @@ import { type IsaIdentity } from '../zyins/envFactory';
 import { IsaConfigError } from '../zyins/apiError';
 import { type IsaCredentialState } from '../zyins/credentialState';
 import { DEFAULT_ZYINS_BASE_URL } from '../zyins/client';
+import { type Transport } from '../zyins/transport';
 import { AccountNamespace } from './index';
 
 /** Inputs the unified `Isa` factory hands down for namespace construction. */
@@ -29,6 +30,7 @@ export interface AccountFactoryOptions {
    * the namespace.
    */
   credentialState?: IsaCredentialState;
+  transport?: Transport;
 }
 
 /** Build the `isa.account` namespace from the unified `Isa` options. */
@@ -59,6 +61,7 @@ export function buildAccountNamespace(opts: AccountFactoryOptions): AccountNames
   return new AccountNamespace({
     auth: opts.credentialState.auth,
     baseUrl: opts.baseUrl ?? DEFAULT_ZYINS_BASE_URL,
+    ...(opts.transport !== undefined && { transport: opts.transport }),
   });
 }
 

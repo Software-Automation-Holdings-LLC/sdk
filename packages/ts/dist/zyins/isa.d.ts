@@ -154,6 +154,7 @@ export declare class Isa {
     /** Consumer-supplied build identifier for client-version negotiation. */
     readonly clientVersion: string | undefined;
     private clientVersionListeners;
+    private clientVersionMismatchEmitted;
     private constructor();
     /**
      * Subscribe to client-version mismatch events. The listener fires on the

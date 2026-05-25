@@ -209,6 +209,7 @@ export class Isa {
   /** Consumer-supplied build identifier for client-version negotiation. */
   public readonly clientVersion: string | undefined;
   private clientVersionListeners: ClientVersionListener[] = [];
+  private clientVersionMismatchEmitted = false;
 
   private constructor(opts: IsaOptions) {
     this.identity = opts.identity;
@@ -220,14 +221,15 @@ export class Isa {
     if (this.credentialState && opts.onLicenseRefreshed) {
       this.credentialState.onLicenseRefreshed(opts.onLicenseRefreshed);
     }
-    const wrappedTransport = opts.transport
-      ? this.wrapTransportForVersion(opts.transport)
-      : undefined;
+    const baseTransport = opts.transport ?? defaultTransport();
+    const wrappedTransport = this.clientVersion
+      ? this.wrapTransportForVersion(baseTransport)
+      : baseTransport;
     const nsOpts: ZyInsNamespaceOptions = { identity: opts.identity };
     if (opts.baseUrl !== undefined) nsOpts.baseUrl = opts.baseUrl;
     if (this.logger !== undefined) nsOpts.logger = this.logger;
     if (this.credentialState !== undefined) nsOpts.credentialState = this.credentialState;
-    if (wrappedTransport !== undefined) nsOpts.transport = wrappedTransport;
+    nsOpts.transport = wrappedTransport;
     if (opts.logosFetch !== undefined) nsOpts.logosFetch = opts.logosFetch;
     this.zyins = new ZyInsNamespace(nsOpts);
     this.rapidsign = new RapidSignNamespace();
@@ -241,6 +243,7 @@ export class Isa {
       ...(opts.deviceId !== undefined && { deviceId: opts.deviceId }),
       ...(opts.orderId !== undefined && { orderId: opts.orderId }),
       ...(this.credentialState !== undefined && { credentialState: this.credentialState }),
+      transport: wrappedTransport,
     });
     this.webhooks = new WebhooksService();
   }
@@ -266,7 +269,10 @@ export class Isa {
     return async (request) => {
       const response = await inner(request);
       const status = evaluateClientVersion(response.headers, this.clientVersion);
-      if (status) this.emitClientVersion(status);
+      if (status && !this.clientVersionMismatchEmitted) {
+        this.clientVersionMismatchEmitted = true;
+        this.emitClientVersion(status);
+      }
       return response;
     };
   }

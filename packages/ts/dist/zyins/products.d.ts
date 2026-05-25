@@ -9,7 +9,7 @@
  * `refresh()` is a no-op today; it remains in the surface so future
  * server-driven catalog refresh lands without an API-shape change.
  */
-import { Products, type Product, type ProductTypeValue } from './product';
+import { Products, type Product, type ProductClassValue } from './product';
 /** `isa.zyins.products` — typed catalog access. */
 export declare class ProductsFacade {
     constructor(_deps?: unknown);
@@ -18,7 +18,7 @@ export declare class ProductsFacade {
     /** Resolve a product by wire-token slug. */
     byWireToken(token: string): Product | undefined;
     /** Resolve a product by legacy display name within a type. */
-    byLegacy(productType: ProductTypeValue, displayName: string): Product | undefined;
+    byLegacy(productClass: ProductClassValue, displayName: string): Product | undefined;
     /** No-op today — the catalog is statically embedded. */
     refresh(): Promise<typeof Products>;
 }

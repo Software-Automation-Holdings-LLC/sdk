@@ -13,13 +13,15 @@
  */
 
 export {
-  ProductType,
-  type ProductTypeValue,
+  ProductType as ProductClass,
+  type ProductTypeValue as ProductClassValue,
   type Product,
   Products,
 } from '../catalog/productsByType';
 
-import type { Product, ProductTypeValue } from '../catalog/productsByType';
+import type { Product, ProductTypeValue as ProductClassValue } from '../catalog/productsByType';
+
+export { ProductType } from './productType';
 
 /**
  * One or more products selected for a single prequalify call.
@@ -36,10 +38,13 @@ import type { Product, ProductTypeValue } from '../catalog/productsByType';
  * internal to the SDK and never exposed to call sites.
  */
 export class ProductSelection {
-  private constructor(
-    readonly explicit: readonly Product[],
-    readonly types: readonly ProductTypeValue[],
-  ) {}
+  private readonly explicit: readonly Product[];
+  private readonly types: readonly ProductClassValue[];
+
+  private constructor(explicit: readonly Product[], types: readonly ProductClassValue[]) {
+    this.explicit = [...explicit];
+    this.types = [...types];
+  }
 
   /** Pick specific products by their typed `Product` object. */
   static of(products: readonly Product[]): ProductSelection {
@@ -50,7 +55,7 @@ export class ProductSelection {
   }
 
   /** Pick all products of one or more types. */
-  static byTypes(types: readonly ProductTypeValue[]): ProductSelection {
+  static byTypes(types: readonly ProductClassValue[]): ProductSelection {
     if (types.length === 0) {
       throw new Error('ProductSelection.byTypes: at least one type is required');
     }
@@ -59,7 +64,7 @@ export class ProductSelection {
 
   /** Hybrid — types as the base, with extra explicit products bolted on. */
   static fromMix(opts: {
-    types?: readonly ProductTypeValue[];
+    types?: readonly ProductClassValue[];
     plus?: readonly Product[];
   }): ProductSelection {
     const t = opts.types ?? [];
