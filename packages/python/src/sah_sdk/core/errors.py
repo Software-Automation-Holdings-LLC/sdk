@@ -189,12 +189,13 @@ class RateLimitError(ISAError):
         self,
         message: str,
         *,
+        code: str = "rate_limit_exceeded",
         http_status: int = 429,
         retry_after_seconds: float | None = None,
         request_id: str | None = None,
     ) -> None:
         super().__init__(
-            message, code="rate_limited", http_status=http_status, request_id=request_id
+            message, code=code, http_status=http_status, request_id=request_id
         )
         self.retry_after_seconds = retry_after_seconds
 
@@ -337,8 +338,10 @@ def from_problem_details(
             param=str(param) if param is not None else None,
             request_id=request_id,
         )
-    if code == "rate_limited":
-        return RateLimitError(message, http_status=status or 429, request_id=request_id)
+    if code in ("rate_limit_exceeded", "rate_limited"):
+        return RateLimitError(
+            message, code=code, http_status=status or 429, request_id=request_id
+        )
     if code in PREQUALIFY_ERROR_CODES:
         return PrequalifyError(
             code,

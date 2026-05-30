@@ -1,4 +1,41 @@
-# Migrating from `isa-sdk-zyins` 0.2.x to `sah-sdk` 0.3.0
+# Migration — 0.x → 1.0.0rc1 (Python)
+
+The cross-language guide at [`../../MIGRATION.md`](../../MIGRATION.md)
+covers the full cut (constructor rename, per-surface `api_version`,
+v3 wire-shape, CaseStorage adapter, bundleless `reference.match`).
+Python-specific notes:
+
+- **Install (rc.1, internal channel):**
+
+  ```bash
+  # Test PyPI:
+  pip install --index-url https://test.pypi.org/simple/ \
+      --extra-index-url https://pypi.org/simple/ \
+      sah-sdk==1.0.0rc1
+
+  # OR GitHub Packages for Python (when configured):
+  pip install --index-url https://<token>@pypi.pkg.github.com/Software-Automation-Holdings-LLC/ \
+      sah-sdk==1.0.0rc1
+  ```
+
+  PEP 440 normalization: the release tag is `sdk/v1.0.0-rc.1`; the
+  installable package version is `1.0.0rc1`.
+
+- **Constructor:** `Isa.create(...)` → `Isa.with_keycode(...)`. The
+  `device_id` parameter is removed (internal SDK detail).
+- **api_version:** `str` → `dict[str, str]` (per-surface map). Use
+  `BUNDLED_API_VERSIONS` for defaults.
+- **Cases:** `isa.case.save(...)` → `isa.zyins.cases.save(product=...,
+  payload=...)`. Default storage is `ZeroKnowledgeCaseStorage`.
+- **Reference:** `datasets.get_v3().match(...)` →
+  `isa.zyins.reference.match(text)`. Cache primes on first call;
+  `isa.zyins.reference.refresh()` invalidates.
+- **Type checking:** mypy strict against the SDK now enforces the
+  locked surface contract.
+
+---
+
+# Historical: `isa-sdk-zyins` 0.2.x → `sah-sdk` 0.3.0
 
 ## What changed
 

@@ -20,6 +20,18 @@ def test_429_maps_to_rate_limit_error() -> None:
     err = from_http_response(429, "rate limited", retry_after_seconds=12.0)
     assert isinstance(err, RateLimitError)
     assert err.retry_after_seconds == 12.0
+    assert err.code == "rate_limit_exceeded"
+
+
+def test_problem_details_rate_limit_exceeded() -> None:
+    err = from_problem_details({"code": "rate_limit_exceeded", "detail": "slow down"})
+    assert isinstance(err, RateLimitError)
+    assert err.code == "rate_limit_exceeded"
+
+
+def test_problem_details_legacy_rate_limited() -> None:
+    err = from_problem_details({"code": "rate_limited", "detail": "slow down"})
+    assert isinstance(err, RateLimitError)
     assert err.code == "rate_limited"
 
 

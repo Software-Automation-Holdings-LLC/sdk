@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "sah-sdk"
-version = "0.5.5"
+version = "1.0.0rc2"
 description = "Unified Python SDK for ISA APIs (zyins, rapidsign, proxy)."
 readme = "README.md"
 license = { text = "Apache-2.0" }
@@ -27,6 +27,7 @@ dependencies = [
     "httpx>=0.27",
     "pydantic>=2.6",
     "libcst>=1.4",
+    "cryptography>=42",
 ]
 
 [project.urls]
@@ -45,7 +46,7 @@ dev = [
 ]
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/sah_sdk"]
+packages = ["src/sah_sdk", "src/isa_sdk"]
 
 [tool.hatch.envs.default]
 features = ["dev"]
@@ -58,7 +59,7 @@ fmt = "ruff format src tests"
 [tool.isort]
 profile = "black"
 line_length = 100
-known_first_party = ["sah_sdk"]
+known_first_party = ["sah_sdk", "isa_sdk"]
 
 [tool.ruff]
 line-length = 100

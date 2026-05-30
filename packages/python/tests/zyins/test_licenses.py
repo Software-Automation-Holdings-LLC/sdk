@@ -64,12 +64,14 @@ def test_check_serializes_and_parses_status() -> None:
     assert result.status == "valid"
     method, url, headers, body = transport.calls[0]
     assert method == "POST"
-    assert url.endswith("/v1/licenses/check")
+    assert url.endswith("/v2/licenses/check")
     assert "Idempotency-Key" in headers
+    assert "Authorization" not in headers
+    assert headers["X-Device-ID"] == "device-1"
     assert json.loads(body or "") == {
         "email": "john.doe@acme-agency.com",
         "keycode": "ABC-123-XYZ",
-        "device_id": "device-1",
+        "deviceId": "device-1",
     }
 
 
@@ -100,12 +102,19 @@ def test_check_surfaces_5xx_as_isa_error() -> None:
 
 
 def test_deactivate_serializes_and_parses_status() -> None:
-    transport = RecordingTransport(response_body=json.dumps({"status": "deactivated"}))
+    transport = RecordingTransport(response_body=json.dumps({"status": "inactive"}))
     client = ZyInsClient(_TOKEN, transport=transport)
     result = client.license.deactivate(
-        LicenseDeactivateInput(email="john.doe@acme-agency.com", keycode="ABC-123-XYZ")
+        LicenseDeactivateInput(
+            email="john.doe@acme-agency.com",
+            keycode="ABC-123-XYZ",
+            device_id="device-1",
+        )
     )
-    assert result.status == "deactivated"
-    method, url, _, _ = transport.calls[0]
+    assert result.status == "inactive"
+    method, url, headers, body = transport.calls[0]
     assert method == "POST"
-    assert url.endswith("/v1/licenses/deactivate")
+    assert url.endswith("/v2/licenses/deactivate")
+    assert "Authorization" not in headers
+    assert headers["X-Device-ID"] == "device-1"
+    assert json.loads(body or "")["deviceId"] == "device-1"

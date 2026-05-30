@@ -47,6 +47,102 @@ for plan in result.data.plans:
 `Isa.with_bearer()` reads `ISA_TOKEN` from the environment. `Authorization: Bearer <token>`,
 `Idempotency-Key`, and the date-pinned `Version` header are set automatically.
 
+## First call in <15 lines
+
+```python
+from sah_sdk.zyins import Isa, Coverage
+
+isa = Isa.with_keycode(
+    keycode="SDV-HWH-WDD",
+    email="john.doe@acme-agency.com",
+)
+result = isa.zyins.prequalify_v2(
+    applicant={"dob": "1962-04-18", "sex": "male", "state": "NC"},
+    coverage=Coverage.face_value(25_000),
+    products="colonial-penn.final-expense",
+)
+print(result.data.plans[0].monthly_premium)
+```
+
+## Per-surface API versions
+
+The ISA API is a federation of independently versioned surfaces. Every SDK
+release exports a frozen `BUNDLED_API_VERSIONS` mapping recording which
+`/vN` each surface targets:
+
+```python
+from sah_sdk.zyins import BUNDLED_API_VERSIONS
+
+print(BUNDLED_API_VERSIONS)
+# {
+#   "prequalify": "v2",
+#   "quote":      "v2",
+#   "datasets":   "v2",
+#   "reference":  "v2",
+#   "sessions":   "v1",
+#   "branding":   "v1",
+#   "cases":      "v1",
+# }
+```
+
+Pin individual surfaces with a per-surface `api_version` map. There is **no**
+`default` key and **no** string shorthand — resolution is
+`api_version.get(surface, BUNDLED_API_VERSIONS[surface])`:
+
+```python
+isa = await Isa.with_keycode(
+    keycode="SDV-HWH-WDD",
+    email="john.doe@acme-agency.com",
+    api_version={"quote": "v2"},   # pin only quote; everything else bundled
+)
+```
+
+The release that retargets `prequalify` / `quote` / `datasets` / `reference`
+to `v3` will bump those entries. See [SDK syntax proposal §2.7][syntax-27].
+
+[syntax-27]: ../../docs/sdk-syntax-proposal.md#27-versioning--per-surface-not-global
+
+## Reference data — `.match()`
+
+The unversioned `isa.zyins.reference` namespace canonicalizes free-text
+medication and condition input. Unknown text never rejects — it returns a
+structured envelope so the final canonicalization fires server-side at
+`/vN/prequalify`:
+
+```python
+ds = await isa.zyins.datasets.get(include=["conditions", "medications"])
+
+insulin = isa.zyins.medications.match("insulin")
+print(insulin.id, insulin.name, insulin.is_known)
+# med_01KSR2WVAGC05ZGR6FA4QYEB12  INSULIN  True
+
+# Symmetric traversal — what conditions is insulin used for?
+used_for = insulin.conditions(isa.zyins.reference.Sort.MOST_COMMON_FIRST)
+# frequency-ordered list; cond_01KSR2WVAGC05ZGR6FA4QYEA8X first
+
+novel = isa.zyins.medications.match("NewExperimental XR 2026")
+# → {"is_known": False, "input_text": "NewExperimental XR 2026", ...}
+```
+
+`Sort.MOST_COMMON_FIRST` and `Sort.ALPHABETICAL` are the two supported
+orderings.
+
+## Case storage — bring your own
+
+`isa.zyins.cases.*` routes through a `CaseStorage` adapter. The default is
+the zero-knowledge store — ISA's servers only hold ciphertext and an opaque
+ID. To plug a carrier-controlled store, pass your adapter at construction:
+
+```python
+isa = await Isa.with_keycode(
+    keycode=..., email=...,
+    case_storage=CarrierCaseStorage(),   # optional; default = ZeroKnowledgeCaseStorage
+)
+```
+
+See [cases guide](https://docs.isaapi.com/docs/cases) for the full
+bring-your-own pattern.
+
 ## Auth deviation from the TS SDK
 
 The TypeScript SDK in this monorepo still carries the pre-#286 HMAC device

@@ -53,7 +53,23 @@ from .core.errors import (
 )
 from .core.value_types import Email, Money, Url
 from .isa import Isa
+from .zyins.applicant import (
+    NicotineDuration,
+    NicotineUsage,
+    NicotineUsageInput,
+    Sex,
+)
+from .zyins.bundled_api_versions import BUNDLED_API_VERSIONS
+from .zyins.coverage import Coverage, CoverageType
 from .zyins.credential_state import LicenseRefreshedEvent
+from .zyins.measurements import Height, HeightParseError, Weight, WeightParseError
+from .zyins.prequalify import (
+    Carrier,
+    Eligibility,
+    PlanProduct,
+    Premium,
+    PrequalifyPlan,
+)
 from .zyins.product import Product as ZyinsProduct  # zyins regex helper (legacy)
 
 __version__ = "0.4.0rc1"
@@ -62,13 +78,20 @@ __version__ = "0.4.0rc1"
 # failures. Until the runtime maps such failures to it, the alias keeps
 # the surface name resolvable.
 __all__ = [
+    "BUNDLED_API_VERSIONS",
     "AuthError",
     "BearerAuth",
+    "Carrier",
+    "Coverage",
+    "CoverageType",
+    "Eligibility",
     "Email",
     "Envelope",
     "ErrorAdviceCodes",
     "ErrorCode",
     "ErrorDocUrls",
+    "Height",
+    "HeightParseError",
     "ISAError",
     "Isa",
     "IsaApiError",
@@ -81,7 +104,13 @@ __all__ = [
     "LicenseRefreshedEvent",
     "MedicationUses",
     "Money",
+    "NicotineDuration",
+    "NicotineUsage",
+    "NicotineUsageInput",
+    "PlanProduct",
+    "Premium",
     "PrequalifyError",
+    "PrequalifyPlan",
     "Product",
     "ProductCarriers",
     "ProductLabels",
@@ -90,12 +119,15 @@ __all__ = [
     "RawResponse",
     "Scope",
     "SessionAuth",
+    "Sex",
     "SignEvent",
     "State",
     "States",
     "Url",
     "UsState",
     "ValidationError",
+    "Weight",
+    "WeightParseError",
     "ZyinsProduct",
     "__version__",
 ]

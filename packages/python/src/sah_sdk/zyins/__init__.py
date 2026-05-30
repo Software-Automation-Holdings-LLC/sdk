@@ -13,6 +13,8 @@ pydantic v2 models for runtime validation, and httpx for transport.
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING, Any
+
 from ..core.env import IsaConfigError
 from ..core.envelope import Envelope, RawResponse
 from ..core.errors import (
@@ -46,6 +48,23 @@ from .client import DEFAULT_BASE_URL, ZyInsClient
 from .coverage import Coverage, CoverageType, QuoteType
 from .datasets import Dataset
 from .health import ProbeResult, ReadinessResult
+from .isa_options import (
+    DEFAULT_TIMEOUT_SECONDS,
+    BearerAuth,
+    FormAuth,
+    InMemoryEngine,
+    IsaApiVersion,
+    IsaAuthSupplier,
+    IsaCreateOptions,
+    IsaEngine,
+    LicenseAuth,
+    LocalEngine,
+    ProxyEngine,
+    RemoteEngine,
+    ResolvedIsaOptions,
+    SessionAuth,
+    resolve_isa_options,
+)
 from .licenses import (
     LicenseCheckInput,
     LicenseCheckResult,
@@ -53,8 +72,18 @@ from .licenses import (
     LicenseDeactivateResult,
 )
 from .licenses_facade import LicenseActivateResult
+from .measurements import Height, HeightParseError, Weight, WeightParseError
+from .plan_info_label import PlanInfoItem, coerce_plan_info, title_case_label
 from .preferences import PreferencesResult, PreferencesSetInput
-from .prequalify import PrequalifyInput, PrequalifyPlan, PrequalifyResult
+from .prequalify import (
+    Carrier,
+    Eligibility,
+    PlanProduct,
+    Premium,
+    PrequalifyInput,
+    PrequalifyPlan,
+    PrequalifyResult,
+)
 from .product import Product, ProductCatalog, ProductSelection, ProductType
 from .products import ProductsFacade
 from .quote import QuotedPlan, QuoteInput, QuoteResult
@@ -63,8 +92,24 @@ from .usage import UsageSummary
 
 ZyInsError = ISAError
 
+# Cross-language naming alias: TS/PHP/C# use ``IsaRateLimitError``; the
+# Python core class historically shipped as ``RateLimitError``. Both
+# resolve to the same exception type so docs that import either form
+# work uniformly.
+IsaRateLimitError = RateLimitError
 
-def __getattr__(name: str) -> object:
+
+if TYPE_CHECKING:
+    # Static-type-checker view: ``Isa`` is a real attribute of this
+    # module. The runtime keeps the lazy ``__getattr__`` below to break
+    # the circular import; mypy/pyright never execute the runtime branch
+    # so they see the eager binding here. This fixes the long-standing
+    # "Isa narrowed to object" surface drift caught by Gate 2 of the
+    # docs-conformance harness.
+    from ..isa import Isa as Isa
+
+
+def __getattr__(name: str) -> Any:
     """Lazy re-export of ``Isa`` to avoid a top-level circular import.
 
     ``sah_sdk.__init__`` imports :class:`Isa`, which in turn imports
@@ -82,36 +127,54 @@ def __getattr__(name: str) -> object:
 
 __all__ = [
     "DEFAULT_BASE_URL",
+    "DEFAULT_TIMEOUT_SECONDS",
     "Applicant",
     "AuthError",
+    "BearerAuth",
     "BrandingDetail",
+    "Carrier",
     "CaseCreateInput",
     "CaseCreateResult",
     "Condition",
     "Coverage",
     "CoverageType",
     "Dataset",
+    "Eligibility",
     "EmailEnqueueInput",
     "EmailEnqueueResult",
     "Envelope",
+    "FormAuth",
+    "Height",
+    "HeightParseError",
     "ISAError",
+    "InMemoryEngine",
     "Isa",
     "IsaApiError",
+    "IsaApiVersion",
+    "IsaAuthSupplier",
     "IsaConfigError",
+    "IsaCreateOptions",
+    "IsaEngine",
     "IsaIdempotencyConflictError",
+    "IsaRateLimitError",
     "LicenseActivateResult",
+    "LicenseAuth",
     "LicenseCheckInput",
     "LicenseCheckResult",
     "LicenseDeactivateInput",
     "LicenseDeactivateResult",
     "LicenseError",
+    "LocalEngine",
     "Medication",
     "NicotineDuration",
     "NicotineProductUsage",
     "NicotineUsage",
     "NicotineUsageInput",
+    "PlanInfoItem",
+    "PlanProduct",
     "PreferencesResult",
     "PreferencesSetInput",
+    "Premium",
     "PrequalifyError",
     "PrequalifyInput",
     "PrequalifyPlan",
@@ -122,6 +185,7 @@ __all__ = [
     "ProductSelection",
     "ProductType",
     "ProductsFacade",
+    "ProxyEngine",
     "QuoteInput",
     "QuoteResult",
     "QuoteType",
@@ -130,9 +194,17 @@ __all__ = [
     "RawResponse",
     "ReadinessResult",
     "ReferenceDataResponse",
+    "RemoteEngine",
+    "ResolvedIsaOptions",
+    "SessionAuth",
     "Sex",
     "UsageSummary",
     "ValidationError",
+    "Weight",
+    "WeightParseError",
     "ZyInsClient",
     "ZyInsError",
+    "coerce_plan_info",
+    "resolve_isa_options",
+    "title_case_label",
 ]

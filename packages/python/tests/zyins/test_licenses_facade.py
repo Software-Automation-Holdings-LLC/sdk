@@ -59,7 +59,7 @@ def test_activate_zero_args_uses_instance_state() -> None:
             TransportResponse(
                 status=200,
                 body=json.dumps(
-                    {"data": {"status": "active", "auth": {"license_key": "lk-fresh"}, "remaining_activations": 4}}
+                    {"data": {"status": "active", "licenseKey": "lk-fresh", "remainingActivations": 4}}
                 ),
                 headers={},
             )
@@ -72,12 +72,35 @@ def test_activate_zero_args_uses_instance_state() -> None:
     assert result.remaining_activations == 4
     method, url, headers, body = transport.calls[0]
     assert method == "POST"
-    assert url.endswith("/v1/licenses/activate")
+    assert url.endswith("/v2/licenses/activate")
     payload = json.loads(body or "")
     assert payload["email"] == "john.doe@acme-agency.com"
     assert payload["keycode"] == "ABC-123-XYZ"
-    assert "device_id" in payload
-    assert headers["Authorization"].startswith("License ")
+    assert "deviceId" in payload
+    # Bootstrap headers only — no Authorization, no HMAC signature.
+    assert "Authorization" not in headers
+    assert "X-Device-Signature" not in headers
+    assert "Idempotency-Key" in headers
+    assert "X-Device-ID" in headers
+
+
+def test_activate_device_override_matches_header() -> None:
+    transport = StubTransport(
+        responses=[
+            TransportResponse(
+                status=200,
+                body=json.dumps({"data": {"status": "active", "licenseKey": "lk-fresh"}}),
+                headers={},
+            )
+        ]
+    )
+    isa = _isa_with(transport)
+
+    isa.zyins.license.activate(device_id="device-override")
+
+    _, _, headers, body = transport.calls[0]
+    assert json.loads(body or "")["deviceId"] == "device-override"
+    assert headers["X-Device-ID"] == "device-override"
 
 
 def test_activate_refreshes_credential_state_in_place() -> None:
@@ -86,7 +109,7 @@ def test_activate_refreshes_credential_state_in_place() -> None:
             TransportResponse(
                 status=200,
                 body=json.dumps(
-                    {"data": {"status": "active", "auth": {"license_key": "lk-fresh"}}}
+                    {"data": {"status": "active", "licenseKey": "lk-fresh"}}
                 ),
                 headers={},
             )
@@ -108,7 +131,7 @@ def test_account_uses_refreshed_license_after_cached_access() -> None:
             TransportResponse(
                 status=200,
                 body=json.dumps(
-                    {"data": {"status": "active", "auth": {"license_key": "lk-fresh"}}}
+                    {"data": {"status": "active", "licenseKey": "lk-fresh"}}
                 ),
                 headers={},
             ),
@@ -174,7 +197,7 @@ def test_on_license_refreshed_fires() -> None:
         responses=[
             TransportResponse(
                 status=200,
-                body=json.dumps({"data": {"status": "active", "auth": {"license_key": "lk-fresh"}}}),
+                body=json.dumps({"data": {"status": "active", "licenseKey": "lk-fresh"}}),
                 headers={},
             )
         ]
@@ -204,9 +227,9 @@ def test_check_zero_args_uses_instance_state() -> None:
     result = isa.zyins.license.check()
     assert result.status == "valid"
     _, url, _, body = transport.calls[-1]
-    assert url.endswith("/v1/licenses/check")
+    assert url.endswith("/v2/licenses/check")
     payload = json.loads(body or "")
-    assert payload["license_key"] == "lk-stored"
+    assert payload["licenseKey"] == "lk-stored"
 
 
 def test_deactivate_clears_stashed_license_key() -> None:
@@ -214,7 +237,7 @@ def test_deactivate_clears_stashed_license_key() -> None:
         responses=[
             TransportResponse(
                 status=200,
-                body=json.dumps({"data": {"status": "deactivated"}}),
+                body=json.dumps({"data": {"status": "inactive"}}),
                 headers={},
             )
         ]
@@ -245,7 +268,7 @@ def test_deactivate_keeps_stashed_license_key_when_response_is_not_success() -> 
     assert isa._credential_state is not None
     isa._credential_state.refresh_license_key("lk-existing")
 
-    with pytest.raises(ValueError, match="deactivated status"):
+    with pytest.raises(ValueError, match="inactive status"):
         isa.zyins.license.deactivate()
 
     assert store.get(CREDENTIAL_KEYS.LICENSE_KEY) == "lk-existing"

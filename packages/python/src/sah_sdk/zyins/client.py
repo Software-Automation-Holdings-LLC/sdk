@@ -24,7 +24,7 @@ from __future__ import annotations
 
 from collections.abc import Mapping
 from dataclasses import dataclass
-from typing import Any
+from typing import Any, cast
 from urllib.parse import quote, urlencode
 
 from ..core.auth import BearerAuth
@@ -62,6 +62,7 @@ DEFAULT_TIMEOUT_SECONDS = 30.0
 DEFAULT_VERSION_HEADER = "2026-05-18"
 
 _JSON_CONTENT_TYPE = "application/json"
+_DEVICE_ID_HEADER = "X-Device-ID"
 _MUTATING_METHODS = frozenset({"POST", "PUT", "PATCH", "DELETE"})
 
 
@@ -156,6 +157,7 @@ class ZyInsClient:
         idempotency_key: str | None = None,
         version: str | None = None,
         extra_headers: dict[str, str] | None = None,
+        auth: bool = True,
     ) -> str:
         """Send a request and return the raw response body.
 
@@ -169,6 +171,7 @@ class ZyInsClient:
             idempotency_key=idempotency_key,
             version=version,
             extra_headers=extra_headers,
+            auth=auth,
         )
         return result.body
 
@@ -181,6 +184,7 @@ class ZyInsClient:
         idempotency_key: str | None = None,
         version: str | None = None,
         extra_headers: dict[str, str] | None = None,
+        auth: bool = True,
     ) -> _DispatchResult:
         """Send a request and return status + body + headers + minted key.
 
@@ -193,8 +197,9 @@ class ZyInsClient:
         headers: dict[str, str] = {
             "Accept": _JSON_CONTENT_TYPE,
             "Version": version or self._version,
-            **self._auth.headers(),
         }
+        if auth:
+            headers.update(self._auth.headers())
         if body is not None:
             headers["Content-Type"] = _JSON_CONTENT_TYPE
         minted_key: str | None = None
@@ -331,16 +336,23 @@ class UsageSubClient:
 class LicenseSubClient:
     """``client.license`` namespace (proto-backed Check / Deactivate).
 
-    Targets the public license-lifecycle endpoints
-    ``/v1/licenses/check`` and ``/v1/licenses/deactivate`` defined in
-    ``shared/schemas/api/zyins/v1/licenses.proto``.
+    Targets the bootstrap-safe public license-lifecycle endpoints
+    ``/v2/licenses/check`` and ``/v2/licenses/deactivate`` which sit
+    OUTSIDE ``AuthMiddleware`` on the server. Wire bodies use camelCase
+    (``deviceId`` / ``licenseKey``) to match the v2 contract.
     """
 
-    _CHECK_PATH = "/v1/licenses/check"
-    _DEACTIVATE_PATH = "/v1/licenses/deactivate"
+    _CHECK_PATH = "/v2/licenses/check"
+    _DEACTIVATE_PATH = "/v2/licenses/deactivate"
 
     def __init__(self, client: ZyInsClient) -> None:
         self._client = client
+
+    @staticmethod
+    def _bootstrap_headers(device_id: str) -> dict[str, str]:
+        if not device_id:
+            return {}
+        return {_DEVICE_ID_HEADER: device_id}
 
     def check(
         self,
@@ -353,6 +365,8 @@ class LicenseSubClient:
             self._CHECK_PATH,
             body=input.to_wire_body(),
             idempotency_key=idempotency_key,
+            extra_headers=self._bootstrap_headers(input.device_id),
+            auth=False,
         )
         return parse_check_response(raw)
 
@@ -367,6 +381,8 @@ class LicenseSubClient:
             self._DEACTIVATE_PATH,
             body=input.to_wire_body(),
             idempotency_key=idempotency_key,
+            extra_headers=self._bootstrap_headers(input.device_id),
+            auth=False,
         )
         return parse_deactivate_response(raw)
 
@@ -412,4 +428,4 @@ class CaseSubClient:
         raw = self._client._request(
             "POST", f"{self._PATH}/email", body=body, idempotency_key=idempotency_key
         )
-        return _json.loads(raw) if raw else {}
+        return cast(dict[str, Any], _json.loads(raw)) if raw else {}

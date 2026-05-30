@@ -6,7 +6,18 @@ successful :meth:`LicenseFacade.activate` updates the shared credential
 state in place so subsequent calls (prequalify, cases.create, …) sign
 with the new license key automatically — no caller re-bootstrap.
 
-Mirror of ``packages/ts/src/zyins/isaNamespaces.ts::LicenseFacade``.
+These three operations target the bootstrap endpoints
+``/v2/licenses/{activate,check,deactivate}`` which sit OUTSIDE
+``AuthMiddleware`` on the server: ``activate`` is the call that MINTS
+the ``licenseKey``, so we cannot sign requests with a credential we do
+not yet have. Headers carry only ``Idempotency-Key`` and ``X-Device-ID``;
+no HMAC signature, no ``Authorization`` header.
+
+The public Python dataclass shape (``LicenseActivateResult.license_key``)
+is preserved; only the wire parsing adapts to the v2 envelope shape
+(``data.licenseKey`` flat, not nested under ``auth``).
+
+Mirror of ``packages/ts/src/zyins/license.ts``.
 """
 
 from __future__ import annotations
@@ -16,17 +27,19 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any
 
 from ..core.idempotency import generate_idempotency_key
-from ..core.license_hmac import LicenseClock, build_license_hmac_headers, system_license_clock
 from ..core.transport import HttpTransport, Transport, raise_for_status
 
 if TYPE_CHECKING:
     from .credential_state import IsaCredentialState
 
 
-_ACTIVATE_PATH = "/v1/licenses/activate"
-_CHECK_PATH = "/v1/licenses/check"
-_DEACTIVATE_PATH = "/v1/licenses/deactivate"
-_DEACTIVATED_STATUS = "deactivated"
+_ACTIVATE_PATH = "/v2/licenses/activate"
+_CHECK_PATH = "/v2/licenses/check"
+_DEACTIVATE_PATH = "/v2/licenses/deactivate"
+_DEACTIVATED_STATUS = "inactive"
+# Legacy v1 word; accepted for back-compat against any server still
+# emitting the old wire string.
+_DEACTIVATED_STATUS_LEGACY = "deactivated"
 
 
 @dataclass(frozen=True, slots=True)
@@ -54,7 +67,7 @@ class LicenseFacade:
     snapshot.
     """
 
-    __slots__ = ("_base_url", "_clock", "_state", "_transport")
+    __slots__ = ("_base_url", "_state", "_transport")
 
     def __init__(
         self,
@@ -62,12 +75,11 @@ class LicenseFacade:
         state: IsaCredentialState,
         base_url: str,
         transport: Transport | None = None,
-        clock: LicenseClock | None = None,
+        clock: Any | None = None,
     ) -> None:
         self._state = state
         self._base_url = base_url.rstrip("/")
         self._transport = transport or HttpTransport()
-        self._clock = clock or system_license_clock
 
     def activate(
         self,
@@ -77,15 +89,16 @@ class LicenseFacade:
         device_id: str | None = None,
     ) -> LicenseActivateResult:
         snap = self._state.snapshot()
+        resolved_device = device_id if device_id is not None else snap.device_id
         body = json.dumps(
             {
                 "email": email if email is not None else snap.email,
                 "keycode": keycode if keycode is not None else snap.keycode,
-                "device_id": device_id if device_id is not None else snap.device_id,
+                "deviceId": resolved_device,
             },
             separators=(",", ":"),
         )
-        raw = self._dispatch("POST", _ACTIVATE_PATH, body=body)
+        raw = self._dispatch("POST", _ACTIVATE_PATH, body=body, device_id=resolved_device)
         result = _parse_activate(raw)
         if result.license_key:
             self._state.refresh_license_key(result.license_key)
@@ -106,12 +119,12 @@ class LicenseFacade:
         }
         resolved_device = device_id if device_id is not None else snap.device_id
         if resolved_device:
-            payload["device_id"] = resolved_device
+            payload["deviceId"] = resolved_device
         resolved_key = license_key if license_key is not None else snap.license_key
         if resolved_key:
-            payload["license_key"] = resolved_key
+            payload["licenseKey"] = resolved_key
         body = json.dumps(payload, separators=(",", ":"))
-        raw = self._dispatch("POST", _CHECK_PATH, body=body)
+        raw = self._dispatch("POST", _CHECK_PATH, body=body, device_id=resolved_device)
         return _parse_check(raw)
 
     def deactivate(
@@ -128,31 +141,25 @@ class LicenseFacade:
         }
         resolved_device = device_id if device_id is not None else snap.device_id
         if resolved_device:
-            payload["device_id"] = resolved_device
+            payload["deviceId"] = resolved_device
         body = json.dumps(payload, separators=(",", ":"))
-        raw = self._dispatch("POST", _DEACTIVATE_PATH, body=body)
+        raw = self._dispatch("POST", _DEACTIVATE_PATH, body=body, device_id=resolved_device)
         result = _parse_deactivate(raw)
         self._state.clear_license_key()
         return result
 
-    def _dispatch(self, method: str, path: str, *, body: str) -> str:
-        auth = self._state.auth()
-        hmac_headers = build_license_hmac_headers(
-            license_key=auth.license_key,
-            order_id=auth.order_id,
-            email=auth.email,
-            method=method,
-            request_uri=path,
-            body=body,
-            device_id=auth.device_id,
-            clock=self._clock,
-        ).as_dict()
+    def _dispatch(self, method: str, path: str, *, body: str, device_id: str) -> str:
+        # Bootstrap-only headers. activate is the call that MINTS the
+        # license key — signing here would require a credential the
+        # client does not yet have. The server tracks the activation
+        # slot by X-Device-ID; no Authorization, no HMAC signature.
         headers: dict[str, str] = {
-            **hmac_headers,
             "Accept": "application/json",
             "Content-Type": "application/json",
             "Idempotency-Key": generate_idempotency_key(),
         }
+        if device_id:
+            headers["X-Device-ID"] = device_id
         response = self._transport.request(
             method,
             f"{self._base_url}{path}",
@@ -177,17 +184,23 @@ def _unwrap(raw: str, *, context: str) -> dict[str, Any]:
 
 def _parse_activate(raw: str) -> LicenseActivateResult:
     root = _unwrap(raw, context="licenses.activate")
-    auth = root.get("auth")
+    # v2 wire shape: data.licenseKey at top of data. Legacy v1 nested
+    # under data.auth.license_key is still accepted for back-compat.
     license_key = ""
-    if isinstance(auth, dict):
-        candidate = auth.get("license_key") or auth.get("licenseKey")
-        if isinstance(candidate, str):
-            license_key = candidate
+    candidate = root.get("licenseKey") or root.get("license_key")
+    if isinstance(candidate, str):
+        license_key = candidate
     if not license_key:
-        candidate = root.get("license_key") or root.get("licenseKey")
-        if isinstance(candidate, str):
-            license_key = candidate
-    remaining = root.get("remaining_activations") or root.get("remainingActivations") or 0
+        auth = root.get("auth")
+        if isinstance(auth, dict):
+            nested = auth.get("licenseKey") or auth.get("license_key")
+            if isinstance(nested, str):
+                license_key = nested
+    remaining = root.get("remainingActivations")
+    if remaining is None:
+        remaining = root.get("remaining_activations")
+    if remaining is None:
+        remaining = 0
     try:
         remaining_int = int(remaining)
     except (TypeError, ValueError):
@@ -209,6 +222,6 @@ def _parse_check(raw: str) -> LicenseCheckResult:
 def _parse_deactivate(raw: str) -> LicenseDeactivateResult:
     root = _unwrap(raw, context="licenses.deactivate")
     status = root.get("status")
-    if status != _DEACTIVATED_STATUS:
-        raise ValueError("licenses.deactivate: response missing deactivated status")
+    if status not in (_DEACTIVATED_STATUS, _DEACTIVATED_STATUS_LEGACY):
+        raise ValueError("licenses.deactivate: response missing inactive status")
     return LicenseDeactivateResult(status=status if isinstance(status, str) else "")

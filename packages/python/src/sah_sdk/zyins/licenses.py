@@ -1,9 +1,11 @@
 """Public license-lifecycle sub-client.
 
 Mirrors the proto ``LicensesService.PublicCheck`` and
-``LicensesService.PublicDeactivate`` operations defined in
-``shared/schemas/api/zyins/v1/licenses.proto``. Targets the canonical
-public endpoints ``/v1/licenses/check`` and ``/v1/licenses/deactivate``.
+``LicensesService.PublicDeactivate`` operations. Targets the
+bootstrap-safe public endpoints ``/v2/licenses/check`` and
+``/v2/licenses/deactivate`` which sit OUTSIDE ``AuthMiddleware`` on
+the server. Wire bodies use camelCase (``deviceId`` / ``licenseKey``)
+to match the v2 contract.
 
 The pre-existing :mod:`license` sub-client (singular) targets the
 authenticated ``/v1/license/*`` self-status endpoints and remains for
@@ -47,9 +49,9 @@ class LicenseCheckInput(BaseModel):
     def to_wire_body(self) -> str:
         payload: dict[str, str] = {"email": self.email, "keycode": self.keycode}
         if self.device_id:
-            payload["device_id"] = self.device_id
+            payload["deviceId"] = self.device_id
         if self.license_key:
-            payload["license_key"] = self.license_key
+            payload["licenseKey"] = self.license_key
         return json.dumps(payload, separators=(",", ":"))
 
 
@@ -83,7 +85,7 @@ class LicenseDeactivateInput(BaseModel):
     def to_wire_body(self) -> str:
         payload: dict[str, str] = {"email": self.email, "keycode": self.keycode}
         if self.device_id:
-            payload["device_id"] = self.device_id
+            payload["deviceId"] = self.device_id
         return json.dumps(payload, separators=(",", ":"))
 
 

@@ -328,19 +328,24 @@ def request_id_from_envelope(raw: dict[str, Any]) -> str
 
 === isa.py ===
 class Isa
-    def with_bearer(cls, token: str | None, *, base_url: str, timeout: float, transport: Transport | None, env: EnvReader | None) -> Isa
-    def with_license(cls, keycode: str | None, email: str | None, *, base_url: str, timeout: float, transport: Transport | None, env: EnvReader | None, credential_store: CredentialStore | None, license_clock: LicenseClock | None) -> Isa
-    def with_keycode(cls, keycode: str | None, email: str | None, *, base_url: str, timeout: float, transport: Transport | None, env: EnvReader | None, credential_store: CredentialStore | None, license_clock: LicenseClock | None) -> Isa
+    def with_bearer(cls, token: str | None, *, base_url: str, timeout: float, transport: Transport | None, env: EnvReader | None, case_storage: CaseStorage | None, dataset_bundle_fetcher: Callable[[], Any] | None) -> Isa
+    def with_license(cls, keycode: str | None, email: str | None, *, base_url: str, timeout: float, transport: Transport | None, env: EnvReader | None, credential_store: CredentialStore | None, license_clock: LicenseClock | None, api_version: Mapping[str, str] | None, case_storage: CaseStorage | None, dataset_bundle_fetcher: Callable[[], Any] | None) -> Isa
+    def with_keycode(cls, keycode: str | None, email: str | None, *, base_url: str, timeout: float, transport: Transport | None, env: EnvReader | None, credential_store: CredentialStore | None, license_clock: LicenseClock | None, api_version: Mapping[str, str] | None, case_storage: CaseStorage | None, dataset_bundle_fetcher: Callable[[], Any] | None, autocorrector: Any | None, match_algorithm: Any | None, autocomplete_algorithm: Any | None) -> Isa
     def for_form(cls, form_token: str, *, base_url: str, timeout: float, transport: Transport | None) -> Isa
     def authenticate(cls, *, token: str | None, keycode: str | None, email: str | None, form_token: str | None, base_url: str, timeout: float, transport: Transport | None, env: EnvReader | None, credential_store: CredentialStore | None, license_clock: LicenseClock | None) -> Isa
+    def create(cls, options: IsaCreateOptions | None, *, auth: IsaAuthSupplier | None, engine: IsaEngine | None, timeout: float | None, api_version: IsaApiVersion | None, client_version: str | None, transport: Transport | None, env: EnvReader | None, credential_store: CredentialStore | None, license_clock: LicenseClock | None) -> Isa
     def with_session(cls, *, session_id: str | None, session_secret: str | None, base_url: str, timeout: float, transport: Transport | None, env: EnvReader | None) -> Isa
     def from_env(cls, *, base_url: str, timeout: float, transport: Transport | None, env: EnvReader | None, credential_store: CredentialStore | None) -> Isa
     def account(self) -> AccountNamespace
     def on_license_refreshed(self, listener: LicenseRefreshedListener) -> Callable[[], None]
     def close(self) -> None
 class ZyinsNamespace
+    def set_dataset_bundle(self, bundle: DatasetBundleV3) -> None
     def license(self) -> LicenseFacade
     def cases(self) -> Any
+    def autocorrector(self) -> Any
+    def matcher(self) -> Any
+    def autocomplete(self) -> Any
 
 === proxy/__init__.py ===
 class ProxyNamespace
@@ -422,7 +427,11 @@ class BrandingDetail(BaseModel)
     default_settings: str
 def parse_lookup_response(raw: str) -> BrandingDetail
 
-=== zyins/cases.py ===
+=== zyins/bundled_api_versions.py ===
+BUNDLED_API_VERSIONS: Final[Mapping[str, str]]
+def resolve_api_version(override: Mapping[str, str] | None, surface: str) -> str
+
+=== zyins/cases/__init__.py ===
 class CaseCreateInput(BaseModel)
     input: dict[str, Any] | str
     results: Any
@@ -445,6 +454,29 @@ class EmailEnqueueInput(BaseModel)
 class EmailEnqueueResult(BaseModel)
     enqueue_id: str
 def parse_email_response(raw: str) -> EmailEnqueueResult
+class CasesFacade
+    def save(self, record: CaseRecord) -> PutResult
+    def recall(self, id: str, recall_token: str | None) -> CaseRecord | None
+
+=== zyins/cases/storage.py ===
+class CaseRecord
+    payload: Any
+    product: str
+    id: str | None
+    metadata: dict[str, Any]
+class PutResult
+    id: str
+    recall_token: str | None
+class CaseStorage(Protocol)
+    def put(self, record: CaseRecord) -> PutResult
+    def get(self, id: str, recall_token: str | None) -> CaseRecord | None
+
+=== zyins/cases/zero_knowledge.py ===
+class CaseDecryptError(ValueError)
+class ZeroKnowledgeCaseStorage(CaseStorage)
+    def put(self, record: CaseRecord) -> PutResult
+    def get(self, id: str, recall_token: str | None) -> CaseRecord | None
+    def delete(self, id: str) -> None
 
 === zyins/client.py ===
 DEFAULT_BASE_URL = ...
@@ -515,6 +547,70 @@ class Dataset(BaseModel)
 def parse_dataset_list(body: str) -> tuple[Dataset, ...]
 def parse_dataset(body: str) -> Dataset
 
+=== zyins/datasets_v3.py ===
+class DatasetCategory(str, Enum)
+class ReferenceEntity
+    id: str
+    name: str
+class ConditionRow
+    id: str
+    name: str
+    treated_with: Sequence[MedicationRelation]
+class MedicationRow
+    id: str
+    name: str
+    used_for: Sequence[ConditionRelation]
+class MedicationRelation
+    id: str
+    name: str
+    prescription_count: int
+class ConditionRelation
+    id: str
+    name: str
+    prescription_count: int
+class NicotineOptionRow
+    id: str
+    name: str
+    type: str
+class SpellingCorrectionRow
+    id: str
+    from_: str
+    to: str
+class DatasetEntry
+    version: str
+    item_count: int
+    items: Sequence[ReferenceEntity]
+class FrequencyGraphs
+    use_map: Mapping[str, Mapping[str, int]]
+class DatasetBundleV3
+    version: str
+    medications: Sequence[ReferenceEntity]
+    conditions: Sequence[ReferenceEntity]
+    products: Sequence[ReferenceEntity]
+    corrections: Sequence[ReferenceEntity]
+    nicotine_options: Sequence[ReferenceEntity]
+    medications_by_condition: Mapping[str, Sequence[str]]
+    frequency_graphs: FrequencyGraphs
+    datasets: Mapping[str, DatasetEntry | None]
+    etag: str | None
+    condition_rows: Sequence[ConditionRow]
+    medication_rows: Sequence[MedicationRow]
+    nicotine_option_rows: Sequence[NicotineOptionRow]
+    spelling_corrections: Sequence[SpellingCorrectionRow]
+    products_by_family: Mapping[str, Sequence[ReferenceEntity]]
+    discontinued_products: Mapping[str, int]
+    state_derivatives: Sequence[str]
+class DatasetsV3NotModified
+    not_modified: Literal[True]
+    etag: str | None
+def is_not_modified(result: DatasetBundleV3 | DatasetsV3NotModified) -> bool
+class DatasetsV3GetOptions
+    include: Sequence[DatasetCategory] | None
+    fields: Literal['full', 'meta'] | None
+    if_none_match: str | None
+def get_datasets_v3(options: DatasetsV3GetOptions | None, *, transport: Transport, base_url: str, headers: Mapping[str, str]) -> DatasetBundleV3 | DatasetsV3NotModified
+def parse_datasets_v3_envelope(body: str, *, etag: str | None) -> DatasetBundleV3
+
 === zyins/health.py ===
 class ProbeResult(BaseModel)
     status: str
@@ -529,6 +625,73 @@ class ReadinessResult(BaseModel)
     downstream_services: dict[str, ProbeResult]
     checked_at: str
 def parse_readiness(raw: str) -> ReadinessResult
+
+=== zyins/isa_options.py ===
+class BearerAuthSupplier
+    kind: Literal['bearer']
+    token: str | None
+class LicenseAuthSupplier
+    kind: Literal['license']
+    keycode: str | None
+    email: str | None
+class FormAuthSupplier
+    kind: Literal['form']
+    form_token: str
+class SessionAuthSupplier
+    kind: Literal['session']
+    session_id: str | None
+    session_secret: str | None
+class BearerAuth
+    def from_token(token: str) -> IsaAuthSupplier
+    def from_env() -> IsaAuthSupplier
+class LicenseAuth
+    def from_keycode(keycode: str, email: str) -> IsaAuthSupplier
+    def from_env() -> IsaAuthSupplier
+class FormAuth
+    def from_token(form_token: str) -> IsaAuthSupplier
+class SessionAuth
+    def from_credentials(session_id: str, session_secret: str) -> IsaAuthSupplier
+    def from_env() -> IsaAuthSupplier
+PRODUCTION_REMOTE_ORIGIN = ...
+PRODUCTION_PROXY_ORIGIN = ...
+class RemoteEngineSelector
+    kind: Literal['remote']
+    base_url: str
+class LocalEngineSelector
+    kind: Literal['local']
+    base_url: str
+class ProxyEngineSelector
+    kind: Literal['proxy']
+    proxy_origin: str
+class InMemoryEngineSelector
+    kind: Literal['in_memory']
+class RemoteEngine
+    def default() -> IsaEngine
+    def at(base_url: str) -> IsaEngine
+class LocalEngine
+    def at(base_url: str) -> IsaEngine
+class ProxyEngine
+    def default() -> IsaEngine
+    def at(proxy_origin: str) -> IsaEngine
+InMemoryEngine: IsaEngine
+DEFAULT_TIMEOUT_SECONDS = ...
+class IsaCreateOptions
+    auth: IsaAuthSupplier
+    engine: IsaEngine | None
+    timeout: float
+    api_version: IsaApiVersion
+    client_version: str | None
+    transport: Transport | None
+class ResolvedIsaOptions
+    auth: IsaAuthSupplier
+    engine: IsaEngine
+    timeout_seconds: float
+    api_version: IsaApiVersion
+    client_version: str | None
+    transport: Transport | None
+    base_url: str
+    proxy_origin: str | None
+def resolve_isa_options(opts: IsaCreateOptions) -> ResolvedIsaOptions
 
 === zyins/license.py ===
 class LicenseActivateResult(BaseModel)
@@ -588,6 +751,36 @@ class LogosSubClient
     def get(self, carrier: str, *, data_uri: bool) -> bytes | str
     def close(self) -> None
 
+=== zyins/measurements.py ===
+class HeightParseError(ValueError)
+class WeightParseError(ValueError)
+class Height
+    inches: int
+    MIN_INCHES: ClassVar[int]
+    MAX_INCHES: ClassVar[int]
+    def from_inches(cls, inches: int) -> Height
+    def from_feet_inches(cls, feet: int, inches: int) -> Height
+    def from_cm(cls, cm: float) -> Height
+    def from_string(cls, value: str) -> Height
+    def cm(self) -> float
+    def feet_and_inches(self) -> tuple[int, int]
+class Weight
+    pounds: int
+    MIN_POUNDS: ClassVar[int]
+    MAX_POUNDS: ClassVar[int]
+    def from_pounds(cls, pounds: int) -> Weight
+    def from_kilograms(cls, kg: float) -> Weight
+    def from_string(cls, value: str) -> Weight
+    def kilograms(self) -> float
+
+=== zyins/plan_info_label.py ===
+def title_case_label(key: str) -> str
+class PlanInfoItem
+    key: str
+    label: str
+    values: tuple[str, ...]
+def coerce_plan_info(raw: object) -> tuple[PlanInfoItem, ...]
+
 === zyins/preferences.py ===
 class PreferencesSetInput(BaseModel)
     prefs: dict[str, Any]
@@ -602,7 +795,27 @@ class PrequalifyInput(BaseModel)
     coverage: Coverage
     products: str | ProductSelection
     def to_wire_body(self) -> str
+class Carrier(BaseModel)
+    id: str
+    name: str
+class PlanProduct(BaseModel)
+    wire_token: str
+    display_name: str
+class Eligibility(BaseModel)
+    eligible: bool
+    category: str
+    coverage_tier: str
+class Premium(BaseModel)
+    cents: int
+    display: str
+    mode: str
+    modes: dict[str, int]
+    rate_class: str
 class PrequalifyPlan(BaseModel)
+    carrier: Carrier
+    product: PlanProduct
+    eligibility: Eligibility
+    premium: Premium | None
     brand: str
     tier: str
     monthly_premium: float
@@ -612,6 +825,74 @@ class PrequalifyResult(BaseModel)
     plans: tuple[PrequalifyPlan, ...]
     request_id: str
 def parse_prequalify_response(body: str) -> PrequalifyResult
+
+=== zyins/prequalify_v3.py ===
+class V3EligibilityCategory(str, Enum)
+class V3Eligibility
+    category: V3EligibilityCategory | None
+    eligible: bool
+    reasons: Sequence[str]
+class V3Money
+    cents: int
+    display: str
+class V3Premium
+    cents: int
+    display: str
+    default: V3Money
+    modes: Mapping[str, V3Money]
+class V3PricingRow
+    rate_class: str
+    primary: bool
+    eligibility: V3Eligibility
+    rank: int | None
+    premium: V3Premium | None
+class V3OfferCarrier
+    id: str
+    name: str
+    logo_url: str
+class V3OfferProduct
+    id: str
+    slug: str
+    name: str
+    display_name: str
+    type: str
+    wire_token: str
+class PrequalifyV3Offer
+    object: Literal['plan_offer']
+    id: str
+    eligible: bool
+    carrier: V3OfferCarrier
+    product: V3OfferProduct
+    plan_info: Sequence[Mapping[str, Any]]
+    death_benefit: V3Money
+    pricing: Sequence[V3PricingRow]
+    metadata: Mapping[str, Any]
+class PrequalifyV3Result
+    plans: Sequence[PrequalifyV3Offer]
+    request_id: str
+    idempotency_key: str
+    livemode: bool
+    retry_attempts: int
+class PrequalifyV3Options
+    only_product_class: str | None
+    include_product_class: Sequence[str]
+    min_rank: str | None
+    show_unreleased: bool | None
+    skip_health_based_underwriting: bool | None
+    include_ineligible: bool | None
+class PrequalifyV3Request
+    applicant: Applicant
+    coverage: Coverage
+    products: ProductSelection
+    options: PrequalifyV3Options | None
+def prequalify_v3(request: PrequalifyV3Request, *, transport: Transport, base_url: str, headers: Mapping[str, str], idempotency_key: str | None) -> PrequalifyV3Result
+def serialize_v3_prequalify_body(*, applicant: Applicant, coverage: Coverage, products: ProductSelection, options: PrequalifyV3Options | None) -> str
+def serialize_wire_body(*, applicant: Applicant, coverage: Coverage, products: ProductSelection, options: PrequalifyV3Options | None) -> str
+def parse_prequalify_v3_envelope(body: str, *, idempotency_key: str, retry_attempts: int) -> PrequalifyV3Result
+def coerce_money(raw: object) -> V3Money
+def coerce_carrier(raw: object) -> V3OfferCarrier
+def coerce_product(raw: object) -> V3OfferProduct
+def coerce_pricing_row(raw: object) -> V3PricingRow
 
 === zyins/product.py ===
 class ProductType(str, Enum)
@@ -661,12 +942,194 @@ class QuoteResult(BaseModel)
     request_id: str
 def parse_quote_response(body: str) -> QuoteResult
 
+=== zyins/quote_v3.py ===
+class QuoteV3Product
+    object: Literal['plan_offer']
+    id: str
+    eligible: bool
+    carrier: V3OfferCarrier
+    product: V3OfferProduct
+    death_benefit: V3Money
+    pricing: Sequence[V3PricingRow]
+class QuoteV3Group
+    amount: str
+    products: Sequence[QuoteV3Product]
+class QuoteV3Result
+    results: Sequence[QuoteV3Group]
+    request_id: str
+    idempotency_key: str
+    livemode: bool
+    retry_attempts: int
+class QuoteV3Options(PrequalifyV3Options)
+class QuoteV3Request
+    applicant: Applicant
+    coverage: Coverage
+    products: ProductSelection
+    options: QuoteV3Options | None
+def quote_v3(request: QuoteV3Request, *, transport: Transport, base_url: str, headers: Mapping[str, str], idempotency_key: str | None) -> QuoteV3Result
+def parse_quote_v3_envelope(body: str, *, idempotency_key: str, retry_attempts: int) -> QuoteV3Result
+
+=== zyins/reference/__init__.py ===
+class ReferenceFacade
+    medications: _KindMatcher
+    conditions: _KindMatcher
+    concepts: _ConceptMatcher
+    def match(self, text: str) -> Concept
+    def match_many(self, texts: Sequence[str]) -> list[Concept]
+def match(text: str, bundle: DatasetBundleV3) -> Concept
+def match_medication(text: str, bundle: DatasetBundleV3) -> Concept
+def match_condition(text: str, bundle: DatasetBundleV3) -> Concept
+def bind(bundle: DatasetBundleV3) -> ReferenceFacade
+reference: _ReferenceNamespace
+
+=== zyins/reference/autocomplete_algorithm.py ===
+class AutocompleteOptions
+    limit: int
+    kinds: Sequence[ConceptKind]
+    frequencies: Mapping[str, int] | None
+    starts_with_only: bool
+    sort: Sort
+class AutocompleteAlgorithm(Protocol)
+    async def rank(self, query: str, candidates: Sequence[Concept], options: AutocompleteOptions) -> list[Suggestion]
+class DefaultAutocompleteAlgorithm
+    def version_tag(self) -> str | None
+    def clone(self, **overrides) -> DefaultAutocompleteAlgorithm
+    async def rank(self, query: str, candidates: Sequence[Concept], options: AutocompleteOptions) -> list[Suggestion]
+
+=== zyins/reference/autocorrector.py ===
+class AutocorrectAppliedEvent
+    original: str
+    corrected: str
+    mode: AutocorrectMode
+    window: str
+    correction: str
+class Autocorrector(Protocol)
+    def correct(self, text: str, *, mode: AutocorrectMode) -> str
+class DefaultAutocorrector
+    def version_tag(self) -> str | None
+    def clone(self, **overrides) -> DefaultAutocorrector
+    def correct(self, text: str, *, mode: AutocorrectMode) -> str
+def create(*, typo_map: Mapping[str, str], version_tag: str | None, on_applied: Callable[[AutocorrectAppliedEvent], None] | None) -> DefaultAutocorrector
+
+=== zyins/reference/concept.py ===
+class ConceptKind(str, Enum)
+class Concept
+    id: str | None
+    name: str
+    kind: ConceptKind
+    is_known: bool
+    input_text: str
+    def conditions(self, sort: Sort) -> tuple[Concept, ...]
+    def medications(self, sort: Sort) -> tuple[Concept, ...]
+    def equals(self, other: object) -> bool
+class MedicationConcept(Protocol)
+    id: str | None
+    name: str
+    kind: ConceptKind
+    is_known: bool
+    input_text: str
+    def conditions(self, sort: Sort) -> Sequence[Concept]
+    def medications(self, sort: Sort) -> Sequence[Concept]
+    def equals(self, other: object) -> bool
+class ConditionConcept(Protocol)
+    id: str | None
+    name: str
+    kind: ConceptKind
+    is_known: bool
+    input_text: str
+    def conditions(self, sort: Sort) -> Sequence[Concept]
+    def medications(self, sort: Sort) -> Sequence[Concept]
+    def equals(self, other: object) -> bool
+
+=== zyins/reference/index.py ===
+class ReferenceIndex
+    version: str
+    condition_names: Mapping[str, str]
+    medication_names: Mapping[str, str]
+    medications_by_condition: Mapping[str, Sequence[str]]
+    conditions_by_medication: Mapping[str, Sequence[str]]
+    use_map: Mapping[str, Mapping[str, int]]
+    def from_bundle(cls, bundle: DatasetBundleV3) -> ReferenceIndex
+    def lookup_medication(self, text: str) -> str | None
+    def lookup_condition(self, text: str) -> str | None
+    def lookup_either(self, text: str) -> tuple[ConceptKind, str] | None
+    def medication_name(self, entity_id: str) -> str | None
+    def condition_name(self, entity_id: str) -> str | None
+    def conditions_for_medication(self, medication_id: str, input_text: str, sort: Sort) -> tuple[Concept, ...]
+    def medications_for_condition(self, condition_id: str, input_text: str, sort: Sort) -> tuple[Concept, ...]
+    def all_medication_concepts(self) -> tuple[Concept, ...]
+    def all_condition_concepts(self) -> tuple[Concept, ...]
+    def build_medication_concept(self, entity_id: str, input_text: str) -> Concept
+    def build_condition_concept(self, entity_id: str, input_text: str) -> Concept
+    def build_unknown_concept(self, input_text: str) -> Concept
+
+=== zyins/reference/match_algorithm.py ===
+class MatchAlgorithm(Protocol)
+    def match(self, query: str, candidates: Sequence[Concept]) -> Concept
+class DefaultMatchAlgorithm
+    def version_tag(self) -> str | None
+    def clone(self, **overrides) -> DefaultMatchAlgorithm
+    def match(self, query: str, candidates: Sequence[Concept]) -> Concept
+
+=== zyins/reference/reference_index.py ===
+class ReferenceIndex
+    version: str
+    concepts: Sequence[Concept]
+    medications: Sequence[Concept]
+    conditions: Sequence[Concept]
+    frequencies: Mapping[str, int]
+    typo_map: Mapping[str, str]
+    medications_by_condition: Mapping[str, Sequence[str]]
+    conditions_by_medication: Mapping[str, Sequence[str]]
+    use_map: Mapping[str, Mapping[str, int]]
+    def from_bundle(cls, bundle: DatasetBundleV3) -> ReferenceIndex
+    def concept_for_id(self, entity_id: str) -> Concept | None
+    def conditions_for_medication(self, medication_id: str, input_text: str, sort: Sort) -> tuple[Concept, ...]
+    def medications_for_condition(self, condition_id: str, input_text: str, sort: Sort) -> tuple[Concept, ...]
+
+=== zyins/reference/sort.py ===
+class Sort(str, Enum)
+
+=== zyins/reference/suggestion.py ===
+class Suggestion
+    concept: Concept
+    score: float
+    matched_span: tuple[int, int]
+    rank: int
+    def id(self) -> str | None
+    def name(self) -> str
+    def kind(self) -> ConceptKind
+    def is_known(self) -> bool
+    def input_text(self) -> str
+
 === zyins/reference_data.py ===
 class ReferenceDataResponse(BaseModel)
     kind: str
     data: dict[str, Any]
     request_id: str
 def parse_reference_data(body: str, *, kind: str) -> ReferenceDataResponse
+
+=== zyins/reference_v3.py ===
+class Sort(str, Enum)
+class ConceptKind(str, Enum)
+class Concept
+    id: str | None
+    name: str
+    kind: ConceptKind
+    is_known: bool
+    input_text: str
+    def conditions(self, sort: Sort) -> Sequence[Concept]
+    def medications(self, sort: Sort) -> Sequence[Concept]
+def match_medication(text: str, bundle: DatasetBundleV3) -> Concept
+def match_condition(text: str, bundle: DatasetBundleV3) -> Concept
+def match_concept(text: str, bundle: DatasetBundleV3) -> Concept
+class BundleBoundMatcher
+    def match(self, text: str) -> Concept
+class ReferenceService
+    medications: BundleBoundMatcher
+    conditions: BundleBoundMatcher
+    concepts: BundleBoundMatcher
+def make_reference_service(bundle: DatasetBundleV3) -> ReferenceService
 
 === zyins/usage.py ===
 class UsageSummary(BaseModel)
