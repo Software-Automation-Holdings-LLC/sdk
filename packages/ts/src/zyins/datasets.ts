@@ -2,6 +2,7 @@ import type { OperationContext } from './client';
 import { buildLicenseHMACHeaders } from '../core';
 import { systemClock } from '../core';
 import { fromHttpResponse } from './errors';
+import { __internal as referenceInternal } from './reference';
 
 export type DatasetName =
     | 'nicotineOptions'
@@ -88,12 +89,6 @@ const readString = (v: unknown, key: string): string | undefined => {
     return typeof value === 'string' ? value : undefined;
 };
 
-const readNumber = (v: unknown, key: string): number | undefined => {
-    if (!isObject(v)) return undefined;
-    const value = v[key];
-    return typeof value === 'number' ? value : undefined;
-};
-
 const readDatasets = (parsed: unknown): Record<string, unknown> => {
     if (!isObject(parsed)) return {};
     const payload = isObject(parsed['data']) ? parsed['data'] : parsed;
@@ -107,6 +102,7 @@ const normalize = (body: string): DatasetBundle => {
     const products = readSlice(ds, 'products');
     const conditions = toArray(readSlice(ds, 'conditions'));
     const medications = toArray(readSlice(ds, 'medications'));
+    const relationships = relationshipMapsFromMedications(medications);
 
     return {
         nicotineOptions: toStringArray(readSlice(ds, 'nicotine_options')),
@@ -122,8 +118,8 @@ const normalize = (body: string): DatasetBundle => {
         medicationNames: medications
             .map((m) => readString(m, 'name'))
             .filter((name): name is string => typeof name === 'string'),
-        medicationsByCondition: medsByCondFrom(conditions),
-        frequencyGraphs: frequencyFrom(conditions, medications),
+        medicationsByCondition: relationships.medicationsByCondition,
+        frequencyGraphs: relationships.frequencyGraphs,
     };
 };
 
@@ -182,59 +178,72 @@ const medicationsToLegacy = (medications: ReadonlyArray<unknown>): Record<string
     return result;
 };
 
-const medsByCondFrom = (conditions: ReadonlyArray<unknown>): Record<string, ReadonlyArray<string>> => {
-    const map: Record<string, string[]> = {};
-    for (const c of conditions) {
-        const name = readString(c, 'name');
-        if (!name) continue;
-        const meds = isObject(c) ? toArray(c['medications']) : [];
-        const medNames = meds
-            .map((m) => readString(m, 'name'))
-            .filter((n): n is string => typeof n === 'string');
-        if (medNames.length > 0) map[name] = medNames;
-    }
-    return map;
+const conditionNameFromUse = (value: unknown): string | undefined => {
+    if (typeof value === 'string') return value;
+    return readString(value, 'condition');
 };
 
-const frequencyFrom = (
-    conditions: ReadonlyArray<unknown>,
+const useFrequency = (value: unknown): number => {
+    if (!isObject(value)) return 1;
+    const frequency = value['frequency'];
+    if (typeof frequency === 'number' && Number.isFinite(frequency)) return frequency;
+    const count = value['count'];
+    return typeof count === 'number' && Number.isFinite(count) ? count : 1;
+};
+
+const appendUnique = (target: Record<string, string[]>, key: string, value: string): void => {
+    const existing = target[key] ?? [];
+    if (!existing.includes(value)) {
+        existing.push(value);
+        target[key] = existing;
+    }
+};
+
+const addFrequency = (
+    useMap: Record<string, Record<string, number>>,
+    conditionKey: string,
+    medicationKey: string,
+    frequency: number,
+): void => {
+    const row = useMap[conditionKey] ?? {};
+    row[medicationKey] = (row[medicationKey] ?? 0) + frequency;
+    useMap[conditionKey] = row;
+};
+
+const relationshipMapsFromMedications = (
     medications: ReadonlyArray<unknown>,
 ): {
-    med_map: Record<string, Record<string, number>>;
-    use_map: Record<string, Record<string, number>>;
-    cond_freq: Record<string, number>;
+    medicationsByCondition: Record<string, string[]>;
+    frequencyGraphs: { use_map: Record<string, Record<string, number>> };
 } => {
-    const med_map: Record<string, Record<string, number>> = {};
-    for (const m of medications) {
-        const name = readString(m, 'name');
-        if (!name) continue;
-        const uses = isObject(m) ? toArray(m['uses']) : [];
-        const usesByCond: Record<string, number> = {};
-        for (const u of uses) {
-            const cond = readString(u, 'condition');
-            const freq = readNumber(u, 'frequency');
-            if (cond && freq !== undefined) usesByCond[cond] = freq;
+    const medicationsByCondition: Record<string, string[]> = {};
+    const useMap: Record<string, Record<string, number>> = {};
+
+    for (const medication of medications) {
+        const name = readString(medication, 'name');
+        if (!name || !isObject(medication)) continue;
+        const medicationID = referenceInternal.makeKey(name);
+        if (!medicationID) continue;
+
+        for (const use of toArray(medication['uses'])) {
+            const conditionName = conditionNameFromUse(use);
+            if (!conditionName) continue;
+            const conditionID = referenceInternal.makeKey(conditionName);
+            if (!conditionID) continue;
+
+            appendUnique(medicationsByCondition, conditionName, name);
+            appendUnique(medicationsByCondition, conditionID, medicationID);
+
+            const frequency = useFrequency(use);
+            addFrequency(useMap, conditionName, name, frequency);
+            addFrequency(useMap, conditionID, medicationID, frequency);
         }
-        if (Object.keys(usesByCond).length > 0) med_map[name] = usesByCond;
     }
 
-    const use_map: Record<string, Record<string, number>> = {};
-    const cond_freq: Record<string, number> = {};
-    for (const c of conditions) {
-        const name = readString(c, 'name');
-        if (!name) continue;
-        const freq = readNumber(c, 'frequency');
-        if (freq !== undefined) cond_freq[name] = freq;
-        const meds = isObject(c) ? toArray(c['medications']) : [];
-        const medsForCond: Record<string, number> = {};
-        for (const m of meds) {
-            const medName = readString(m, 'name');
-            const medFreq = readNumber(m, 'frequency');
-            if (medName && medFreq !== undefined) medsForCond[medName] = medFreq;
-        }
-        if (Object.keys(medsForCond).length > 0) use_map[name] = medsForCond;
-    }
-    return { med_map, use_map, cond_freq };
+    return {
+        medicationsByCondition,
+        frequencyGraphs: { use_map: useMap },
+    };
 };
 
 const pick = (bundle: DatasetBundle, include: ReadonlyArray<DatasetName>): DatasetBundle => {

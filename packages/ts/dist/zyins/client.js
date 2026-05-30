@@ -19,13 +19,18 @@
 import { defaultTransport } from './transport';
 import { systemClock } from '../core';
 import { prequalify, } from './prequalify';
+import { prequalifyV2, } from './prequalify-v2';
+import { prequalifyV3, } from './prequalify-v3';
+import { quoteV3, } from './quote-v3';
+import { DatasetsV3SubClient } from './datasets-v3';
 import { activate as licenseActivate, check as licenseCheck, deactivate as licenseDeactivate, } from './license';
 import { getReadiness } from './health';
 import { email } from './case';
 import { lookup as brandingLookup } from './branding';
 import { DatasetsSubClient } from './datasets';
 import { lookup as preferencesLookup, set as preferencesSet, } from './preferences';
-import { create as casesCreate, } from './cases';
+import { share as casesShare, } from './cases';
+import { DEFAULT_CASE_VIEWER_BASE_URL } from '../account/cases';
 import { LogosSubClient } from './logos';
 /** Production ZyINS endpoint. Override only for staging / local. */
 export const DEFAULT_ZYINS_BASE_URL = 'https://zyins.isaapi.com';
@@ -38,6 +43,7 @@ export const DEFAULT_ZYINS_BASE_URL = 'https://zyins.isaapi.com';
 export class ZyInsClient {
     auth;
     baseUrl;
+    caseViewerBaseUrl;
     transport;
     clock;
     logosFetch;
@@ -57,11 +63,17 @@ export class ZyInsClient {
     cases;
     /** Carrier-logo lookup. See `logos.ts`. */
     logos;
-    /** Reference-data bundle (`isa.zyins.datasets.get()`). */
+    /**
+     * Legacy v2 reference-data bundle. Prefer `datasetsV3` for new code;
+     * the SDK's public `isa.zyins.datasets` facade routes to v3.
+     */
     datasets;
+    /** v3 reference catalog (`GET /v3/datasets`). */
+    datasetsV3;
     constructor(options) {
         this.auth = options.auth;
         this.baseUrl = options.baseUrl ?? DEFAULT_ZYINS_BASE_URL;
+        this.caseViewerBaseUrl = options.caseViewerBaseUrl ?? DEFAULT_CASE_VIEWER_BASE_URL;
         this.transport = options.transport ?? defaultTransport();
         this.clock = options.clock ?? systemClock;
         this.logosFetch = options.logosFetch;
@@ -73,16 +85,45 @@ export class ZyInsClient {
         this.cases = new CasesSubClient(this.context());
         this.logos = new LogosSubClient(this.baseUrl, this.logosFetch);
         this.datasets = new DatasetsSubClient(this.context());
+        this.datasetsV3 = new DatasetsV3SubClient(this.context());
     }
     /** Run a prequalify call. See `PrequalifyRequest` for input shape. */
     async prequalify(request) {
         return prequalify(request, this.context());
+    }
+    /**
+     * Run the v2 prequalify call (`POST /v2/prequalify`). Returns one
+     * `PlanOffer` per product with the best qualifying tier at the top
+     * level and alternates in `other_offers[]`. Pass
+     * `options: { includeIneligible: true }` to also receive declined
+     * products / declined alternates.
+     */
+    async prequalifyV2(request) {
+        return prequalifyV2(request, this.context());
+    }
+    /**
+     * Run the v3 prequalify call (`POST /v3/prequalify`). Returns one
+     * offer per product with a uniform `pricing[]` table — each row is a
+     * rate class carrying its own eligibility, premium, and rank. Array
+     * order of `pricing` is authoritative for display.
+     */
+    async prequalifyV3(request) {
+        return prequalifyV3(request, this.context());
+    }
+    /**
+     * Run the v3 quote call (`POST /v3/quote`). Returns qualifying
+     * products grouped by requested amount with the same uniform
+     * `pricing[]` table as v3 prequalify.
+     */
+    async quoteV3(request) {
+        return quoteV3(request, this.context());
     }
     /** Internal: produce the shared context object every operation needs. */
     context() {
         return {
             auth: this.auth,
             baseUrl: this.baseUrl,
+            caseViewerBaseUrl: this.caseViewerBaseUrl,
             transport: this.transport,
             clock: this.clock,
         };
@@ -152,9 +193,9 @@ class PreferencesSubClient {
     }
 }
 /**
- * Cases sub-client. Targets `POST /v1/case` for create and
- * `POST /v1/email/enqueue` for case-share email. Future `list`/`get`/
- * `delete` operations require net-new server work tracked in the design doc.
+ * Cases sub-client. `share` stores an opaque, client-encrypted case via the
+ * zero-knowledge `/v1/case` store and returns the fragment-keyed link;
+ * `email` enqueues a case email. The decryption key never reaches the server.
  */
 class CasesSubClient {
     ctx;
@@ -162,21 +203,41 @@ class CasesSubClient {
         this.ctx = ctx;
     }
     /**
-     * Share a case (RW + optional analysis). Canonical surface per the locked
-     * spec (Section 3 Flow 5 + Appendix B post-lock correction #2). The
-     * recipient's UI decides RO vs RW based on whether `results` is present;
-     * the SDK has no `mode` flag.
+     * Surface the bound signed-request context so the unified `Isa`
+     * namespace can construct a `ZeroKnowledgeCaseStorage` adapter without
+     * duplicating the auth/transport/clock plumbing. Internal — not part of
+     * the published SDK surface.
      */
-    share(request) {
-        return casesCreate(request, this.ctx);
+    get context() {
+        return this.ctx;
     }
     /**
-     * @deprecated Use `share()` instead. `create()` is retained as a back-compat
-     * alias and will be removed in v0.7.0. See
-     * `/tmp/sdk-syntax-proposal.md` Appendix B post-lock correction #2.
+     * Share a zyins case (input + optional analysis snapshot). Encrypts
+     * client-side and returns the fragment-keyed link. The recipient's UI
+     * decides RO vs RW based on whether `results` is present; the SDK has no
+     * `mode` flag.
+     *
+     * @example
+     * ```ts
+     * const { id, link } = await isa.zyins.cases.share({
+     *   input: currentCaseToJSON(),
+     * });
+     * ```
+     */
+    share(request) {
+        return casesShare(request, this.ctx);
+    }
+    /**
+     * @deprecated Use `share()` instead. `create()` is a back-compat alias that
+     * forwards to the same opaque-case flow; removed in v0.7.0.
+     *
+     * @example
+     * ```ts
+     * const { id, link } = await isa.zyins.cases.create({ input });
+     * ```
      */
     create(request) {
-        return casesCreate(request, this.ctx);
+        return casesShare(request, this.ctx);
     }
     email(request) {
         return email(request, this.ctx);

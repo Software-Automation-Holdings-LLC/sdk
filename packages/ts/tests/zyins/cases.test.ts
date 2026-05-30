@@ -1,61 +1,50 @@
 import { describe, expect, it } from 'vitest';
 import { client, recordingTransport } from './client-test-helpers';
 
-describe('ZyInsClient.cases.create', () => {
-  it('POSTs /v1/case with input + results + products and parses the hash response', async () => {
-    const responseBody = JSON.stringify({
-      object: 'case',
-      hash: 'abc123',
-      url: 'https://share.example/case/abc123',
-      readonly: true,
-      created_at: '2026-05-20T14:32:01Z',
-    });
-    const { transport, requests } = recordingTransport(200, responseBody);
-    const result = await client(transport).cases.create({
+const CASE_ID = '9f1c2d3e-4b5a-6c7d-8e9f-0a1b2c3d4e5f';
+
+/** Read a recorded request body as a string-keyed record (test trust edge). */
+function bodyRecord(body: string): Record<string, unknown> {
+  const parsed: unknown = JSON.parse(body);
+  return parsed as Record<string, unknown>;
+}
+
+describe('ZyInsClient.cases.share', () => {
+  it('encrypts {input,results,products}, POSTs only the opaque envelope, returns {id,link}', async () => {
+    const { transport, requests } = recordingTransport(
+      201,
+      JSON.stringify({ object: 'case', id: CASE_ID }),
+    );
+    const result = await client(transport).cases.share({
       input: { applicant: { name: 'John Doe' } },
       results: { decided: true },
       products: ['senior-life'],
     });
-    expect(result.hash).toBe('abc123');
-    expect(result.url).toBe('https://share.example/case/abc123');
-    expect(result.readonly).toBe(true);
-    expect(result.createdAt).toBe('2026-05-20T14:32:01Z');
+    expect(result.id).toBe(CASE_ID);
+    expect(result.link).toContain(`/c/${CASE_ID}#k=`);
     expect(requests[0]!.method).toBe('POST');
     expect(requests[0]!.url).toBe('https://test.example/v1/case');
     expect(requests[0]!.headers['Idempotency-Key']).toBeTruthy();
-    const sent: unknown = JSON.parse(requests[0]!.body);
-    expect(sent).toEqual({
-      input: { applicant: { name: 'John Doe' } },
-      results: { decided: true },
-      products: ['senior-life'],
-    });
+    const sent = bodyRecord(requests[0]!.body);
+    expect(Object.keys(sent).sort()).toEqual(['ciphertext', 'iv', 'product', 'tag']);
+    expect(sent['product']).toBe('zyins');
+    // Neither the plaintext input nor the fragment key is on the wire.
+    const fragment = result.link.slice(result.link.indexOf('#k=') + 3);
+    expect(requests[0]!.body).not.toContain('John Doe');
+    expect(requests[0]!.body).not.toContain(fragment);
   });
 
-  it('accepts raw-XML input strings', async () => {
-    const { transport, requests } = recordingTransport(
-      200,
-      JSON.stringify({ object: 'case', hash: 'xml1', url: '', readonly: false, created_at: '' }),
-    );
-    await client(transport).cases.create({ input: '<applicant/>' });
-    const sent = JSON.parse(requests[0]!.body) as { input: unknown };
-    expect(sent.input).toBe('<applicant/>');
-  });
-
-  it('uses the same Idempotency-Key on retry of the same body', async () => {
-    const { transport, requests } = recordingTransport(
-      200,
-      JSON.stringify({ object: 'case', hash: 'h', url: '', readonly: false, created_at: '' }),
-    );
-    const c = client(transport);
-    await c.cases.create({ input: { a: 1 } });
-    await c.cases.create({ input: { a: 1 } });
-    expect(requests[0]!.headers['Idempotency-Key']).toBe(requests[1]!.headers['Idempotency-Key']);
+  it('create() is a back-compat alias for share()', async () => {
+    const { transport } = recordingTransport(201, JSON.stringify({ object: 'case', id: CASE_ID }));
+    const result = await client(transport).cases.create({ input: '<applicant/>' });
+    expect(result.id).toBe(CASE_ID);
+    expect(result.link).toContain(`/c/${CASE_ID}#k=`);
   });
 
   it('rejects missing input', async () => {
-    const { transport } = recordingTransport(200, '{}');
+    const { transport } = recordingTransport(201, '{}');
     await expect(
-      client(transport).cases.create({} as unknown as { input: Record<string, unknown> }),
+      client(transport).cases.share({} as unknown as { input: Record<string, unknown> }),
     ).rejects.toThrow(/input/);
   });
 
@@ -64,26 +53,20 @@ describe('ZyInsClient.cases.create', () => {
       500,
       JSON.stringify({ type: 'about:blank', title: 'server', status: 500, code: 'server_error' }),
     );
-    await expect(client(transport).cases.create({ input: { a: 1 } })).rejects.toBeInstanceOf(Error);
+    await expect(client(transport).cases.share({ input: { a: 1 } })).rejects.toBeInstanceOf(Error);
   });
 
   it('throws a clear error when the success body is invalid JSON', async () => {
-    const { transport } = recordingTransport(200, '{');
-    await expect(client(transport).cases.create({ input: { a: 1 } })).rejects.toThrow(/not valid JSON/);
-  });
-
-  it('rejects a non-object success body', async () => {
-    const { transport } = recordingTransport(200, 'null');
-    await expect(client(transport).cases.create({ input: { a: 1 } })).rejects.toThrow(/not an object/);
+    const { transport } = recordingTransport(201, '{');
+    await expect(client(transport).cases.share({ input: { a: 1 } })).rejects.toThrow(
+      /not valid JSON/,
+    );
   });
 });
 
 describe('ZyInsClient.cases.email', () => {
   it('delegates to /v1/email/enqueue with the case-share payload', async () => {
-    const { transport, requests } = recordingTransport(
-      200,
-      JSON.stringify({ enqueue_id: 'eq_1' }),
-    );
+    const { transport, requests } = recordingTransport(200, JSON.stringify({ enqueue_id: 'eq_1' }));
     const result = await client(transport).cases.email({
       to: 'jane@smith.com',
       subject: 'Your case',

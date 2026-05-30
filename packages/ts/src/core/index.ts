@@ -14,9 +14,13 @@ export {
   arrayBufferToHex,
   resolveFetch,
   base64EncodeUtf8,
+  base64ToBytes,
+  bytesToBase64,
+  bytesToBase64Url,
+  systemRandomBytes,
   systemClock,
 } from './internal/crypto';
-export type { Clock } from './internal/crypto';
+export type { Clock, RandomBytes } from './internal/crypto';
 
 export * from './license/deviceAuth';
 export * from './problem-details/types';

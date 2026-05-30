@@ -1,6 +1,7 @@
 import { buildLicenseHMACHeaders } from '../core';
 import { systemClock } from '../core';
 import { fromHttpResponse } from './errors';
+import { __internal as referenceInternal } from './reference';
 const DATASETS_PATH = '/v2/reference-data';
 export async function getDatasets(options, ctx) {
     const headers = await buildLicenseHMACHeaders(ctx.auth.licenseKey, ctx.auth.orderId, ctx.auth.email, 'GET', DATASETS_PATH, '', ctx.auth.deviceId, ctx.clock ?? systemClock);
@@ -37,12 +38,6 @@ const readString = (v, key) => {
     const value = v[key];
     return typeof value === 'string' ? value : undefined;
 };
-const readNumber = (v, key) => {
-    if (!isObject(v))
-        return undefined;
-    const value = v[key];
-    return typeof value === 'number' ? value : undefined;
-};
 const readDatasets = (parsed) => {
     if (!isObject(parsed))
         return {};
@@ -55,6 +50,7 @@ const normalize = (body) => {
     const products = readSlice(ds, 'products');
     const conditions = toArray(readSlice(ds, 'conditions'));
     const medications = toArray(readSlice(ds, 'medications'));
+    const relationships = relationshipMapsFromMedications(medications);
     return {
         nicotineOptions: toStringArray(readSlice(ds, 'nicotine_options')),
         products: extractProductNames(products),
@@ -69,8 +65,8 @@ const normalize = (body) => {
         medicationNames: medications
             .map((m) => readString(m, 'name'))
             .filter((name) => typeof name === 'string'),
-        medicationsByCondition: medsByCondFrom(conditions),
-        frequencyGraphs: frequencyFrom(conditions, medications),
+        medicationsByCondition: relationships.medicationsByCondition,
+        frequencyGraphs: relationships.frequencyGraphs,
     };
 };
 const toStringArray = (v) => toArray(v).filter((item) => typeof item === 'string');
@@ -127,59 +123,60 @@ const medicationsToLegacy = (medications) => {
     }
     return result;
 };
-const medsByCondFrom = (conditions) => {
-    const map = {};
-    for (const c of conditions) {
-        const name = readString(c, 'name');
-        if (!name)
-            continue;
-        const meds = isObject(c) ? toArray(c['medications']) : [];
-        const medNames = meds
-            .map((m) => readString(m, 'name'))
-            .filter((n) => typeof n === 'string');
-        if (medNames.length > 0)
-            map[name] = medNames;
-    }
-    return map;
+const conditionNameFromUse = (value) => {
+    if (typeof value === 'string')
+        return value;
+    return readString(value, 'condition');
 };
-const frequencyFrom = (conditions, medications) => {
-    const med_map = {};
-    for (const m of medications) {
-        const name = readString(m, 'name');
-        if (!name)
-            continue;
-        const uses = isObject(m) ? toArray(m['uses']) : [];
-        const usesByCond = {};
-        for (const u of uses) {
-            const cond = readString(u, 'condition');
-            const freq = readNumber(u, 'frequency');
-            if (cond && freq !== undefined)
-                usesByCond[cond] = freq;
-        }
-        if (Object.keys(usesByCond).length > 0)
-            med_map[name] = usesByCond;
+const useFrequency = (value) => {
+    if (!isObject(value))
+        return 1;
+    const frequency = value['frequency'];
+    if (typeof frequency === 'number' && Number.isFinite(frequency))
+        return frequency;
+    const count = value['count'];
+    return typeof count === 'number' && Number.isFinite(count) ? count : 1;
+};
+const appendUnique = (target, key, value) => {
+    const existing = target[key] ?? [];
+    if (!existing.includes(value)) {
+        existing.push(value);
+        target[key] = existing;
     }
-    const use_map = {};
-    const cond_freq = {};
-    for (const c of conditions) {
-        const name = readString(c, 'name');
-        if (!name)
+};
+const addFrequency = (useMap, conditionKey, medicationKey, frequency) => {
+    const row = useMap[conditionKey] ?? {};
+    row[medicationKey] = (row[medicationKey] ?? 0) + frequency;
+    useMap[conditionKey] = row;
+};
+const relationshipMapsFromMedications = (medications) => {
+    const medicationsByCondition = {};
+    const useMap = {};
+    for (const medication of medications) {
+        const name = readString(medication, 'name');
+        if (!name || !isObject(medication))
             continue;
-        const freq = readNumber(c, 'frequency');
-        if (freq !== undefined)
-            cond_freq[name] = freq;
-        const meds = isObject(c) ? toArray(c['medications']) : [];
-        const medsForCond = {};
-        for (const m of meds) {
-            const medName = readString(m, 'name');
-            const medFreq = readNumber(m, 'frequency');
-            if (medName && medFreq !== undefined)
-                medsForCond[medName] = medFreq;
+        const medicationID = referenceInternal.makeKey(name);
+        if (!medicationID)
+            continue;
+        for (const use of toArray(medication['uses'])) {
+            const conditionName = conditionNameFromUse(use);
+            if (!conditionName)
+                continue;
+            const conditionID = referenceInternal.makeKey(conditionName);
+            if (!conditionID)
+                continue;
+            appendUnique(medicationsByCondition, conditionName, name);
+            appendUnique(medicationsByCondition, conditionID, medicationID);
+            const frequency = useFrequency(use);
+            addFrequency(useMap, conditionName, name, frequency);
+            addFrequency(useMap, conditionID, medicationID, frequency);
         }
-        if (Object.keys(medsForCond).length > 0)
-            use_map[name] = medsForCond;
     }
-    return { med_map, use_map, cond_freq };
+    return {
+        medicationsByCondition,
+        frequencyGraphs: { use_map: useMap },
+    };
 };
 const pick = (bundle, include) => {
     const empty = {

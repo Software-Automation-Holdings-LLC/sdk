@@ -27,12 +27,16 @@ import { type Envelope, type RawResponseResult } from './envelope';
 import { type Transport } from './transport';
 import { type LogosFetch } from './logos';
 import { type PrequalifyRequest, type PrequalifyResult } from './prequalify';
+import { type PrequalifyV2Request, type PrequalifyV2Result } from './prequalify-v2';
+import { type PrequalifyV3Request, type PrequalifyV3Result, type QuoteV3Request, type QuoteV3Result } from './prequalify-v3-types';
 import { WebhooksService } from '../rapidsign/webhooks';
 import { type ProxyCallOptions, type ProxyCallResult } from '../proxy/call';
-import { BrandingFacade, DatasetsFacade, PreferencesFacade, CasesFacade, EmailFacade, LicenseFacade, LogosFacade } from './isaNamespaces';
+import { BrandingFacade, DatasetsFacade, PreferencesFacade, CasesFacade, EmailFacade, LicenseFacade, LogosFacade, ReferenceFacade, ReferenceMedicationsFacade, ReferenceConditionsFacade, type Autocorrector, type MatchAlgorithm, type AutocompleteAlgorithm, type DefaultAutocorrectorOptions } from './isaNamespaces';
 import { ProductsFacade } from './products';
 import { type ClientVersionListener } from './clientVersion';
 import { AccountNamespace } from '../account';
+import { type IsaApiVersion, type IsaApiVersionOverride, type IsaApiSurface, type IsaCreateOptions } from './isaOptions';
+import type { CaseStorage } from './cases/CaseStorage';
 /** Constructor options for `Isa`. */
 export interface IsaOptions {
     /** Auth identity from one of the three factories. */
@@ -41,6 +45,13 @@ export interface IsaOptions {
     baseUrl?: string;
     /** Proxy origin override; defaults to the production proxy endpoint. */
     proxyOrigin?: string;
+    /**
+     * Viewer origin used to assemble case share links (`isa.account.cases`).
+     * Defaults to `https://app.isaapi.com`. The SDK appends `/c/<id>#k=<key>`,
+     * so the base must NOT include the `/c/` segment. The fragment key never
+     * reaches the server; this only controls the host the link points at.
+     */
+    caseViewerBaseUrl?: string;
     /**
      * Device ID required to construct a license-mode product client. Auto-
      * loaded from storage on first product call in a future phase; today it
@@ -87,11 +98,40 @@ export interface IsaOptions {
      * response headers and fires `onClientVersionMismatch` listeners.
      */
     clientVersion?: string;
+    /** Per-call timeout in ms. Defaults to {@link DEFAULT_TIMEOUT_MS}. */
+    timeout?: number;
+    /**
+     * Per-surface API-version override. Surfaces absent from the override
+     * fall back to {@link import('./bundledApiVersions').BundledApiVersions}.
+     * Surfaced per-call via the `Api-Version` request header, resolved from
+     * the request path.
+     */
+    apiVersion?: IsaApiVersionOverride;
+    /** Pluggable case-storage adapter; defaults to {@link ZeroKnowledgeCaseStorage}. */
+    caseStorage?: CaseStorage;
+    /**
+     * Replace the default autocorrector backing
+     * `isa.zyins.autocorrector` / `isa.zyins.reference.autocorrector`.
+     * Omit for the bundle-bound default that tracks dataset refreshes.
+     */
+    autocorrector?: Autocorrector;
+    /**
+     * Replace the default matcher backing `isa.zyins.matcher` and
+     * `match()` calls on every reference sub-facade.
+     */
+    matchAlgorithm?: MatchAlgorithm;
+    /**
+     * Replace the default ranker backing every reference
+     * `autocomplete()` accessor.
+     */
+    autocompleteAlgorithm?: AutocompleteAlgorithm;
 }
 /** Optional transport/facade overrides accepted by `Isa` factories. */
 export interface IsaFactoryOptions {
     /** Base URL override; defaults to the production ZyINS endpoint. */
     baseUrl?: string;
+    /** Viewer origin used to assemble case share links. */
+    caseViewerBaseUrl?: string;
     /** Proxy origin override; defaults to the production proxy endpoint. */
     proxyOrigin?: string;
     /** Optional structured logger. Overrides ISA_LOG=debug auto-detection. */
@@ -111,6 +151,23 @@ export interface IsaFactoryOptions {
     transport?: Transport;
     /** Consumer-supplied build identifier for client-version negotiation. */
     clientVersion?: string;
+    /** Per-call timeout in ms. Defaults to {@link DEFAULT_TIMEOUT_MS}. */
+    timeout?: number;
+    /**
+     * Per-surface API-version override. Surfaces absent from the override
+     * fall back to {@link import('./bundledApiVersions').BundledApiVersions}.
+     * Immutable per-instance; surfaced via the `Api-Version` request header
+     * resolved per-call from the request path.
+     */
+    apiVersion?: IsaApiVersionOverride;
+    /** Pluggable case-storage adapter; defaults to {@link ZeroKnowledgeCaseStorage}. */
+    caseStorage?: CaseStorage;
+    /** Replace the default autocorrector. */
+    autocorrector?: Autocorrector;
+    /** Replace the default matcher. */
+    matchAlgorithm?: MatchAlgorithm;
+    /** Replace the default ranker. */
+    autocompleteAlgorithm?: AutocompleteAlgorithm;
 }
 /**
  * Unified SDK entry point.
@@ -146,6 +203,14 @@ export declare class Isa {
     /** Top-level webhook verifier. */
     readonly webhooks: WebhooksService;
     /**
+     * Top-level autocorrector kernel — domain-agnostic.
+     * `isa.autocorrector.create({ typoMap })` returns a fresh
+     * {@link DefaultAutocorrector} bound to a caller-supplied typo map.
+     * For the zyins-bound autocorrector pre-wired to the dataset's
+     * spelling table, use `isa.zyins.autocorrector` instead.
+     */
+    readonly autocorrector: AutocorrectorKernel;
+    /**
      * Shared credential state for license-mode `Isa` instances. Mutated in
      * place by `isa.zyins.license.activate()`; `undefined` for bearer /
      * session identities.
@@ -153,6 +218,13 @@ export declare class Isa {
     readonly credentialState: IsaCredentialState | undefined;
     /** Consumer-supplied build identifier for client-version negotiation. */
     readonly clientVersion: string | undefined;
+    /**
+     * Resolved per-surface API-version map for this instance. Immutable;
+     * surfaced via the `Api-Version` request header per call, resolved from
+     * the request path. Read this to audit which version each surface talks
+     * to without inspecting the wire.
+     */
+    readonly apiVersion: Readonly<Record<IsaApiSurface, IsaApiVersion>>;
     private clientVersionListeners;
     private clientVersionMismatchEmitted;
     private constructor();
@@ -199,12 +271,14 @@ export declare class Isa {
     static withKeycode(args?: {
         keycode?: string;
         email?: string;
-        deviceId?: string;
         orderId?: string;
         licenseKey?: string;
         credentialStore?: CredentialStore;
         onLicenseRefreshed?: LicenseRefreshedListener;
         transport?: Transport;
+        autocorrector?: Autocorrector;
+        matchAlgorithm?: MatchAlgorithm;
+        autocompleteAlgorithm?: AutocompleteAlgorithm;
     }, env?: EnvReader, options?: IsaFactoryOptions): Promise<Isa>;
     /**
      * Construct from a one-shot form token (embedded eApp forms). The SDK
@@ -244,6 +318,24 @@ export declare class Isa {
      * ```
      */
     static authenticate(args: IsaAuthArgs, options?: IsaFactoryOptions): Promise<Isa>;
+    /**
+     * Construct from the typed options bag — the recommended path going
+     * forward and the form mirrored across the cross-language SDKs.
+     *
+     * ```ts
+     * const isa = await Isa.create({
+     *   auth: BearerAuth.fromToken('isa_live_…'),
+     *   engine: RemoteEngine.default,
+     *   apiVersion: 'v2',
+     *   timeout: 30_000,
+     * });
+     * ```
+     *
+     * Dispatches to the matching legacy factory (`withBearer` / `withKeycode`
+     * / `withSession` / `forForm`) based on the auth supplier's tag, and
+     * threads the resolved engine + apiVersion into the underlying options.
+     */
+    static create(opts: IsaCreateOptions): Promise<Isa>;
 }
 /**
  * Server-side path for the form-token → session exchange. Anchored as a
@@ -266,7 +358,11 @@ export type IsaAuthArgs = {
 /** Internal options the zyins namespace needs from its parent `Isa`. */
 interface ZyInsNamespaceOptions {
     identity: IsaIdentity;
+    /** Resolved per-surface API-version map inherited from the parent `Isa`. */
+    apiVersion: Readonly<Record<IsaApiSurface, IsaApiVersion>>;
     baseUrl?: string;
+    /** Viewer origin for case share links; forwarded to the client context. */
+    caseViewerBaseUrl?: string;
     logger?: DebugLogger;
     /** Shared credential state for license-mode instances. */
     credentialState?: IsaCredentialState;
@@ -274,6 +370,29 @@ interface ZyInsNamespaceOptions {
     transport?: Transport;
     /** Optional logos fetcher (binary path; bypasses string-bodied Transport). */
     logosFetch?: LogosFetch;
+    /**
+     * Optional case-storage override from the parent `Isa`. When omitted the
+     * namespace lazily constructs a {@link ZeroKnowledgeCaseStorage} bound
+     * to the shared signed-request context.
+     */
+    caseStorageOverride?: CaseStorage;
+    /** Optional autocorrector override (forwarded to `ReferenceFacade`). */
+    autocorrector?: Autocorrector;
+    /** Optional matcher override (forwarded to `ReferenceFacade`). */
+    matchAlgorithm?: MatchAlgorithm;
+    /** Optional ranker override (forwarded to `ReferenceFacade`). */
+    autocompleteAlgorithm?: AutocompleteAlgorithm;
+}
+/**
+ * Top-level domain-agnostic autocorrector kernel exposed as
+ * `isa.autocorrector`. The factory mints a fresh {@link DefaultAutocorrector}
+ * bound to a caller-supplied typo map. Domain-bound autocorrectors
+ * (e.g. `isa.zyins.autocorrector`) pre-wire the typo map from their
+ * dataset bundle.
+ */
+export interface AutocorrectorKernel {
+    /** Construct a domain-agnostic autocorrector from a typo map. */
+    create(opts: DefaultAutocorrectorOptions): Autocorrector;
 }
 /**
  * `isa.zyins.*` — methods for the ZyINS product. Each method has a
@@ -290,6 +409,44 @@ export declare class ZyInsNamespace {
     readonly branding: BrandingFacade;
     /** `isa.zyins.datasets` — reference-data bundle for picker UIs. */
     readonly datasets: DatasetsFacade;
+    /**
+     * `isa.zyins.reference` — typed catalog access. Use `match()` to
+     * resolve free text into a `Concept` handle, then call the symmetric
+     * accessors (`conditions(sort)` / `medications(sort)`).
+     */
+    readonly reference: ReferenceFacade;
+    /**
+     * `isa.zyins.medications` — top-level shortcut to
+     * `isa.zyins.reference.medications`. Per the locked SDK syntax
+     * (`docs/sdk-syntax-proposal.md`), consumers can call
+     * `isa.zyins.medications.match('insulin')` without traversing the
+     * `reference` namespace.
+     */
+    readonly medications: ReferenceMedicationsFacade;
+    /**
+     * `isa.zyins.conditions` — top-level shortcut to
+     * `isa.zyins.reference.conditions`. Mirror of `medications`.
+     */
+    readonly conditions: ReferenceConditionsFacade;
+    /**
+     * `isa.zyins.autocorrector` — domain-bound autocorrector, pre-wired to
+     * the zyins dataset's `spellingCorrections`. Tracks bundle refreshes
+     * automatically: a fresh `datasets.getV3()` swaps the typo map under
+     * the same handle.
+     *
+     * @example
+     * ```ts
+     * await isa.zyins.datasets.getV3();
+     * const fixed = isa.zyins.autocorrector.correct('hyprtension', { mode: 'submit' });
+     * ```
+     */
+    readonly autocorrector: Autocorrector;
+    /**
+     * `isa.zyins.matcher` — domain-bound matcher used internally by
+     * `match()`. Exposed so consumers can match against arbitrary
+     * candidate pools.
+     */
+    readonly matcher: MatchAlgorithm;
     /** `isa.zyins.preferences` — per-license preferences document. */
     readonly preferences: PreferencesFacade;
     /** `isa.zyins.cases` — case create + share. */
@@ -301,10 +458,53 @@ export declare class ZyInsNamespace {
      */
     readonly email: EmailFacade;
     /**
-     * `isa.zyins.prequalify` — callable that runs the prequalify decision
-     * from a typed `PrequalifyRequest`.
+     * `isa.zyins.prequalify` — runs the prequalify decision against the
+     * version pinned on the parent `Isa`. With the default
+     * (`BundledApiVersions.prequalify`) this aliases {@link prequalifyV2} and
+     * returns `Envelope<PrequalifyV2Result>`. With
+     * `apiVersion: { prequalify: 'v1' }` it routes to {@link prequalifyV1};
+     * with `apiVersion: { prequalify: 'v3' }` it routes to
+     * {@link prequalifyV3}. Narrow on `isa.apiVersion.prequalify` to
+     * disambiguate the return shape.
      */
-    readonly prequalify: PrequalifyCallable;
+    readonly prequalify: PrequalifyV3Callable | PrequalifyV2Callable | PrequalifyV1Callable;
+    /**
+     * `isa.zyins.prequalifyV2` — callable that runs the v2 prequalify
+     * decision (`POST /v2/prequalify`). Returns one `PlanOffer` per
+     * product with the best qualifying tier at the top level and
+     * alternates in `other_offers[]`.
+     *
+     * @deprecated Prefer `isa.zyins.prequalify` (v2 by default). Retained
+     * for one release as an alias of the canonical method so existing
+     * callers do not break.
+     */
+    readonly prequalifyV2: PrequalifyV2Callable;
+    /**
+     * `isa.zyins.prequalifyV1` — legacy callable that hits
+     * `POST /v1/prequalify`. Use only when pinned to `apiVersion: 'v1'`.
+     */
+    readonly prequalifyV1: PrequalifyV1Callable;
+    /**
+     * `isa.zyins.prequalifyV3` — callable that runs the v3 prequalify
+     * decision (`POST /v3/prequalify`). Returns one offer per product with
+     * a uniform `pricing[]` table — each row is a rate class carrying its
+     * own eligibility, premium, and rank. Array order of `pricing` is
+     * authoritative for display. Pin via `apiVersion: { prequalify: 'v3' }`
+     * to make `isa.zyins.prequalify` route here.
+     */
+    readonly prequalifyV3: PrequalifyV3Callable;
+    /**
+     * `isa.zyins.quote` — runs the quote decision against the version pinned
+     * on the parent `Isa`. Pin via `apiVersion: { quote: 'v3' }` to route to
+     * {@link quoteV3}; v1/v2 quote facades are not implemented.
+     */
+    readonly quote: QuoteV3Callable;
+    /**
+     * `isa.zyins.quoteV3` — callable that runs the v3 quote call
+     * (`POST /v3/quote`). Returns qualifying products grouped by requested
+     * amount with the same uniform `pricing[]` table as v3 prequalify.
+     */
+    readonly quoteV3: QuoteV3Callable;
     /**
      * `isa.zyins.products` — live product catalog built from server datasets.
      * `catalog()` fetches once and memoizes; `refresh()` forces a re-fetch.
@@ -320,15 +520,51 @@ export declare class ZyInsNamespace {
     /** `isa.zyins.logos` — carrier-logo asset lookup (public, no auth). */
     readonly logos: LogosFacade;
     constructor(opts: ZyInsNamespaceOptions);
-    /** Raw-response sibling of `prequalify`. */
-    prequalifyRaw: (request: PrequalifyRequest) => Promise<RawResponseResult<PrequalifyResult>>;
+    /** Raw-response sibling of {@link prequalify}; follows the pinned API version. */
+    prequalifyRaw: (request: PrequalifyRequest | PrequalifyV2Request | PrequalifyV3Request) => Promise<RawResponseResult<PrequalifyResult | PrequalifyV2Result | PrequalifyV3Result>>;
+    /** Raw-response sibling of `prequalifyV2`. */
+    prequalifyV2Raw: (request: PrequalifyV2Request) => Promise<RawResponseResult<PrequalifyV2Result>>;
+    /** Raw-response sibling of `prequalifyV3`. */
+    prequalifyV3Raw: (request: PrequalifyV3Request) => Promise<RawResponseResult<PrequalifyV3Result>>;
+    /** Raw-response sibling of `quoteV3`. */
+    quoteV3Raw: (request: QuoteV3Request) => Promise<RawResponseResult<QuoteV3Result>>;
 }
 /**
- * Shape of `isa.zyins.prequalify` — a callable for the typed prequalify
- * call. Returns `Envelope<PrequalifyResult>`.
+ * Shape of the v1 prequalify callable (`POST /v1/prequalify`). Returns
+ * `Envelope<PrequalifyResult>`.
+ *
+ * @deprecated The legacy v1 envelope shape disagrees with what the
+ * documented examples describe. Pin `apiVersion: 'v2'` (default) and
+ * call {@link PrequalifyV2Callable} instead.
  */
-export interface PrequalifyCallable {
+export interface PrequalifyV1Callable {
     (request: PrequalifyRequest): Promise<Envelope<PrequalifyResult>>;
+}
+/**
+ * @deprecated Renamed to {@link PrequalifyV1Callable}. Retained as an
+ * alias for one release so existing callers keep compiling.
+ */
+export type PrequalifyCallable = PrequalifyV1Callable;
+/**
+ * Shape of `isa.zyins.prequalifyV2` — a callable for the typed v2
+ * prequalify call. Returns `Envelope<PrequalifyV2Result>`.
+ */
+export interface PrequalifyV2Callable {
+    (request: PrequalifyV2Request): Promise<Envelope<PrequalifyV2Result>>;
+}
+/**
+ * Shape of `isa.zyins.prequalifyV3` — a callable for the typed v3
+ * prequalify call. Returns `Envelope<PrequalifyV3Result>`.
+ */
+export interface PrequalifyV3Callable {
+    (request: PrequalifyV3Request): Promise<Envelope<PrequalifyV3Result>>;
+}
+/**
+ * Shape of `isa.zyins.quoteV3` — a callable for the typed v3 quote call.
+ * Returns `Envelope<QuoteV3Result>`.
+ */
+export interface QuoteV3Callable {
+    (request: QuoteV3Request): Promise<Envelope<QuoteV3Result>>;
 }
 /** Top-level helper to add `.withRawResponse` siblings ergonomically. */
 export interface RawCallable<TArgs extends unknown[], TResult> {
@@ -341,7 +577,7 @@ export interface RawCallable<TArgs extends unknown[], TResult> {
  * underscore-prefixed siblings (`_requestId`, `_idempotencyKey`) so consumers
  * on either convention see the same values.
  */
-export declare function wrapEnvelope<T>(data: T, requestId: string, idempotencyKey?: string): Envelope<T>;
+export declare function wrapEnvelope<T>(data: T, requestId: string, idempotencyKey?: string, livemode?: boolean, retryAttempts?: number): Envelope<T>;
 /**
  * `isa.rapidsign.*` — RapidSign product namespace.
  *

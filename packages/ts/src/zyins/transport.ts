@@ -26,6 +26,8 @@ export interface TransportRequest {
   headers: Record<string, string>;
   /** Serialized request body. Empty string for body-less verbs. */
   body: string;
+  /** Cancellation signal supplied by SDK timeout wrappers. */
+  signal?: AbortSignal;
 }
 
 /** Response shape the transport returns to the client. */
@@ -49,6 +51,7 @@ export function defaultTransport(fetchImpl?: typeof fetch): Transport {
     const init: RequestInit = {
       method: request.method,
       headers: request.headers,
+      signal: request.signal,
     };
     if (request.method !== 'GET' && request.method !== 'DELETE') {
       init.body = request.body;

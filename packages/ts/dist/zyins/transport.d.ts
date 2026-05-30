@@ -22,6 +22,8 @@ export interface TransportRequest {
     headers: Record<string, string>;
     /** Serialized request body. Empty string for body-less verbs. */
     body: string;
+    /** Cancellation signal supplied by SDK timeout wrappers. */
+    signal?: AbortSignal;
 }
 /** Response shape the transport returns to the client. */
 export interface TransportResponse {

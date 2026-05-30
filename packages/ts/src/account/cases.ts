@@ -1,61 +1,82 @@
 /**
- * `isa.account.cases` — case CRUD + share over `/v1/case`.
+ * `isa.account.cases` — zero-knowledge case share + recall over `/v1/case`.
  *
- *   create  → `POST   /v1/case`
- *   get     → `GET    /v1/case/{id}`
- *   list    → `GET    /v1/case`
- *   email   → `POST   /v1/case/{id}/email`
+ *   create → `POST /v1/case`          (opaque ciphertext in, id out)
+ *   open   → `GET  /v1/case/{uuid}`   (opaque ciphertext out, decrypt local)
+ *   list   → `POST /v1/case/list`     (metadata only, no ciphertext)
+ *   email  → `POST /v1/case/{id}/email`
  *
- * Cases are content-addressed shareable artifacts created from a quote
- * input + results + selected products. The server hashes the tuple —
- * identical inputs dedupe to the same `hash` regardless of which license
- * created the case.
+ * The payload is applicant PII the platform must never decrypt. The SDK
+ * encrypts client-side with a fresh per-case key (AES-256-GCM, `product`
+ * bound as AEAD data), posts only the opaque envelope, and carries the key
+ * in the share-link fragment (`#k=…`) — never on the wire, never in a log.
+ * See `docs/design/case-store-e2ee.md` and zyins #363 for the wire contract.
+ *
+ * HARD RULE — no key/fragment leakage: the assembled link is returned to the
+ * caller as a value and nothing else. It is never logged, never embedded in a
+ * telemetry payload, and never attached to a thrown error. The encrypt step
+ * keeps the key local to {@link create}; `open` parses it from the link the
+ * caller already holds. Downstream consumers (bpp2.0, Phase 3) must scrub
+ * `location.hash` before any telemetry call.
  */
 
-import { type AuthContext } from './auth';
-import { type Transport } from '../zyins/transport';
+import { encryptCase, decryptCase } from './caseCrypto';
+import {
+  assembleLink,
+  parseLink,
+  parseCreatedId,
+  parseCaseDetail,
+  parseCaseList,
+  type TCaseListEntry,
+} from './caseWire';
+import { signedCaseRequest, isSuccess, type TCaseRequestContext } from './caseTransport';
 import { fromHttpResponse } from '../zyins/errors';
-import { deriveIdempotencyKey } from '../zyins/idempotency';
-import { isRecord, stringField, unwrapEnvelope } from '../zyins/response';
-import { buildLicenseHMACHeaders } from '../core';
-import { type Clock, systemClock } from '../core';
+import { IsaCaseExpiredError } from '../zyins/apiError';
 
-const CASES_PATH = '/v1/case';
+const CASE_PATH = '/v1/case';
+const CASE_LIST_PATH = '/v1/case/list';
+const HTTP_NOT_FOUND = 404;
+
+/**
+ * Default share-link viewer origin. The SDK appends `/c/<id>#k=<key>`; the
+ * base intentionally omits the `/c/` segment so a deployment can point the
+ * option at any host without re-encoding the path shape.
+ */
+export const DEFAULT_CASE_VIEWER_BASE_URL = 'https://app.isaapi.com';
+
+/**
+ * Cleartext routing tag identifying the app that owns the payload. Not PII;
+ * mirrors the known zyins #363 product set while preserving server-side
+ * forward compatibility for future product values.
+ */
+export type TCaseProduct = 'zyins' | 'eapp' | 'rapidsign' | (string & {});
 
 /** Inputs for `account.cases.create`. */
 export interface CaseCreateRequest {
-  /** Quote input — object converted to XML server-side, or raw XML string. */
-  input: Record<string, unknown> | string;
-  /** Optional quote results payload. */
-  results?: unknown;
-  /** Optional product selection (array of product identifiers). */
-  products?: string[];
+  /** Routing tag stored cleartext and bound as AEAD data during encryption. */
+  product: TCaseProduct;
+  /** Arbitrary JSON payload; encrypted client-side before it leaves the SDK. */
+  payload: unknown;
 }
 
+/** Result of `account.cases.create`: the case id and the assembled share link. */
 export interface CaseCreateResult {
-  /** Content-addressed case identifier. */
-  hash: string;
-  /** Absolute share URL for the case viewer. */
-  url: string;
-  /** True when the case is read-only (created by another license). */
-  readonly: boolean;
-  /** RFC 3339 timestamp the case was first created. */
-  createdAt: string;
+  /** Server-assigned case uuid. */
+  id: string;
+  /** Full share link `${caseViewerBaseUrl}/c/<id>#k=<base64url(key)>`. */
+  link: string;
 }
 
-/** A case as returned by `get` / `list`. */
-export interface CaseSummary {
-  hash: string;
-  url: string;
-  readonly: boolean;
-  createdAt: string;
-  /** Optional original input (server returns when caller owns the case). */
-  input?: unknown;
-  /** Optional results payload (server returns when present). */
-  results?: unknown;
-  /** Optional product selection (server returns when present). */
-  products?: string[];
+/** A decrypted case returned by `open`. */
+export interface CaseOpenResult {
+  /** Routing tag the case was created under. */
+  product: string;
+  /** The decrypted payload. */
+  payload: unknown;
 }
+
+/** Case metadata returned by `list` — never carries ciphertext. */
+export type CaseSummary = TCaseListEntry;
 
 /** Inputs for `account.cases.email`. */
 export interface CaseEmailRequest {
@@ -67,114 +88,103 @@ export interface CaseEmailResult {
   queued: true;
 }
 
-export interface CasesContext {
-  baseUrl: string;
-  auth: AuthContext;
-  transport: Transport;
-  clock: Clock;
-  idempotencyKey?: string;
+/** Per-operation context: signed-request inputs plus the viewer origin. */
+export interface CasesContext extends TCaseRequestContext {
+  /** Viewer origin for share-link assembly; see {@link DEFAULT_CASE_VIEWER_BASE_URL}. */
+  caseViewerBaseUrl: string;
 }
 
-/** Create a new shareable case. */
+/**
+ * Encrypt a payload client-side, store the opaque envelope, and return the
+ * fragment-keyed share link. The decryption key never reaches the server.
+ *
+ * @example
+ * ```ts
+ * const { id, link } = await isa.account.cases.create({
+ *   product: 'zyins',
+ *   payload: { input: currentCaseToJSON() },
+ * });
+ * // `link` is `https://app.isaapi.com/c/<id>#k=<key>` — send it to the client.
+ * ```
+ */
 export async function create(
   request: CaseCreateRequest,
   ctx: CasesContext,
 ): Promise<CaseCreateResult> {
-  if (
-    !request ||
-    request.input === undefined ||
-    request.input === null ||
-    (typeof request.input === 'string' && request.input.trim().length === 0)
-  ) {
-    throw new Error('account: cases.create requires input');
+  if (!request || typeof request.product !== 'string' || request.product.length === 0) {
+    throw new Error('account: cases.create requires a product');
   }
-  const wire: Record<string, unknown> = { input: request.input };
-  if (request.results !== undefined) wire['results'] = request.results;
-  if (request.products !== undefined) wire['products'] = request.products;
-  const body = JSON.stringify(wire);
-  const idempotencyKey =
-    ctx.idempotencyKey ??
-    (await deriveIdempotencyKey({ deviceId: ctx.auth.deviceId, op: 'cases_create', body }));
-  const headers = await buildLicenseHMACHeaders(
-    ctx.auth.licenseKey,
-    ctx.auth.orderId,
-    ctx.auth.email,
-    'POST',
-    CASES_PATH,
-    body,
-    ctx.auth.deviceId,
-    ctx.clock ?? systemClock,
+  if (request.payload === undefined) {
+    throw new Error('account: cases.create requires a payload');
+  }
+  const { envelope, keyFragment } = await encryptCase(request.product, request.payload);
+  const body = JSON.stringify({ product: request.product, ...envelope });
+  const response = await signedCaseRequest(
+    { method: 'POST', path: CASE_PATH, body, idempotencyOp: 'cases_create' },
+    ctx,
   );
-  const response = await ctx.transport({
-    url: `${ctx.baseUrl}${CASES_PATH}`,
-    method: 'POST',
-    headers: {
-      ...headers,
-      'Content-Type': 'application/json',
-      Accept: 'application/json',
-      'Idempotency-Key': idempotencyKey,
-    },
-    body,
-  });
-  if (response.status >= 200 && response.status < 300) {
-    return parseCreateResponse(response.body);
+  if (!isSuccess(response.status)) {
+    throw fromHttpResponse(response.status, response.body);
   }
-  throw fromHttpResponse(response.status, response.body);
+  const id = parseCreatedId(response.body);
+  return { id, link: assembleLink(ctx.caseViewerBaseUrl, id, keyFragment) };
 }
 
-/** Retrieve a single case by hash. */
-export async function get(caseId: string, ctx: CasesContext): Promise<CaseSummary> {
-  if (typeof caseId !== 'string' || caseId.length === 0) {
-    throw new Error('account: cases.get requires a non-empty case id');
+/**
+ * Resolve a share link: parse the id and fragment key, fetch the opaque
+ * envelope, and decrypt locally. A 404 (absent or expired — indistinguishable
+ * by design) raises {@link IsaCaseExpiredError}.
+ *
+ * @example
+ * ```ts
+ * const { product, payload } = await isa.account.cases.open(link);
+ * ```
+ */
+export async function open(link: string, ctx: CasesContext): Promise<CaseOpenResult> {
+  const { id, keyFragment } = parseLink(link);
+  const path = `${CASE_PATH}/${encodeURIComponent(id)}`;
+  const response = await signedCaseRequest({ method: 'GET', path, body: '' }, ctx);
+  if (response.status === HTTP_NOT_FOUND) {
+    throw new IsaCaseExpiredError(id);
   }
-  const path = `${CASES_PATH}/${encodeURIComponent(caseId)}`;
-  const headers = await buildLicenseHMACHeaders(
-    ctx.auth.licenseKey,
-    ctx.auth.orderId,
-    ctx.auth.email,
-    'GET',
-    path,
-    '',
-    ctx.auth.deviceId,
-    ctx.clock ?? systemClock,
-  );
-  const response = await ctx.transport({
-    url: `${ctx.baseUrl}${path}`,
-    method: 'GET',
-    headers: { ...headers, Accept: 'application/json' },
-    body: '',
-  });
-  if (response.status >= 200 && response.status < 300) {
-    return parseCaseSummary(response.body);
+  if (!isSuccess(response.status)) {
+    throw fromHttpResponse(response.status, response.body);
   }
-  throw fromHttpResponse(response.status, response.body);
+  const { product, envelope } = parseCaseDetail(response.body);
+  const payload = await decryptCase(product, envelope, keyFragment);
+  return { product, payload };
 }
 
-/** List all cases visible to the caller. */
+/**
+ * List the caller's cases (account-scoped metadata only). The list never
+ * carries ciphertext — the owner cannot decrypt a case without its link's
+ * fragment key.
+ *
+ * @example
+ * ```ts
+ * const cases = await isa.account.cases.list();
+ * cases.forEach((c) => console.log(c.id, c.product, c.expiresAt));
+ * ```
+ */
 export async function list(ctx: CasesContext): Promise<CaseSummary[]> {
-  const headers = await buildLicenseHMACHeaders(
-    ctx.auth.licenseKey,
-    ctx.auth.orderId,
-    ctx.auth.email,
-    'GET',
-    CASES_PATH,
-    '',
-    ctx.auth.deviceId,
-    ctx.clock ?? systemClock,
+  const response = await signedCaseRequest(
+    { method: 'POST', path: CASE_LIST_PATH, body: '{}' },
+    ctx,
   );
-  const response = await ctx.transport({
-    url: `${ctx.baseUrl}${CASES_PATH}`,
-    method: 'GET',
-    headers: { ...headers, Accept: 'application/json' },
-    body: '',
-  });
-  if (response.status >= 200 && response.status < 300) {
-    return parseCaseList(response.body);
+  if (!isSuccess(response.status)) {
+    throw fromHttpResponse(response.status, response.body);
   }
-  throw fromHttpResponse(response.status, response.body);
+  return parseCaseList(response.body);
 }
 
-/** Email a case PDF / artifact to a recipient. */
+/**
+ * Email a case link to a recipient.
+ *
+ * @example
+ * ```ts
+ * await isa.account.cases.email({ caseId: id, to: 'jane.smith@example.com' });
+ * ```
+ */
 export async function email(
   request: CaseEmailRequest,
   ctx: CasesContext,
@@ -185,107 +195,14 @@ export async function email(
   if (typeof request.to !== 'string' || request.to.length === 0) {
     throw new Error('account: cases.email requires a non-empty to address');
   }
-  const path = `${CASES_PATH}/${encodeURIComponent(request.caseId)}/email`;
+  const path = `${CASE_PATH}/${encodeURIComponent(request.caseId)}/email`;
   const body = JSON.stringify({ to: request.to });
-  const idempotencyKey =
-    ctx.idempotencyKey ??
-    (await deriveIdempotencyKey({
-      deviceId: ctx.auth.deviceId,
-      op: `cases_email:${request.caseId}`,
-      body,
-    }));
-  const headers = await buildLicenseHMACHeaders(
-    ctx.auth.licenseKey,
-    ctx.auth.orderId,
-    ctx.auth.email,
-    'POST',
-    path,
-    body,
-    ctx.auth.deviceId,
-    ctx.clock ?? systemClock,
+  const response = await signedCaseRequest(
+    { method: 'POST', path, body, idempotencyOp: `cases_email:${request.caseId}` },
+    ctx,
   );
-  const response = await ctx.transport({
-    url: `${ctx.baseUrl}${path}`,
-    method: 'POST',
-    headers: {
-      ...headers,
-      'Content-Type': 'application/json',
-      Accept: 'application/json',
-      'Idempotency-Key': idempotencyKey,
-    },
-    body,
-  });
-  if (response.status >= 200 && response.status < 300) {
+  if (isSuccess(response.status)) {
     return { queued: true };
   }
   throw fromHttpResponse(response.status, response.body);
 }
-
-function parseCreateResponse(body: string): CaseCreateResult {
-  if (!body) {
-    throw new Error('account: cases.create response body was empty');
-  }
-  const parsed = parseCaseJson(body, 'account: cases.create');
-  const root = caseRecord(parsed, 'account: cases.create');
-  return {
-    hash: stringField(root, 'hash'),
-    url: stringField(root, 'url'),
-    readonly: root['readonly'] === true,
-    createdAt: stringField(root, 'created_at'),
-  };
-}
-
-function parseCaseSummary(body: string): CaseSummary {
-  if (!body) {
-    throw new Error('account: cases.get response body was empty');
-  }
-  const parsed = parseCaseJson(body, 'account: cases.get');
-  const root = caseRecord(parsed, 'account: cases.get');
-  return summaryFromRecord(root);
-}
-
-function parseCaseList(body: string): CaseSummary[] {
-  if (!body) return [];
-  const parsed = parseCaseJson(body, 'account: cases.list');
-  const root = unwrapEnvelope(parsed);
-  if (Array.isArray(root)) {
-    return root.map((entry) => summaryFromRecord(entry as Record<string, unknown>));
-  }
-  if (root && typeof root === 'object' && 'cases' in (root as Record<string, unknown>)) {
-    const cases = (root as { cases: unknown }).cases;
-    if (Array.isArray(cases)) {
-      return cases.map((entry) => summaryFromRecord(entry as Record<string, unknown>));
-    }
-  }
-  return [];
-}
-
-function parseCaseJson(body: string, context: string): unknown {
-  try {
-    return JSON.parse(body) as unknown;
-  } catch (err) {
-    throw new Error(`${context} response was not valid JSON: ${(err as Error).message}`);
-  }
-}
-
-function caseRecord(parsed: unknown, context: string): Record<string, unknown> {
-  const root = unwrapEnvelope(parsed);
-  if (!isRecord(root)) {
-    throw new Error(`${context} response body was not a JSON object`);
-  }
-  return root;
-}
-
-function summaryFromRecord(r: Record<string, unknown>): CaseSummary {
-  const out: CaseSummary = {
-    hash: stringField(r, 'hash'),
-    url: stringField(r, 'url'),
-    readonly: r['readonly'] === true,
-    createdAt: stringField(r, 'created_at'),
-  };
-  if (r['input'] !== undefined) out.input = r['input'];
-  if (r['results'] !== undefined) out.results = r['results'];
-  if (Array.isArray(r['products'])) out.products = r['products'] as string[];
-  return out;
-}
-

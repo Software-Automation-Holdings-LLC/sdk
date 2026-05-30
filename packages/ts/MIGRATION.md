@@ -1,4 +1,39 @@
-# Migration from per-product SDK packages (v0.0.0 → v0.3.0)
+# Migration — 0.x → 1.0.0-rc.1 (TypeScript)
+
+The cross-language guide at [`../../MIGRATION.md`](../../MIGRATION.md)
+covers the full cut (constructor rename, per-surface `apiVersion`,
+v3 wire-shape, CaseStorage adapter, bundleless `reference.match`).
+TS-specific notes:
+
+- **Install (rc.1, internal channel):**
+
+  ```bash
+  # ~/.npmrc must auth GitHub Packages:
+  # //npm.pkg.github.com/:_authToken=<GH_PAT_with_read:packages>
+  # @software-automation-holdings-llc:registry=https://npm.pkg.github.com
+
+  npm install @software-automation-holdings-llc/sdk@next
+  ```
+
+  Published with `--tag next`; `latest` dist-tag is NOT moved.
+
+- **Constructor:** `Isa.create(...)` → `Isa.withKeycode(...)`. The
+  `deviceId` option is removed (internal SDK detail).
+- **apiVersion:** string → `Record<Surface, string>`. Use
+  `BundledApiVersions` for defaults.
+- **Cases:** `Isa.case.save(...)` → `isa.zyins.cases.save({ product,
+  payload })`. Default storage is `ZeroKnowledgeCaseStorage`
+  (AES-GCM envelope).
+- **Reference:** `datasets.getV3().match(...)` →
+  `isa.zyins.reference.match(text)`. Cache primes on first call;
+  `isa.zyins.reference.refresh()` invalidates.
+- **TypeScript strict mode:** `tsc --noEmit` against the SDK now
+  enforces the locked surface contract (see CI workflow
+  `sdk-public-api.yml`).
+
+---
+
+# Historical: per-product SDK packages (v0.0.0 → v0.3.0)
 
 Per SDK_DESIGN §0 (2026-05-18), the TypeScript SDK now ships as one unified
 package: `@software-automation-holdings-llc/sdk`.

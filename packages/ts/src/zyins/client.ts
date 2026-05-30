@@ -26,6 +26,22 @@ import {
   type PrequalifyResult,
 } from './prequalify';
 import {
+  prequalifyV2,
+  type PrequalifyV2Request,
+  type PrequalifyV2Result,
+} from './prequalify-v2';
+import {
+  prequalifyV3,
+  type PrequalifyV3Request,
+  type PrequalifyV3Result,
+} from './prequalify-v3';
+import {
+  quoteV3,
+  type QuoteV3Request,
+  type QuoteV3Result,
+} from './quote-v3';
+import { DatasetsV3SubClient } from './datasets-v3';
+import {
   activate as licenseActivate,
   check as licenseCheck,
   deactivate as licenseDeactivate,
@@ -48,16 +64,19 @@ import {
   type PreferencesSetResult,
 } from './preferences';
 import {
-  create as casesCreate,
-  type CaseCreateRequest,
-  type CaseCreateResult,
+  share as casesShare,
+  type CaseShareRequest,
+  type CaseShareResult,
 } from './cases';
+import { DEFAULT_CASE_VIEWER_BASE_URL } from '../account/cases';
 import { LogosSubClient, type LogosFetch } from './logos';
 
 /** Per-call context shared across sub-clients. */
 export interface OperationContext {
   auth: AuthContext;
   baseUrl: string;
+  /** Viewer origin for case share links; defaults via {@link ZyInsClientOptions}. */
+  caseViewerBaseUrl: string;
   transport: Transport;
   clock: Clock;
 }
@@ -71,6 +90,12 @@ export interface ZyInsClientOptions {
   auth: AuthContext;
   /** Base URL override; defaults to {@link DEFAULT_ZYINS_BASE_URL}. */
   baseUrl?: string;
+  /**
+   * Viewer origin for case share links; defaults to
+   * {@link DEFAULT_CASE_VIEWER_BASE_URL}. The SDK appends `/c/<id>#k=<key>`,
+   * so the base must NOT include `/c/`.
+   */
+  caseViewerBaseUrl?: string;
   /** Transport override; defaults to {@link defaultTransport}. */
   transport?: Transport;
   /** Clock override; defaults to {@link systemClock}. */
@@ -93,6 +118,7 @@ export interface ZyInsClientOptions {
 export class ZyInsClient {
   private readonly auth: AuthContext;
   private readonly baseUrl: string;
+  private readonly caseViewerBaseUrl: string;
   private readonly transport: Transport;
   private readonly clock: Clock;
   private readonly logosFetch: LogosFetch | undefined;
@@ -113,12 +139,18 @@ export class ZyInsClient {
   public readonly cases: CasesSubClient;
   /** Carrier-logo lookup. See `logos.ts`. */
   public readonly logos: LogosSubClient;
-  /** Reference-data bundle (`isa.zyins.datasets.get()`). */
+  /**
+   * Legacy v2 reference-data bundle. Prefer `datasetsV3` for new code;
+   * the SDK's public `isa.zyins.datasets` facade routes to v3.
+   */
   public readonly datasets: DatasetsSubClient;
+  /** v3 reference catalog (`GET /v3/datasets`). */
+  public readonly datasetsV3: DatasetsV3SubClient;
 
   constructor(options: ZyInsClientOptions) {
     this.auth = options.auth;
     this.baseUrl = options.baseUrl ?? DEFAULT_ZYINS_BASE_URL;
+    this.caseViewerBaseUrl = options.caseViewerBaseUrl ?? DEFAULT_CASE_VIEWER_BASE_URL;
     this.transport = options.transport ?? defaultTransport();
     this.clock = options.clock ?? systemClock;
     this.logosFetch = options.logosFetch;
@@ -130,6 +162,7 @@ export class ZyInsClient {
     this.cases = new CasesSubClient(this.context());
     this.logos = new LogosSubClient(this.baseUrl, this.logosFetch);
     this.datasets = new DatasetsSubClient(this.context());
+    this.datasetsV3 = new DatasetsV3SubClient(this.context());
   }
 
   /** Run a prequalify call. See `PrequalifyRequest` for input shape. */
@@ -137,11 +170,42 @@ export class ZyInsClient {
     return prequalify(request, this.context());
   }
 
+  /**
+   * Run the v2 prequalify call (`POST /v2/prequalify`). Returns one
+   * `PlanOffer` per product with the best qualifying tier at the top
+   * level and alternates in `other_offers[]`. Pass
+   * `options: { includeIneligible: true }` to also receive declined
+   * products / declined alternates.
+   */
+  async prequalifyV2(request: PrequalifyV2Request): Promise<PrequalifyV2Result> {
+    return prequalifyV2(request, this.context());
+  }
+
+  /**
+   * Run the v3 prequalify call (`POST /v3/prequalify`). Returns one
+   * offer per product with a uniform `pricing[]` table — each row is a
+   * rate class carrying its own eligibility, premium, and rank. Array
+   * order of `pricing` is authoritative for display.
+   */
+  async prequalifyV3(request: PrequalifyV3Request): Promise<PrequalifyV3Result> {
+    return prequalifyV3(request, this.context());
+  }
+
+  /**
+   * Run the v3 quote call (`POST /v3/quote`). Returns qualifying
+   * products grouped by requested amount with the same uniform
+   * `pricing[]` table as v3 prequalify.
+   */
+  async quoteV3(request: QuoteV3Request): Promise<QuoteV3Result> {
+    return quoteV3(request, this.context());
+  }
+
   /** Internal: produce the shared context object every operation needs. */
   private context(): OperationContext {
     return {
       auth: this.auth,
       baseUrl: this.baseUrl,
+      caseViewerBaseUrl: this.caseViewerBaseUrl,
       transport: this.transport,
       clock: this.clock,
     };
@@ -210,30 +274,51 @@ class PreferencesSubClient {
 }
 
 /**
- * Cases sub-client. Targets `POST /v1/case` for create and
- * `POST /v1/email/enqueue` for case-share email. Future `list`/`get`/
- * `delete` operations require net-new server work tracked in the design doc.
+ * Cases sub-client. `share` stores an opaque, client-encrypted case via the
+ * zero-knowledge `/v1/case` store and returns the fragment-keyed link;
+ * `email` enqueues a case email. The decryption key never reaches the server.
  */
 class CasesSubClient {
   constructor(private readonly ctx: OperationContext) {}
 
   /**
-   * Share a case (RW + optional analysis). Canonical surface per the locked
-   * spec (Section 3 Flow 5 + Appendix B post-lock correction #2). The
-   * recipient's UI decides RO vs RW based on whether `results` is present;
-   * the SDK has no `mode` flag.
+   * Surface the bound signed-request context so the unified `Isa`
+   * namespace can construct a `ZeroKnowledgeCaseStorage` adapter without
+   * duplicating the auth/transport/clock plumbing. Internal — not part of
+   * the published SDK surface.
    */
-  share(request: CaseCreateRequest): Promise<CaseCreateResult> {
-    return casesCreate(request, this.ctx);
+  get context(): OperationContext {
+    return this.ctx;
   }
 
   /**
-   * @deprecated Use `share()` instead. `create()` is retained as a back-compat
-   * alias and will be removed in v0.7.0. See
-   * `/tmp/sdk-syntax-proposal.md` Appendix B post-lock correction #2.
+   * Share a zyins case (input + optional analysis snapshot). Encrypts
+   * client-side and returns the fragment-keyed link. The recipient's UI
+   * decides RO vs RW based on whether `results` is present; the SDK has no
+   * `mode` flag.
+   *
+   * @example
+   * ```ts
+   * const { id, link } = await isa.zyins.cases.share({
+   *   input: currentCaseToJSON(),
+   * });
+   * ```
    */
-  create(request: CaseCreateRequest): Promise<CaseCreateResult> {
-    return casesCreate(request, this.ctx);
+  share(request: CaseShareRequest): Promise<CaseShareResult> {
+    return casesShare(request, this.ctx);
+  }
+
+  /**
+   * @deprecated Use `share()` instead. `create()` is a back-compat alias that
+   * forwards to the same opaque-case flow; removed in v0.7.0.
+   *
+   * @example
+   * ```ts
+   * const { id, link } = await isa.zyins.cases.create({ input });
+   * ```
+   */
+  create(request: CaseShareRequest): Promise<CaseShareResult> {
+    return casesShare(request, this.ctx);
   }
 
   email(request: CaseEmailRequest): Promise<CaseEmailResult> {

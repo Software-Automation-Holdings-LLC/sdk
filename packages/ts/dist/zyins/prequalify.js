@@ -21,6 +21,8 @@ import { fromHttpResponse } from './errors';
 import { deriveIdempotencyKey } from './idempotency';
 import { buildLicenseHMACHeaders } from '../core';
 import { systemClock } from '../core';
+import { coercePlanInfo } from './planInfo';
+import { retryAttemptsFromHeaders } from './retryAttempts';
 const PREQUALIFY_PATH = '/v1/prequalify';
 /**
  * Run a prequalify call. Builds the wire body, derives the idempotency key,
@@ -42,7 +44,7 @@ async function executePrequalify(body, request, ctx) {
     const url = `${ctx.baseUrl}${PREQUALIFY_PATH}`;
     const response = await ctx.transport({ url, method: 'POST', headers, body });
     if (response.status >= 200 && response.status < 300) {
-        return parsePrequalifyResponse(response.body, request.coverage, idempotencyKey);
+        return parsePrequalifyResponse(response.body, request.coverage, idempotencyKey, retryAttemptsFromHeaders(response.headers));
     }
     throw fromHttpResponse(response.status, response.body);
 }
@@ -142,7 +144,7 @@ const toBool = (v) => v === true;
  *   request_id, idempotency_key }
  * ```
  */
-function parsePrequalifyResponse(body, coverage, idempotencyKey) {
+function parsePrequalifyResponse(body, coverage, idempotencyKey, retryAttempts) {
     let parsed;
     try {
         parsed = JSON.parse(body);
@@ -153,6 +155,7 @@ function parsePrequalifyResponse(body, coverage, idempotencyKey) {
     const root = isRecord(parsed) ? parsed : {};
     const requestId = toStr(root['request_id']);
     const echoKey = toStr(root['idempotency_key']) || idempotencyKey;
+    const livemode = root['livemode'] === undefined ? true : toBool(root['livemode']);
     const data = isRecord(root['data']) ? root['data'] : {};
     const meta = parseMeta(data['meta']);
     const results = isRecord(data['results']) ? data['results'] : {};
@@ -187,6 +190,8 @@ function parsePrequalifyResponse(body, coverage, idempotencyKey) {
             meta,
             requestId,
             idempotencyKey: echoKey,
+            livemode,
+            retryAttempts,
         };
     }
     const amount = Math.round(coverage.amount);
@@ -203,6 +208,8 @@ function parsePrequalifyResponse(body, coverage, idempotencyKey) {
         meta,
         requestId,
         idempotencyKey: echoKey,
+        livemode,
+        retryAttempts,
     };
 }
 function parseMeta(raw) {
@@ -360,11 +367,7 @@ function parsePricingRanks(raw) {
 function coercePlan(raw) {
     const r = isRecord(raw) ? raw : {};
     const id = toStr(r['id']);
-    const planInfoRaw = isRecord(r['plan_info']) ? r['plan_info'] : {};
-    const planInfo = {};
-    for (const [k, v] of Object.entries(planInfoRaw)) {
-        planInfo[k] = Array.isArray(v) ? v.map((x) => toStr(x)) : [];
-    }
+    const planInfoCoerced = coercePlanInfo(r['plan_info']);
     const pricingRaw = isRecord(r['pricing']) ? r['pricing'] : {};
     const classes = buildClasses(pricingRaw);
     const serverDefaultKey = toStr(r['default_pricing_key']);
@@ -383,7 +386,8 @@ function coercePlan(raw) {
         index: toNum(r['index']),
         isExcluded: toBool(r['is_excluded']),
         logoUrl: toStr(r['logo_url']),
-        planInfo,
+        planInfo: planInfoCoerced.array,
+        planInfoLegacy: planInfoCoerced.legacy,
         raw: r,
     };
     const hydrated = id ? Products.byWireToken(id) : undefined;

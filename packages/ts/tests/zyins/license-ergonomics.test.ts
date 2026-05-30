@@ -20,7 +20,13 @@ import {
 } from '../../src/zyins';
 import { CREDENTIAL_KEYS, inMemoryCredentialStore } from '../../src/core';
 import type { Transport, TransportRequest } from '../../src/zyins/transport';
-import { TEST_APPLICANT, TEST_AUTH, TEST_COVERAGE, TEST_PRODUCTS } from './fixtures';
+import {
+  TEST_APPLICANT,
+  TEST_AUTH,
+  TEST_COVERAGE,
+  TEST_PRODUCTS,
+  testCredentialStore,
+} from './fixtures';
 
 function jsonObject(raw: string): Record<string, unknown> {
   const parsed: unknown = JSON.parse(raw);
@@ -69,7 +75,7 @@ describe('isa.zyins.license ergonomics', () => {
       {
         keycode: TEST_AUTH.licenseKey,
         email: TEST_AUTH.email,
-        deviceId: TEST_AUTH.deviceId,
+        credentialStore: await testCredentialStore(),
         transport,
       },
       licenseEnv(),
@@ -89,7 +95,6 @@ describe('isa.zyins.license ergonomics', () => {
       {
         keycode: TEST_AUTH.licenseKey,
         email: TEST_AUTH.email,
-        deviceId: TEST_AUTH.deviceId,
         transport,
       },
       licenseEnv(),
@@ -105,7 +110,6 @@ describe('isa.zyins.license ergonomics', () => {
       {
         keycode: TEST_AUTH.licenseKey,
         email: TEST_AUTH.email,
-        deviceId: TEST_AUTH.deviceId,
         orderId: TEST_AUTH.orderId,
         transport,
       },
@@ -121,7 +125,6 @@ describe('isa.zyins.license ergonomics', () => {
       {
         keycode: TEST_AUTH.licenseKey,
         email: TEST_AUTH.email,
-        deviceId: TEST_AUTH.deviceId,
         transport,
       },
       licenseEnv(),
@@ -139,7 +142,6 @@ describe('isa.zyins.license ergonomics', () => {
       {
         keycode: TEST_AUTH.licenseKey,
         email: TEST_AUTH.email,
-        deviceId: TEST_AUTH.deviceId,
         transport,
       },
       licenseEnv(),
@@ -155,7 +157,6 @@ describe('isa.zyins.license ergonomics', () => {
       {
         keycode: TEST_AUTH.licenseKey,
         email: TEST_AUTH.email,
-        deviceId: TEST_AUTH.deviceId,
         credentialStore: store,
         transport,
       },
@@ -172,7 +173,7 @@ describe('isa.zyins.license ergonomics', () => {
       {
         keycode: TEST_AUTH.licenseKey,
         email: TEST_AUTH.email,
-        deviceId: TEST_AUTH.deviceId,
+        credentialStore: await testCredentialStore(),
         transport,
         onLicenseRefreshed: (event) =>
           events.push({ licenseKey: event.licenseKey, deviceId: event.deviceId }),
@@ -191,7 +192,6 @@ describe('isa.zyins.license ergonomics', () => {
       {
         keycode: TEST_AUTH.licenseKey,
         email: TEST_AUTH.email,
-        deviceId: TEST_AUTH.deviceId,
         transport,
       },
       licenseEnv(),
@@ -213,7 +213,6 @@ describe('isa.zyins.license ergonomics', () => {
       {
         keycode: TEST_AUTH.licenseKey,
         email: TEST_AUTH.email,
-        deviceId: TEST_AUTH.deviceId,
         licenseKey: 'STALE',
         credentialStore: store,
         transport,
@@ -231,7 +230,6 @@ describe('isa.zyins.license ergonomics', () => {
       {
         keycode: TEST_AUTH.licenseKey,
         email: TEST_AUTH.email,
-        deviceId: TEST_AUTH.deviceId,
         licenseKey: 'LK-INSTANCE',
         transport,
       },
@@ -247,7 +245,6 @@ describe('isa.zyins.license ergonomics', () => {
       {
         keycode: TEST_AUTH.licenseKey,
         email: TEST_AUTH.email,
-        deviceId: TEST_AUTH.deviceId,
         licenseKey: 'LK-INSTANCE',
         transport,
       },
@@ -270,7 +267,6 @@ describe('isa.zyins.license ergonomics', () => {
       {
         keycode: TEST_AUTH.licenseKey,
         email: TEST_AUTH.email,
-        deviceId: TEST_AUTH.deviceId,
         transport,
       },
       licenseEnv(),

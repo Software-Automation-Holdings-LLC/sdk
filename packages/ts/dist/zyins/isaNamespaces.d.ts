@@ -9,9 +9,14 @@
 import { type ZyInsClient } from './client';
 import { type BrandingDetail } from './branding';
 import { type PreferencesLookupResult, type PreferencesSetRequest, type PreferencesSetResult } from './preferences';
-import { type CaseCreateRequest, type CaseCreateResult } from './cases';
+import { type CaseShareRequest, type CaseShareResult } from './cases';
 import { type CaseEmailRequest, type CaseEmailResult } from './case';
+import type { CaseRecord, CaseStorage, CaseStoragePutResult } from './cases/CaseStorage';
 import { type DatasetBundle, type DatasetsGetOptions } from './datasets';
+import { type DatasetBundleV3, type DatasetsV3GetOptions, type DatasetsV3NotModified } from './datasets-v3';
+import { type Concept, type ConditionConcept, type MedicationConcept, type UnknownConcept } from './reference';
+export { ReferenceFacade, ReferenceMedicationsFacade, ReferenceConditionsFacade, ReferenceConceptsFacade, ReferenceBundleCache, DefaultAutocorrector, DefaultMatchAlgorithm, DefaultAutocompleteAlgorithm, buildSuggestion, } from './reference/index';
+export type { Autocorrector, AutocorrectOptions, AutocorrectAppliedEvent, DefaultAutocorrectorOptions, MatchAlgorithm, DefaultMatchAlgorithmOptions, AutocompleteAlgorithm, AutocompleteOptions, DefaultAutocompleteAlgorithmOptions, Suggestion, ReferenceAdapters, } from './reference/index';
 import { type LicenseActivateRequest, type LicenseActivateResult, type LicenseCheckRequest, type LicenseCheckResult, type LicenseDeactivateRequest, type LicenseDeactivateResult } from './license';
 import { type IsaCredentialState } from './credentialState';
 import { type Transport } from './transport';
@@ -25,16 +30,50 @@ export declare class BrandingFacade {
     /** Fetch whitelabel branding for the calling license. */
     lookup(): Promise<BrandingDetail>;
 }
-/** `isa.zyins.datasets` — reference-data bundle for picker UIs. */
+/**
+ * `isa.zyins.datasets` — reference-data bundle for picker UIs.
+ *
+ * `get()` preserves the existing v2 bundle contract for callers that
+ * have not migrated their downstream parsing.
+ *
+ * `getV3()` is the v3 endpoint (`GET /v3/datasets`) and is the canonical
+ * SDK surface going forward. It returns typed `{id, name}` entities and
+ * id-keyed relationship maps — consumers never re-derive keys.
+ */
 export declare class DatasetsFacade {
     private readonly clientOnce;
-    constructor(clientOnce: ClientThunk);
+    private readonly onBundle?;
     /**
-     * Returns the full reference-data bundle (medications, conditions,
-     * products, etc.). Pass `{ include }` to fetch a subset.
+     * @param clientOnce  Lazy ZyInsClient accessor.
+     * @param onBundle    Optional sink invoked with every fresh
+     *                    `DatasetBundleV3` returned by `getV3()`. The
+     *                    `ZyInsNamespace` wires this to the shared
+     *                    `ReferenceBundleCache` so `isa.zyins.reference.match()`
+     *                    sees the catalog without any consumer plumbing.
+     */
+    constructor(clientOnce: ClientThunk, onBundle?: ((bundle: DatasetBundleV3) => void) | undefined);
+    /**
+     * Fetch the legacy v2 reference-data bundle.
      */
     get(options?: DatasetsGetOptions): Promise<DatasetBundle>;
+    /** Alias for `get()` retained for explicit migration call sites. */
+    getLegacy(options?: DatasetsGetOptions): Promise<DatasetBundle>;
+    /**
+     * Fetch the v3 reference catalog. Pass `{ include }` to narrow,
+     * `{ fields: 'meta' }` for the cheap names+versions check, or
+     * `{ ifNoneMatch: etag }` to revalidate.
+     *
+     * Returns either a `DatasetBundleV3` or a `DatasetsV3NotModified`
+     * marker when the server responded `304`; use `isNotModified()` to
+     * discriminate.
+     *
+     * On a fresh-bundle response, the `onBundle` callback (if supplied) is
+     * invoked synchronously before the promise resolves. The
+     * `ZyInsNamespace` uses this hook to warm the reference index.
+     */
+    getV3(options?: DatasetsV3GetOptions): Promise<DatasetBundleV3 | DatasetsV3NotModified>;
 }
+export type { Concept, ConditionConcept, MedicationConcept, UnknownConcept };
 /** `isa.zyins.preferences` — opaque per-license preferences document. */
 export declare class PreferencesFacade {
     private readonly clientOnce;
@@ -66,18 +105,55 @@ export declare class PreferencesFacade {
  */
 export declare class CasesFacade {
     private readonly clientOnce;
-    constructor(clientOnce: ClientThunk);
+    private readonly caseStorageOnce;
+    private readonly caseViewerBaseUrlOnce;
+    constructor(clientOnce: ClientThunk, caseStorageOnce: () => CaseStorage, caseViewerBaseUrlOnce: () => string);
     /**
-     * Share a case from quote input + optional analysis snapshot. Returns the
-     * shareable URL. Canonical per the locked spec.
+     * Persist a record through the resolved {@link CaseStorage} adapter.
+     * The default {@link ZeroKnowledgeCaseStorage} encrypts client-side and
+     * returns the per-record key as `recallToken`; carrier adapters may
+     * return a different token shape or omit it entirely. Treat the token
+     * as opaque.
+     *
+     * @example
+     * ```ts
+     * const { id, recallToken } = await isa.zyins.cases.save({
+     *   product: 'zyins',
+     *   payload: { input: currentCaseToJSON() },
+     * });
+     * ```
      */
-    share(request: CaseCreateRequest): Promise<CaseCreateResult>;
+    save(record: CaseRecord): Promise<CaseStoragePutResult>;
     /**
-     * @deprecated Use `share()`. `create()` is a back-compat alias that
-     * forwards to the same wire call; will be removed in v0.7.0. See
-     * `/tmp/sdk-syntax-proposal.md` Appendix B post-lock correction #2.
+     * Resolve a record from the configured {@link CaseStorage} adapter.
+     * `recallToken` is required iff `save()` returned one. Returns `null`
+     * when the record is absent — adapters do not distinguish "expired"
+     * from "never existed" by design.
      */
-    create(request: CaseCreateRequest): Promise<CaseCreateResult>;
+    recall(id: string, recallToken?: string): Promise<CaseRecord | null>;
+    /**
+     * Share an existing record by id + opaque recallToken. Built-in:
+     * assembles `${caseViewerBaseUrl}/c/<id>#k=<recallToken>`. Carrier
+     * adapters may not have URL semantics; in that case the recipient
+     * exchanges `(id, recallToken)` through whatever channel the carrier
+     * documents — the SDK has no shared URL contract for non-default
+     * adapters and returns `undefined` for the link.
+     *
+     * Overload 2 — the legacy `share(request)` shape — persists a quote
+     * snapshot and returns the assembled share link in one call. Retained
+     * for back-compat; new code prefers `save()` + `share(id, token)`.
+     */
+    share(id: string, recallToken?: string): {
+        id: string;
+        recallToken: string | undefined;
+        link: string | undefined;
+    };
+    share(request: CaseShareRequest): Promise<CaseShareResult>;
+    /**
+     * @deprecated Use `save()` (or the legacy `share(request)` overload).
+     * `create()` is a back-compat alias retained until v0.7.0.
+     */
+    create(request: CaseShareRequest): Promise<CaseShareResult>;
     /** Email a case PDF/artifact to a recipient. */
     email(request: CaseEmailRequest): Promise<CaseEmailResult>;
 }
@@ -167,5 +243,4 @@ export declare class LogosFacade {
     }): Promise<Blob>;
     get(carrier: string, opts?: LogosGetOptions): Promise<Blob | string>;
 }
-export {};
 //# sourceMappingURL=isaNamespaces.d.ts.map

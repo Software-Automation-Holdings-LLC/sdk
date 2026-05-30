@@ -29,6 +29,9 @@ import { fromHttpResponse } from './errors';
 import { deriveIdempotencyKey } from './idempotency';
 import { buildLicenseHMACHeaders } from '../core';
 import { type Clock, systemClock } from '../core';
+import { coercePlanInfo } from './planInfo';
+import { retryAttemptsFromHeaders } from './retryAttempts';
+import type { OfferPlanInfo, OfferPlanInfoLegacy } from './prequalify-v2-types';
 
 /** Optional per-call knobs that map onto the server's filter primitives. */
 export interface PrequalifyOptions {
@@ -122,7 +125,21 @@ export interface Plan {
   index: number;
   isExcluded: boolean;
   logoUrl: string;
-  planInfo: Record<string, readonly string[]>;
+  /**
+   * Array of `{key, label, values}` items in server-canonical display order.
+   * Labels are Title Case; values are URL-decoded. Iterate the array
+   * directly to render the plan info section.
+   *
+   * The wire body may carry either the typed array (post-zyins#349) or the
+   * legacy `Record<string, string[]>` map; the SDK upconverts the latter so
+   * downstream consumers see exactly one shape.
+   */
+  planInfo: OfferPlanInfo;
+  /**
+   * @deprecated Removed in next major. Use `planInfo` (typed array). This
+   * field mirrors the legacy map shape during the migration window.
+   */
+  planInfoLegacy?: OfferPlanInfoLegacy;
   /** Hydrated typed catalog product when `id` matches a known wire token. */
   product?: Product;
   /** Forward-compatible raw fields the server emits but we don't yet model. */
@@ -148,6 +165,8 @@ export interface SinglePrequalifyResult {
   meta: PrequalifyResultMeta;
   requestId: string;
   idempotencyKey: string;
+  livemode: boolean;
+  retryAttempts: number;
 }
 
 /** Result shape for a multi-amount prequalify call. */
@@ -161,6 +180,8 @@ export interface MultiPrequalifyResult {
   meta: PrequalifyResultMeta;
   requestId: string;
   idempotencyKey: string;
+  livemode: boolean;
+  retryAttempts: number;
 }
 
 /** Union returned by `prequalify`. */
@@ -207,7 +228,12 @@ async function executePrequalify(
   const url = `${ctx.baseUrl}${PREQUALIFY_PATH}`;
   const response = await ctx.transport({ url, method: 'POST', headers, body });
   if (response.status >= 200 && response.status < 300) {
-    return parsePrequalifyResponse(response.body, request.coverage, idempotencyKey);
+    return parsePrequalifyResponse(
+      response.body,
+      request.coverage,
+      idempotencyKey,
+      retryAttemptsFromHeaders(response.headers),
+    );
   }
   throw fromHttpResponse(response.status, response.body);
 }
@@ -334,6 +360,7 @@ function parsePrequalifyResponse(
   body: string,
   coverage: CoverageInput,
   idempotencyKey: string,
+  retryAttempts: number,
 ): PrequalifyResult {
   let parsed: unknown;
   try {
@@ -346,6 +373,7 @@ function parsePrequalifyResponse(
   const root = isRecord(parsed) ? parsed : {};
   const requestId = toStr(root['request_id']);
   const echoKey = toStr(root['idempotency_key']) || idempotencyKey;
+  const livemode = root['livemode'] === undefined ? true : toBool(root['livemode']);
   const data = isRecord(root['data']) ? (root['data'] as Record<string, unknown>) : {};
   const meta = parseMeta(data['meta']);
   const results = isRecord(data['results']) ? (data['results'] as Record<string, unknown>) : {};
@@ -383,6 +411,8 @@ function parsePrequalifyResponse(
       meta,
       requestId,
       idempotencyKey: echoKey,
+      livemode,
+      retryAttempts,
     };
   }
 
@@ -400,6 +430,8 @@ function parsePrequalifyResponse(
     meta,
     requestId,
     idempotencyKey: echoKey,
+    livemode,
+    retryAttempts,
   };
 }
 
@@ -564,11 +596,7 @@ function parsePricingRanks(raw: unknown): Record<string, number | null> {
 function coercePlan(raw: unknown): Plan {
   const r = isRecord(raw) ? raw : {};
   const id = toStr(r['id']);
-  const planInfoRaw = isRecord(r['plan_info']) ? (r['plan_info'] as Record<string, unknown>) : {};
-  const planInfo: Record<string, readonly string[]> = {};
-  for (const [k, v] of Object.entries(planInfoRaw)) {
-    planInfo[k] = Array.isArray(v) ? (v as unknown[]).map((x) => toStr(x)) : [];
-  }
+  const planInfoCoerced = coercePlanInfo(r['plan_info']);
   const pricingRaw = isRecord(r['pricing']) ? (r['pricing'] as Record<string, unknown>) : {};
   const classes = buildClasses(pricingRaw);
   const serverDefaultKey = toStr(r['default_pricing_key']);
@@ -587,10 +615,12 @@ function coercePlan(raw: unknown): Plan {
     index: toNum(r['index']),
     isExcluded: toBool(r['is_excluded']),
     logoUrl: toStr(r['logo_url']),
-    planInfo,
+    planInfo: planInfoCoerced.array,
+    planInfoLegacy: planInfoCoerced.legacy,
     raw: r,
   };
   const hydrated = id ? Products.byWireToken(id) : undefined;
   if (hydrated) plan.product = hydrated;
   return plan;
 }
+

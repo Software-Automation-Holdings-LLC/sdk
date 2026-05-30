@@ -19,6 +19,22 @@ export declare class IsaError extends Error {
 export declare class IsaConfigError extends IsaError {
     constructor(message: string);
 }
+/** Runtime timeout error for external work exceeding the configured deadline. */
+export declare class IsaTimeoutError extends IsaError {
+    constructor(message: string);
+}
+/**
+ * A shared case could not be opened because it is absent or expired. The
+ * zero-knowledge store returns 404 for both cases by design — TTL expiry and
+ * a never-existing id are deliberately indistinguishable — so a single typed
+ * error covers both. The message and fields are key-free: the share link and
+ * its fragment never reach this error (see the no-leak rule in cases.ts).
+ */
+export declare class IsaCaseExpiredError extends IsaError {
+    /** The case id that could not be resolved; never the fragment key. */
+    readonly caseId: string;
+    constructor(caseId: string);
+}
 /**
  * Stable activation-state codes surfaced by {@link IsaNotActivatedError}.
  *

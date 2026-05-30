@@ -24,6 +24,7 @@ export function defaultTransport(fetchImpl) {
         const init = {
             method: request.method,
             headers: request.headers,
+            signal: request.signal,
         };
         if (request.method !== 'GET' && request.method !== 'DELETE') {
             init.body = request.body;

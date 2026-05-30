@@ -21,7 +21,7 @@
  * bundle.
  */
 // --- Unified facade ------------------------------------------------------
-export { Isa, ZyInsNamespace, RapidSignNamespace, ProxyNamespace, SESSIONS_REISSUE_PATH, } from './zyins/isa';
+export { Isa, ZyInsNamespace, RapidSignNamespace, ProxyNamespace, SESSIONS_REISSUE_PATH } from './zyins/isa';
 // --- Account namespace --------------------------------------------------
 export { AccountNamespace, AccountBranding, AccountPreferences, AccountCases, AccountEmail, } from './account';
 // --- Auth / identity / env factory --------------------------------------
@@ -29,14 +29,26 @@ export { AccountNamespace, AccountBranding, AccountPreferences, AccountCases, Ac
 // from the public surface — sessions are SDK-internal refresh state minted
 // by `Isa.withKeycode` / `Isa.forForm`, not a consumer-constructed auth
 // mode (sdk-syntax-proposal.md §4 + §6).
-export { resolveBearerIdentity, resolveLicenseIdentity, ENV_VAR_NAMES, } from './zyins/envFactory';
+export { resolveBearerIdentity, resolveLicenseIdentity, ENV_VAR_NAMES } from './zyins/envFactory';
 // --- Errors -------------------------------------------------------------
-export { IsaError, IsaApiError, IsaConfigError, IsaIdempotencyConflictError, IsaNotActivatedError, } from './zyins/apiError';
-export { canonicalString, formatTimestamp, signRequest, } from './core/auth/signRequest';
+export { IsaError, IsaApiError, IsaConfigError, IsaCaseExpiredError, IsaIdempotencyConflictError, IsaNotActivatedError, IsaTimeoutError } from './zyins/apiError';
+// --- Case crypto (zero-knowledge envelope) ------------------------------
+export { encryptCase, decryptCase, IsaCaseDecryptError } from './account/caseCrypto';
+export { canonicalString, formatTimestamp, signRequest } from './core/auth/signRequest';
 // --- Value types / domain primitives (zyins-flavored, public) ----------
-export { Sex, NicotineUsage, NicotineDuration, Height, Weight, } from './zyins/applicant';
-export { Coverage, QuoteType, isMulti, } from './zyins/coverage';
-export { ProductSelection, ProductClass, ProductType, Products, } from './zyins/product';
+export { Sex, NicotineUsage, NicotineDuration, Height, Weight } from './zyins/applicant';
+export { Coverage, QuoteType, isMulti } from './zyins/coverage';
+export { ProductSelection, ProductClass, ProductType, Products } from './zyins/product';
+// --- Reference catalog (typed concepts, sort, adapters) ----------------
+// `ReferenceSort` + the concept/adapter types are the surface bpp2.0 (and
+// any reference consumer) imports from the package root. Re-exported here
+// so `import { ReferenceSort } from '@software-automation-holdings-llc/sdk'`
+// resolves without a per-consumer shim; the `./zyins` subpath in
+// `package.json#exports` exposes the same names under a namespaced path.
+export { ReferenceSort, } from './zyins';
+// --- IsaOptions sugar constructor -------------------------------------
+export { BearerAuth, LicenseAuth, FormAuth, RemoteEngine, LocalEngine, ProxyEngine, InMemoryEngine, inMemoryEngineWith, resolveIsaOptions, DEFAULT_TIMEOUT_MS, BundledApiVersions, resolveApiVersions, } from './zyins/isaOptions';
+export { ZeroKnowledgeCaseStorage } from './zyins/cases/ZeroKnowledgeCaseStorage';
 // --- Generated catalogs -------------------------------------------------
 // Every name in this block is produced by `scripts/gen-catalog.mjs`. See
 // `src/catalog/` for the source modules and `docs/SDK_DESIGN.md` §5.1
@@ -48,5 +60,5 @@ export {
 // legacy flat enum should import from `./catalog/products` directly.
 Product as ProductSlug, Products as ProductSlugs, State, States, ProductCarriers, ConditionCategories, MedicationUses, Scope, ScopeDescriptions, SignEvent, SignEventLabels, ErrorCode, ErrorAdviceCodes, ErrorDocUrls, } from './catalog';
 // --- Debug logger / env reader -----------------------------------------
-export { debugLoggerFromEnv, makeLogger, redactHeaders, redactBody, redactBodyString, processEnv, stderrSink, } from './zyins/logger';
+export { debugLoggerFromEnv, makeLogger, redactHeaders, redactBody, redactBodyString, processEnv, stderrSink } from './zyins/logger';
 //# sourceMappingURL=index.js.map

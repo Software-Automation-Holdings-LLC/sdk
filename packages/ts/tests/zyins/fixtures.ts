@@ -16,6 +16,11 @@ import {
 } from '../../src/zyins/applicant';
 import { Coverage } from '../../src/zyins/coverage';
 import { Products, ProductSelection } from '../../src/zyins/product';
+import {
+  inMemoryCredentialStore,
+  CREDENTIAL_KEYS,
+  type CredentialStore,
+} from '../../src/core/storage';
 
 export const TEST_AUTH: AuthContext = {
   licenseKey: 'LIC-ABC-123',
@@ -42,3 +47,16 @@ if (!AETNA_ACCENDO) {
 export const TEST_PRODUCTS = ProductSelection.of([AETNA_ACCENDO]);
 
 export const FIXED_CLOCK = (): number => 1_700_000_000_000;
+
+/**
+ * Build a credential store pre-seeded with `TEST_AUTH.deviceId` so
+ * `Isa.withKeycode()` derives the stable test identifier rather than
+ * minting a fresh random one. `deviceId` is SDK-internal per
+ * docs/sdk-syntax-proposal.md §2.8; this is the supported test-side
+ * injection point.
+ */
+export async function testCredentialStore(): Promise<CredentialStore> {
+  const store = inMemoryCredentialStore();
+  await store.set(CREDENTIAL_KEYS.deviceId, TEST_AUTH.deviceId);
+  return store;
+}

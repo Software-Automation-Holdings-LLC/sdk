@@ -6,6 +6,8 @@
  * Separated from `isa.ts` to keep that file under the 250-line cap; this
  * module owns only the facade shape, not the unified `Isa` class itself.
  */
+import { assembleLink } from '../account/caseWire';
+export { ReferenceFacade, ReferenceMedicationsFacade, ReferenceConditionsFacade, ReferenceConceptsFacade, ReferenceBundleCache, DefaultAutocorrector, DefaultMatchAlgorithm, DefaultAutocompleteAlgorithm, buildSuggestion, } from './reference/index';
 import { activate as licenseActivate, check as licenseCheck, deactivate as licenseDeactivate, } from './license';
 import { systemClock } from '../core';
 import { LogosSubClient, } from './logos';
@@ -34,19 +36,64 @@ export class BrandingFacade {
         return this.clientOnce().branding.lookup();
     }
 }
-/** `isa.zyins.datasets` — reference-data bundle for picker UIs. */
+/**
+ * `isa.zyins.datasets` — reference-data bundle for picker UIs.
+ *
+ * `get()` preserves the existing v2 bundle contract for callers that
+ * have not migrated their downstream parsing.
+ *
+ * `getV3()` is the v3 endpoint (`GET /v3/datasets`) and is the canonical
+ * SDK surface going forward. It returns typed `{id, name}` entities and
+ * id-keyed relationship maps — consumers never re-derive keys.
+ */
 export class DatasetsFacade {
     clientOnce;
-    constructor(clientOnce) {
+    onBundle;
+    /**
+     * @param clientOnce  Lazy ZyInsClient accessor.
+     * @param onBundle    Optional sink invoked with every fresh
+     *                    `DatasetBundleV3` returned by `getV3()`. The
+     *                    `ZyInsNamespace` wires this to the shared
+     *                    `ReferenceBundleCache` so `isa.zyins.reference.match()`
+     *                    sees the catalog without any consumer plumbing.
+     */
+    constructor(clientOnce, onBundle) {
         this.clientOnce = clientOnce;
+        this.onBundle = onBundle;
     }
     /**
-     * Returns the full reference-data bundle (medications, conditions,
-     * products, etc.). Pass `{ include }` to fetch a subset.
+     * Fetch the legacy v2 reference-data bundle.
      */
     get(options) {
         return this.clientOnce().datasets.get(options);
     }
+    /** Alias for `get()` retained for explicit migration call sites. */
+    getLegacy(options) {
+        return this.get(options);
+    }
+    /**
+     * Fetch the v3 reference catalog. Pass `{ include }` to narrow,
+     * `{ fields: 'meta' }` for the cheap names+versions check, or
+     * `{ ifNoneMatch: etag }` to revalidate.
+     *
+     * Returns either a `DatasetBundleV3` or a `DatasetsV3NotModified`
+     * marker when the server responded `304`; use `isNotModified()` to
+     * discriminate.
+     *
+     * On a fresh-bundle response, the `onBundle` callback (if supplied) is
+     * invoked synchronously before the promise resolves. The
+     * `ZyInsNamespace` uses this hook to warm the reference index.
+     */
+    async getV3(options) {
+        const result = await this.clientOnce().datasetsV3.get(options);
+        if (this.onBundle !== undefined && !isNotModifiedMarker(result)) {
+            this.onBundle(result);
+        }
+        return result;
+    }
+}
+function isNotModifiedMarker(result) {
+    return result.notModified === true;
 }
 /** `isa.zyins.preferences` — opaque per-license preferences document. */
 export class PreferencesFacade {
@@ -85,29 +132,73 @@ export class PreferencesFacade {
  */
 export class CasesFacade {
     clientOnce;
-    constructor(clientOnce) {
+    caseStorageOnce;
+    caseViewerBaseUrlOnce;
+    constructor(clientOnce, caseStorageOnce, caseViewerBaseUrlOnce) {
         this.clientOnce = clientOnce;
+        this.caseStorageOnce = caseStorageOnce;
+        this.caseViewerBaseUrlOnce = caseViewerBaseUrlOnce;
     }
     /**
-     * Share a case from quote input + optional analysis snapshot. Returns the
-     * shareable URL. Canonical per the locked spec.
+     * Persist a record through the resolved {@link CaseStorage} adapter.
+     * The default {@link ZeroKnowledgeCaseStorage} encrypts client-side and
+     * returns the per-record key as `recallToken`; carrier adapters may
+     * return a different token shape or omit it entirely. Treat the token
+     * as opaque.
+     *
+     * @example
+     * ```ts
+     * const { id, recallToken } = await isa.zyins.cases.save({
+     *   product: 'zyins',
+     *   payload: { input: currentCaseToJSON() },
+     * });
+     * ```
      */
-    share(request) {
-        return this.clientOnce().cases.share(request);
+    save(record) {
+        return this.caseStorageOnce().put(record);
     }
     /**
-     * @deprecated Use `share()`. `create()` is a back-compat alias that
-     * forwards to the same wire call; will be removed in v0.7.0. See
-     * `/tmp/sdk-syntax-proposal.md` Appendix B post-lock correction #2.
+     * Resolve a record from the configured {@link CaseStorage} adapter.
+     * `recallToken` is required iff `save()` returned one. Returns `null`
+     * when the record is absent — adapters do not distinguish "expired"
+     * from "never existed" by design.
+     */
+    recall(id, recallToken) {
+        return this.caseStorageOnce().get(id, recallToken);
+    }
+    share(arg1, recallToken) {
+        if (typeof arg1 === 'string') {
+            return assembleShareView(arg1, recallToken, this.caseViewerBaseUrlOnce());
+        }
+        return this.clientOnce().cases.share(arg1);
+    }
+    /**
+     * @deprecated Use `save()` (or the legacy `share(request)` overload).
+     * `create()` is a back-compat alias retained until v0.7.0.
      */
     create(request) {
-        warnDeprecatedOnce(this, 'isa.zyins.cases.create is deprecated; use isa.zyins.cases.share. Removed in v0.7.0.');
+        warnDeprecatedOnce(this, 'isa.zyins.cases.create is deprecated; use isa.zyins.cases.save. Removed in v0.7.0.');
         return this.clientOnce().cases.share(request);
     }
     /** Email a case PDF/artifact to a recipient. */
     email(request) {
         return this.clientOnce().cases.email(request);
     }
+}
+/**
+ * Compose the recipient-visible share view from an id + opaque token.
+ * Carrier adapters that surface an opaque token without URL semantics
+ * leave `link` `undefined`; the caller threads `(id, recallToken)`
+ * through the carrier's documented channel instead.
+ */
+function assembleShareView(id, recallToken, viewerBaseUrl) {
+    if (typeof id !== 'string' || id.length === 0) {
+        throw new Error('isa.zyins.cases.share requires a non-empty id');
+    }
+    if (recallToken === undefined || recallToken.length === 0) {
+        return { id, recallToken: undefined, link: undefined };
+    }
+    return { id, recallToken, link: assembleLink(viewerBaseUrl, id, recallToken) };
 }
 /**
  * `isa.zyins.license` — license lifecycle (activate / check / deactivate).

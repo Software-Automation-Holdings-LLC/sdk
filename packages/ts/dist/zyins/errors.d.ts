@@ -65,6 +65,7 @@ export declare class RateLimitedError extends ZyInsError {
     /** Seconds the caller should wait before retrying, when known. */
     readonly retryAfterSeconds?: number;
     constructor(message: string, opts?: {
+        code?: 'rate_limit_exceeded' | 'rate_limited';
         httpStatus: number;
         retryAfterSeconds?: number;
     });

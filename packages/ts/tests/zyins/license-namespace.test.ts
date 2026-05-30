@@ -24,7 +24,6 @@ async function buildIsa(transport: Transport): Promise<Isa> {
     {
       keycode: TEST_AUTH.licenseKey,
       email: TEST_AUTH.email,
-      deviceId: TEST_AUTH.deviceId,
       orderId: TEST_AUTH.orderId,
       transport,
     },
@@ -67,7 +66,6 @@ describe('isa.zyins.license namespace', () => {
     const result = await isa.zyins.license.activate({
       email: TEST_AUTH.email,
       keycode: TEST_AUTH.licenseKey,
-      deviceId: TEST_AUTH.deviceId,
     });
     expect(result.auth.licenseKey).toBe('LK-1');
     expect(requests[0]!.url).toContain('/v2/licenses/activate');

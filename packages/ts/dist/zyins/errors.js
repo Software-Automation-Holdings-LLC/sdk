@@ -74,8 +74,10 @@ export class PrequalifyError extends ZyInsError {
 export class RateLimitedError extends ZyInsError {
     /** Seconds the caller should wait before retrying, when known. */
     retryAfterSeconds;
-    constructor(message, opts = { httpStatus: 429 }) {
-        super(message, { code: 'rate_limited', httpStatus: opts.httpStatus });
+    constructor(message, opts = {
+        httpStatus: 429,
+    }) {
+        super(message, { code: opts.code ?? 'rate_limit_exceeded', httpStatus: opts.httpStatus });
         this.name = 'RateLimitedError';
         if (opts.retryAfterSeconds !== undefined)
             this.retryAfterSeconds = opts.retryAfterSeconds;
@@ -136,8 +138,8 @@ export function fromProblemDetails(problem) {
             peOpts.param = problem.param;
         return new PrequalifyError('validation_error', problem.detail ?? problem.title, peOpts);
     }
-    if (problem.code === 'rate_limited') {
-        return new RateLimitedError(problem.detail ?? problem.title, { httpStatus: problem.status });
+    if (problem.code === 'rate_limit_exceeded' || problem.code === 'rate_limited') {
+        return new RateLimitedError(problem.detail ?? problem.title, { code: problem.code, httpStatus: problem.status });
     }
     return new ZyInsError(problem.detail ?? problem.title, { code: problem.code, ...opts });
 }

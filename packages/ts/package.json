@@ -1,6 +1,6 @@
 {
   "name": "@software-automation-holdings-llc/sdk",
-  "version": "0.5.5",
+  "version": "1.0.0-rc.2",
   "description": "Unified TypeScript SDK for the ISA platform APIs (zyins, rapidsign, proxy).",
   "license": "Apache-2.0",
   "repository": {
@@ -17,6 +17,10 @@
     ".": {
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js"
+    },
+    "./zyins": {
+      "types": "./dist/zyins/index.d.ts",
+      "import": "./dist/zyins/index.js"
     },
     "./zyins/react": {
       "types": "./dist/zyins/react/useZyIns.d.ts",

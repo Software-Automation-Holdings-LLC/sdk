@@ -27,6 +27,8 @@ export interface AccountFactoryOptions {
      */
     credentialState?: IsaCredentialState;
     transport?: Transport;
+    /** Viewer origin for case share links; forwarded to {@link AccountNamespace}. */
+    caseViewerBaseUrl?: string;
 }
 /** Build the `isa.account` namespace from the unified `Isa` options. */
 export declare function buildAccountNamespace(opts: AccountFactoryOptions): AccountNamespace;

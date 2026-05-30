@@ -26,3 +26,37 @@ export function account(transport: Transport): AccountNamespace {
     clock: FIXED_CLOCK,
   });
 }
+
+/** Viewer origin used by case share-link tests. */
+export const TEST_CASE_VIEWER_BASE_URL = 'https://viewer.example';
+
+/** Build an `AccountNamespace` with an explicit case viewer base URL. */
+export function accountWithViewer(
+  transport: Transport,
+  caseViewerBaseUrl: string,
+): AccountNamespace {
+  return new AccountNamespace({
+    auth: TEST_AUTH,
+    baseUrl: TEST_BASE_URL,
+    caseViewerBaseUrl,
+    transport,
+    clock: FIXED_CLOCK,
+  });
+}
+
+/**
+ * A transport whose response is chosen by a per-request handler. Records every
+ * request for assertion. Lets one test script distinct create / open responses
+ * (POST returns an id, the GET returns the stored envelope).
+ */
+export function scriptedTransport(
+  handler: (req: TransportRequest) => { status: number; body: string },
+): { transport: Transport; requests: TransportRequest[] } {
+  const requests: TransportRequest[] = [];
+  const transport: Transport = async (req) => {
+    requests.push(req);
+    const { status, body } = handler(req);
+    return { status, body, headers: {} };
+  };
+  return { transport, requests };
+}

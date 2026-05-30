@@ -41,6 +41,37 @@ export declare function resolveFetch(injected?: typeof fetch, context?: string):
  */
 export declare function base64EncodeUtf8(input: string): string;
 /**
+ * Decodes a standard or URL-safe base64 string to raw bytes in any JS
+ * runtime. Accepts the URL-safe alphabet (`-`/`_`) and missing padding so a
+ * fragment-borne base64url key decodes without a separate code path.
+ */
+export declare function base64ToBytes(input: string): Uint8Array;
+/**
+ * Standard-base64-encodes raw bytes in any JS runtime. Emits the padded std
+ * alphabet (`+`/`/`/`=`) to match what the server stores and returns on GET
+ * for ciphertext / iv / tag.
+ */
+export declare function bytesToBase64(bytes: Uint8Array): string;
+/**
+ * URL-safe-base64-encodes raw bytes (RFC 4648 §5, padding stripped). Used for
+ * the share-link fragment key so the value survives a URL without
+ * percent-encoding. The companion {@link base64ToBytes} accepts this form.
+ */
+export declare function bytesToBase64Url(bytes: Uint8Array): string;
+/**
+ * CSPRNG facade — all random-byte reads go through this interface so callers
+ * never touch `crypto.getRandomValues` directly and tests can inject a
+ * deterministic source.
+ */
+export type RandomBytes = (length: number) => Uint8Array;
+/**
+ * Default random source backed by `crypto.getRandomValues`. Override in tests
+ * by passing a custom {@link RandomBytes} to functions that accept one.
+ *
+ * @throws Error if `crypto.getRandomValues` is unavailable in the environment.
+ */
+export declare const systemRandomBytes: RandomBytes;
+/**
  * Clock facade — all current-time reads go through this interface.
  * Provides an injection point for tests to control time-sensitive behavior.
  */

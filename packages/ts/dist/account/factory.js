@@ -32,6 +32,7 @@ export function buildAccountNamespace(opts) {
     return new AccountNamespace({
         auth: opts.credentialState.auth,
         baseUrl: opts.baseUrl ?? DEFAULT_ZYINS_BASE_URL,
+        ...(opts.caseViewerBaseUrl !== undefined && { caseViewerBaseUrl: opts.caseViewerBaseUrl }),
         ...(opts.transport !== undefined && { transport: opts.transport }),
     });
 }
@@ -50,7 +51,7 @@ function throwingNamespace(message) {
         preferences: { lookup: throwConfigError, set: throwConfigError },
         cases: {
             create: throwConfigError,
-            get: throwConfigError,
+            open: throwConfigError,
             list: throwConfigError,
             email: throwConfigError,
         },

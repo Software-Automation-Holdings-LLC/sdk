@@ -31,6 +31,8 @@ export interface AccountFactoryOptions {
    */
   credentialState?: IsaCredentialState;
   transport?: Transport;
+  /** Viewer origin for case share links; forwarded to {@link AccountNamespace}. */
+  caseViewerBaseUrl?: string;
 }
 
 /** Build the `isa.account` namespace from the unified `Isa` options. */
@@ -61,6 +63,7 @@ export function buildAccountNamespace(opts: AccountFactoryOptions): AccountNames
   return new AccountNamespace({
     auth: opts.credentialState.auth,
     baseUrl: opts.baseUrl ?? DEFAULT_ZYINS_BASE_URL,
+    ...(opts.caseViewerBaseUrl !== undefined && { caseViewerBaseUrl: opts.caseViewerBaseUrl }),
     ...(opts.transport !== undefined && { transport: opts.transport }),
   });
 }
@@ -80,7 +83,7 @@ function throwingNamespace(message: string): AccountNamespace {
     preferences: { lookup: throwConfigError, set: throwConfigError },
     cases: {
       create: throwConfigError,
-      get: throwConfigError,
+      open: throwConfigError,
       list: throwConfigError,
       email: throwConfigError,
     },

@@ -1,111 +1,81 @@
 /**
- * Tier 3 cases operations — `POST /v1/case`.
+ * Tier 3 zyins case share — the zyins-flavored sugar over the zero-knowledge
+ * `/v1/case` store (E2EE Phase 2).
  *
- * Cases are content-addressed shareable artifacts created from a quote
- * input + results + selected products. The server hashes the (xml,
- * results, products) tuple — identical inputs dedupe to the same `hash`
- * regardless of which license created the case. ZIP+4 fields are stripped
- * from the input before hashing.
+ * `share` pins `product: 'zyins'`, shapes the payload as
+ * `{ input, results?, products? }`, and delegates to the shared opaque-case
+ * `create` in `../account/cases`. The payload is encrypted client-side; the
+ * server stores opaque ciphertext and never sees the key. The result is the
+ * case id plus the fragment-keyed share link.
  *
- * Today this module exposes `create`; the existing `case.email` Tier-3
- * helper is re-exported via the `cases` sub-client for case-share email.
- * Future `list` / `get` / `delete` RPCs require new server work (see the
- * design doc; tracked as issue #149 follow-ups).
+ * HARD RULE — no key/fragment leakage: the link is returned as a value only.
+ * It is never logged, never put on a telemetry payload, and never attached to
+ * a thrown error. See `../account/cases` for the enforced guarantee.
  */
 
 import { type AuthContext } from './auth';
 import { type Transport } from './transport';
-import { fromHttpResponse } from './errors';
-import { deriveIdempotencyKey } from './idempotency';
-import { isRecord, parseJsonResponse, unwrapEnvelope } from './response';
-import { buildLicenseHMACHeaders } from '../core';
-import { type Clock, systemClock } from '../core';
+import {
+  create as opaqueCreate,
+  type CaseCreateResult as OpaqueCreateResult,
+} from '../account/cases';
+import { type Clock } from '../core';
 
-const CASE_PATH = '/v1/case';
+/** zyins routing tag pinned by {@link share}. */
+const ZYINS_PRODUCT = 'zyins' as const;
 
 /**
- * Inputs for `cases.create`. The `input` field is polymorphic at the wire:
- * a JSON object is converted to XML server-side; a raw XML string passes
- * through as-is.
+ * Inputs for `cases.share`. `input` is the quote payload; `results` and
+ * `products` are an optional analysis snapshot. All three are encrypted
+ * together — the server never reads any of them.
  */
-export interface CaseCreateRequest {
+export interface CaseShareRequest {
   input: Record<string, unknown> | string;
   results?: unknown;
   products?: string[];
 }
 
-export interface CaseCreateResult {
-  object: string;
-  hash: string;
-  url: string;
-  readonly: boolean;
-  createdAt: string;
+/** Result of `cases.share`: the case id and assembled fragment-keyed link. */
+export interface CaseShareResult {
+  /** Server-assigned case uuid. */
+  id: string;
+  /** Full share link `${caseViewerBaseUrl}/c/<id>#k=<base64url(key)>`. */
+  link: string;
 }
 
 export interface CasesContext {
   baseUrl: string;
+  /** Viewer origin for share-link assembly; threaded from the namespace. */
+  caseViewerBaseUrl: string;
   auth: AuthContext;
   transport: Transport;
   clock: Clock;
   idempotencyKey?: string;
 }
 
-/** Create a new shareable case. */
-export async function create(
-  request: CaseCreateRequest,
+/**
+ * Share a zyins case: encrypt `{ input, results?, products? }` under a fresh
+ * key, store the opaque envelope, and return the fragment-keyed link.
+ *
+ * @example
+ * ```ts
+ * const { id, link } = await isa.zyins.cases.share({
+ *   input: currentCaseToJSON(),
+ *   results: currentAnalysisResult,
+ *   products: ['colonial-penn'],
+ * });
+ * ```
+ */
+export async function share(
+  request: CaseShareRequest,
   ctx: CasesContext,
-): Promise<CaseCreateResult> {
+): Promise<CaseShareResult> {
   if (!request || request.input === undefined || request.input === null) {
-    throw new Error('zyins: cases.create requires input');
+    throw new Error('zyins: cases.share requires input');
   }
-  const wire: Record<string, unknown> = { input: request.input };
-  if (request.results !== undefined) wire['results'] = request.results;
-  if (request.products !== undefined) wire['products'] = request.products;
-  const body = JSON.stringify(wire);
-  const idempotencyKey =
-    ctx.idempotencyKey ??
-    (await deriveIdempotencyKey({ deviceId: ctx.auth.deviceId, op: 'cases_create', body }));
-  const headers = await buildLicenseHMACHeaders(
-    ctx.auth.licenseKey,
-    ctx.auth.orderId,
-    ctx.auth.email,
-    'POST',
-    CASE_PATH,
-    body,
-    ctx.auth.deviceId,
-    ctx.clock ?? systemClock,
-  );
-  const response = await ctx.transport({
-    url: `${ctx.baseUrl}${CASE_PATH}`,
-    method: 'POST',
-    headers: {
-      ...headers,
-      'Content-Type': 'application/json',
-      Accept: 'application/json',
-      'Idempotency-Key': idempotencyKey,
-    },
-    body,
-  });
-  if (response.status >= 200 && response.status < 300) {
-    return parseCreateResponse(response.body);
-  }
-  throw fromHttpResponse(response.status, response.body);
-}
-
-function parseCreateResponse(body: string): CaseCreateResult {
-  if (!body) {
-    throw new Error('zyins: cases.create response body was empty');
-  }
-  const parsed = parseJsonResponse(body, 'cases.create');
-  const root = unwrapEnvelope(parsed);
-  if (!isRecord(root)) {
-    throw new Error('zyins: cases.create response body was not an object');
-  }
-  return {
-    object: typeof root['object'] === 'string' ? (root['object'] as string) : 'case',
-    hash: typeof root['hash'] === 'string' ? (root['hash'] as string) : '',
-    url: typeof root['url'] === 'string' ? (root['url'] as string) : '',
-    readonly: root['readonly'] === true,
-    createdAt: typeof root['created_at'] === 'string' ? (root['created_at'] as string) : '',
-  };
+  const payload: Record<string, unknown> = { input: request.input };
+  if (request.results !== undefined) payload['results'] = request.results;
+  if (request.products !== undefined) payload['products'] = request.products;
+  const result: OpaqueCreateResult = await opaqueCreate({ product: ZYINS_PRODUCT, payload }, ctx);
+  return { id: result.id, link: result.link };
 }

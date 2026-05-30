@@ -72,55 +72,137 @@ export interface BrandingContext {
 /** Fetch the whitelabel branding for the caller's license. */
 export declare function lookup(request: BrandingLookupRequest | undefined, ctx: BrandingContext): Promise<BrandingDetail>;
 //# sourceMappingURL=branding.d.ts.map
+=== dist/account/caseCrypto.d.ts ===
+/**
+ * Zero-knowledge case crypto envelope (E2EE Phase 2).
+ *
+ * The platform stores opaque ciphertext and never holds a key: the SDK
+ * generates a fresh 256-bit data key per case, encrypts the payload with
+ * AES-256-GCM (the cleartext `product` tag is bound as additional
+ * authenticated data), and carries the key only in the share-link fragment.
+ * See `docs/design/case-store-e2ee.md`.
+ *
+ * WebCrypto returns the GCM auth tag appended to the ciphertext; the wire
+ * contract carries `ciphertext` and `tag` separately (mirroring zyins #363),
+ * so this module splits on encrypt and rejoins on decrypt.
+ */
+import { type RandomBytes } from '../core';
+import { IsaError } from '../zyins/apiError';
+/** The opaque crypto fields the server stores, all base64 (std alphabet). */
+export interface TCaseEnvelope {
+    /** Base64 AES-256-GCM ciphertext (auth tag stripped). */
+    ciphertext: string;
+    /** Base64 AES-GCM nonce. */
+    iv: string;
+    /** Base64 AES-GCM authentication tag. */
+    tag: string;
+}
+/** Result of {@link encryptCase}: the wire envelope plus the fragment key. */
+export interface TEncryptedCase {
+    /** The base64 fields posted to `/v1/case`. */
+    envelope: TCaseEnvelope;
+    /** The data key, base64url-encoded for the `#k=` share-link fragment. */
+    keyFragment: string;
+}
+/** Optional injection points for {@link encryptCase} / {@link decryptCase}. */
+export interface TCaseCryptoOptions {
+    /** SubtleCrypto override; defaults to `globalThis.crypto.subtle`. */
+    subtle?: SubtleCrypto;
+    /** CSPRNG override; defaults to {@link systemRandomBytes}. */
+    randomBytes?: RandomBytes;
+}
+/**
+ * Raised when an envelope fails AES-GCM authentication — a tampered, corrupt,
+ * or `product`-mismatched payload, or a wrong fragment key. The recipient
+ * cannot recover the plaintext; surface it as a terminal decrypt failure.
+ */
+export declare class IsaCaseDecryptError extends IsaError {
+    constructor(message: string);
+}
+/**
+ * Encrypts a JSON payload under a fresh 256-bit key, binding `product` as
+ * AEAD additional data. Returns the base64 wire envelope and the base64url
+ * fragment key. The key never leaves this call except as the returned
+ * fragment value — the caller must keep it out of logs and telemetry.
+ *
+ * @example
+ * ```ts
+ * const { envelope, keyFragment } = await encryptCase('zyins', { input });
+ * // POST envelope; assemble `${viewer}/c/${id}#k=${keyFragment}`
+ * ```
+ */
+export declare function encryptCase(product: string, payload: unknown, options?: TCaseCryptoOptions): Promise<TEncryptedCase>;
+/**
+ * Decrypts a wire envelope with the fragment key, verifying the `product`
+ * AEAD binding. Throws {@link IsaCaseDecryptError} on any authentication
+ * failure (wrong key, wrong product, tampered ciphertext).
+ *
+ * @example
+ * ```ts
+ * const payload = await decryptCase('zyins', envelope, keyFragment);
+ * ```
+ */
+export declare function decryptCase(product: string, envelope: TCaseEnvelope, keyFragment: string, options?: TCaseCryptoOptions): Promise<unknown>;
+//# sourceMappingURL=caseCrypto.d.ts.map
 === dist/account/cases.d.ts ===
 /**
- * `isa.account.cases` — case CRUD + share over `/v1/case`.
+ * `isa.account.cases` — zero-knowledge case share + recall over `/v1/case`.
  *
- *   create  → `POST   /v1/case`
- *   get     → `GET    /v1/case/{id}`
- *   list    → `GET    /v1/case`
- *   email   → `POST   /v1/case/{id}/email`
+ *   create → `POST /v1/case`          (opaque ciphertext in, id out)
+ *   open   → `GET  /v1/case/{uuid}`   (opaque ciphertext out, decrypt local)
+ *   list   → `POST /v1/case/list`     (metadata only, no ciphertext)
+ *   email  → `POST /v1/case/{id}/email`
  *
- * Cases are content-addressed shareable artifacts created from a quote
- * input + results + selected products. The server hashes the tuple —
- * identical inputs dedupe to the same `hash` regardless of which license
- * created the case.
+ * The payload is applicant PII the platform must never decrypt. The SDK
+ * encrypts client-side with a fresh per-case key (AES-256-GCM, `product`
+ * bound as AEAD data), posts only the opaque envelope, and carries the key
+ * in the share-link fragment (`#k=…`) — never on the wire, never in a log.
+ * See `docs/design/case-store-e2ee.md` and zyins #363 for the wire contract.
+ *
+ * HARD RULE — no key/fragment leakage: the assembled link is returned to the
+ * caller as a value and nothing else. It is never logged, never embedded in a
+ * telemetry payload, and never attached to a thrown error. The encrypt step
+ * keeps the key local to {@link create}; `open` parses it from the link the
+ * caller already holds. Downstream consumers (bpp2.0, Phase 3) must scrub
+ * `location.hash` before any telemetry call.
  */
-import { type AuthContext } from './auth';
-import { type Transport } from '../zyins/transport';
-import { type Clock } from '../core';
+import { type TCaseListEntry } from './caseWire';
+import { type TCaseRequestContext } from './caseTransport';
+/**
+ * Default share-link viewer origin. The SDK appends `/c/<id>#k=<key>`; the
+ * base intentionally omits the `/c/` segment so a deployment can point the
+ * option at any host without re-encoding the path shape.
+ */
+export declare const DEFAULT_CASE_VIEWER_BASE_URL = "https://app.isaapi.com";
+/**
+ * Cleartext routing tag identifying the app that owns the payload. Not PII;
+ * mirrors the known zyins #363 product set while preserving server-side
+ * forward compatibility for future product values.
+ */
+export type TCaseProduct = 'zyins' | 'eapp' | 'rapidsign' | (string & {});
 /** Inputs for `account.cases.create`. */
 export interface CaseCreateRequest {
-    /** Quote input — object converted to XML server-side, or raw XML string. */
-    input: Record<string, unknown> | string;
-    /** Optional quote results payload. */
-    results?: unknown;
-    /** Optional product selection (array of product identifiers). */
-    products?: string[];
+    /** Routing tag stored cleartext and bound as AEAD data during encryption. */
+    product: TCaseProduct;
+    /** Arbitrary JSON payload; encrypted client-side before it leaves the SDK. */
+    payload: unknown;
 }
+/** Result of `account.cases.create`: the case id and the assembled share link. */
 export interface CaseCreateResult {
-    /** Content-addressed case identifier. */
-    hash: string;
-    /** Absolute share URL for the case viewer. */
-    url: string;
-    /** True when the case is read-only (created by another license). */
-    readonly: boolean;
-    /** RFC 3339 timestamp the case was first created. */
-    createdAt: string;
+    /** Server-assigned case uuid. */
+    id: string;
+    /** Full share link `${caseViewerBaseUrl}/c/<id>#k=<base64url(key)>`. */
+    link: string;
 }
-/** A case as returned by `get` / `list`. */
-export interface CaseSummary {
-    hash: string;
-    url: string;
-    readonly: boolean;
-    createdAt: string;
-    /** Optional original input (server returns when caller owns the case). */
-    input?: unknown;
-    /** Optional results payload (server returns when present). */
-    results?: unknown;
-    /** Optional product selection (server returns when present). */
-    products?: string[];
+/** A decrypted case returned by `open`. */
+export interface CaseOpenResult {
+    /** Routing tag the case was created under. */
+    product: string;
+    /** The decrypted payload. */
+    payload: unknown;
 }
+/** Case metadata returned by `list` — never carries ciphertext. */
+export type CaseSummary = TCaseListEntry;
 /** Inputs for `account.cases.email`. */
 export interface CaseEmailRequest {
     caseId: string;
@@ -129,22 +211,134 @@ export interface CaseEmailRequest {
 export interface CaseEmailResult {
     queued: true;
 }
-export interface CasesContext {
+/** Per-operation context: signed-request inputs plus the viewer origin. */
+export interface CasesContext extends TCaseRequestContext {
+    /** Viewer origin for share-link assembly; see {@link DEFAULT_CASE_VIEWER_BASE_URL}. */
+    caseViewerBaseUrl: string;
+}
+/**
+ * Encrypt a payload client-side, store the opaque envelope, and return the
+ * fragment-keyed share link. The decryption key never reaches the server.
+ *
+ * @example
+ * ```ts
+ * const { id, link } = await isa.account.cases.create({
+ *   product: 'zyins',
+ *   payload: { input: currentCaseToJSON() },
+ * });
+ * // `link` is `https://app.isaapi.com/c/<id>#k=<key>` — send it to the client.
+ * ```
+ */
+export declare function create(request: CaseCreateRequest, ctx: CasesContext): Promise<CaseCreateResult>;
+/**
+ * Resolve a share link: parse the id and fragment key, fetch the opaque
+ * envelope, and decrypt locally. A 404 (absent or expired — indistinguishable
+ * by design) raises {@link IsaCaseExpiredError}.
+ *
+ * @example
+ * ```ts
+ * const { product, payload } = await isa.account.cases.open(link);
+ * ```
+ */
+export declare function open(link: string, ctx: CasesContext): Promise<CaseOpenResult>;
+/**
+ * List the caller's cases (account-scoped metadata only). The list never
+ * carries ciphertext — the owner cannot decrypt a case without its link's
+ * fragment key.
+ *
+ * @example
+ * ```ts
+ * const cases = await isa.account.cases.list();
+ * cases.forEach((c) => console.log(c.id, c.product, c.expiresAt));
+ * ```
+ */
+export declare function list(ctx: CasesContext): Promise<CaseSummary[]>;
+/**
+ * Email a case link to a recipient.
+ *
+ * @example
+ * ```ts
+ * await isa.account.cases.email({ caseId: id, to: 'jane.smith@example.com' });
+ * ```
+ */
+export declare function email(request: CaseEmailRequest, ctx: CasesContext): Promise<CaseEmailResult>;
+//# sourceMappingURL=cases.d.ts.map
+=== dist/account/caseTransport.d.ts ===
+/**
+ * Signed-request dispatch for the `/v1/case` operations. Centralizes the
+ * License-HMAC header construction + transport call so each operation in
+ * `cases.ts` only assembles its body and routes status codes.
+ */
+import { type AuthContext } from './auth';
+import { type Transport } from '../zyins/transport';
+import { type Clock } from '../core';
+/** The auth + transport context a signed case request needs. */
+export interface TCaseRequestContext {
     baseUrl: string;
     auth: AuthContext;
     transport: Transport;
     clock: Clock;
     idempotencyKey?: string;
 }
-/** Create a new shareable case. */
-export declare function create(request: CaseCreateRequest, ctx: CasesContext): Promise<CaseCreateResult>;
-/** Retrieve a single case by hash. */
-export declare function get(caseId: string, ctx: CasesContext): Promise<CaseSummary>;
-/** List all cases visible to the caller. */
-export declare function list(ctx: CasesContext): Promise<CaseSummary[]>;
-/** Email a case PDF / artifact to a recipient. */
-export declare function email(request: CaseEmailRequest, ctx: CasesContext): Promise<CaseEmailResult>;
-//# sourceMappingURL=cases.d.ts.map
+/** A single signed `/v1/case` request: method, path, body, and idempotency. */
+export interface TSignedRequestSpec {
+    method: 'GET' | 'POST';
+    path: string;
+    body: string;
+    /** When set, an `Idempotency-Key` is derived (or taken from ctx) for the op. */
+    idempotencyOp?: string;
+}
+/** Shape of a transport response after success/error status routing. */
+export type TTransportResponse = Awaited<ReturnType<Transport>>;
+/**
+ * Build License-HMAC headers and dispatch one `/v1/case` request, eliminating
+ * the per-operation header/transport boilerplate. The caller routes status
+ * codes — this helper only signs and sends.
+ */
+export declare function signedCaseRequest(spec: TSignedRequestSpec, ctx: TCaseRequestContext): Promise<TTransportResponse>;
+/** True when an HTTP status is a 2xx success. */
+export declare function isSuccess(status: number): boolean;
+//# sourceMappingURL=caseTransport.d.ts.map
+=== dist/account/caseWire.d.ts ===
+/**
+ * Wire helpers for the zero-knowledge case store: share-link assembly +
+ * parsing, and response decoding for `/v1/case`. Kept separate from the
+ * operation logic in `cases.ts` so each file stays focused (link/​parse vs.
+ * transport orchestration).
+ *
+ * The link is the capability: it carries the case id in the path and the
+ * decryption key in the `#k=` fragment. These helpers never log it.
+ */
+import { type TCaseEnvelope } from './caseCrypto';
+/** A case's id and fragment key, parsed out of a share link. */
+export interface TParsedLink {
+    id: string;
+    keyFragment: string;
+}
+/** A case's metadata as returned by the list endpoint (never ciphertext). */
+export interface TCaseListEntry {
+    id: string;
+    product: string;
+    createdAt: string;
+    expiresAt: string;
+}
+/**
+ * Assemble `${base}/c/<id>#k=<keyFragment>`, normalizing a trailing slash on
+ * the viewer base. The base must NOT already include the `/c/` segment.
+ */
+export declare function assembleLink(viewerBaseUrl: string, id: string, keyFragment: string): string;
+/** Parse a share link into its case id and fragment key. */
+export declare function parseLink(link: string): TParsedLink;
+/** Decode a create response into the server-assigned case id. */
+export declare function parseCreatedId(body: string): string;
+/** Decode a `GET /v1/case/{uuid}` response into its product + opaque envelope. */
+export declare function parseCaseDetail(body: string): {
+    product: string;
+    envelope: TCaseEnvelope;
+};
+/** Decode a list response into metadata rows (ciphertext is never present). */
+export declare function parseCaseList(body: string): TCaseListEntry[];
+//# sourceMappingURL=caseWire.d.ts.map
 === dist/account/email.d.ts ===
 /**
  * `isa.account.email` — `POST /v1/email/enqueue`.
@@ -223,6 +417,8 @@ export interface AccountFactoryOptions {
      */
     credentialState?: IsaCredentialState;
     transport?: Transport;
+    /** Viewer origin for case share links; forwarded to {@link AccountNamespace}. */
+    caseViewerBaseUrl?: string;
 }
 /** Build the `isa.account` namespace from the unified `Isa` options. */
 export declare function buildAccountNamespace(opts: AccountFactoryOptions): AccountNamespace;
@@ -241,9 +437,9 @@ export declare function buildAccountNamespace(opts: AccountFactoryOptions): Acco
  * branding / preferences / cases / email surface is preserved for
  * back-compat and shares the same wire endpoints; `account` is the
  * forward-looking ergonomic surface and adds the missing operations
- * (`cases.get`, `cases.list`, scope-partitioned preferences).
+ * (`cases.open`, `cases.list`, scope-partitioned preferences).
  *
- * Reference data has consolidated onto `isa.zyins.datasets.get()`; the
+ * Reference data has consolidated onto `isa.zyins.datasets.getV3()`; the
  * deprecated `isa.account.referenceData` surface has been removed per
  * `/tmp/sdk-syntax-proposal.md` post-lock correction #3.
  */
@@ -252,12 +448,18 @@ import { type Transport } from '../zyins/transport';
 import { type Clock } from '../core';
 import { type BrandingDetail, type BrandingLookupRequest } from './branding';
 import { type PreferencesLookupRequest, type PreferencesLookupResult, type PreferencesSetRequest, type PreferencesSetResult } from './preferences';
-import { type CaseCreateRequest, type CaseCreateResult, type CaseEmailRequest, type CaseEmailResult, type CaseSummary } from './cases';
+import { type CaseCreateRequest, type CaseCreateResult, type CaseOpenResult, type CaseEmailRequest, type CaseEmailResult, type CaseSummary, type TCaseProduct } from './cases';
 import { type EmailEnqueueRequest, type EmailEnqueueResult } from './email';
 /** Construction options for {@link AccountNamespace}. */
 export interface AccountNamespaceOptions {
     auth: AuthContext;
     baseUrl: string;
+    /**
+     * Viewer origin used to assemble case share links. Defaults to
+     * {@link DEFAULT_CASE_VIEWER_BASE_URL}. The SDK appends `/c/<id>#k=<key>`;
+     * the base must NOT include the `/c/` segment.
+     */
+    caseViewerBaseUrl?: string;
     /** Optional transport override; defaults to {@link defaultTransport}. */
     transport?: Transport;
     /** Optional clock override; defaults to {@link systemClock}. */
@@ -267,6 +469,7 @@ export interface AccountNamespaceOptions {
 interface OperationContext {
     auth: AuthContext;
     baseUrl: string;
+    caseViewerBaseUrl: string;
     transport: Transport;
     clock: Clock;
 }
@@ -295,13 +498,49 @@ export declare class AccountPreferences {
     lookup(request: PreferencesLookupRequest): Promise<PreferencesLookupResult>;
     set(request: PreferencesSetRequest): Promise<PreferencesSetResult>;
 }
-/** `isa.account.cases` facade. */
+/** `isa.account.cases` facade — zero-knowledge share + recall. */
 export declare class AccountCases {
     private readonly ctx;
     constructor(ctx: OperationContext);
+    /**
+     * Encrypt a payload and store the opaque envelope, returning the
+     * fragment-keyed share link. The key never reaches the server.
+     *
+     * @example
+     * ```ts
+     * const { id, link } = await isa.account.cases.create({
+     *   product: 'zyins',
+     *   payload: { input: currentCaseToJSON() },
+     * });
+     * ```
+     */
     create(request: CaseCreateRequest): Promise<CaseCreateResult>;
-    get(caseId: string): Promise<CaseSummary>;
+    /**
+     * Resolve a share link and decrypt the payload client-side.
+     *
+     * @example
+     * ```ts
+     * const { product, payload } = await isa.account.cases.open(link);
+     * ```
+     */
+    open(link: string): Promise<CaseOpenResult>;
+    /**
+     * List the caller's cases (metadata only; never ciphertext).
+     *
+     * @example
+     * ```ts
+     * const cases = await isa.account.cases.list();
+     * ```
+     */
     list(): Promise<CaseSummary[]>;
+    /**
+     * Email a case link to a recipient.
+     *
+     * @example
+     * ```ts
+     * await isa.account.cases.email({ caseId: id, to: 'jane.smith@example.com' });
+     * ```
+     */
     email(request: CaseEmailRequest): Promise<CaseEmailResult>;
 }
 /** `isa.account.email` facade. */
@@ -310,7 +549,7 @@ export declare class AccountEmail {
     constructor(ctx: OperationContext);
     enqueue(request: EmailEnqueueRequest): Promise<EmailEnqueueResult>;
 }
-export type { BrandingDetail, BrandingLookupRequest, PreferencesLookupRequest, PreferencesLookupResult, PreferencesSetRequest, PreferencesSetResult, CaseCreateRequest, CaseCreateResult, CaseEmailRequest, CaseEmailResult, CaseSummary, EmailEnqueueRequest, EmailEnqueueResult, };
+export type { BrandingDetail, BrandingLookupRequest, PreferencesLookupRequest, PreferencesLookupResult, PreferencesSetRequest, PreferencesSetResult, CaseCreateRequest, CaseCreateResult, CaseOpenResult, CaseEmailRequest, CaseEmailResult, CaseSummary, TCaseProduct, EmailEnqueueRequest, EmailEnqueueResult, };
 //# sourceMappingURL=index.d.ts.map
 === dist/account/preferences.d.ts ===
 /**
@@ -1125,8 +1364,8 @@ export declare function httpRequest<T = unknown>(opts: HttpRequestOptions): Prom
  * workspace protocol during development; the publish workflow pins
  * the workspace dep to a concrete sdk/core/v* tag at publish time.
  */
-export { resolveSubtle, arrayBufferToHex, resolveFetch, base64EncodeUtf8, systemClock, } from './internal/crypto';
-export type { Clock } from './internal/crypto';
+export { resolveSubtle, arrayBufferToHex, resolveFetch, base64EncodeUtf8, base64ToBytes, bytesToBase64, bytesToBase64Url, systemRandomBytes, systemClock, } from './internal/crypto';
+export type { Clock, RandomBytes } from './internal/crypto';
 export * from './license/deviceAuth';
 export * from './problem-details/types';
 export * from './http/constants';
@@ -1251,6 +1490,37 @@ export declare function resolveFetch(injected?: typeof fetch, context?: string):
  * (international emails, CJK characters, etc.).
  */
 export declare function base64EncodeUtf8(input: string): string;
+/**
+ * Decodes a standard or URL-safe base64 string to raw bytes in any JS
+ * runtime. Accepts the URL-safe alphabet (`-`/`_`) and missing padding so a
+ * fragment-borne base64url key decodes without a separate code path.
+ */
+export declare function base64ToBytes(input: string): Uint8Array;
+/**
+ * Standard-base64-encodes raw bytes in any JS runtime. Emits the padded std
+ * alphabet (`+`/`/`/`=`) to match what the server stores and returns on GET
+ * for ciphertext / iv / tag.
+ */
+export declare function bytesToBase64(bytes: Uint8Array): string;
+/**
+ * URL-safe-base64-encodes raw bytes (RFC 4648 §5, padding stripped). Used for
+ * the share-link fragment key so the value survives a URL without
+ * percent-encoding. The companion {@link base64ToBytes} accepts this form.
+ */
+export declare function bytesToBase64Url(bytes: Uint8Array): string;
+/**
+ * CSPRNG facade — all random-byte reads go through this interface so callers
+ * never touch `crypto.getRandomValues` directly and tests can inject a
+ * deterministic source.
+ */
+export type RandomBytes = (length: number) => Uint8Array;
+/**
+ * Default random source backed by `crypto.getRandomValues`. Override in tests
+ * by passing a custom {@link RandomBytes} to functions that accept one.
+ *
+ * @throws Error if `crypto.getRandomValues` is unavailable in the environment.
+ */
+export declare const systemRandomBytes: RandomBytes;
 /**
  * Clock facade — all current-time reads go through this interface.
  * Provides an injection point for tests to control time-sensitive behavior.
@@ -1410,7 +1680,7 @@ export declare function isObfuscated(value: string, threshold?: number): boolean
  * The authoritative list of platform error codes. Revisions MUST update both
  * this array and `platform-php`'s `ProblemException` enum in the same commit.
  */
-export declare const PROBLEM_DETAILS_CODES: readonly ["unauthorized", "token_expired", "validation_error", "license_locked", "not_found", "forbidden", "conflict", "rate_limited", "internal_error", "service_unavailable", "idempotency_conflict"];
+export declare const PROBLEM_DETAILS_CODES: readonly ["unauthorized", "token_expired", "validation_error", "license_locked", "not_found", "forbidden", "conflict", "rate_limit_exceeded", "rate_limited", "internal_error", "service_unavailable", "idempotency_conflict"];
 export type ProblemDetailsCode = (typeof PROBLEM_DETAILS_CODES)[number];
 export interface ProblemDetails {
     /** URI reference identifying the problem type. */
@@ -1685,18 +1955,24 @@ export declare function parseRetryAfter(raw: string | null, nowMs: number): numb
  * only the names you use keeps unused product namespaces out of your
  * bundle.
  */
-export { Isa, ZyInsNamespace, RapidSignNamespace, ProxyNamespace, SESSIONS_REISSUE_PATH, type IsaOptions, type IsaFactoryOptions, type IsaAuthArgs, } from './zyins/isa';
-export { AccountNamespace, AccountBranding, AccountPreferences, AccountCases, AccountEmail, type AccountNamespaceOptions, type BrandingDetail as AccountBrandingDetail, type BrandingLookupRequest as AccountBrandingLookupRequest, type PreferencesLookupRequest as AccountPreferencesLookupRequest, type PreferencesLookupResult as AccountPreferencesLookupResult, type PreferencesSetRequest as AccountPreferencesSetRequest, type PreferencesSetResult as AccountPreferencesSetResult, type CaseCreateRequest as AccountCaseCreateRequest, type CaseCreateResult as AccountCaseCreateResult, type CaseEmailRequest as AccountCaseEmailRequest, type CaseEmailResult as AccountCaseEmailResult, type CaseSummary as AccountCaseSummary, type EmailEnqueueRequest as AccountEmailEnqueueRequest, type EmailEnqueueResult as AccountEmailEnqueueResult, } from './account';
-export { type IsaIdentity, type BearerIdentity, type LicenseIdentity, resolveBearerIdentity, resolveLicenseIdentity, ENV_VAR_NAMES, } from './zyins/envFactory';
-export { IsaError, IsaApiError, IsaConfigError, IsaIdempotencyConflictError, IsaNotActivatedError, type IsaNotActivatedCode, } from './zyins/apiError';
-export { type Envelope, type RawResponse, type RawResponseResult, } from './zyins/envelope';
-export { canonicalString, formatTimestamp, signRequest, type SignClock, type SignRequestHeaders, type SignRequestInput, type SignRequestResult, } from './core/auth/signRequest';
-export { Sex, NicotineUsage, NicotineDuration, Height, Weight, type Applicant, type Medication, type Condition, type NicotineUsageInput, type NicotineProductUsage, } from './zyins/applicant';
-export { Coverage, QuoteType, isMulti, type CoverageInput, type CoverageType, type SingleCoverage, type MultiCoverage, type FaceValueCoverage, type MonthlyBudgetCoverage, } from './zyins/coverage';
-export { ProductSelection, ProductClass, ProductType, Products, type Product, type ProductClassValue, } from './zyins/product';
-export { type LogosGetOptions, type LogosFetch, type LogosResponse, } from './zyins/logos';
+export { Isa, ZyInsNamespace, RapidSignNamespace, ProxyNamespace, SESSIONS_REISSUE_PATH, type IsaOptions, type IsaFactoryOptions, type IsaAuthArgs } from './zyins/isa';
+export { AccountNamespace, AccountBranding, AccountPreferences, AccountCases, AccountEmail, type AccountNamespaceOptions, type BrandingDetail as AccountBrandingDetail, type BrandingLookupRequest as AccountBrandingLookupRequest, type PreferencesLookupRequest as AccountPreferencesLookupRequest, type PreferencesLookupResult as AccountPreferencesLookupResult, type PreferencesSetRequest as AccountPreferencesSetRequest, type PreferencesSetResult as AccountPreferencesSetResult, type CaseCreateRequest as AccountCaseCreateRequest, type CaseCreateResult as AccountCaseCreateResult, type CaseOpenResult as AccountCaseOpenResult, type CaseEmailRequest as AccountCaseEmailRequest, type CaseEmailResult as AccountCaseEmailResult, type CaseSummary as AccountCaseSummary, type TCaseProduct, type EmailEnqueueRequest as AccountEmailEnqueueRequest, type EmailEnqueueResult as AccountEmailEnqueueResult, } from './account';
+export { type IsaIdentity, type BearerIdentity, type LicenseIdentity, resolveBearerIdentity, resolveLicenseIdentity, ENV_VAR_NAMES } from './zyins/envFactory';
+export { IsaError, IsaApiError, IsaConfigError, IsaCaseExpiredError, IsaIdempotencyConflictError, IsaNotActivatedError, IsaTimeoutError, type IsaNotActivatedCode } from './zyins/apiError';
+export { encryptCase, decryptCase, IsaCaseDecryptError, type TCaseEnvelope, type TEncryptedCase, type TCaseCryptoOptions } from './account/caseCrypto';
+export { type Envelope, type RawResponse, type RawResponseResult } from './zyins/envelope';
+export { canonicalString, formatTimestamp, signRequest, type SignClock, type SignRequestHeaders, type SignRequestInput, type SignRequestResult } from './core/auth/signRequest';
+export { Sex, NicotineUsage, NicotineDuration, Height, Weight, type Applicant, type Medication, type Condition, type NicotineUsageInput, type NicotineProductUsage } from './zyins/applicant';
+export { Coverage, QuoteType, isMulti, type CoverageInput, type CoverageType, type SingleCoverage, type MultiCoverage, type FaceValueCoverage, type MonthlyBudgetCoverage } from './zyins/coverage';
+export { ProductSelection, ProductClass, ProductType, Products, type Product, type ProductClassValue } from './zyins/product';
+export { ReferenceSort, type DatasetBundleV3, type DatasetCategory, type DatasetEntry, type ReferenceEntity, type ConditionEntity, type ConditionTreatedWith, type MedicationEntity, type MedicationUsedFor, type NicotineOptionEntity, type SpellingCorrectionEntity, type Concept, type ConceptKind, type ConditionConcept, type MedicationConcept, type UnknownConcept, type Suggestion, type Autocorrector, type AutocorrectOptions, type MatchAlgorithm, type AutocompleteAlgorithm, type AutocompleteOptions, type ReferenceAdapters, } from './zyins';
+export { type PrequalifyV2Request, type PrequalifyV2Result, type PrequalifyV2Options, type PlanOffer, type OtherOffer, type OfferEligibility, type OfferCategory, type OfferCarrier, type OfferProduct, type OfferPlanInfo, type OfferPlanInfoItem, type OfferPlanInfoLegacy, type OfferDeathBenefit, type OfferPremium, type OfferMoney, } from './zyins/prequalify-v2';
+export { BearerAuth, LicenseAuth, FormAuth, RemoteEngine, LocalEngine, ProxyEngine, InMemoryEngine, inMemoryEngineWith, resolveIsaOptions, DEFAULT_TIMEOUT_MS, BundledApiVersions, resolveApiVersions, type IsaApiVersion, type IsaApiVersionOverride, type IsaApiSurface, type IsaAuthSupplier, type IsaEngine, type IsaCreateOptions, type ResolvedIsaOptions, } from './zyins/isaOptions';
+export type { CaseStorage, CaseRecord, CaseStoragePutResult } from './zyins/cases/CaseStorage';
+export { ZeroKnowledgeCaseStorage } from './zyins/cases/ZeroKnowledgeCaseStorage';
+export { type LogosGetOptions, type LogosFetch, type LogosResponse } from './zyins/logos';
 export { Product as ProductSlug, Products as ProductSlugs, type ProductMetadata, State, States, type StateMetadata, ProductCarriers, type ProductCarrierMetadata, ConditionCategories, type ConditionCategoryMetadata, MedicationUses, type MedicationUseMetadata, Scope, ScopeDescriptions, SignEvent, SignEventLabels, ErrorCode, ErrorAdviceCodes, ErrorDocUrls, } from './catalog';
-export { type DebugLogger, type EnvReader, type LogSink, debugLoggerFromEnv, makeLogger, redactHeaders, redactBody, redactBodyString, processEnv, stderrSink, } from './zyins/logger';
+export { type DebugLogger, type EnvReader, type LogSink, debugLoggerFromEnv, makeLogger, redactHeaders, redactBody, redactBodyString, processEnv, stderrSink } from './zyins/logger';
 //# sourceMappingURL=index.d.ts.map
 === dist/proxy/algosure/embedded.d.ts ===
 import { type Clock } from '../../core';
@@ -2542,6 +2818,22 @@ export declare class IsaError extends Error {
 export declare class IsaConfigError extends IsaError {
     constructor(message: string);
 }
+/** Runtime timeout error for external work exceeding the configured deadline. */
+export declare class IsaTimeoutError extends IsaError {
+    constructor(message: string);
+}
+/**
+ * A shared case could not be opened because it is absent or expired. The
+ * zero-knowledge store returns 404 for both cases by design — TTL expiry and
+ * a never-existing id are deliberately indistinguishable — so a single typed
+ * error covers both. The message and fields are key-free: the share link and
+ * its fragment never reach this error (see the no-leak rule in cases.ts).
+ */
+export declare class IsaCaseExpiredError extends IsaError {
+    /** The case id that could not be resolved; never the fragment key. */
+    readonly caseId: string;
+    constructor(caseId: string);
+}
 /**
  * Stable activation-state codes surfaced by {@link IsaNotActivatedError}.
  *
@@ -2892,6 +3184,60 @@ export interface BrandingContext {
 /** Fetch the whitelabel branding for the caller's license. */
 export declare function lookup(ctx: BrandingContext): Promise<BrandingDetail>;
 //# sourceMappingURL=branding.d.ts.map
+=== dist/zyins/bundledApiVersions.d.ts ===
+/**
+ * Per-surface bundled API-version table.
+ *
+ * Each ZyINS surface (prequalify, quote, datasets, reference, sessions,
+ * branding, cases) advances on its own schedule; one surface moving to `v3`
+ * does not move the others. There is no single "current" API version, so
+ * the SDK exposes no global shorthand.
+ *
+ * `BundledApiVersions` is the per-SDK-release auditable table: it answers
+ * "what does this release talk to by default?" without inspecting the wire.
+ *
+ * Per-call resolution:
+ *   `options.apiVersion?.[surface] ?? BundledApiVersions[surface]`
+ *
+ * There is **no** shorthand string form (`apiVersion: 'v3'`) and **no**
+ * `default` key — both would assert a uniformity that does not exist
+ * across surfaces.
+ *
+ * @see docs/sdk-syntax-proposal.md §2.7 (per-surface apiVersion map)
+ */
+/**
+ * The set of ZyINS API surfaces that carry an independent version. Adding
+ * a new surface here requires the same addition to {@link BundledApiVersions}.
+ */
+export type IsaApiSurface = 'prequalify' | 'quote' | 'datasets' | 'reference' | 'sessions' | 'branding' | 'cases';
+/** Major-version token sent in the `Api-Version` request header. */
+export type IsaApiVersion = 'v1' | 'v2' | 'v3';
+/**
+ * Per-surface override accepted on `IsaCreateOptions.apiVersion` and the
+ * legacy factory `IsaFactoryOptions.apiVersion`. Surfaces absent from the
+ * override fall back to {@link BundledApiVersions}.
+ */
+export type IsaApiVersionOverride = Partial<Readonly<Record<IsaApiSurface, IsaApiVersion>>>;
+/**
+ * Auditable per-release default for every surface. Frozen — consumers that
+ * need a different value for one surface pass an
+ * {@link IsaApiVersionOverride} on construction; they do not mutate this.
+ */
+export declare const BundledApiVersions: Readonly<Record<IsaApiSurface, IsaApiVersion>>;
+/**
+ * Resolves a per-surface version by overlaying an optional override onto
+ * the bundled defaults. Pure; returns a fresh object so callers can hold
+ * the result without aliasing {@link BundledApiVersions}.
+ */
+export declare function resolveApiVersions(override?: IsaApiVersionOverride): Readonly<Record<IsaApiSurface, IsaApiVersion>>;
+/**
+ * Map a request path to the surface that owns it. Returns `undefined` for
+ * paths that are not surface-scoped (e.g. `/v1/logos`, `/v1/email/enqueue`,
+ * `/v1/licenses/*` — these are infrastructure endpoints with no per-surface
+ * versioning override).
+ */
+export declare function surfaceForPath(path: string): IsaApiSurface | undefined;
+//# sourceMappingURL=bundledApiVersions.d.ts.map
 === dist/zyins/case.d.ts ===
 /**
  * Tier 3 case operations.
@@ -2937,49 +3283,208 @@ export declare function email(request: CaseEmailRequest, ctx: CaseContext): Prom
 //# sourceMappingURL=case.d.ts.map
 === dist/zyins/cases.d.ts ===
 /**
- * Tier 3 cases operations — `POST /v1/case`.
+ * Tier 3 zyins case share — the zyins-flavored sugar over the zero-knowledge
+ * `/v1/case` store (E2EE Phase 2).
  *
- * Cases are content-addressed shareable artifacts created from a quote
- * input + results + selected products. The server hashes the (xml,
- * results, products) tuple — identical inputs dedupe to the same `hash`
- * regardless of which license created the case. ZIP+4 fields are stripped
- * from the input before hashing.
+ * `share` pins `product: 'zyins'`, shapes the payload as
+ * `{ input, results?, products? }`, and delegates to the shared opaque-case
+ * `create` in `../account/cases`. The payload is encrypted client-side; the
+ * server stores opaque ciphertext and never sees the key. The result is the
+ * case id plus the fragment-keyed share link.
  *
- * Today this module exposes `create`; the existing `case.email` Tier-3
- * helper is re-exported via the `cases` sub-client for case-share email.
- * Future `list` / `get` / `delete` RPCs require new server work (see the
- * design doc; tracked as issue #149 follow-ups).
+ * HARD RULE — no key/fragment leakage: the link is returned as a value only.
+ * It is never logged, never put on a telemetry payload, and never attached to
+ * a thrown error. See `../account/cases` for the enforced guarantee.
  */
 import { type AuthContext } from './auth';
 import { type Transport } from './transport';
 import { type Clock } from '../core';
 /**
- * Inputs for `cases.create`. The `input` field is polymorphic at the wire:
- * a JSON object is converted to XML server-side; a raw XML string passes
- * through as-is.
+ * Inputs for `cases.share`. `input` is the quote payload; `results` and
+ * `products` are an optional analysis snapshot. All three are encrypted
+ * together — the server never reads any of them.
  */
-export interface CaseCreateRequest {
+export interface CaseShareRequest {
     input: Record<string, unknown> | string;
     results?: unknown;
     products?: string[];
 }
-export interface CaseCreateResult {
-    object: string;
-    hash: string;
-    url: string;
-    readonly: boolean;
-    createdAt: string;
+/** Result of `cases.share`: the case id and assembled fragment-keyed link. */
+export interface CaseShareResult {
+    /** Server-assigned case uuid. */
+    id: string;
+    /** Full share link `${caseViewerBaseUrl}/c/<id>#k=<base64url(key)>`. */
+    link: string;
 }
 export interface CasesContext {
     baseUrl: string;
+    /** Viewer origin for share-link assembly; threaded from the namespace. */
+    caseViewerBaseUrl: string;
     auth: AuthContext;
     transport: Transport;
     clock: Clock;
     idempotencyKey?: string;
 }
-/** Create a new shareable case. */
-export declare function create(request: CaseCreateRequest, ctx: CasesContext): Promise<CaseCreateResult>;
+/**
+ * Share a zyins case: encrypt `{ input, results?, products? }` under a fresh
+ * key, store the opaque envelope, and return the fragment-keyed link.
+ *
+ * @example
+ * ```ts
+ * const { id, link } = await isa.zyins.cases.share({
+ *   input: currentCaseToJSON(),
+ *   results: currentAnalysisResult,
+ *   products: ['colonial-penn'],
+ * });
+ * ```
+ */
+export declare function share(request: CaseShareRequest, ctx: CasesContext): Promise<CaseShareResult>;
 //# sourceMappingURL=cases.d.ts.map
+=== dist/zyins/cases/CaseStorage.d.ts ===
+/**
+ * `CaseStorage` — pluggable adapter for the case share/recall pipeline.
+ *
+ * The default implementation ({@link ZeroKnowledgeCaseStorage}) preserves
+ * the ISA platform's E2EE Phase 2 guarantee: ciphertext on the wire, key
+ * in the share-link fragment, server cannot decrypt. Carrier adapters
+ * (Mountain Life, William Penn, …) may substitute their own storage —
+ * typically because the carrier hosts the canonical record and the share
+ * link is a redirect into the carrier's portal.
+ *
+ * Adapters MUST treat `recallToken` as opaque. The default returns a
+ * base64url AES-256-GCM data key; a carrier may return a signed bearer
+ * token, an SSO handoff blob, or omit the token entirely. Consumers
+ * thread it through unchanged.
+ *
+ * @see docs/sdk-syntax-proposal.md §2.9 (CaseStorage adapter lock)
+ */
+/**
+ * The application-level record handed to `CaseStorage.put` and returned
+ * from `CaseStorage.get`. Product-agnostic; adapters layer their own
+ * routing on top of `product` (the cleartext app tag).
+ */
+export interface CaseRecord {
+    /**
+     * Cleartext routing tag identifying the app that owns the payload
+     * (`'zyins'`, `'eapp'`, `'rapidsign'`, or a carrier-defined value).
+     * Mirrors {@link import('../../account/cases').TCaseProduct}.
+     */
+    product: string;
+    /**
+     * Arbitrary JSON payload. The default `ZeroKnowledgeCaseStorage`
+     * encrypts this client-side before the wire call; alternate adapters
+     * may forward it directly to a carrier-owned store.
+     */
+    payload: unknown;
+}
+/**
+ * Result of {@link CaseStorage.put}. Adapters that mint a fragment key
+ * (the default zero-knowledge path) return it as `recallToken`; adapters
+ * with no client-side key material omit the field.
+ */
+export interface CaseStoragePutResult {
+    /** Server-assigned (or adapter-assigned) opaque identifier. */
+    id: string;
+    /**
+     * Opaque material the recipient needs to recover the record. The
+     * default implementation returns a base64url AES-256-GCM data key
+     * intended for a share-link fragment (`#k=…`); carrier adapters may
+     * return a signed bearer token, an SSO handoff blob, or omit the
+     * field when no client-side material is required.
+     */
+    recallToken?: string;
+}
+/**
+ * Pluggable case storage adapter. The Isa instance resolves a single
+ * implementation at construction time and routes every `isa.zyins.cases`
+ * operation through it.
+ *
+ * Implementations MUST be safe to call concurrently and MUST NOT mutate
+ * arguments. Failure modes throw — never return a partial record.
+ *
+ * @example Default zero-knowledge path
+ * ```ts
+ * const isa = await Isa.create({ auth, /* no caseStorage *\/ });
+ * const { id, recallToken } = await isa.zyins.cases.save({
+ *   product: 'zyins', payload,
+ * });
+ * // Reuse recallToken to share or recall:
+ * const record = await isa.zyins.cases.recall(id, recallToken);
+ * ```
+ *
+ * @example Carrier override
+ * ```ts
+ * const isa = await Isa.create({
+ *   auth,
+ *   caseStorage: new MountainLifeCaseStorage(carrierClient),
+ * });
+ * // Same call sites; the carrier's portal now hosts the record.
+ * ```
+ */
+export interface CaseStorage {
+    /**
+     * Persist a case record. Returns the adapter's identifier plus an
+     * optional opaque recall token. The token, if present, is required
+     * for {@link get} — store it alongside the id (or carry it in the
+     * share-link fragment for E2EE adapters).
+     */
+    put(record: CaseRecord): Promise<CaseStoragePutResult>;
+    /**
+     * Resolve a previously-stored record. `recallToken` is required iff
+     * the adapter returned one from {@link put}; passing it when not
+     * required is a no-op. Returns `null` when the record is absent
+     * (expired, deleted, or never existed — adapters do not distinguish
+     * these by design).
+     */
+    get(id: string, recallToken?: string): Promise<CaseRecord | null>;
+    /**
+     * Delete a record by id. Optional — adapters whose storage is
+     * write-once or carrier-managed may omit this method, in which case
+     * `isa.zyins.cases.delete()` will throw at call-time.
+     */
+    delete?(id: string): Promise<void>;
+}
+//# sourceMappingURL=CaseStorage.d.ts.map
+=== dist/zyins/cases/ZeroKnowledgeCaseStorage.d.ts ===
+/**
+ * `ZeroKnowledgeCaseStorage` — the default {@link CaseStorage} adapter.
+ *
+ * Preserves the ISA platform's E2EE Phase 2 guarantee: the SDK generates a
+ * fresh 256-bit AES-GCM key per record, encrypts the payload client-side
+ * (with `product` bound as AEAD additional data), posts only the opaque
+ * envelope to `/v1/case`, and returns the key as `recallToken` (base64url)
+ * — the server never holds key material.
+ *
+ * Recall reverses the flow: fetch the opaque envelope, decrypt with the
+ * caller-supplied `recallToken`. A 404 (absent / expired — by design
+ * indistinguishable) surfaces as `null`.
+ *
+ * Implementation reuses the shipped crypto + wire helpers from `#347`
+ * (`encryptCase` / `decryptCase` / `signedCaseRequest`) to avoid forking
+ * the cryptographic surface.
+ */
+import { type TCaseRequestContext } from '../../account/caseTransport';
+import type { CaseRecord, CaseStorage, CaseStoragePutResult } from './CaseStorage';
+/**
+ * Per-operation context needed by the default zero-knowledge adapter.
+ * Mirrors {@link import('../../account/cases').CasesContext} without the
+ * viewer-origin field — share-link assembly is the consumer's call,
+ * not the adapter's.
+ */
+export type ZeroKnowledgeCaseStorageContext = TCaseRequestContext;
+/**
+ * Default zero-knowledge implementation of {@link CaseStorage}. Constructed
+ * with the same signed-request context the legacy `account.cases` surface
+ * uses; the parent `Isa` wires this automatically when no override is
+ * supplied on {@link import('../isaOptions').IsaCreateOptions.caseStorage}.
+ */
+export declare class ZeroKnowledgeCaseStorage implements CaseStorage {
+    private readonly contextOnce;
+    constructor(contextOnce: () => ZeroKnowledgeCaseStorageContext);
+    put(record: CaseRecord): Promise<CaseStoragePutResult>;
+    get(id: string, recallToken?: string): Promise<CaseRecord | null>;
+}
+//# sourceMappingURL=ZeroKnowledgeCaseStorage.d.ts.map
 === dist/zyins/client.d.ts ===
 /**
  * Tier 3 ZyINS client.
@@ -3003,18 +3508,24 @@ import { type AuthContext } from './auth';
 import { type Transport } from './transport';
 import { type Clock } from '../core';
 import { type PrequalifyRequest, type PrequalifyResult } from './prequalify';
+import { type PrequalifyV2Request, type PrequalifyV2Result } from './prequalify-v2';
+import { type PrequalifyV3Request, type PrequalifyV3Result } from './prequalify-v3';
+import { type QuoteV3Request, type QuoteV3Result } from './quote-v3';
+import { DatasetsV3SubClient } from './datasets-v3';
 import { type LicenseActivateRequest, type LicenseActivateResult, type LicenseCheckRequest, type LicenseCheckResult, type LicenseDeactivateRequest, type LicenseDeactivateResult } from './license';
 import { type ReadinessResult } from './health';
 import { type CaseEmailRequest, type CaseEmailResult } from './case';
 import { type BrandingDetail } from './branding';
 import { DatasetsSubClient } from './datasets';
 import { type PreferencesLookupResult, type PreferencesSetRequest, type PreferencesSetResult } from './preferences';
-import { type CaseCreateRequest, type CaseCreateResult } from './cases';
+import { type CaseShareRequest, type CaseShareResult } from './cases';
 import { LogosSubClient, type LogosFetch } from './logos';
 /** Per-call context shared across sub-clients. */
 export interface OperationContext {
     auth: AuthContext;
     baseUrl: string;
+    /** Viewer origin for case share links; defaults via {@link ZyInsClientOptions}. */
+    caseViewerBaseUrl: string;
     transport: Transport;
     clock: Clock;
 }
@@ -3026,6 +3537,12 @@ export interface ZyInsClientOptions {
     auth: AuthContext;
     /** Base URL override; defaults to {@link DEFAULT_ZYINS_BASE_URL}. */
     baseUrl?: string;
+    /**
+     * Viewer origin for case share links; defaults to
+     * {@link DEFAULT_CASE_VIEWER_BASE_URL}. The SDK appends `/c/<id>#k=<key>`,
+     * so the base must NOT include `/c/`.
+     */
+    caseViewerBaseUrl?: string;
     /** Transport override; defaults to {@link defaultTransport}. */
     transport?: Transport;
     /** Clock override; defaults to {@link systemClock}. */
@@ -3047,6 +3564,7 @@ export interface ZyInsClientOptions {
 export declare class ZyInsClient {
     private readonly auth;
     private readonly baseUrl;
+    private readonly caseViewerBaseUrl;
     private readonly transport;
     private readonly clock;
     private readonly logosFetch;
@@ -3066,11 +3584,37 @@ export declare class ZyInsClient {
     readonly cases: CasesSubClient;
     /** Carrier-logo lookup. See `logos.ts`. */
     readonly logos: LogosSubClient;
-    /** Reference-data bundle (`isa.zyins.datasets.get()`). */
+    /**
+     * Legacy v2 reference-data bundle. Prefer `datasetsV3` for new code;
+     * the SDK's public `isa.zyins.datasets` facade routes to v3.
+     */
     readonly datasets: DatasetsSubClient;
+    /** v3 reference catalog (`GET /v3/datasets`). */
+    readonly datasetsV3: DatasetsV3SubClient;
     constructor(options: ZyInsClientOptions);
     /** Run a prequalify call. See `PrequalifyRequest` for input shape. */
     prequalify(request: PrequalifyRequest): Promise<PrequalifyResult>;
+    /**
+     * Run the v2 prequalify call (`POST /v2/prequalify`). Returns one
+     * `PlanOffer` per product with the best qualifying tier at the top
+     * level and alternates in `other_offers[]`. Pass
+     * `options: { includeIneligible: true }` to also receive declined
+     * products / declined alternates.
+     */
+    prequalifyV2(request: PrequalifyV2Request): Promise<PrequalifyV2Result>;
+    /**
+     * Run the v3 prequalify call (`POST /v3/prequalify`). Returns one
+     * offer per product with a uniform `pricing[]` table — each row is a
+     * rate class carrying its own eligibility, premium, and rank. Array
+     * order of `pricing` is authoritative for display.
+     */
+    prequalifyV3(request: PrequalifyV3Request): Promise<PrequalifyV3Result>;
+    /**
+     * Run the v3 quote call (`POST /v3/quote`). Returns qualifying
+     * products grouped by requested amount with the same uniform
+     * `pricing[]` table as v3 prequalify.
+     */
+    quoteV3(request: QuoteV3Request): Promise<QuoteV3Result>;
     /** Internal: produce the shared context object every operation needs. */
     private context;
 }
@@ -3112,26 +3656,44 @@ declare class PreferencesSubClient {
     set(request: PreferencesSetRequest): Promise<PreferencesSetResult>;
 }
 /**
- * Cases sub-client. Targets `POST /v1/case` for create and
- * `POST /v1/email/enqueue` for case-share email. Future `list`/`get`/
- * `delete` operations require net-new server work tracked in the design doc.
+ * Cases sub-client. `share` stores an opaque, client-encrypted case via the
+ * zero-knowledge `/v1/case` store and returns the fragment-keyed link;
+ * `email` enqueues a case email. The decryption key never reaches the server.
  */
 declare class CasesSubClient {
     private readonly ctx;
     constructor(ctx: OperationContext);
     /**
-     * Share a case (RW + optional analysis). Canonical surface per the locked
-     * spec (Section 3 Flow 5 + Appendix B post-lock correction #2). The
-     * recipient's UI decides RO vs RW based on whether `results` is present;
-     * the SDK has no `mode` flag.
+     * Surface the bound signed-request context so the unified `Isa`
+     * namespace can construct a `ZeroKnowledgeCaseStorage` adapter without
+     * duplicating the auth/transport/clock plumbing. Internal — not part of
+     * the published SDK surface.
      */
-    share(request: CaseCreateRequest): Promise<CaseCreateResult>;
+    get context(): OperationContext;
     /**
-     * @deprecated Use `share()` instead. `create()` is retained as a back-compat
-     * alias and will be removed in v0.7.0. See
-     * `/tmp/sdk-syntax-proposal.md` Appendix B post-lock correction #2.
+     * Share a zyins case (input + optional analysis snapshot). Encrypts
+     * client-side and returns the fragment-keyed link. The recipient's UI
+     * decides RO vs RW based on whether `results` is present; the SDK has no
+     * `mode` flag.
+     *
+     * @example
+     * ```ts
+     * const { id, link } = await isa.zyins.cases.share({
+     *   input: currentCaseToJSON(),
+     * });
+     * ```
      */
-    create(request: CaseCreateRequest): Promise<CaseCreateResult>;
+    share(request: CaseShareRequest): Promise<CaseShareResult>;
+    /**
+     * @deprecated Use `share()` instead. `create()` is a back-compat alias that
+     * forwards to the same opaque-case flow; removed in v0.7.0.
+     *
+     * @example
+     * ```ts
+     * const { id, link } = await isa.zyins.cases.create({ input });
+     * ```
+     */
+    create(request: CaseShareRequest): Promise<CaseShareResult>;
     email(request: CaseEmailRequest): Promise<CaseEmailResult>;
 }
 export {};
@@ -3325,6 +3887,187 @@ export declare class IsaCredentialState {
     clearLicenseKey(): Promise<void>;
 }
 //# sourceMappingURL=credentialState.d.ts.map
+=== dist/zyins/datasets-v3.d.ts ===
+/**
+ * `GET /v3/datasets` — the typed, inline-row reference catalog.
+ *
+ * Wire shape (locked):
+ *   - Every dataset row is self-contained — `treated_with[]` (condition
+ *     rows) and `used_for[]` (medication rows) carry the relationships
+ *     inline with `prescription_count` integers.
+ *   - NO response-root maps. `medications_by_condition`, `frequency_graphs`,
+ *     `use_map`, `med_map` are REMOVED; the row IS the source of truth.
+ *   - `spelling_corrections` is a first-class dataset, mintable into a
+ *     typo map via {@link buildTypoMap}.
+ *
+ * This module owns ONLY the wire shape + the parser. Consumer-side index
+ * construction (`ReferenceIndex`) lives in `./reference/referenceIndex.ts`.
+ */
+import type { OperationContext } from './client';
+/** Closed enum of dataset categories the server returns. */
+export type DatasetCategory = 'medications' | 'conditions' | 'products' | 'spelling_corrections' | 'nicotine_options';
+/** Base reference entity: every row carries at least `id` + `name`. */
+export interface ReferenceEntity {
+    /** Opaque entity identifier. Today: kind-prefixed ULID (`cond_`, `med_`, ...). */
+    readonly id: string;
+    /** Display name from the catalog. */
+    readonly name: string;
+}
+/** Inline `treated_with[]` entry on a condition row. */
+export interface ConditionTreatedWith {
+    /** Medication id. */
+    readonly id: string;
+    /** Medication display name. */
+    readonly name: string;
+    /**
+     * Number of observed prescriptions of this medication for this
+     * condition. Source of truth for frequency-based sort.
+     */
+    readonly prescription_count: number;
+}
+/** A condition row — carries its medications inline. */
+export interface ConditionEntity extends ReferenceEntity {
+    /** Pre-sorted by `prescription_count` desc; ties alphabetical asc. */
+    readonly treated_with: readonly ConditionTreatedWith[];
+}
+/** Inline `used_for[]` entry on a medication row. */
+export interface MedicationUsedFor {
+    /** Condition id. */
+    readonly id: string;
+    /** Condition display name. */
+    readonly name: string;
+    /**
+     * Number of observed prescriptions of this medication for this
+     * condition. Source of truth for frequency-based sort.
+     */
+    readonly prescription_count: number;
+}
+/** A medication row — carries its conditions inline. */
+export interface MedicationEntity extends ReferenceEntity {
+    /** Pre-sorted by `prescription_count` desc; ties alphabetical asc. */
+    readonly used_for: readonly MedicationUsedFor[];
+}
+/** A nicotine-option row. */
+export interface NicotineOptionEntity extends ReferenceEntity {
+    /** Coarse classification of the consumption form. */
+    readonly type: 'smoked' | 'smokeless' | 'vapor' | 'other';
+}
+/** A typo correction row. */
+export interface SpellingCorrectionEntity extends ReferenceEntity {
+    /** Pre-normalized typo (uppercase). */
+    readonly from: string;
+    /** Pre-normalized correction (uppercase). */
+    readonly to: string;
+}
+/**
+ * Per-dataset version + row count + items. `items` is empty when the
+ * caller asks for `fields: 'meta'` — `itemCount` is still populated.
+ */
+export interface DatasetEntry<T extends ReferenceEntity = ReferenceEntity> {
+    /** Opaque per-dataset version token. Bumps when the dataset changes. */
+    readonly version: string;
+    /** Number of rows. Present in both `full` and `meta` modes. */
+    readonly itemCount: number;
+    /** The rows. Empty in `meta` mode. */
+    readonly items: readonly T[];
+}
+/**
+ * The v3 datasets bundle — inline-row shape.
+ *
+ * Every relationship is on the row itself; the SDK never re-derives keys
+ * or rebuilds reverse maps from response-root joins. Consumers reading
+ * the raw JSON understand every row standalone.
+ */
+export interface DatasetBundleV3 {
+    /** Response ETag for conditional revalidation. */
+    readonly etag: string | undefined;
+    /** Opaque catalog-wide version token. */
+    readonly version: string;
+    /** All known medications with inline `used_for[]`. */
+    readonly medications: readonly MedicationEntity[];
+    /** All known conditions with inline `treated_with[]`. */
+    readonly conditions: readonly ConditionEntity[];
+    /** Products as typed entities. */
+    readonly products: readonly ReferenceEntity[];
+    /** Nicotine options with `type` classification. */
+    readonly nicotineOptions: readonly NicotineOptionEntity[];
+    /** Spelling corrections (typo → correction). */
+    readonly spellingCorrections: readonly SpellingCorrectionEntity[];
+    /**
+     * Per-category dataset entries (version, item_count, items). Useful
+     * for staleness checks and for `fields: 'meta'` mode.
+     */
+    readonly datasets: Readonly<Record<DatasetCategory, DatasetEntry | undefined>>;
+    /**
+     * Product slices keyed by family slug — the products available within
+     * each marketing family. Empty when the server omits the slice.
+     * Consumers (e.g. a product-list UI) read this directly rather than
+     * re-deriving family membership from flat product rows.
+     */
+    readonly productsByFamily: Readonly<Record<string, readonly ReferenceEntity[]>>;
+    /**
+     * Discontinued products keyed by product slug → the unix epoch second
+     * at which the product was discontinued. Empty when none are
+     * discontinued or the server omits the slice.
+     */
+    readonly discontinuedProducts: Readonly<Record<string, number>>;
+    /**
+     * State derivative slugs — states whose product availability derives
+     * from another state's ruleset. Empty when the server omits the slice.
+     */
+    readonly stateDerivatives: readonly string[];
+}
+/** Options accepted by `getDatasetsV3`. */
+export interface DatasetsV3GetOptions {
+    /** Narrow the response to specific categories. Omit for all. */
+    readonly include?: readonly DatasetCategory[];
+    /** `'meta'` skips row payloads; `'full'` (default) returns everything. */
+    readonly fields?: 'full' | 'meta';
+    /** Conditional revalidation; passes through as `If-None-Match`. */
+    readonly ifNoneMatch?: string;
+}
+/** Result of a 304-bearing `getDatasetsV3` call. */
+export interface DatasetsV3NotModified {
+    readonly notModified: true;
+    readonly etag: string | undefined;
+}
+/**
+ * Discriminator helper. Lets a caller switch on the result without
+ * peeking at `notModified`.
+ *
+ * @example
+ * ```ts
+ * const result = await isa.zyins.datasets.getV3();
+ * if (isNotModified(result)) useCachedBundle();
+ * else useFreshBundle(result);
+ * ```
+ */
+export declare function isNotModified(result: DatasetBundleV3 | DatasetsV3NotModified): result is DatasetsV3NotModified;
+/**
+ * Build the canonical typo map from a bundle's `spellingCorrections`.
+ *
+ * Keys and values are both UPPERCASE; consumers MUST uppercase their
+ * inputs before lookup. Conventionally fed into
+ * {@link DefaultAutocorrector}.
+ */
+export declare function buildTypoMap(bundle: Pick<DatasetBundleV3, 'spellingCorrections'>): ReadonlyMap<string, string>;
+/**
+ * Aggregate per-id prescription frequency from inline rows.
+ *
+ * For each condition: sum of `treated_with[].prescription_count`.
+ * For each medication: sum of `used_for[].prescription_count`.
+ *
+ * Consumers feed this into {@link AutocompleteAlgorithm.rank} as the
+ * `frequencies` map.
+ */
+export declare function buildFrequencyMap(bundle: Pick<DatasetBundleV3, 'conditions' | 'medications'>): ReadonlyMap<string, number>;
+export declare function getDatasetsV3(options: DatasetsV3GetOptions | undefined, ctx: OperationContext): Promise<DatasetBundleV3 | DatasetsV3NotModified>;
+export declare class DatasetsV3SubClient {
+    private readonly ctx;
+    constructor(ctx: OperationContext);
+    get(options?: DatasetsV3GetOptions): Promise<DatasetBundleV3 | DatasetsV3NotModified>;
+}
+//# sourceMappingURL=datasets-v3.d.ts.map
 === dist/zyins/datasets.d.ts ===
 import type { OperationContext } from './client';
 export type DatasetName = 'nicotineOptions' | 'products' | 'discontinuedProducts' | 'stateDerivatives' | 'typos' | 'conditions' | 'conditionNames' | 'medications' | 'medicationNames' | 'medicationsByCondition' | 'frequencyGraphs';
@@ -3541,6 +4284,7 @@ export declare class RateLimitedError extends ZyInsError {
     /** Seconds the caller should wait before retrying, when known. */
     readonly retryAfterSeconds?: number;
     constructor(message: string, opts?: {
+        code?: 'rate_limit_exceeded' | 'rate_limited';
         httpStatus: number;
         retryAfterSeconds?: number;
     });
@@ -3654,15 +4398,25 @@ export { ProductSelection, ProductClass, ProductType, Products, type Product, ty
 export { ProductsFacade } from './products';
 export { ZyInsError, LicenseError, PrequalifyError, RateLimitedError, fromHttpResponse, fromProblemDetails, type LicenseErrorCode, type PrequalifyErrorCode, } from './errors';
 export { type PrequalifyRequest, type PrequalifyResult, type PrequalifyPlan, type Plan, type PrequalifyOptions, type PrequalifyResultMeta, type SinglePrequalifyResult, type MultiPrequalifyResult, } from './prequalify';
+export { prequalifyV2, type PrequalifyV2Request, type PrequalifyV2Result, type PrequalifyV2Options, type PrequalifyV2Context, type PlanOffer, type OtherOffer, type OfferEligibility, type OfferCategory, type OfferCarrier, type OfferProduct, type OfferPlanInfo, type OfferPlanInfoItem, type OfferPlanInfoLegacy, type OfferDeathBenefit, type OfferPremium, type OfferMoney, } from './prequalify-v2';
+export { prequalifyV3, type PrequalifyV3Request, type PrequalifyV3Result, type PrequalifyV3Options, type PrequalifyV3Context, type PrequalifyV3Offer, type V3Eligibility, type V3EligibilityCategory, type V3Money, type V3Premium, type V3PricingRow, type V3DeathBenefit, } from './prequalify-v3';
+export { quoteV3, type QuoteV3Request, type QuoteV3Result, type QuoteV3Options, type QuoteV3Context, type QuoteV3Group, type QuoteV3Product, } from './quote-v3';
+export { getDatasetsV3, isNotModified, buildTypoMap, buildFrequencyMap, DatasetsV3SubClient, type DatasetBundleV3, type DatasetCategory, type DatasetEntry, type DatasetsV3GetOptions, type DatasetsV3NotModified, type ReferenceEntity, type ConditionEntity, type ConditionTreatedWith, type MedicationEntity, type MedicationUsedFor, type NicotineOptionEntity, type SpellingCorrectionEntity, } from './datasets-v3';
+export { Sort as ReferenceSort, matchCondition, matchConcept, matchMedication, type Concept, type ConceptKind, type ConditionConcept, type MedicationConcept, type UnknownConcept, } from './reference';
+export { DefaultAutocorrector, DefaultMatchAlgorithm, DefaultAutocompleteAlgorithm, buildSuggestion, type Autocorrector, type AutocorrectOptions, type AutocorrectAppliedEvent, type DefaultAutocorrectorOptions, type MatchAlgorithm, type DefaultMatchAlgorithmOptions, type AutocompleteAlgorithm, type AutocompleteOptions, type DefaultAutocompleteAlgorithmOptions, type Suggestion, type ReferenceAdapters, } from './reference/index';
+export { BearerAuth, LicenseAuth, FormAuth, RemoteEngine, LocalEngine, ProxyEngine, InMemoryEngine, inMemoryEngineWith, resolveIsaOptions, DEFAULT_TIMEOUT_MS, BundledApiVersions, resolveApiVersions, type IsaApiVersion, type IsaApiVersionOverride, type IsaApiSurface, type IsaAuthSupplier, type IsaEngine, type IsaCreateOptions, type ResolvedIsaOptions, } from './isaOptions';
+export type { CaseStorage, CaseRecord, CaseStoragePutResult, } from './cases/CaseStorage';
+export { ZeroKnowledgeCaseStorage } from './cases/ZeroKnowledgeCaseStorage';
 export { type ClientVersionStatus, type ClientVersionListener, } from './clientVersion';
 export { type LicenseActivateRequest, type LicenseActivateResult, type LicenseActivateAuth, type LicenseCheckRequest, type LicenseCheckResult, type LicenseDeactivateRequest, type LicenseDeactivateResult, type LicenseValidationStatus, } from './license';
 export { getReadiness, type ReadinessResult, type ProbeResult, type ServingStatus, type HealthContext, } from './health';
 export { type CaseEmailRequest, type CaseEmailResult, } from './case';
 export { defaultTransport, type Transport, type TransportRequest, type TransportResponse, type HttpMethod, } from './transport';
 export { Isa, ZyInsNamespace, type IsaOptions } from './isa';
+export { ReferenceFacade, ReferenceMedicationsFacade, ReferenceConditionsFacade, ReferenceConceptsFacade, } from './isaNamespaces';
 export { IsaCredentialState, type LicenseCredentialSnapshot, type LicenseRefreshedEvent, type LicenseRefreshedListener, } from './credentialState';
 export { type IsaIdentity, type BearerIdentity, type LicenseIdentity, type SessionIdentity, resolveBearerIdentity, resolveLicenseIdentity, resolveSessionIdentity, ENV_VAR_NAMES, } from './envFactory';
-export { IsaError, IsaApiError, IsaConfigError, IsaIdempotencyConflictError, IsaNotActivatedError, type IsaNotActivatedCode, } from './apiError';
+export { IsaError, IsaApiError, IsaConfigError, IsaCaseExpiredError, IsaIdempotencyConflictError, IsaNotActivatedError, IsaTimeoutError, type IsaNotActivatedCode, } from './apiError';
 export { type Envelope, type RawResponse, type RawResponseResult, } from './envelope';
 export { type DebugLogger, type EnvReader, type LogSink, debugLoggerFromEnv, makeLogger, redactHeaders, redactBody, redactBodyString, processEnv, stderrSink, } from './logger';
 //# sourceMappingURL=index.d.ts.map
@@ -3696,12 +4450,16 @@ import { type Envelope, type RawResponseResult } from './envelope';
 import { type Transport } from './transport';
 import { type LogosFetch } from './logos';
 import { type PrequalifyRequest, type PrequalifyResult } from './prequalify';
+import { type PrequalifyV2Request, type PrequalifyV2Result } from './prequalify-v2';
+import { type PrequalifyV3Request, type PrequalifyV3Result, type QuoteV3Request, type QuoteV3Result } from './prequalify-v3-types';
 import { WebhooksService } from '../rapidsign/webhooks';
 import { type ProxyCallOptions, type ProxyCallResult } from '../proxy/call';
-import { BrandingFacade, DatasetsFacade, PreferencesFacade, CasesFacade, EmailFacade, LicenseFacade, LogosFacade } from './isaNamespaces';
+import { BrandingFacade, DatasetsFacade, PreferencesFacade, CasesFacade, EmailFacade, LicenseFacade, LogosFacade, ReferenceFacade, ReferenceMedicationsFacade, ReferenceConditionsFacade, type Autocorrector, type MatchAlgorithm, type AutocompleteAlgorithm, type DefaultAutocorrectorOptions } from './isaNamespaces';
 import { ProductsFacade } from './products';
 import { type ClientVersionListener } from './clientVersion';
 import { AccountNamespace } from '../account';
+import { type IsaApiVersion, type IsaApiVersionOverride, type IsaApiSurface, type IsaCreateOptions } from './isaOptions';
+import type { CaseStorage } from './cases/CaseStorage';
 /** Constructor options for `Isa`. */
 export interface IsaOptions {
     /** Auth identity from one of the three factories. */
@@ -3710,6 +4468,13 @@ export interface IsaOptions {
     baseUrl?: string;
     /** Proxy origin override; defaults to the production proxy endpoint. */
     proxyOrigin?: string;
+    /**
+     * Viewer origin used to assemble case share links (`isa.account.cases`).
+     * Defaults to `https://app.isaapi.com`. The SDK appends `/c/<id>#k=<key>`,
+     * so the base must NOT include the `/c/` segment. The fragment key never
+     * reaches the server; this only controls the host the link points at.
+     */
+    caseViewerBaseUrl?: string;
     /**
      * Device ID required to construct a license-mode product client. Auto-
      * loaded from storage on first product call in a future phase; today it
@@ -3756,11 +4521,40 @@ export interface IsaOptions {
      * response headers and fires `onClientVersionMismatch` listeners.
      */
     clientVersion?: string;
+    /** Per-call timeout in ms. Defaults to {@link DEFAULT_TIMEOUT_MS}. */
+    timeout?: number;
+    /**
+     * Per-surface API-version override. Surfaces absent from the override
+     * fall back to {@link import('./bundledApiVersions').BundledApiVersions}.
+     * Surfaced per-call via the `Api-Version` request header, resolved from
+     * the request path.
+     */
+    apiVersion?: IsaApiVersionOverride;
+    /** Pluggable case-storage adapter; defaults to {@link ZeroKnowledgeCaseStorage}. */
+    caseStorage?: CaseStorage;
+    /**
+     * Replace the default autocorrector backing
+     * `isa.zyins.autocorrector` / `isa.zyins.reference.autocorrector`.
+     * Omit for the bundle-bound default that tracks dataset refreshes.
+     */
+    autocorrector?: Autocorrector;
+    /**
+     * Replace the default matcher backing `isa.zyins.matcher` and
+     * `match()` calls on every reference sub-facade.
+     */
+    matchAlgorithm?: MatchAlgorithm;
+    /**
+     * Replace the default ranker backing every reference
+     * `autocomplete()` accessor.
+     */
+    autocompleteAlgorithm?: AutocompleteAlgorithm;
 }
 /** Optional transport/facade overrides accepted by `Isa` factories. */
 export interface IsaFactoryOptions {
     /** Base URL override; defaults to the production ZyINS endpoint. */
     baseUrl?: string;
+    /** Viewer origin used to assemble case share links. */
+    caseViewerBaseUrl?: string;
     /** Proxy origin override; defaults to the production proxy endpoint. */
     proxyOrigin?: string;
     /** Optional structured logger. Overrides ISA_LOG=debug auto-detection. */
@@ -3780,6 +4574,23 @@ export interface IsaFactoryOptions {
     transport?: Transport;
     /** Consumer-supplied build identifier for client-version negotiation. */
     clientVersion?: string;
+    /** Per-call timeout in ms. Defaults to {@link DEFAULT_TIMEOUT_MS}. */
+    timeout?: number;
+    /**
+     * Per-surface API-version override. Surfaces absent from the override
+     * fall back to {@link import('./bundledApiVersions').BundledApiVersions}.
+     * Immutable per-instance; surfaced via the `Api-Version` request header
+     * resolved per-call from the request path.
+     */
+    apiVersion?: IsaApiVersionOverride;
+    /** Pluggable case-storage adapter; defaults to {@link ZeroKnowledgeCaseStorage}. */
+    caseStorage?: CaseStorage;
+    /** Replace the default autocorrector. */
+    autocorrector?: Autocorrector;
+    /** Replace the default matcher. */
+    matchAlgorithm?: MatchAlgorithm;
+    /** Replace the default ranker. */
+    autocompleteAlgorithm?: AutocompleteAlgorithm;
 }
 /**
  * Unified SDK entry point.
@@ -3815,6 +4626,14 @@ export declare class Isa {
     /** Top-level webhook verifier. */
     readonly webhooks: WebhooksService;
     /**
+     * Top-level autocorrector kernel — domain-agnostic.
+     * `isa.autocorrector.create({ typoMap })` returns a fresh
+     * {@link DefaultAutocorrector} bound to a caller-supplied typo map.
+     * For the zyins-bound autocorrector pre-wired to the dataset's
+     * spelling table, use `isa.zyins.autocorrector` instead.
+     */
+    readonly autocorrector: AutocorrectorKernel;
+    /**
      * Shared credential state for license-mode `Isa` instances. Mutated in
      * place by `isa.zyins.license.activate()`; `undefined` for bearer /
      * session identities.
@@ -3822,6 +4641,13 @@ export declare class Isa {
     readonly credentialState: IsaCredentialState | undefined;
     /** Consumer-supplied build identifier for client-version negotiation. */
     readonly clientVersion: string | undefined;
+    /**
+     * Resolved per-surface API-version map for this instance. Immutable;
+     * surfaced via the `Api-Version` request header per call, resolved from
+     * the request path. Read this to audit which version each surface talks
+     * to without inspecting the wire.
+     */
+    readonly apiVersion: Readonly<Record<IsaApiSurface, IsaApiVersion>>;
     private clientVersionListeners;
     private clientVersionMismatchEmitted;
     private constructor();
@@ -3868,12 +4694,14 @@ export declare class Isa {
     static withKeycode(args?: {
         keycode?: string;
         email?: string;
-        deviceId?: string;
         orderId?: string;
         licenseKey?: string;
         credentialStore?: CredentialStore;
         onLicenseRefreshed?: LicenseRefreshedListener;
         transport?: Transport;
+        autocorrector?: Autocorrector;
+        matchAlgorithm?: MatchAlgorithm;
+        autocompleteAlgorithm?: AutocompleteAlgorithm;
     }, env?: EnvReader, options?: IsaFactoryOptions): Promise<Isa>;
     /**
      * Construct from a one-shot form token (embedded eApp forms). The SDK
@@ -3913,6 +4741,24 @@ export declare class Isa {
      * ```
      */
     static authenticate(args: IsaAuthArgs, options?: IsaFactoryOptions): Promise<Isa>;
+    /**
+     * Construct from the typed options bag — the recommended path going
+     * forward and the form mirrored across the cross-language SDKs.
+     *
+     * ```ts
+     * const isa = await Isa.create({
+     *   auth: BearerAuth.fromToken('isa_live_…'),
+     *   engine: RemoteEngine.default,
+     *   apiVersion: 'v2',
+     *   timeout: 30_000,
+     * });
+     * ```
+     *
+     * Dispatches to the matching legacy factory (`withBearer` / `withKeycode`
+     * / `withSession` / `forForm`) based on the auth supplier's tag, and
+     * threads the resolved engine + apiVersion into the underlying options.
+     */
+    static create(opts: IsaCreateOptions): Promise<Isa>;
 }
 /**
  * Server-side path for the form-token → session exchange. Anchored as a
@@ -3935,7 +4781,11 @@ export type IsaAuthArgs = {
 /** Internal options the zyins namespace needs from its parent `Isa`. */
 interface ZyInsNamespaceOptions {
     identity: IsaIdentity;
+    /** Resolved per-surface API-version map inherited from the parent `Isa`. */
+    apiVersion: Readonly<Record<IsaApiSurface, IsaApiVersion>>;
     baseUrl?: string;
+    /** Viewer origin for case share links; forwarded to the client context. */
+    caseViewerBaseUrl?: string;
     logger?: DebugLogger;
     /** Shared credential state for license-mode instances. */
     credentialState?: IsaCredentialState;
@@ -3943,6 +4793,29 @@ interface ZyInsNamespaceOptions {
     transport?: Transport;
     /** Optional logos fetcher (binary path; bypasses string-bodied Transport). */
     logosFetch?: LogosFetch;
+    /**
+     * Optional case-storage override from the parent `Isa`. When omitted the
+     * namespace lazily constructs a {@link ZeroKnowledgeCaseStorage} bound
+     * to the shared signed-request context.
+     */
+    caseStorageOverride?: CaseStorage;
+    /** Optional autocorrector override (forwarded to `ReferenceFacade`). */
+    autocorrector?: Autocorrector;
+    /** Optional matcher override (forwarded to `ReferenceFacade`). */
+    matchAlgorithm?: MatchAlgorithm;
+    /** Optional ranker override (forwarded to `ReferenceFacade`). */
+    autocompleteAlgorithm?: AutocompleteAlgorithm;
+}
+/**
+ * Top-level domain-agnostic autocorrector kernel exposed as
+ * `isa.autocorrector`. The factory mints a fresh {@link DefaultAutocorrector}
+ * bound to a caller-supplied typo map. Domain-bound autocorrectors
+ * (e.g. `isa.zyins.autocorrector`) pre-wire the typo map from their
+ * dataset bundle.
+ */
+export interface AutocorrectorKernel {
+    /** Construct a domain-agnostic autocorrector from a typo map. */
+    create(opts: DefaultAutocorrectorOptions): Autocorrector;
 }
 /**
  * `isa.zyins.*` — methods for the ZyINS product. Each method has a
@@ -3959,6 +4832,44 @@ export declare class ZyInsNamespace {
     readonly branding: BrandingFacade;
     /** `isa.zyins.datasets` — reference-data bundle for picker UIs. */
     readonly datasets: DatasetsFacade;
+    /**
+     * `isa.zyins.reference` — typed catalog access. Use `match()` to
+     * resolve free text into a `Concept` handle, then call the symmetric
+     * accessors (`conditions(sort)` / `medications(sort)`).
+     */
+    readonly reference: ReferenceFacade;
+    /**
+     * `isa.zyins.medications` — top-level shortcut to
+     * `isa.zyins.reference.medications`. Per the locked SDK syntax
+     * (`docs/sdk-syntax-proposal.md`), consumers can call
+     * `isa.zyins.medications.match('insulin')` without traversing the
+     * `reference` namespace.
+     */
+    readonly medications: ReferenceMedicationsFacade;
+    /**
+     * `isa.zyins.conditions` — top-level shortcut to
+     * `isa.zyins.reference.conditions`. Mirror of `medications`.
+     */
+    readonly conditions: ReferenceConditionsFacade;
+    /**
+     * `isa.zyins.autocorrector` — domain-bound autocorrector, pre-wired to
+     * the zyins dataset's `spellingCorrections`. Tracks bundle refreshes
+     * automatically: a fresh `datasets.getV3()` swaps the typo map under
+     * the same handle.
+     *
+     * @example
+     * ```ts
+     * await isa.zyins.datasets.getV3();
+     * const fixed = isa.zyins.autocorrector.correct('hyprtension', { mode: 'submit' });
+     * ```
+     */
+    readonly autocorrector: Autocorrector;
+    /**
+     * `isa.zyins.matcher` — domain-bound matcher used internally by
+     * `match()`. Exposed so consumers can match against arbitrary
+     * candidate pools.
+     */
+    readonly matcher: MatchAlgorithm;
     /** `isa.zyins.preferences` — per-license preferences document. */
     readonly preferences: PreferencesFacade;
     /** `isa.zyins.cases` — case create + share. */
@@ -3970,10 +4881,53 @@ export declare class ZyInsNamespace {
      */
     readonly email: EmailFacade;
     /**
-     * `isa.zyins.prequalify` — callable that runs the prequalify decision
-     * from a typed `PrequalifyRequest`.
+     * `isa.zyins.prequalify` — runs the prequalify decision against the
+     * version pinned on the parent `Isa`. With the default
+     * (`BundledApiVersions.prequalify`) this aliases {@link prequalifyV2} and
+     * returns `Envelope<PrequalifyV2Result>`. With
+     * `apiVersion: { prequalify: 'v1' }` it routes to {@link prequalifyV1};
+     * with `apiVersion: { prequalify: 'v3' }` it routes to
+     * {@link prequalifyV3}. Narrow on `isa.apiVersion.prequalify` to
+     * disambiguate the return shape.
      */
-    readonly prequalify: PrequalifyCallable;
+    readonly prequalify: PrequalifyV3Callable | PrequalifyV2Callable | PrequalifyV1Callable;
+    /**
+     * `isa.zyins.prequalifyV2` — callable that runs the v2 prequalify
+     * decision (`POST /v2/prequalify`). Returns one `PlanOffer` per
+     * product with the best qualifying tier at the top level and
+     * alternates in `other_offers[]`.
+     *
+     * @deprecated Prefer `isa.zyins.prequalify` (v2 by default). Retained
+     * for one release as an alias of the canonical method so existing
+     * callers do not break.
+     */
+    readonly prequalifyV2: PrequalifyV2Callable;
+    /**
+     * `isa.zyins.prequalifyV1` — legacy callable that hits
+     * `POST /v1/prequalify`. Use only when pinned to `apiVersion: 'v1'`.
+     */
+    readonly prequalifyV1: PrequalifyV1Callable;
+    /**
+     * `isa.zyins.prequalifyV3` — callable that runs the v3 prequalify
+     * decision (`POST /v3/prequalify`). Returns one offer per product with
+     * a uniform `pricing[]` table — each row is a rate class carrying its
+     * own eligibility, premium, and rank. Array order of `pricing` is
+     * authoritative for display. Pin via `apiVersion: { prequalify: 'v3' }`
+     * to make `isa.zyins.prequalify` route here.
+     */
+    readonly prequalifyV3: PrequalifyV3Callable;
+    /**
+     * `isa.zyins.quote` — runs the quote decision against the version pinned
+     * on the parent `Isa`. Pin via `apiVersion: { quote: 'v3' }` to route to
+     * {@link quoteV3}; v1/v2 quote facades are not implemented.
+     */
+    readonly quote: QuoteV3Callable;
+    /**
+     * `isa.zyins.quoteV3` — callable that runs the v3 quote call
+     * (`POST /v3/quote`). Returns qualifying products grouped by requested
+     * amount with the same uniform `pricing[]` table as v3 prequalify.
+     */
+    readonly quoteV3: QuoteV3Callable;
     /**
      * `isa.zyins.products` — live product catalog built from server datasets.
      * `catalog()` fetches once and memoizes; `refresh()` forces a re-fetch.
@@ -3989,15 +4943,51 @@ export declare class ZyInsNamespace {
     /** `isa.zyins.logos` — carrier-logo asset lookup (public, no auth). */
     readonly logos: LogosFacade;
     constructor(opts: ZyInsNamespaceOptions);
-    /** Raw-response sibling of `prequalify`. */
-    prequalifyRaw: (request: PrequalifyRequest) => Promise<RawResponseResult<PrequalifyResult>>;
+    /** Raw-response sibling of {@link prequalify}; follows the pinned API version. */
+    prequalifyRaw: (request: PrequalifyRequest | PrequalifyV2Request | PrequalifyV3Request) => Promise<RawResponseResult<PrequalifyResult | PrequalifyV2Result | PrequalifyV3Result>>;
+    /** Raw-response sibling of `prequalifyV2`. */
+    prequalifyV2Raw: (request: PrequalifyV2Request) => Promise<RawResponseResult<PrequalifyV2Result>>;
+    /** Raw-response sibling of `prequalifyV3`. */
+    prequalifyV3Raw: (request: PrequalifyV3Request) => Promise<RawResponseResult<PrequalifyV3Result>>;
+    /** Raw-response sibling of `quoteV3`. */
+    quoteV3Raw: (request: QuoteV3Request) => Promise<RawResponseResult<QuoteV3Result>>;
 }
 /**
- * Shape of `isa.zyins.prequalify` — a callable for the typed prequalify
- * call. Returns `Envelope<PrequalifyResult>`.
+ * Shape of the v1 prequalify callable (`POST /v1/prequalify`). Returns
+ * `Envelope<PrequalifyResult>`.
+ *
+ * @deprecated The legacy v1 envelope shape disagrees with what the
+ * documented examples describe. Pin `apiVersion: 'v2'` (default) and
+ * call {@link PrequalifyV2Callable} instead.
  */
-export interface PrequalifyCallable {
+export interface PrequalifyV1Callable {
     (request: PrequalifyRequest): Promise<Envelope<PrequalifyResult>>;
+}
+/**
+ * @deprecated Renamed to {@link PrequalifyV1Callable}. Retained as an
+ * alias for one release so existing callers keep compiling.
+ */
+export type PrequalifyCallable = PrequalifyV1Callable;
+/**
+ * Shape of `isa.zyins.prequalifyV2` — a callable for the typed v2
+ * prequalify call. Returns `Envelope<PrequalifyV2Result>`.
+ */
+export interface PrequalifyV2Callable {
+    (request: PrequalifyV2Request): Promise<Envelope<PrequalifyV2Result>>;
+}
+/**
+ * Shape of `isa.zyins.prequalifyV3` — a callable for the typed v3
+ * prequalify call. Returns `Envelope<PrequalifyV3Result>`.
+ */
+export interface PrequalifyV3Callable {
+    (request: PrequalifyV3Request): Promise<Envelope<PrequalifyV3Result>>;
+}
+/**
+ * Shape of `isa.zyins.quoteV3` — a callable for the typed v3 quote call.
+ * Returns `Envelope<QuoteV3Result>`.
+ */
+export interface QuoteV3Callable {
+    (request: QuoteV3Request): Promise<Envelope<QuoteV3Result>>;
 }
 /** Top-level helper to add `.withRawResponse` siblings ergonomically. */
 export interface RawCallable<TArgs extends unknown[], TResult> {
@@ -4010,7 +5000,7 @@ export interface RawCallable<TArgs extends unknown[], TResult> {
  * underscore-prefixed siblings (`_requestId`, `_idempotencyKey`) so consumers
  * on either convention see the same values.
  */
-export declare function wrapEnvelope<T>(data: T, requestId: string, idempotencyKey?: string): Envelope<T>;
+export declare function wrapEnvelope<T>(data: T, requestId: string, idempotencyKey?: string, livemode?: boolean, retryAttempts?: number): Envelope<T>;
 /**
  * `isa.rapidsign.*` — RapidSign product namespace.
  *
@@ -4068,9 +5058,14 @@ export {};
 import { type ZyInsClient } from './client';
 import { type BrandingDetail } from './branding';
 import { type PreferencesLookupResult, type PreferencesSetRequest, type PreferencesSetResult } from './preferences';
-import { type CaseCreateRequest, type CaseCreateResult } from './cases';
+import { type CaseShareRequest, type CaseShareResult } from './cases';
 import { type CaseEmailRequest, type CaseEmailResult } from './case';
+import type { CaseRecord, CaseStorage, CaseStoragePutResult } from './cases/CaseStorage';
 import { type DatasetBundle, type DatasetsGetOptions } from './datasets';
+import { type DatasetBundleV3, type DatasetsV3GetOptions, type DatasetsV3NotModified } from './datasets-v3';
+import { type Concept, type ConditionConcept, type MedicationConcept, type UnknownConcept } from './reference';
+export { ReferenceFacade, ReferenceMedicationsFacade, ReferenceConditionsFacade, ReferenceConceptsFacade, ReferenceBundleCache, DefaultAutocorrector, DefaultMatchAlgorithm, DefaultAutocompleteAlgorithm, buildSuggestion, } from './reference/index';
+export type { Autocorrector, AutocorrectOptions, AutocorrectAppliedEvent, DefaultAutocorrectorOptions, MatchAlgorithm, DefaultMatchAlgorithmOptions, AutocompleteAlgorithm, AutocompleteOptions, DefaultAutocompleteAlgorithmOptions, Suggestion, ReferenceAdapters, } from './reference/index';
 import { type LicenseActivateRequest, type LicenseActivateResult, type LicenseCheckRequest, type LicenseCheckResult, type LicenseDeactivateRequest, type LicenseDeactivateResult } from './license';
 import { type IsaCredentialState } from './credentialState';
 import { type Transport } from './transport';
@@ -4084,16 +5079,50 @@ export declare class BrandingFacade {
     /** Fetch whitelabel branding for the calling license. */
     lookup(): Promise<BrandingDetail>;
 }
-/** `isa.zyins.datasets` — reference-data bundle for picker UIs. */
+/**
+ * `isa.zyins.datasets` — reference-data bundle for picker UIs.
+ *
+ * `get()` preserves the existing v2 bundle contract for callers that
+ * have not migrated their downstream parsing.
+ *
+ * `getV3()` is the v3 endpoint (`GET /v3/datasets`) and is the canonical
+ * SDK surface going forward. It returns typed `{id, name}` entities and
+ * id-keyed relationship maps — consumers never re-derive keys.
+ */
 export declare class DatasetsFacade {
     private readonly clientOnce;
-    constructor(clientOnce: ClientThunk);
+    private readonly onBundle?;
     /**
-     * Returns the full reference-data bundle (medications, conditions,
-     * products, etc.). Pass `{ include }` to fetch a subset.
+     * @param clientOnce  Lazy ZyInsClient accessor.
+     * @param onBundle    Optional sink invoked with every fresh
+     *                    `DatasetBundleV3` returned by `getV3()`. The
+     *                    `ZyInsNamespace` wires this to the shared
+     *                    `ReferenceBundleCache` so `isa.zyins.reference.match()`
+     *                    sees the catalog without any consumer plumbing.
+     */
+    constructor(clientOnce: ClientThunk, onBundle?: ((bundle: DatasetBundleV3) => void) | undefined);
+    /**
+     * Fetch the legacy v2 reference-data bundle.
      */
     get(options?: DatasetsGetOptions): Promise<DatasetBundle>;
+    /** Alias for `get()` retained for explicit migration call sites. */
+    getLegacy(options?: DatasetsGetOptions): Promise<DatasetBundle>;
+    /**
+     * Fetch the v3 reference catalog. Pass `{ include }` to narrow,
+     * `{ fields: 'meta' }` for the cheap names+versions check, or
+     * `{ ifNoneMatch: etag }` to revalidate.
+     *
+     * Returns either a `DatasetBundleV3` or a `DatasetsV3NotModified`
+     * marker when the server responded `304`; use `isNotModified()` to
+     * discriminate.
+     *
+     * On a fresh-bundle response, the `onBundle` callback (if supplied) is
+     * invoked synchronously before the promise resolves. The
+     * `ZyInsNamespace` uses this hook to warm the reference index.
+     */
+    getV3(options?: DatasetsV3GetOptions): Promise<DatasetBundleV3 | DatasetsV3NotModified>;
 }
+export type { Concept, ConditionConcept, MedicationConcept, UnknownConcept };
 /** `isa.zyins.preferences` — opaque per-license preferences document. */
 export declare class PreferencesFacade {
     private readonly clientOnce;
@@ -4125,18 +5154,55 @@ export declare class PreferencesFacade {
  */
 export declare class CasesFacade {
     private readonly clientOnce;
-    constructor(clientOnce: ClientThunk);
+    private readonly caseStorageOnce;
+    private readonly caseViewerBaseUrlOnce;
+    constructor(clientOnce: ClientThunk, caseStorageOnce: () => CaseStorage, caseViewerBaseUrlOnce: () => string);
     /**
-     * Share a case from quote input + optional analysis snapshot. Returns the
-     * shareable URL. Canonical per the locked spec.
+     * Persist a record through the resolved {@link CaseStorage} adapter.
+     * The default {@link ZeroKnowledgeCaseStorage} encrypts client-side and
+     * returns the per-record key as `recallToken`; carrier adapters may
+     * return a different token shape or omit it entirely. Treat the token
+     * as opaque.
+     *
+     * @example
+     * ```ts
+     * const { id, recallToken } = await isa.zyins.cases.save({
+     *   product: 'zyins',
+     *   payload: { input: currentCaseToJSON() },
+     * });
+     * ```
      */
-    share(request: CaseCreateRequest): Promise<CaseCreateResult>;
+    save(record: CaseRecord): Promise<CaseStoragePutResult>;
     /**
-     * @deprecated Use `share()`. `create()` is a back-compat alias that
-     * forwards to the same wire call; will be removed in v0.7.0. See
-     * `/tmp/sdk-syntax-proposal.md` Appendix B post-lock correction #2.
+     * Resolve a record from the configured {@link CaseStorage} adapter.
+     * `recallToken` is required iff `save()` returned one. Returns `null`
+     * when the record is absent — adapters do not distinguish "expired"
+     * from "never existed" by design.
      */
-    create(request: CaseCreateRequest): Promise<CaseCreateResult>;
+    recall(id: string, recallToken?: string): Promise<CaseRecord | null>;
+    /**
+     * Share an existing record by id + opaque recallToken. Built-in:
+     * assembles `${caseViewerBaseUrl}/c/<id>#k=<recallToken>`. Carrier
+     * adapters may not have URL semantics; in that case the recipient
+     * exchanges `(id, recallToken)` through whatever channel the carrier
+     * documents — the SDK has no shared URL contract for non-default
+     * adapters and returns `undefined` for the link.
+     *
+     * Overload 2 — the legacy `share(request)` shape — persists a quote
+     * snapshot and returns the assembled share link in one call. Retained
+     * for back-compat; new code prefers `save()` + `share(id, token)`.
+     */
+    share(id: string, recallToken?: string): {
+        id: string;
+        recallToken: string | undefined;
+        link: string | undefined;
+    };
+    share(request: CaseShareRequest): Promise<CaseShareResult>;
+    /**
+     * @deprecated Use `save()` (or the legacy `share(request)` overload).
+     * `create()` is a back-compat alias retained until v0.7.0.
+     */
+    create(request: CaseShareRequest): Promise<CaseShareResult>;
     /** Email a case PDF/artifact to a recipient. */
     email(request: CaseEmailRequest): Promise<CaseEmailResult>;
 }
@@ -4226,8 +5292,187 @@ export declare class LogosFacade {
     }): Promise<Blob>;
     get(carrier: string, opts?: LogosGetOptions): Promise<Blob | string>;
 }
-export {};
 //# sourceMappingURL=isaNamespaces.d.ts.map
+=== dist/zyins/isaOptions.d.ts ===
+/**
+ * Typed options-bag constructor sugar for `Isa`.
+ *
+ * The historic factories (`Isa.withBearer`, `Isa.withKeycode`,
+ * `Isa.forForm`, `Isa.authenticate`) remain the canonical primitives; this
+ * surface is the recommended path going forward and matches the
+ * cross-language SDK shape (C# `new Isa(new IsaOptions { Auth = … })`).
+ *
+ * ```ts
+ * const isa = await Isa.create({
+ *   auth: BearerAuth.fromToken('isa_live_…'),
+ *   engine: RemoteEngine.default,
+ *   timeout: 30_000,
+ *   apiVersion: 'v2',
+ * });
+ * ```
+ *
+ * `apiVersion` is immutable per-instance and pinned via the `Api-Version`
+ * request header. `'v2'` (default) routes `prequalify` to `/v2/prequalify`
+ * and returns the typed offer envelope. `'v1'` preserves the legacy
+ * contract for callers still wired against the old envelope.
+ */
+import type { CredentialStore } from '../core';
+import type { LicenseRefreshedListener } from './credentialState';
+import { type Transport } from './transport';
+import { type IsaApiVersion, type IsaApiVersionOverride, type IsaApiSurface, BundledApiVersions, resolveApiVersions } from './bundledApiVersions';
+export type { IsaApiVersion, IsaApiVersionOverride, IsaApiSurface };
+export { BundledApiVersions, resolveApiVersions };
+/**
+ * Tagged auth supplier accepted by {@link IsaCreateOptions.auth}. Each
+ * variant carries the material the matching factory requires; a single
+ * dispatch in `Isa.create` picks the correct legacy factory.
+ */
+export type IsaAuthSupplier = {
+    readonly kind: 'bearer';
+    readonly token?: string;
+} | {
+    readonly kind: 'license';
+    readonly keycode?: string;
+    readonly email?: string;
+    readonly orderId?: string;
+    readonly licenseKey?: string;
+    readonly credentialStore?: CredentialStore;
+    readonly onLicenseRefreshed?: LicenseRefreshedListener;
+} | {
+    readonly kind: 'form';
+    readonly formToken: string;
+} | {
+    readonly kind: 'session';
+    readonly sessionId: string;
+    readonly sessionSecret: string;
+};
+/**
+ * Bearer-auth supplier factory. Resolves a server-to-server `isa_live_…`
+ * token from the explicit argument or, when omitted, from `ISA_TOKEN`.
+ */
+export declare const BearerAuth: {
+    /** Construct from an explicit token. */
+    readonly fromToken: (token: string) => IsaAuthSupplier;
+    /** Construct from `ISA_TOKEN` at factory time. */
+    readonly fromEnv: () => IsaAuthSupplier;
+};
+/**
+ * License-auth supplier factory. Resolves `(keycode, email)` from the
+ * explicit args or, when omitted, from `ISA_LICENSE_KEYCODE` +
+ * `ISA_LICENSE_EMAIL`.
+ */
+export declare const LicenseAuth: {
+    /** Construct from explicit keycode + email. */
+    readonly fromKeycode: (keycode: string, email: string, extras?: Omit<Extract<IsaAuthSupplier, {
+        kind: "license";
+    }>, "kind" | "keycode" | "email">) => IsaAuthSupplier;
+    /** Construct from environment variables at factory time. */
+    readonly fromEnv: () => IsaAuthSupplier;
+};
+/** Form-token auth supplier factory (embedded eApp). */
+export declare const FormAuth: {
+    readonly fromToken: (formToken: string) => IsaAuthSupplier;
+};
+/**
+ * Tagged engine selector — every variant exposes the same product API
+ * surface so consumer code stays identical when targeting different
+ * deployments. Values are interpreted by `Isa.create` to set `baseUrl`
+ * (and proxyOrigin where applicable).
+ */
+export type IsaEngine = {
+    readonly kind: 'remote';
+    readonly baseUrl: string;
+} | {
+    readonly kind: 'local';
+    readonly baseUrl: string;
+} | {
+    readonly kind: 'proxy';
+    readonly proxyOrigin: string;
+} | {
+    readonly kind: 'in_memory';
+    readonly transport: Transport;
+};
+/** Production ZyINS endpoint (`https://zyins.isaapi.com`). */
+export declare const RemoteEngine: {
+    /** Default — production endpoint. */
+    readonly default: IsaEngine;
+    /** Construct from an explicit base URL (staging, region-specific). */
+    readonly at: (baseUrl: string) => IsaEngine;
+};
+/** Local engine binary — points at a developer or test endpoint. */
+export declare const LocalEngine: {
+    readonly at: (baseUrl: string) => IsaEngine;
+};
+/** Routes through the platform proxy (`/v1/call`). */
+export declare const ProxyEngine: {
+    readonly default: IsaEngine;
+    readonly at: (proxyOrigin: string) => IsaEngine;
+};
+/**
+ * In-process mock — bypasses HTTP entirely. Test-only; pass an injected
+ * transport to satisfy the same surface used by real engines.
+ */
+export declare const InMemoryEngine: IsaEngine;
+/**
+ * Construct an in-memory engine backed by a custom transport. Useful when
+ * tests want to assert on outbound request shape without the default
+ * transport's network hop.
+ */
+export declare function inMemoryEngineWith(transport: Transport): IsaEngine;
+/** Default per-call timeout in milliseconds. */
+export declare const DEFAULT_TIMEOUT_MS = 30000;
+/**
+ * Options accepted by `Isa.create()`. Every field is optional except
+ * `auth`; defaults match the production posture.
+ */
+export interface IsaCreateOptions {
+    /** Auth supplier. See {@link BearerAuth}, {@link LicenseAuth}, {@link FormAuth}. */
+    auth: IsaAuthSupplier;
+    /** Engine selector. Defaults to {@link RemoteEngine.default}. */
+    engine?: IsaEngine;
+    /** Per-call timeout in ms. Defaults to {@link DEFAULT_TIMEOUT_MS}. */
+    timeout?: number;
+    /**
+     * Per-surface API-version override. Surfaces absent from the override
+     * fall back to {@link BundledApiVersions}. There is no shorthand string
+     * form and no `default` key.
+     */
+    apiVersion?: IsaApiVersionOverride;
+    /** Viewer origin used to assemble case share links. */
+    caseViewerBaseUrl?: string;
+    /** Optional consumer build identifier for client-version negotiation. */
+    clientVersion?: string;
+    /** Transport override applied AFTER engine selection (test only). */
+    transport?: Transport;
+    /**
+     * Optional case-storage adapter. Defaults to
+     * {@link import('./cases/ZeroKnowledgeCaseStorage').ZeroKnowledgeCaseStorage}
+     * — client-side AES-256-GCM, opaque ciphertext on the wire, fragment
+     * key as the recall token. Carrier adapters may substitute a portal-
+     * backed store; the SDK only sees the {@link CaseStorage} interface.
+     */
+    caseStorage?: import('./cases/CaseStorage').CaseStorage;
+}
+/** Resolved view of `IsaCreateOptions` with defaults applied. */
+export interface ResolvedIsaOptions {
+    readonly auth: IsaAuthSupplier;
+    readonly engine: IsaEngine;
+    readonly timeoutMs: number;
+    /** Fully-resolved per-surface version map (override overlaid on bundled). */
+    readonly apiVersions: Readonly<Record<IsaApiSurface, IsaApiVersion>>;
+    readonly caseViewerBaseUrl: string | undefined;
+    readonly clientVersion: string | undefined;
+    readonly transport: Transport | undefined;
+    readonly baseUrl: string;
+    readonly proxyOrigin: string | undefined;
+    readonly caseStorage: import('./cases/CaseStorage').CaseStorage | undefined;
+}
+/**
+ * Resolve `IsaCreateOptions` into a fully-defaulted view. Pure — no side
+ * effects, safe to call from constructors and tests alike.
+ */
+export declare function resolveIsaOptions(opts: IsaCreateOptions): ResolvedIsaOptions;
+//# sourceMappingURL=isaOptions.d.ts.map
 === dist/zyins/license.d.ts ===
 /**
  * Tier 3 license operations — bootstrap endpoints at
@@ -4477,6 +5722,35 @@ export declare class LogosSubClient {
     get(carrier: string, opts?: LogosGetOptions): Promise<Blob | string>;
 }
 //# sourceMappingURL=logos.d.ts.map
+=== dist/zyins/planInfo.d.ts ===
+import type { OfferPlanInfo, OfferPlanInfoLegacy } from './prequalify-v2-types';
+type PlanInfoCoercion = {
+    array: OfferPlanInfo;
+    legacy?: OfferPlanInfoLegacy;
+};
+/**
+ * Coerce either plan-info wire shape into the typed array surface plus a
+ * legacy-map mirror.
+ */
+export declare function coercePlanInfo(raw: unknown): PlanInfoCoercion;
+export {};
+//# sourceMappingURL=planInfo.d.ts.map
+=== dist/zyins/planInfoLabel.d.ts ===
+/**
+ * Title Case label derivation for plan-info keys.
+ *
+ * The post-zyins#349 wire shape carries a server-emitted `label` per item
+ * — used verbatim. For pre-#349 bodies (legacy `Record<string, string[]>`)
+ * the SDK upconverts to the typed array surface and synthesizes a label
+ * by Title-Casing the snake_case key so downstream UIs see one type only.
+ *
+ * Special-cases the well-known `eapp` token to `eApp` to match the
+ * server's canonical capitalization. All other tokens follow the generic
+ * "split on `_` / `-`, capitalize each word" rule.
+ */
+/** Title-Case a snake_case / kebab-case plan-info key. */
+export declare function titleCaseLabel(key: string): string;
+//# sourceMappingURL=planInfoLabel.d.ts.map
 === dist/zyins/preferences.d.ts ===
 /**
  * Tier 3 preferences operations — `GET /v2/preferences/restore` + `POST /v2/preferences/backup`.
@@ -4516,6 +5790,481 @@ export declare function lookup(ctx: PreferencesContext): Promise<PreferencesLook
 /** Upsert the caller's preferences document. */
 export declare function set(request: PreferencesSetRequest, ctx: PreferencesContext): Promise<PreferencesSetResult>;
 //# sourceMappingURL=preferences.d.ts.map
+=== dist/zyins/prequalify-v2-types.d.ts ===
+/**
+ * Typed value objects for `POST /v2/prequalify`. See `prequalify-v2.ts`
+ * for the operation entry point. These shapes mirror the OpenAPI schemas
+ * (`PlanOffer`, `OtherOffer`, `OfferPremium`, ...) so consumers reading
+ * the public spec see the same names verbatim.
+ *
+ * Field-name policy:
+ *  - Wire-shape value objects preserve server snake_case (`rate_class`,
+ *    `other_offers`, `coverage_tier`, ...) — these are the OpenAPI fields.
+ *  - Top-level envelope metadata follows the `Envelope<T>` camelCase
+ *    convention (`requestId`, `idempotencyKey`).
+ */
+import { type Applicant } from './applicant';
+import { type CoverageInput } from './coverage';
+import { type ProductSelection, type ProductClassValue } from './product';
+import { type AuthContext } from './auth';
+import { type Transport } from './transport';
+import { type Clock } from '../core';
+/** Eligibility category — closed enum on qualifying offers, `null` otherwise. */
+export type OfferCategory = 'immediate' | 'graded' | 'rop' | null;
+/** Qualifies-or-not view for a single offer / tier. */
+export interface OfferEligibility {
+    /** True when the applicant qualifies at this category. */
+    eligible: boolean;
+    /** Closed enum of underwriting categories; `null` on ineligible offers. */
+    category: OfferCategory;
+    /** Carrier rate-class string verbatim (e.g. `"Preferred Plus"`); `null` when not segmented. */
+    coverage_tier: string | null;
+    /** Human-readable reasons — populated only when `eligible` is false. */
+    reasons: readonly string[];
+}
+/** The carrier underwriting an offer. */
+export interface OfferCarrier {
+    /** Stable opaque carrier id (UUID). */
+    id: string;
+    /** Display name for agent-facing UIs. */
+    name: string;
+    /** Absolute logo URL (PNG). */
+    logo_url: string;
+}
+/** The carrier product an offer represents. */
+export interface OfferProduct {
+    /** Stable opaque product id (UUID). */
+    id: string;
+    /** Human-readable, URL-safe stable identifier. */
+    slug: string;
+    /** Carrier-supplied product name. */
+    name: string;
+    /** Fully qualified display name (carrier + product). */
+    display_name: string;
+    /** Canonical product family — `fex`, `term`, `medsup`, `preneed`, `annuity`, ... */
+    type: string;
+    /** Wire token for the product family — equals `type` today. */
+    wire_token: string;
+}
+/**
+ * One server-canonical entry in {@link OfferPlanInfo}.
+ *
+ * `key` is the stable wire identifier (snake_case); `label` is the
+ * Title Case display string the server emits; `values` are the URL-decoded
+ * value strings in server-canonical order.
+ */
+export interface OfferPlanInfoItem {
+    /** Stable wire key (e.g. `eapp`, `telesales`, `rate_class_notes`). */
+    key: string;
+    /** Title Case display label, server-emitted (e.g. `eApp`, `Telesales`). */
+    label: string;
+    /** URL-decoded values for this key, in server-canonical display order. */
+    values: readonly string[];
+}
+/**
+ * Server-canonical, ordered, typed plan-info surface. Iterate the array
+ * directly to render the plan info section — labels are Title Case and
+ * values are URL-decoded.
+ *
+ * The wire shape is `Array<{key, label, values}>` post-zyins#349. The SDK
+ * upconverts a legacy `Record<string, string[]>` body to this shape so
+ * downstream consumers see exactly one type during the migration window.
+ */
+export type OfferPlanInfo = readonly OfferPlanInfoItem[];
+/**
+ * @deprecated Removed in next major. Use `plan_info` (typed array). This
+ * field mirrors the legacy map shape during the migration window.
+ */
+export type OfferPlanInfoLegacy = Record<string, readonly string[]>;
+/** A money value denominated in integer minor units. */
+export interface OfferMoney {
+    /** Integer minor units (US cents). */
+    cents: number;
+    /** Server-formatted display string — render verbatim. */
+    display: string;
+}
+/** Death benefit alias for `OfferMoney`. */
+export type OfferDeathBenefit = OfferMoney;
+/** Premium for an offer at a resolved (rate_class, mode), with full mode grid. */
+export interface OfferPremium {
+    /** Premium for the default mode and rate class, in minor units. */
+    cents: number;
+    /** Server-formatted display string for the default mode. */
+    display: string;
+    /** Carrier-defined default pricing mode verbatim. */
+    mode: string;
+    /** Carrier-defined rate class for this offer verbatim. */
+    rate_class: string;
+    /** Full grid of carrier-supported pricing modes for this rate class. */
+    modes: Record<string, OfferMoney>;
+}
+/**
+ * Sparse alternate-tier view nested in `PlanOffer.other_offers[]`. Carries
+ * only the fields that differ from the parent best-offer entry.
+ */
+export interface OtherOffer {
+    /** Server-assigned rank for this alternate; `null` when ineligible. */
+    rank: number | null;
+    /** Eligibility for this alternate category. */
+    eligibility: OfferEligibility;
+    /** Premium for this alternate; `null` when ineligible. */
+    premium: OfferPremium | null;
+}
+/** One best-offer-per-product entry in the v2 result. */
+export interface PlanOffer {
+    /** Discriminator — always `"plan_offer"`. */
+    object: 'plan_offer';
+    /** Stable v5-derived UUID for `(carrier_slug, product_slug)`. */
+    id: string;
+    /** Zero-based engine ordering index — UI should sort by `rank` instead. */
+    result_index: number;
+    /** Best qualifying rank for this product; `null` when ineligible. */
+    rank: number | null;
+    /** Eligibility for the best qualifying category. */
+    eligibility: OfferEligibility;
+    /** Carrier underwriting this offer. */
+    carrier: OfferCarrier;
+    /** Product this offer represents. */
+    product: OfferProduct;
+    /**
+     * Array of `{key, label, values}` items in server-canonical display order.
+     * Labels are Title Case; values are URL-decoded. Iterate the array
+     * directly to render the plan info section.
+     */
+    plan_info: OfferPlanInfo;
+    /**
+     * @deprecated Removed in next major. Use `plan_info` (typed array). This
+     * field mirrors the legacy map shape during the migration window.
+     */
+    plan_info_legacy?: OfferPlanInfoLegacy;
+    /** Death benefit for this offer. */
+    death_benefit: OfferDeathBenefit;
+    /** Premium for the best qualifying category; `null` when ineligible. */
+    premium: OfferPremium | null;
+    /** Alternate eligibility categories for the same product. */
+    other_offers: readonly OtherOffer[];
+    /** Account-scoped key/value bag echoed from the request, or `{}`. */
+    metadata: Record<string, unknown>;
+}
+/** v2-only knobs layered on top of v1 prequalify options. */
+export interface PrequalifyV2Options {
+    /** Restrict to a single product class (server `only_product_class`). */
+    onlyProductClass?: ProductClassValue;
+    /** Include one or more product classes (server `include_product_class`). */
+    includeProductClass?: readonly ProductClassValue[];
+    /** Server-side `min_rank` filter (string per server contract). */
+    minRank?: string;
+    /** Include products flagged unreleased. */
+    showUnreleased?: boolean;
+    /** Skip the health-based underwriting layer. */
+    skipHealthBasedUnderwriting?: boolean;
+    /** When true, surfaces declined products and declined alternates. Default false. */
+    includeIneligible?: boolean;
+}
+/** Inputs accepted by `prequalifyV2`. */
+export interface PrequalifyV2Request {
+    applicant: Applicant;
+    coverage: CoverageInput;
+    products: ProductSelection;
+    options?: PrequalifyV2Options;
+}
+/** Typed payload of the v2 `data` field plus echoed envelope metadata. */
+export interface PrequalifyV2Result {
+    /** One entry per product, sorted best-rank-first. */
+    plans: readonly PlanOffer[];
+    /** Pagination scaffolding — always `false` today. */
+    has_more: boolean;
+    /** Opaque next-page cursor; `null` when `has_more` is false. */
+    next_cursor: string | null;
+    /** Echoed envelope metadata. */
+    requestId: string;
+    /** Echoed envelope metadata. */
+    idempotencyKey: string;
+    /** Whether the response was produced against live data. */
+    livemode: boolean;
+    /** Number of SDK retry attempts before this call succeeded. */
+    retryAttempts: number;
+}
+/** Per-call context for the v2 prequalify operation. */
+export interface PrequalifyV2Context {
+    baseUrl: string;
+    auth: AuthContext;
+    transport: Transport;
+    clock: Clock;
+    /** Optional override; defaults to the derived key. */
+    idempotencyKey?: string;
+}
+//# sourceMappingURL=prequalify-v2-types.d.ts.map
+=== dist/zyins/prequalify-v2.d.ts ===
+/**
+ * Tier 3 prequalify v2 operation — `POST /v2/prequalify`.
+ *
+ * v2 returns the modern envelope shape with one `PlanOffer` per product;
+ * each entry carries the **best qualifying** category at the top level and
+ * alternate categories nested in `other_offers[]`. Ineligible products /
+ * tiers surface only when `include_ineligible: true`.
+ *
+ * Locked invariants (mirroring v1):
+ *   - The wire body is built by the SDK; the call site never sees it.
+ *   - The idempotency key is derived from sessionId:op:body-hash unless
+ *     overridden via `ctx.idempotencyKey`.
+ *   - Auth credentials live in HMAC headers only — never in the body.
+ *
+ * Typed value objects live in `prequalify-v2-types.ts`; this file owns the
+ * wire serialization, header building, and response parsing.
+ */
+import { type PrequalifyV2Context, type PrequalifyV2Request, type PrequalifyV2Result } from './prequalify-v2-types';
+export type { OfferCarrier, OfferCategory, OfferEligibility, OfferMoney, OfferPlanInfo, OfferPlanInfoItem, OfferPlanInfoLegacy, OfferPremium, OfferProduct, OtherOffer, PlanOffer, PrequalifyV2Context, PrequalifyV2Request, PrequalifyV2Result, } from './prequalify-v2-types';
+export type { OfferDeathBenefit, PrequalifyV2Options, } from './prequalify-v2-types';
+/**
+ * Run a v2 prequalify call. Builds the wire body, derives the idempotency
+ * key, signs the request, and parses the envelope into typed offers.
+ */
+export declare function prequalifyV2(request: PrequalifyV2Request, ctx: PrequalifyV2Context): Promise<PrequalifyV2Result>;
+//# sourceMappingURL=prequalify-v2.d.ts.map
+=== dist/zyins/prequalify-v3-types.d.ts ===
+/**
+ * Typed value objects for `POST /v3/prequalify` and `POST /v3/quote`.
+ * The v3 contract collapses v2's `premium` + `other_offers` split into
+ * one uniform `pricing[]` table per product. Money is always integer
+ * cents paired with a server-formatted `display` string; there is no
+ * string-money path anywhere.
+ *
+ * Shape over helpers: consumers iterate `offer.pricing` directly,
+ * filter rows on `row.eligibility.eligible`, and trust array order for
+ * display. There are no synthetic indexes, no client-side sort keys.
+ */
+import type { Applicant } from './applicant';
+import type { CoverageInput } from './coverage';
+import type { ProductSelection, ProductClassValue } from './product';
+import type { AuthContext } from './auth';
+import type { Transport } from './transport';
+import type { Clock } from '../core';
+import type { OfferCarrier, OfferProduct, OfferPlanInfo } from './prequalify-v2-types';
+/**
+ * Underwriting rank bucket. `null` reserved for the unlikely case the
+ * server cannot resolve any bucket; closed enum otherwise. This is NOT
+ * the carrier rate-class label — that lives on `V3PricingRow.rateClass`.
+ */
+export type V3EligibilityCategory = 'immediate' | 'graded' | 'rop' | 'other' | null;
+/** Eligibility for one row of the pricing table. */
+export interface V3Eligibility {
+    /** Underwriting rank bucket (closed enum), `null` when unresolved. */
+    readonly category: V3EligibilityCategory;
+    /** True when the applicant qualifies at this row. */
+    readonly eligible: boolean;
+    /**
+     * Generic, carrier-confidential reasons populated when `eligible` is
+     * false. Empty array when `eligible` is true. Per-tier specificity is
+     * intentionally not surfaced.
+     */
+    readonly reasons: readonly string[];
+}
+/** A money value in integer minor units paired with display string. */
+export interface V3Money {
+    readonly cents: number;
+    readonly display: string;
+}
+/** Premium for one row of the pricing table. */
+export interface V3Premium {
+    /** Premium for the default mode in integer cents. */
+    readonly cents: number;
+    /** Server-formatted display string for the default mode. */
+    readonly display: string;
+    /**
+     * The premium at the carrier's default pricing mode, as a self-
+     * contained `{cents, display}` pair. ALWAYS present. This is the
+     * apples-to-apples comparison value.
+     */
+    readonly default: V3Money;
+    /** Full grid of carrier modes (`MONTHLY-EFT`, `ANNUAL`, ...). */
+    readonly modes: Readonly<Record<string, V3Money>>;
+}
+/**
+ * One row of the uniform pricing table — a single rate class for one
+ * product. Replaces v2's `premium` + `other_offers` split: the best
+ * qualifying class and every alternate (qualifying or not) are sibling
+ * rows distinguished by `primary` and their own `eligibility`.
+ */
+export interface V3PricingRow {
+    /** Carrier-defined rate class verbatim. */
+    readonly rateClass: string;
+    /** True for the single best qualifying row per product. */
+    readonly primary: boolean;
+    /** Eligibility for this row. */
+    readonly eligibility: V3Eligibility;
+    /** Premium for this row. `undefined` when `eligibility.eligible` is false. */
+    readonly premium?: V3Premium;
+    /** Server-assigned display rank for this row; `null` when ineligible. */
+    readonly rank: number | null;
+}
+/** Death benefit for a v3 offer. */
+export type V3DeathBenefit = V3Money;
+/**
+ * One product's v3 prequalification result. Array order of `pricing`
+ * is authoritative for display — there is no `result_index`, no
+ * client-side sort key, no synthetic rank.
+ */
+export interface PrequalifyV3Offer {
+    readonly object: 'plan_offer';
+    /** Stable UUID v5 from `(carrier_slug, product_slug)`. */
+    readonly id: string;
+    /**
+     * True when the applicant qualifies for at least one rate class on
+     * this product. Convenience field — equivalent to
+     * `offer.pricing.some(row => row.eligibility.eligible)`.
+     */
+    readonly eligible: boolean;
+    readonly carrier: OfferCarrier;
+    readonly product: OfferProduct;
+    readonly planInfo: OfferPlanInfo;
+    readonly deathBenefit: V3DeathBenefit;
+    /**
+     * One row per rate class for this product. Array order is
+     * authoritative for display; exactly one row has `primary: true`
+     * when the product has any qualifying class.
+     */
+    readonly pricing: readonly V3PricingRow[];
+    readonly metadata: Readonly<Record<string, unknown>>;
+}
+/** Payload of the `data` field on the v3 prequalify envelope. */
+export interface PrequalifyV3Result {
+    readonly plans: readonly PrequalifyV3Offer[];
+    /** Echoed envelope metadata. */
+    readonly requestId: string;
+    /** Echoed envelope metadata. */
+    readonly idempotencyKey: string;
+    readonly livemode: boolean;
+    readonly retryAttempts: number;
+}
+/** Options layered on top of the v3 prequalify request. */
+export interface PrequalifyV3Options {
+    readonly onlyProductClass?: ProductClassValue;
+    readonly includeProductClass?: readonly ProductClassValue[];
+    readonly minRank?: string;
+    readonly showUnreleased?: boolean;
+    readonly skipHealthBasedUnderwriting?: boolean;
+    /**
+     * Default `true`. When `true`, products and rate-class rows the
+     * applicant does not qualify for surface with `eligible: false`.
+     */
+    readonly includeIneligible?: boolean;
+}
+/** Inputs accepted by `prequalifyV3`. */
+export interface PrequalifyV3Request {
+    readonly applicant: Applicant;
+    readonly coverage: CoverageInput;
+    readonly products: ProductSelection;
+    readonly options?: PrequalifyV3Options;
+}
+/** Per-call context for `prequalifyV3`. */
+export interface PrequalifyV3Context {
+    readonly baseUrl: string;
+    readonly auth: AuthContext;
+    readonly transport: Transport;
+    readonly clock: Clock;
+    readonly idempotencyKey?: string;
+}
+/** One product within a quote amount group. */
+export interface QuoteV3Product {
+    readonly object: 'plan_offer';
+    readonly id: string;
+    readonly eligible: boolean;
+    readonly carrier: OfferCarrier;
+    readonly product: OfferProduct;
+    readonly deathBenefit: V3DeathBenefit;
+    readonly pricing: readonly V3PricingRow[];
+}
+/** All qualifying products for one requested amount. */
+export interface QuoteV3Group {
+    /** The requested amount this group answers, as a string. */
+    readonly amount: string;
+    readonly products: readonly QuoteV3Product[];
+}
+/** Payload of the `data` field on the v3 quote envelope. */
+export interface QuoteV3Result {
+    readonly results: readonly QuoteV3Group[];
+    readonly requestId: string;
+    readonly idempotencyKey: string;
+    readonly livemode: boolean;
+    readonly retryAttempts: number;
+}
+/** Options for `quoteV3`. Same shape as the prequalify options. */
+export type QuoteV3Options = PrequalifyV3Options;
+/** Inputs accepted by `quoteV3`. */
+export interface QuoteV3Request {
+    readonly applicant: Applicant;
+    readonly coverage: CoverageInput;
+    readonly products: ProductSelection;
+    readonly options?: QuoteV3Options;
+}
+/** Per-call context for `quoteV3`. */
+export type QuoteV3Context = PrequalifyV3Context;
+//# sourceMappingURL=prequalify-v3-types.d.ts.map
+=== dist/zyins/prequalify-v3.d.ts ===
+/**
+ * Tier 3 prequalify v3 operation — `POST /v3/prequalify`.
+ *
+ * The v3 contract collapses v2's `premium` + `other_offers` into one
+ * uniform `pricing[]` table per product (see `prequalify-v3-types.ts`).
+ * Money is integer cents + server-formatted `display`; array order is
+ * authoritative; there is no `result_index`.
+ *
+ * Idempotency: every v3 mutating call requires a UUID v4 in
+ * `Idempotency-Key`. We auto-mint when the caller does not supply one.
+ */
+import { type Applicant } from './applicant';
+import { type CoverageInput } from './coverage';
+import { type AuthContext } from './auth';
+import { type Clock } from '../core';
+import { type PrequalifyV3Context, type PrequalifyV3Request, type PrequalifyV3Result, type V3PricingRow } from './prequalify-v3-types';
+export type { PrequalifyV3Context, PrequalifyV3Offer, PrequalifyV3Options, PrequalifyV3Request, PrequalifyV3Result, QuoteV3Context, QuoteV3Group, QuoteV3Options, QuoteV3Product, QuoteV3Request, QuoteV3Result, V3DeathBenefit, V3Eligibility, V3EligibilityCategory, V3Money, V3Premium, V3PricingRow, } from './prequalify-v3-types';
+/**
+ * Run a v3 prequalify call. Builds the wire body, mints a UUID v4 for
+ * `Idempotency-Key` if the caller did not pass one, signs the request,
+ * and parses the envelope into typed offers.
+ */
+export declare function prequalifyV3(request: PrequalifyV3Request, ctx: PrequalifyV3Context): Promise<PrequalifyV3Result>;
+/**
+ * Build the `PrequalifyV3Request` wire body — the envelope shape with
+ * `applicant`, `coverage`, `products[]` per the OpenAPI spec.
+ *
+ * v3 prequalify is a face-amount-only evaluation; multi-amount /
+ * monthly-budget callers must use `quoteV3`. We collapse multi-amount
+ * coverage to its first amount here so a misuse fails loudly server-side
+ * rather than silently dropping the others. `face_amount_cents` is
+ * integer cents (SDK input dollars × 100, rounded).
+ *
+ * `applicant.state` is moved into the coverage envelope per the v3
+ * schema. `applicant.zip`, `options.minRank`, `options.showUnreleased`,
+ * `options.skipHealthBasedUnderwriting`, `options.onlyProductClass`,
+ * `options.includeProductClass` are not part of the v3 prequalify
+ * envelope and are silently dropped — they survive on `/v3/quote` via
+ * the legacy flat body.
+ */
+export declare function serializeV3PrequalifyBody(request: PrequalifyV3Request): string;
+export declare function serializeWireBody(request: {
+    readonly applicant: Applicant;
+    readonly coverage: CoverageInput;
+    readonly products: PrequalifyV3Request['products'];
+    readonly options?: PrequalifyV3Request['options'];
+}): string;
+export declare function buildHeaders(args: {
+    readonly auth: AuthContext;
+    readonly body: string;
+    readonly idempotencyKey: string;
+    readonly clock: Clock;
+    readonly path: string;
+    /**
+     * Pinned API version for this call. When set, surfaces as the
+     * `Api-Version` request header so the server routes deterministically
+     * even if a transport-layer middleware mutates the URL.
+     */
+    readonly apiVersion?: string;
+}): Promise<Record<string, string>>;
+export declare function mintUuidV4(): string;
+export declare function coercePricingRow(raw: unknown): V3PricingRow;
+//# sourceMappingURL=prequalify-v3.d.ts.map
 === dist/zyins/prequalify.d.ts ===
 /**
  * Tier 3 prequalify operation.
@@ -4539,6 +6288,7 @@ import { type ProductSelection, type Product, type ProductClassValue } from './p
 import { type AuthContext } from './auth';
 import { type Transport } from './transport';
 import { type Clock } from '../core';
+import type { OfferPlanInfo, OfferPlanInfoLegacy } from './prequalify-v2-types';
 /** Optional per-call knobs that map onto the server's filter primitives. */
 export interface PrequalifyOptions {
     /** Restrict to a single product class (server `only_product_class`). */
@@ -4627,7 +6377,21 @@ export interface Plan {
     index: number;
     isExcluded: boolean;
     logoUrl: string;
-    planInfo: Record<string, readonly string[]>;
+    /**
+     * Array of `{key, label, values}` items in server-canonical display order.
+     * Labels are Title Case; values are URL-decoded. Iterate the array
+     * directly to render the plan info section.
+     *
+     * The wire body may carry either the typed array (post-zyins#349) or the
+     * legacy `Record<string, string[]>` map; the SDK upconverts the latter so
+     * downstream consumers see exactly one shape.
+     */
+    planInfo: OfferPlanInfo;
+    /**
+     * @deprecated Removed in next major. Use `planInfo` (typed array). This
+     * field mirrors the legacy map shape during the migration window.
+     */
+    planInfoLegacy?: OfferPlanInfoLegacy;
     /** Hydrated typed catalog product when `id` matches a known wire token. */
     product?: Product;
     /** Forward-compatible raw fields the server emits but we don't yet model. */
@@ -4650,6 +6414,8 @@ export interface SinglePrequalifyResult {
     meta: PrequalifyResultMeta;
     requestId: string;
     idempotencyKey: string;
+    livemode: boolean;
+    retryAttempts: number;
 }
 /** Result shape for a multi-amount prequalify call. */
 export interface MultiPrequalifyResult {
@@ -4662,6 +6428,8 @@ export interface MultiPrequalifyResult {
     meta: PrequalifyResultMeta;
     requestId: string;
     idempotencyKey: string;
+    livemode: boolean;
+    retryAttempts: number;
 }
 /** Union returned by `prequalify`. */
 export type PrequalifyResult = SinglePrequalifyResult | MultiPrequalifyResult;
@@ -4765,6 +6533,20 @@ export declare enum ProductType {
     Indexed = "indexed"
 }
 //# sourceMappingURL=productType.d.ts.map
+=== dist/zyins/quote-v3.d.ts ===
+/**
+ * Tier 3 quote v3 operation — `POST /v3/quote`.
+ *
+ * Shares the uniform `pricing[]` table shape with v3 prequalify (see
+ * `prequalify-v3-types.ts`). The quote endpoint groups qualifying
+ * products by requested amount for side-by-side comparison tables.
+ * Money is integer cents + display string; the v2 string-money map is
+ * gone in v3.
+ */
+import type { QuoteV3Context, QuoteV3Request, QuoteV3Result } from './prequalify-v3-types';
+export type { QuoteV3Context, QuoteV3Group, QuoteV3Options, QuoteV3Product, QuoteV3Request, QuoteV3Result, } from './prequalify-v3-types';
+export declare function quoteV3(request: QuoteV3Request, ctx: QuoteV3Context): Promise<QuoteV3Result>;
+//# sourceMappingURL=quote-v3.d.ts.map
 === dist/zyins/react/useZyIns.d.ts ===
 /**
  * React Tier 3 binding for the ZyINS client.
@@ -4802,6 +6584,733 @@ export declare function ZyInsProvider(props: {
  */
 export declare function useZyIns(): ZyInsClient;
 //# sourceMappingURL=useZyIns.d.ts.map
+=== dist/zyins/reference.d.ts ===
+/**
+ * Back-compat shim for `zyins/reference`. The canonical implementation
+ * now lives in `zyins/reference/` (see `./reference/index.ts`); this file
+ * re-exports the new types + adds the legacy bundle-taking helpers
+ * (`matchMedication(text, bundle)`, ...) used by callers that still
+ * thread a `DatasetBundleV3` through directly (e.g. the conformance
+ * corpus, the products catalog builder).
+ *
+ * New code should use `isa.zyins.reference.medications.match(text)` —
+ * the bundle is cached inside the facade.
+ */
+import type { DatasetBundleV3 } from './datasets-v3';
+import { buildUnknownConcept } from './reference/referenceIndex';
+import { _makeKey } from './reference/_makeKey';
+import { type Concept, type ConditionConcept, type MedicationConcept, type UnknownConcept } from './reference/Concept';
+export { Sort } from './reference/Sort';
+export type { Concept, ConceptKind, ConditionConcept, MedicationConcept, UnknownConcept, } from './reference/Concept';
+/**
+ * Resolve free text against the medication catalog using an explicit
+ * bundle. Returns a `MedicationConcept` on a hit; returns an unknown
+ * handle on a miss. Never rejects.
+ *
+ * Prefer the facade form `isa.zyins.reference.medications.match(text)`
+ * which manages the bundle for you.
+ */
+export declare function matchMedication(text: string, bundle: DatasetBundleV3): MedicationConcept | UnknownConcept;
+/**
+ * Resolve free text against the condition catalog using an explicit
+ * bundle. Returns a `ConditionConcept` on a hit; returns an unknown
+ * handle on a miss. Never rejects.
+ */
+export declare function matchCondition(text: string, bundle: DatasetBundleV3): ConditionConcept | UnknownConcept;
+/**
+ * Resolve free text against the catalog without specifying a kind.
+ * Tries conditions first ("the user typed a symptom"), then medications.
+ * Never rejects.
+ */
+export declare function matchConcept(text: string, bundle: DatasetBundleV3): Concept;
+/**
+ * Build an unknown handle directly. Exported for callers that need to
+ * synthesize a placeholder concept without a catalog.
+ */
+export { buildUnknownConcept };
+/**
+ * Testing hook — exported so the conformance corpus can assert that the
+ * internal normalizer matches the server-side `MakeKey`. Not part of the
+ * public consumer surface; lives behind a `__internal` prefix.
+ */
+export declare const __internal: {
+    readonly makeKey: typeof _makeKey;
+};
+//# sourceMappingURL=reference.d.ts.map
+=== dist/zyins/reference/AutocompleteAlgorithm.d.ts ===
+/**
+ * `AutocompleteAlgorithm` — text → ranked Suggestion[].
+ *
+ * Default: a direct port of the bpp2.0 picker hook
+ * (`src/sah-ui/Input/TextField/useAutocomplete.js`). Candidates are
+ * categorized into priority buckets, then sorted within each bucket by a
+ * `(frequency + 1) * scaleFactor` score where `scaleFactor` decreases
+ * as bucket priority drops.
+ *
+ * Bucket priorities (highest → lowest):
+ *   1. `startsWith` — option starts with the literal input
+ *      (sub-sort: option.wordCount ascending)
+ *   2. `sameWords` — identical word set + same word count
+ *   3. `independentWordIntersection` — every input word appears in option
+ *   4. `wordCountNoTolerance[d]` — superset; option has `d` extra words
+ *      (sub-sort: d ascending)
+ *   5. `sameNumWithTolerance` — same word count, different word sets
+ *   6. `wordCountWithTolerance[d]` — `d` words differ/extra
+ *      (sub-sort: d ascending)
+ *
+ * The promise wrapper exists so future implementations can do real I/O
+ * (server-side reranking, embedding lookup) without an API change; the
+ * default resolves synchronously.
+ *
+ * @example
+ * ```ts
+ * const ranked = await isa.zyins.medications.autocomplete('lisi', { limit: 5 });
+ * for (const s of ranked) console.log(s.rank, s.name, s.score);
+ * ```
+ */
+import type { Concept, ConceptKind } from './Concept';
+import { Sort } from './Sort';
+import { type Suggestion } from './Suggestion';
+/** Per-call options for {@link AutocompleteAlgorithm.rank}. */
+export interface AutocompleteOptions {
+    /** Maximum suggestions to return; default 25, max 250. */
+    readonly limit: number;
+    /** Restrict to these concept kinds. Empty/omitted = all kinds. */
+    readonly kinds: readonly ConceptKind[];
+    /**
+     * Per-id frequency table. Higher = more common. Missing keys score 0.
+     * When NO candidate has an entry, the algorithm skips the frequency
+     * boost entirely and falls back to bucket order.
+     */
+    readonly frequencies: ReadonlyMap<string, number>;
+    /**
+     * Result ordering. `MostCommonFirst` (default) keeps the bucketed
+     * relevance + frequency-boost order. `Alphabetical` keeps the same
+     * relevance FILTER — only matching candidates are returned — but emits
+     * them in a flat case-insensitive A→Z order by display name, for an
+     * A-Z toggle in a narrowing UI.
+     */
+    readonly sort?: Sort;
+}
+/**
+ * Rank a candidate pool against `query`. Always async — the default
+ * resolves synchronously, but the contract leaves room for I/O-backed
+ * rankers.
+ */
+export interface AutocompleteAlgorithm {
+    rank(query: string, candidates: readonly Concept[], options: AutocompleteOptions): Promise<Suggestion[]>;
+}
+/** Constructor options for {@link DefaultAutocompleteAlgorithm}. */
+export interface DefaultAutocompleteAlgorithmOptions {
+    /**
+     * When `true`, ONLY emit suggestions whose name starts with the
+     * literal input. Useful for `medications.match` where the picker
+     * displays an inline completion.
+     *
+     * Default `false` — populate all six buckets.
+     */
+    readonly startOnly?: boolean;
+    /** Optional version stamp surfaced via {@link DefaultAutocompleteAlgorithm.versionTag}. */
+    readonly versionTag?: string;
+}
+/**
+ * Default ranker. Bucket + frequency-boost algorithm ported from the
+ * bpp2.0 picker hook.
+ *
+ * @example
+ * ```ts
+ * const ranker = new DefaultAutocompleteAlgorithm({ startOnly: false });
+ * const out = await ranker.rank('high blood', candidates, {
+ *   limit: 10,
+ *   kinds: ['condition'],
+ *   frequencies: new Map([['HIGHBLOODPRESSURE', 4120]]),
+ * });
+ * ```
+ */
+export declare class DefaultAutocompleteAlgorithm implements AutocompleteAlgorithm {
+    private readonly startOnly;
+    private readonly _versionTag;
+    constructor(opts?: DefaultAutocompleteAlgorithmOptions);
+    /** Opaque tag tracking the version of this ranker. */
+    get versionTag(): string | undefined;
+    rank(query: string, candidates: readonly Concept[], options: AutocompleteOptions): Promise<Suggestion[]>;
+    /** Return a new ranker with selected fields overridden. */
+    clone(overrides?: Partial<DefaultAutocompleteAlgorithmOptions>): DefaultAutocompleteAlgorithm;
+}
+//# sourceMappingURL=AutocompleteAlgorithm.d.ts.map
+=== dist/zyins/reference/Autocorrector.d.ts ===
+/**
+ * `Autocorrector` — free-text typo correction for picker UIs.
+ *
+ * The interface accepts free text and returns the same text with known
+ * typos rewritten. Mode governs typing-state heuristics:
+ *   - `'keyup'`: live correction during typing. Skip a correction whose
+ *     RHS contains the typed token AND is longer — prevents `ASTHM` from
+ *     prematurely becoming `ASTHMA` while still typing.
+ *   - `'submit'`: post-commit correction. Skip a correction whose RHS is
+ *     already present in the surrounding text — prevents
+ *     `HIGH CHOLESTEROL` from becoming `HIGH HIGH CHOLESTEROL`.
+ *
+ * Algorithm parity: the default implementation is a direct port of
+ * `bpp2.0/src/sah-ui/Input/TextField/useAutocorrect.js` (the n-gram
+ * sliding window over uppercase tokens). Semantically identical so the
+ * SDK can replace the bpp2.0 hook drop-in.
+ *
+ * @example
+ * ```ts
+ * // Domain-bound (typoMap pre-loaded from zyins datasets):
+ * const corrected = isa.zyins.autocorrector.correct('hyprtension', { mode: 'keyup' });
+ * // → 'HYPERTENSION'
+ *
+ * // Custom typo map (top-level kernel):
+ * const corrector = isa.autocorrector.create({
+ *   typoMap: new Map([['HYPRTENSION', 'HYPERTENSION']]),
+ * });
+ * corrector.correct('hyprtension', { mode: 'submit' });
+ * ```
+ *
+ * Substitution: replace via {@link DefaultAutocorrector.clone} or pass
+ * a custom `Autocorrector` to {@link Isa.withKeycode}.
+ */
+export interface Autocorrector {
+    /**
+     * Apply typo corrections to free-text input.
+     *
+     * Never throws. Empty input returns empty. Trailing whitespace on the
+     * input is preserved on the output so cursor positioning in a text
+     * field remains stable across edits.
+     */
+    correct(text: string, options: AutocorrectOptions): string;
+}
+/** Mode + per-call options for {@link Autocorrector.correct}. */
+export interface AutocorrectOptions {
+    /**
+     * Typing-state mode. `'keyup'` for live correction during typing;
+     * `'submit'` for post-commit (blur, enter, form submit) correction.
+     */
+    readonly mode: 'keyup' | 'submit';
+}
+/** Event emitted by {@link DefaultAutocorrector.onApplied}. */
+export interface AutocorrectAppliedEvent {
+    /** Pre-correction input, verbatim. */
+    readonly input: string;
+    /** Post-correction output. */
+    readonly output: string;
+    /** Mode the consumer passed. */
+    readonly mode: 'keyup' | 'submit';
+}
+/** Constructor options for {@link DefaultAutocorrector}. */
+export interface DefaultAutocorrectorOptions {
+    /**
+     * Map of UPPERCASE input → UPPERCASE correction. Keys MUST be the
+     * normalized form (uppercase tokens, joined by a single space).
+     * Conventionally sourced from
+     * `isa.zyins.datasets.spellingCorrections.items`.
+     */
+    readonly typoMap: ReadonlyMap<string, string>;
+    /**
+     * Optional version stamp for the typo map. Surface via {@link
+     * DefaultAutocorrector.versionTag} so consumers can detect a stale
+     * binding and refresh it.
+     */
+    readonly versionTag?: string;
+    /**
+     * Optional sink invoked whenever a correction actually changes the
+     * text. Useful for analytics ("user typed X, we corrected to Y").
+     * Fires AFTER the text is computed and BEFORE `correct()` returns.
+     */
+    readonly onApplied?: (event: AutocorrectAppliedEvent) => void;
+}
+/**
+ * Default autocorrector. Implements the n-gram sliding-window algorithm
+ * from the bpp2.0 picker hook.
+ *
+ * Single-threaded, synchronous, dependency-free. Safe to share across
+ * concurrent calls — the instance holds no mutable per-call state.
+ *
+ * @example
+ * ```ts
+ * const corrector = new DefaultAutocorrector({
+ *   typoMap: new Map([['HYPRTENSION', 'HYPERTENSION']]),
+ *   versionTag: '2026.05.29',
+ *   onApplied: (e) => analytics.track('autocorrect', e),
+ * });
+ *
+ * corrector.correct('hyprtension', { mode: 'submit' });
+ * // → 'HYPERTENSION'
+ *
+ * // Replace the typo map without losing the listener:
+ * const next = corrector.clone({ typoMap: freshMap, versionTag: '2026.06.01' });
+ * ```
+ */
+export declare class DefaultAutocorrector implements Autocorrector {
+    private readonly typoMap;
+    private readonly _versionTag;
+    private readonly _onApplied;
+    constructor(opts: DefaultAutocorrectorOptions);
+    /** Opaque tag tracking the version of the typo map this corrector binds. */
+    get versionTag(): string | undefined;
+    /**
+     * Apply typo corrections.
+     *
+     * Mirrors the bpp2.0 algorithm:
+     *   1. Uppercase the input; tokenize on whitespace.
+     *   2. For window size 1..wordCount, slide every contiguous n-gram.
+     *   3. Look up the n-gram in `typoMap`. Apply guard for the mode.
+     *   4. Replace the matched span; mark positions consumed.
+     *   5. Fill non-matched positions with the original (uppercased) word.
+     *   6. Reassemble with single-space separator; preserve trailing space.
+     */
+    correct(text: string, options: AutocorrectOptions): string;
+    /**
+     * Return a new corrector with selected fields overridden. Useful for
+     * swapping the typo map after a fresh dataset bundle arrives without
+     * losing the `onApplied` sink.
+     *
+     * @example
+     * ```ts
+     * const fresh = corrector.clone({ typoMap: nextMap, versionTag: '2026.06.01' });
+     * ```
+     */
+    clone(overrides?: Partial<DefaultAutocorrectorOptions>): DefaultAutocorrector;
+}
+//# sourceMappingURL=Autocorrector.d.ts.map
+=== dist/zyins/reference/Concept.d.ts ===
+/**
+ * Public Concept handle returned by `reference.*.match()`.
+ *
+ * `match()` never rejects. Unknown input text returns a handle with
+ * `kind: 'unknown'`, `isKnown: false`, `id: null`, and `inputText`
+ * preserved verbatim — downstream engine expansion handles the unknown
+ * path; an unmatched term is not an error.
+ *
+ * Symmetric traversal: a `MedicationConcept` exposes `.conditions(sort?)`
+ * (which conditions is this med typically prescribed for); a
+ * `ConditionConcept` exposes `.medications(sort?)`. Both default to
+ * `Sort.MostCommonFirst`.
+ *
+ * `aliases` is intentionally absent. Aliases are resolved server-side and
+ * not surfaced; consumers compare on `id` (use `Concept.equals`).
+ */
+import type { Sort } from './Sort';
+/** Discriminator on a concept handle. */
+export type ConceptKind = 'medication' | 'condition' | 'unknown';
+export interface Concept {
+    /**
+     * Opaque entity identifier. Today equals the server-side `make_key`
+     * normalized form (e.g. `HIGHBLOODPRESSURE`); tomorrow may be
+     * `cond_<ULID>` / `med_<ULID>`. Treat as a stable opaque token.
+     * `null` when `kind === 'unknown'`.
+     */
+    readonly id: string | null;
+    /**
+     * Human-readable display name from the catalog. When `isKnown` is
+     * false, this falls back to `inputText` so the UI always has
+     * something to render.
+     */
+    readonly name: string;
+    /** Discriminator. `'unknown'` when `isKnown` is false. */
+    readonly kind: ConceptKind;
+    /** Whether the input text matched a known catalog entity. */
+    readonly isKnown: boolean;
+    /** The original input text passed to `match()`. Preserved verbatim. */
+    readonly inputText: string;
+    /**
+     * Conditions associated with this concept. Defined on medication
+     * handles; on a condition or unknown handle returns an empty array.
+     * Default sort: `Sort.MostCommonFirst`.
+     */
+    conditions(sort?: Sort): readonly ConditionConcept[];
+    /**
+     * Medications associated with this concept. Defined on condition
+     * handles; on a medication or unknown handle returns an empty array.
+     * Default sort: `Sort.MostCommonFirst`.
+     */
+    medications(sort?: Sort): readonly MedicationConcept[];
+    /**
+     * Id-based equality: two concepts are equal when both are `isKnown`
+     * and share the same `id`. Two unknown handles are never equal — they
+     * have no stable identity. Case-insensitive input (`'INSULIN'` vs
+     * `'insulin'`) resolves to the same `id`, so equality holds.
+     */
+    equals(other: Concept): boolean;
+}
+/** A `Concept` whose `kind` is statically known to be `'medication'`. */
+export interface MedicationConcept extends Concept {
+    readonly kind: 'medication';
+}
+/** A `Concept` whose `kind` is statically known to be `'condition'`. */
+export interface ConditionConcept extends Concept {
+    readonly kind: 'condition';
+}
+/** A `Concept` whose `kind` is statically known to be `'unknown'`. */
+export interface UnknownConcept extends Concept {
+    readonly kind: 'unknown';
+    readonly isKnown: false;
+    readonly id: null;
+}
+//# sourceMappingURL=Concept.d.ts.map
+=== dist/zyins/reference/index.d.ts ===
+/**
+ * `isa.zyins.reference` — typed reference catalog access.
+ *
+ * Three pluggable adapters back this facade:
+ *   - {@link Autocorrector} — `correct(text, { mode })`. Default: ngram
+ *     sliding window over the bundle's `spellingCorrections`.
+ *   - {@link MatchAlgorithm} — `match(text, candidates)`. Default:
+ *     `make_key` normalize + exact lookup.
+ *   - {@link AutocompleteAlgorithm} — `rank(text, candidates, options)`.
+ *     Default: bucketed frequency-boost (ported from the bpp2.0 picker).
+ *
+ * All three default to the bundle-bound implementations; consumers swap
+ * any of them via the `Isa.withKeycode` constructor options.
+ *
+ * @example
+ * ```ts
+ * const isa = await Isa.withKeycode({
+ *   keycode, email,
+ *   autocompleteAlgorithm: new MyEmbeddingRanker(),
+ * });
+ * const ranked = await isa.zyins.medications.autocomplete('lisi', { limit: 5 });
+ * ```
+ */
+import type { DatasetBundleV3 } from '../datasets-v3';
+import { ReferenceIndex } from './referenceIndex';
+import { type Concept, type ConditionConcept, type MedicationConcept, type UnknownConcept } from './Concept';
+import { type Autocorrector } from './Autocorrector';
+import { type MatchAlgorithm } from './MatchAlgorithm';
+import { type AutocompleteAlgorithm, type AutocompleteOptions } from './AutocompleteAlgorithm';
+import { type Suggestion } from './Suggestion';
+/**
+ * Shared bundle cache. One instance per `ZyInsNamespace`; the
+ * `DatasetsFacade.getV3()` call writes the latest bundle here, and the
+ * `ReferenceFacade` reads from it lazily.
+ *
+ * The cache also memoizes the derived typo map + frequency map so
+ * repeated `autocorrector.correct()` / `autocomplete()` calls do not
+ * rebuild them per call.
+ */
+export declare class ReferenceBundleCache {
+    private bundle;
+    private index;
+    private typoMap;
+    private frequencyMap;
+    /** Push the freshly-fetched bundle. */
+    setBundle(bundle: DatasetBundleV3): void;
+    /** Read the active index, building it on demand. */
+    currentIndex(): ReferenceIndex | undefined;
+    /** Read (build-on-demand) the bundle-derived typo map. */
+    currentTypoMap(): ReadonlyMap<string, string>;
+    /** Read (build-on-demand) the per-id aggregate frequency map. */
+    currentFrequencyMap(): ReadonlyMap<string, number>;
+    /** Read the active bundle version signal (etag-or-version). */
+    currentVersionTag(): string | undefined;
+}
+/** Adapter overrides accepted by {@link ReferenceFacade}. */
+export interface ReferenceAdapters {
+    /** Replace the default autocorrector. Omit to use the bundle-bound default. */
+    readonly autocorrector?: Autocorrector;
+    /** Replace the default matcher. */
+    readonly matchAlgorithm?: MatchAlgorithm;
+    /** Replace the default ranker. */
+    readonly autocompleteAlgorithm?: AutocompleteAlgorithm;
+}
+/**
+ * The `isa.zyins.reference` facade.
+ *
+ * Construction takes a `ReferenceBundleCache` shared with `DatasetsFacade`
+ * — the namespace wires them up so `datasets.getV3()` warms `reference`
+ * automatically; no consumer-side plumbing.
+ */
+export declare class ReferenceFacade {
+    private readonly cache;
+    /** Namespaced sort enum. `Sort.MostCommonFirst | Alphabetical`. */
+    static readonly Sort: Readonly<{
+        readonly MostCommonFirst: "most_common_first";
+        readonly Alphabetical: "alphabetical";
+    }>;
+    /** Instance accessor for `Sort`. */
+    readonly Sort: Readonly<{
+        readonly MostCommonFirst: "most_common_first";
+        readonly Alphabetical: "alphabetical";
+    }>;
+    readonly medications: ReferenceMedicationsFacade;
+    readonly conditions: ReferenceConditionsFacade;
+    readonly concepts: ReferenceConceptsFacade;
+    /** Domain-bound autocorrector. Pre-wired to the bundle's spelling table. */
+    readonly autocorrector: Autocorrector;
+    /** Domain-bound matcher. Pre-wired to the bundle's catalog. */
+    readonly matcher: MatchAlgorithm;
+    constructor(cache: ReferenceBundleCache, adapters?: ReferenceAdapters);
+}
+/** `isa.zyins.reference.medications` / `isa.zyins.medications`. */
+export declare class ReferenceMedicationsFacade {
+    private readonly cache;
+    private readonly matcher;
+    private readonly ranker;
+    constructor(cache: ReferenceBundleCache, matcher: MatchAlgorithm, ranker: AutocompleteAlgorithm);
+    /**
+     * Resolve free text to a single medication. Sync; never throws.
+     * Unknown input or unprimed bundle returns an `UnknownConcept` with
+     * `inputText` preserved.
+     *
+     * @example
+     * ```ts
+     * const med = isa.zyins.medications.match('lisinopril');
+     * for (const cond of med.conditions(Sort.MostCommonFirst)) console.log(cond.name);
+     * ```
+     */
+    match(text: string): MedicationConcept | UnknownConcept;
+    /**
+     * Rank medications against `query`. Default: bucketed frequency boost.
+     *
+     * @example
+     * ```ts
+     * const top5 = await isa.zyins.medications.autocomplete('lisi', { limit: 5 });
+     * ```
+     */
+    autocomplete(query: string, options?: Partial<AutocompleteOptions>): Promise<Suggestion[]>;
+    /** Enumerate every known medication. Empty until the bundle is primed. */
+    list(): MedicationConcept[];
+}
+/** `isa.zyins.reference.conditions` / `isa.zyins.conditions`. */
+export declare class ReferenceConditionsFacade {
+    private readonly cache;
+    private readonly matcher;
+    private readonly ranker;
+    constructor(cache: ReferenceBundleCache, matcher: MatchAlgorithm, ranker: AutocompleteAlgorithm);
+    match(text: string): ConditionConcept | UnknownConcept;
+    autocomplete(query: string, options?: Partial<AutocompleteOptions>): Promise<Suggestion[]>;
+    list(): ConditionConcept[];
+}
+/** `isa.zyins.reference.concepts`. */
+export declare class ReferenceConceptsFacade {
+    private readonly cache;
+    private readonly matcher;
+    private readonly ranker;
+    constructor(cache: ReferenceBundleCache, matcher: MatchAlgorithm, ranker: AutocompleteAlgorithm);
+    match(text: string): Concept;
+    matchMany(texts: readonly string[]): Concept[];
+    /**
+     * Rank across all concept kinds. Pass `kinds` to narrow; omit for both.
+     */
+    autocomplete(query: string, options?: Partial<AutocompleteOptions>): Promise<Suggestion[]>;
+}
+export { Sort } from './Sort';
+export type { Concept, ConceptKind, ConditionConcept, MedicationConcept, UnknownConcept } from './Concept';
+export { type Autocorrector, type AutocorrectOptions, type AutocorrectAppliedEvent, type DefaultAutocorrectorOptions, DefaultAutocorrector } from './Autocorrector';
+export { type MatchAlgorithm, type DefaultMatchAlgorithmOptions, DefaultMatchAlgorithm } from './MatchAlgorithm';
+export { type AutocompleteAlgorithm, type AutocompleteOptions, type DefaultAutocompleteAlgorithmOptions, DefaultAutocompleteAlgorithm } from './AutocompleteAlgorithm';
+export { type Suggestion, buildSuggestion } from './Suggestion';
+//# sourceMappingURL=index.d.ts.map
+=== dist/zyins/reference/MatchAlgorithm.d.ts ===
+/**
+ * `MatchAlgorithm` — text → single Concept resolution.
+ *
+ * The default normalizes input via `_makeKey` (uppercase + strip non-
+ * alphanumeric) and looks up the resulting key against candidate names
+ * and ids. This matches the server-side `MakeKey` so SDK ↔ server
+ * identity holds while still supporting opaque catalog ids.
+ *
+ * Substitute when:
+ *   - The product needs fuzzy matching (Levenshtein, trigram, etc.).
+ *   - The catalog uses a different normalization (locale-aware
+ *     casefolding, transliteration).
+ *   - You want to wholesale-replace the lookup path while keeping the
+ *     symmetric-traversal accessors.
+ *
+ * @example
+ * ```ts
+ * // Replace the default at construction time:
+ * const isa = await Isa.withKeycode({
+ *   keycode, email,
+ *   matchAlgorithm: new MyFuzzyMatcher({ threshold: 0.8 }),
+ * });
+ * ```
+ */
+import type { Concept, UnknownConcept } from './Concept';
+/**
+ * Resolve free text to exactly one `Concept` from a candidate pool.
+ *
+ * Implementations MUST be pure and synchronous. Return an `UnknownConcept`
+ * for misses; never throw on unknown input.
+ */
+export interface MatchAlgorithm {
+    /**
+     * Resolve `query` against `candidates`. Returns the single best Concept
+     * or an `UnknownConcept` if no candidate matches.
+     *
+     * Candidates are typically the catalog's full medication / condition
+     * list; the algorithm chooses scope. Order of candidates is NOT
+     * significant to the default; alternate implementations MAY rely on
+     * it (e.g. "first match wins").
+     */
+    match(query: string, candidates: readonly Concept[]): Concept | UnknownConcept;
+}
+/** Constructor options for {@link DefaultMatchAlgorithm}. */
+export interface DefaultMatchAlgorithmOptions {
+    /** Optional version stamp surfaced via {@link DefaultMatchAlgorithm.versionTag}. */
+    readonly versionTag?: string;
+}
+/**
+ * Default matcher. Normalizes query, candidate names, and candidate IDs via the
+ * server-mirrored `make_key`, then does an exact-equality lookup.
+ *
+ * Synchronous, dependency-free, safe to share across concurrent calls.
+ *
+ * @example
+ * ```ts
+ * const matcher = new DefaultMatchAlgorithm({ versionTag: 'v1' });
+ * const hit = matcher.match('high blood pressure', conditions);
+ * // hit.id === 'HIGHBLOODPRESSURE'
+ * ```
+ */
+export declare class DefaultMatchAlgorithm implements MatchAlgorithm {
+    private readonly _versionTag;
+    constructor(opts?: DefaultMatchAlgorithmOptions);
+    /** Opaque tag tracking the version of this matcher. */
+    get versionTag(): string | undefined;
+    match(query: string, candidates: readonly Concept[]): Concept | UnknownConcept;
+    /** Return a new matcher with selected fields overridden. */
+    clone(overrides?: Partial<DefaultMatchAlgorithmOptions>): DefaultMatchAlgorithm;
+}
+//# sourceMappingURL=MatchAlgorithm.d.ts.map
+=== dist/zyins/reference/referenceIndex.d.ts ===
+/**
+ * `ReferenceIndex` — text→id lookup + symmetric traversal over a single
+ * `DatasetBundleV3` snapshot (inline-row shape).
+ *
+ * Built once per bundle by `ReferenceBundleCache.currentIndex()` and
+ * retained for the lifetime of the bundle's `etag` / `version`. When a
+ * fresh bundle (different version signal) arrives the cache drops this
+ * index and rebuilds on the next `match()` call.
+ *
+ * Module-private. Consumers only ever see `Concept` handles via the
+ * `ReferenceFacade`.
+ */
+import type { DatasetBundleV3 } from '../datasets-v3';
+import { type Concept, type ConditionConcept, type MedicationConcept, type UnknownConcept } from './Concept';
+export declare class ReferenceIndex {
+    private readonly conditionById;
+    private readonly conditionByKey;
+    private readonly medicationById;
+    private readonly medicationByKey;
+    /** Bundle reference retained for traversal lookups. */
+    private readonly bundle;
+    constructor(bundle: DatasetBundleV3);
+    get versionSignal(): string;
+    listMedications(): MedicationConcept[];
+    listConditions(): ConditionConcept[];
+    lookupMedication(text: string): MedicationConcept | UnknownConcept;
+    lookupCondition(text: string): ConditionConcept | UnknownConcept;
+    lookupConcept(text: string): Concept;
+    /** Rebuild the matched catalog concept while preserving caller input text. */
+    lookupResolvedConcept(result: Concept, inputText: string): Concept;
+    private resolveMedication;
+    private resolveCondition;
+    private buildMedicationConcept;
+    private buildConditionConcept;
+}
+export declare function buildUnknownConcept(inputText: string): UnknownConcept;
+//# sourceMappingURL=referenceIndex.d.ts.map
+=== dist/zyins/reference/Sort.d.ts ===
+/**
+ * Sort orders for the symmetric accessors on a `Concept`.
+ *
+ * Namespaced enum — consumers write `reference.Sort.MostCommonFirst` /
+ * `reference.Sort.Alphabetical`. No `Sort.Asc` / `Sort.Desc`, no closures,
+ * no string aliases. New sort orders ship as new enum members.
+ *
+ * The constant is `Object.freeze`-d so consumers cannot mutate the public
+ * surface at runtime.
+ */
+export declare const Sort: Readonly<{
+    /** Sort by descending prescription frequency from the v3 frequency graph. */
+    readonly MostCommonFirst: "most_common_first";
+    /** Sort alphabetically (case-insensitive) by display name. */
+    readonly Alphabetical: "alphabetical";
+}>;
+export type Sort = (typeof Sort)[keyof typeof Sort];
+//# sourceMappingURL=Sort.d.ts.map
+=== dist/zyins/reference/Suggestion.d.ts ===
+/**
+ * `Suggestion` — a scored, ranked autocomplete result.
+ *
+ * Extends `Concept` so consumers can treat a suggestion as a Concept handle
+ * (call `.medications(sort)` / `.conditions(sort)` directly) while still
+ * accessing the rank metadata that came out of `AutocompleteAlgorithm.rank()`.
+ *
+ * `score` is the raw `(frequency + 1) * scaleFactor` value the default
+ * algorithm produces; consumers MAY use it for tiebreaks or display, but
+ * MUST NOT compare scores across queries — they are query-relative.
+ *
+ * `matchedSpan` is the `[start, endExclusive)` indices on the option's
+ * display name where the query text matched. UI layers use this to bold
+ * the matched substring.
+ *
+ * `rank` is the 0-based index of the suggestion in the result list, before
+ * the consumer trims it. Useful for analytics ("position 0 selected") even
+ * after a paging slice.
+ *
+ * @example
+ * ```ts
+ * const ranked = await isa.zyins.medications.autocomplete('lisi', { limit: 5 });
+ * for (const s of ranked) {
+ *   console.log(s.rank, s.name, s.score, s.matchedSpan);
+ *   for (const cond of s.conditions(Sort.MostCommonFirst)) {
+ *     console.log('  -', cond.name);
+ *   }
+ * }
+ * ```
+ */
+import type { Concept } from './Concept';
+/**
+ * One ranked suggestion produced by an `AutocompleteAlgorithm`.
+ *
+ * Suggestions are immutable handles. The Concept methods on the suggestion
+ * delegate to the underlying catalog-backed handle that produced it.
+ */
+export interface Suggestion extends Concept {
+    /** Query-relative score; higher is better. Not comparable across queries. */
+    readonly score: number;
+    /**
+     * `[startInclusive, endExclusive)` indices on this suggestion's
+     * display `name` where the query matched. Use to highlight the
+     * matched substring in a picker UI.
+     *
+     * `[0, 0]` when there is no contiguous span (e.g. bucket-only match).
+     */
+    readonly matchedSpan: readonly [number, number];
+    /** 0-based position within the full ranked list. Stable per query. */
+    readonly rank: number;
+}
+/**
+ * Construct a `Suggestion` by decorating an existing `Concept` handle.
+ *
+ * The decorator preserves every Concept method by delegating; it never
+ * mutates the source handle. Callers MAY pass the same `Concept` to many
+ * suggestion records — each gets its own rank/score/span without aliasing.
+ */
+export declare function buildSuggestion(concept: Concept, meta: {
+    score: number;
+    matchedSpan: readonly [number, number];
+    rank: number;
+}): Suggestion;
+//# sourceMappingURL=Suggestion.d.ts.map
+=== dist/zyins/reference/_makeKey.d.ts ===
+/**
+ * Internal text→key normalizer.
+ *
+ * Mirrors Go's `MakeKey` in `go/zyins/models/makekey.go`: uppercase the
+ * string, then strip every character that is not ASCII alphanumeric.
+ * "High Blood Pressure" → "HIGHBLOODPRESSURE".
+ *
+ * This function is module-private. Consumers must use `reference.match()`
+ * and never compute keys themselves — the catalog id may change over time
+ * (today `HIGHBLOODPRESSURE`, tomorrow `cond_<ULID>`).
+ */
+export declare function _makeKey(text: string): string;
+//# sourceMappingURL=_makeKey.d.ts.map
 === dist/zyins/response.d.ts ===
 /** Shared response parsing helpers for ZyINS JSON endpoints. */
 export declare function parseJsonResponse(body: string, operation: string): unknown;
@@ -4812,6 +7321,10 @@ export declare function stringField(r: Record<string, unknown>, key: string): st
 export declare function firstStringField(r: Record<string, unknown>, keys: string[]): string;
 export declare function boolField(r: Record<string, unknown>, key: string): boolean;
 //# sourceMappingURL=response.d.ts.map
+=== dist/zyins/retryAttempts.d.ts ===
+export declare const SDK_RETRY_ATTEMPTS_HEADER = "x-isa-sdk-retry-attempts";
+export declare function retryAttemptsFromHeaders(headers: Record<string, string>): number;
+//# sourceMappingURL=retryAttempts.d.ts.map
 === dist/zyins/transport.d.ts ===
 /**
  * Transport facade for the Tier 3 ZyINS client.
@@ -4837,6 +7350,8 @@ export interface TransportRequest {
     headers: Record<string, string>;
     /** Serialized request body. Empty string for body-less verbs. */
     body: string;
+    /** Cancellation signal supplied by SDK timeout wrappers. */
+    signal?: AbortSignal;
 }
 /** Response shape the transport returns to the client. */
 export interface TransportResponse {
@@ -4853,6 +7368,20 @@ export type Transport = (request: TransportRequest) => Promise<TransportResponse
  */
 export declare function defaultTransport(fetchImpl?: typeof fetch): Transport;
 //# sourceMappingURL=transport.d.ts.map
+=== dist/zyins/v3Coercion.d.ts ===
+/** Shared v3 response coercion helpers for prequalify and quote parsing. */
+import { isRecord } from './response';
+import type { OfferCarrier, OfferProduct } from './prequalify-v2-types';
+import type { V3Money } from './prequalify-v3-types';
+export { isRecord };
+export declare const toStr: (v: unknown) => string;
+export declare const toNum: (v: unknown) => number;
+export declare const toBool: (v: unknown) => boolean;
+export declare const toNullableNum: (v: unknown) => number | null;
+export declare function coerceCarrier(raw: unknown): OfferCarrier;
+export declare function coerceProduct(raw: unknown): OfferProduct;
+export declare function coerceMoney(raw: unknown): V3Money;
+//# sourceMappingURL=v3Coercion.d.ts.map
 === dist/zyins/vue/useZyIns.d.ts ===
 /**
  * Vue 3 Tier 3 binding for the ZyINS client.
@@ -4884,3 +7413,47 @@ export declare function provideZyIns(config: ZyInsProviderConfig): ZyInsClient;
  */
 export declare function useZyIns(): ZyInsClient;
 //# sourceMappingURL=useZyIns.d.ts.map
+=== dist/__contract__.d.ts ===
+/**
+ * Public surface contract — compile-time assertions.
+ *
+ * This file is checked by `tsc --noEmit` (it lives under `src/**`, included
+ * by `tsconfig.json`) and exists purely as a guard. It compiles to nothing
+ * at runtime (no value exports). Each `type _<Name>` alias asserts that a
+ * specific named export from the public barrel exists with the expected
+ * shape; tsc fails the build the moment a guarded export is renamed,
+ * removed, or mistyped.
+ *
+ * This complements two pre-existing layers of drift detection:
+ *
+ *   1. `packages/ts/PUBLIC_API.txt` — snapshot of every dist `.d.ts` line.
+ *      Captures ANY shape change to ANY exported symbol; regenerated by
+ *      `scripts/sdk-public-api.sh regenerate` and diff-gated by CI
+ *      (`.github/workflows/sdk-public-api.yml`). Picks up additions
+ *      automatically. The primary surface guard.
+ *
+ *   2. `packages/ts/tests/conformance/locked-surface.test.ts` — vitest
+ *      type-level assertions citing the locked-spec section per check.
+ *      Documents WHY each symbol is locked. (Note: vitest's
+ *      `expectTypeOf` is loose by default — it documents intent but does
+ *      not enforce until `typecheck.enabled: true` lands; this file is
+ *      the tsc-strict tier.)
+ *
+ * This file's contribution is the strongest tier: assertions that tsc
+ * actually fails on. The motivation is the closed-PR #359 class of bug
+ * where a facade method snuck in under a SUFFIXED name (e.g. `shareV3`
+ * instead of `share`). The snapshot caught the new line, but a diff that
+ * only ADDS exports is easy to wave through; a tsc-enforced positive
+ * assertion on the canonical name makes that mistake compile-fail at the
+ * same instant.
+ *
+ * Adding to this contract: list a name only after the locked-spec calls
+ * for it. The `@ts-expect-error` markers on future symbols flip from
+ * "directive expected an error and got one" (green) to "directive
+ * expected an error and got none" (red) the moment the symbol is
+ * implemented — forcing whoever lands the implementation to remove the
+ * marker and replace it with a real assertion, locking the shipped
+ * signature.
+ */
+export {};
+//# sourceMappingURL=__contract__.d.ts.map

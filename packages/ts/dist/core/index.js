@@ -8,7 +8,7 @@
  * workspace protocol during development; the publish workflow pins
  * the workspace dep to a concrete sdk/core/v* tag at publish time.
  */
-export { resolveSubtle, arrayBufferToHex, resolveFetch, base64EncodeUtf8, systemClock, } from './internal/crypto';
+export { resolveSubtle, arrayBufferToHex, resolveFetch, base64EncodeUtf8, base64ToBytes, bytesToBase64, bytesToBase64Url, systemRandomBytes, systemClock, } from './internal/crypto';
 export * from './license/deviceAuth';
 export * from './problem-details/types';
 export * from './http/constants';

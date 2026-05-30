@@ -18,6 +18,7 @@ export const PROBLEM_DETAILS_CODES = [
   'not_found',
   'forbidden',
   'conflict',
+  'rate_limit_exceeded',
   'rate_limited',
   'internal_error',
   'service_unavailable',

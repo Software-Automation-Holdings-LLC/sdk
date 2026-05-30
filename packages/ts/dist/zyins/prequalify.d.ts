@@ -20,6 +20,7 @@ import { type ProductSelection, type Product, type ProductClassValue } from './p
 import { type AuthContext } from './auth';
 import { type Transport } from './transport';
 import { type Clock } from '../core';
+import type { OfferPlanInfo, OfferPlanInfoLegacy } from './prequalify-v2-types';
 /** Optional per-call knobs that map onto the server's filter primitives. */
 export interface PrequalifyOptions {
     /** Restrict to a single product class (server `only_product_class`). */
@@ -108,7 +109,21 @@ export interface Plan {
     index: number;
     isExcluded: boolean;
     logoUrl: string;
-    planInfo: Record<string, readonly string[]>;
+    /**
+     * Array of `{key, label, values}` items in server-canonical display order.
+     * Labels are Title Case; values are URL-decoded. Iterate the array
+     * directly to render the plan info section.
+     *
+     * The wire body may carry either the typed array (post-zyins#349) or the
+     * legacy `Record<string, string[]>` map; the SDK upconverts the latter so
+     * downstream consumers see exactly one shape.
+     */
+    planInfo: OfferPlanInfo;
+    /**
+     * @deprecated Removed in next major. Use `planInfo` (typed array). This
+     * field mirrors the legacy map shape during the migration window.
+     */
+    planInfoLegacy?: OfferPlanInfoLegacy;
     /** Hydrated typed catalog product when `id` matches a known wire token. */
     product?: Product;
     /** Forward-compatible raw fields the server emits but we don't yet model. */
@@ -131,6 +146,8 @@ export interface SinglePrequalifyResult {
     meta: PrequalifyResultMeta;
     requestId: string;
     idempotencyKey: string;
+    livemode: boolean;
+    retryAttempts: number;
 }
 /** Result shape for a multi-amount prequalify call. */
 export interface MultiPrequalifyResult {
@@ -143,6 +160,8 @@ export interface MultiPrequalifyResult {
     meta: PrequalifyResultMeta;
     requestId: string;
     idempotencyKey: string;
+    livemode: boolean;
+    retryAttempts: number;
 }
 /** Union returned by `prequalify`. */
 export type PrequalifyResult = SinglePrequalifyResult | MultiPrequalifyResult;

@@ -25,6 +25,29 @@ export class IsaConfigError extends IsaError {
         this.name = 'IsaConfigError';
     }
 }
+/** Runtime timeout error for external work exceeding the configured deadline. */
+export class IsaTimeoutError extends IsaError {
+    constructor(message) {
+        super(message);
+        this.name = 'IsaTimeoutError';
+    }
+}
+/**
+ * A shared case could not be opened because it is absent or expired. The
+ * zero-knowledge store returns 404 for both cases by design — TTL expiry and
+ * a never-existing id are deliberately indistinguishable — so a single typed
+ * error covers both. The message and fields are key-free: the share link and
+ * its fragment never reach this error (see the no-leak rule in cases.ts).
+ */
+export class IsaCaseExpiredError extends IsaError {
+    /** The case id that could not be resolved; never the fragment key. */
+    caseId;
+    constructor(caseId) {
+        super(`case ${caseId} is unavailable (expired or never existed)`);
+        this.name = 'IsaCaseExpiredError';
+        this.caseId = caseId;
+    }
+}
 /**
  * The `isa.zyins.*` product surface was invoked on a license-mode `Isa`
  * that has no usable licenseKey. Consumers dispatch on `error.code` rather

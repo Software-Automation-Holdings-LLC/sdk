@@ -9,7 +9,7 @@
  * The authoritative list of platform error codes. Revisions MUST update both
  * this array and `platform-php`'s `ProblemException` enum in the same commit.
  */
-export declare const PROBLEM_DETAILS_CODES: readonly ["unauthorized", "token_expired", "validation_error", "license_locked", "not_found", "forbidden", "conflict", "rate_limited", "internal_error", "service_unavailable", "idempotency_conflict"];
+export declare const PROBLEM_DETAILS_CODES: readonly ["unauthorized", "token_expired", "validation_error", "license_locked", "not_found", "forbidden", "conflict", "rate_limit_exceeded", "rate_limited", "internal_error", "service_unavailable", "idempotency_conflict"];
 export type ProblemDetailsCode = (typeof PROBLEM_DETAILS_CODES)[number];
 export interface ProblemDetails {
     /** URI reference identifying the problem type. */

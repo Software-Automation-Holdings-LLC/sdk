@@ -8,7 +8,6 @@ import {
   ENV_VAR_NAMES,
   IsaConfigError,
   type Envelope,
-  type RawResponseResult,
   type EnvReader,
   type ZyInsClient,
   type CaseEmailRequest,
@@ -32,17 +31,17 @@ function licenseEnv(): EnvReader {
 }
 
 async function buildIsa(
-  opts: { transport?: import('../src/transport').Transport } = {},
+  opts: { apiVersion?: 'v1' | 'v2'; transport?: import('../src/transport').Transport } = {},
 ): Promise<Isa> {
   const isa = await Isa.withKeycode(
     {
       keycode: TEST_AUTH.licenseKey,
       email: TEST_AUTH.email,
-      deviceId: TEST_AUTH.deviceId,
       orderId: TEST_AUTH.orderId,
       licenseKey: TEST_AUTH.licenseKey,
     },
     licenseEnv(),
+    opts.apiVersion === undefined ? {} : { apiVersion: { prequalify: opts.apiVersion } },
   );
   // Inject a recording transport via the underlying ZyInsClient — done by
   // poking the internal cached client. Done here only because Phase 1+2
@@ -96,15 +95,42 @@ const OK_BODY = JSON.stringify({
   idempotency_key: 'idem_test',
 });
 
+const PREQUALIFY_V2_BODY = JSON.stringify({
+  object: 'prequalify_result',
+  request_id: 'req_test_iso_v2',
+  idempotency_key: 'idem_test_v2',
+  livemode: false,
+  data: {
+    plans: [],
+    has_more: false,
+    next_cursor: null,
+  },
+});
+
+const PREQUALIFY_V1_TEST_BODY = JSON.stringify({
+  object: 'prequalify_result',
+  request_id: 'req_test_iso_v1_test',
+  idempotency_key: 'idem_test_v1_test',
+  livemode: false,
+  data: {
+    meta: { amounts: [5000], processing_time_ms: 1, quote_type: 'face_value', total_products: 0 },
+    results: { '5000': [] },
+  },
+});
+
 describe('Envelope<T>', () => {
   it('surfaces requestId, idempotencyKey, livemode, retryAttempts as named fields', async () => {
     const isa = await buildIsa({
+      apiVersion: 'v1',
       transport: async () => ({ status: 200, body: OK_BODY, headers: {} }),
     });
+    // Pre-#349 callers explicitly opt into the v1 envelope; the default
+    // `apiVersion: 'v2'` aliases `prequalify` to `prequalifyV2`. This
+    // assertion exercises the v1 contract via the explicit method.
     const envelope: Envelope<{
       plans: ReadonlyArray<{ brand: string }>;
       requestId: string;
-    }> = await isa.zyins.prequalify({
+    }> = await isa.zyins.prequalifyV1({
       applicant: TEST_APPLICANT,
       coverage: TEST_COVERAGE,
       products: TEST_PRODUCTS,
@@ -113,8 +139,38 @@ describe('Envelope<T>', () => {
     expect(envelope.requestId).toBe('req_test_iso');
     expect(typeof envelope.idempotencyKey).toBe('string');
     expect(typeof envelope.livemode).toBe('boolean');
+    expect(envelope.livemode).toBe(true);
     expect(typeof envelope.retryAttempts).toBe('number');
     expect(envelope.retryAttempts).toBe(0);
+  });
+
+  it('surfaces server livemode for prequalifyV1 envelope calls', async () => {
+    const isa = await buildIsa({
+      apiVersion: 'v1',
+      transport: async () => ({ status: 200, body: PREQUALIFY_V1_TEST_BODY, headers: {} }),
+    });
+    const envelope = await isa.zyins.prequalifyV1({
+      applicant: TEST_APPLICANT,
+      coverage: TEST_COVERAGE,
+      products: TEST_PRODUCTS,
+    });
+
+    expect(envelope.livemode).toBe(false);
+    expect(envelope.data.livemode).toBe(false);
+  });
+
+  it('surfaces server livemode for prequalifyV2 envelope calls', async () => {
+    const isa = await buildIsa({
+      transport: async () => ({ status: 200, body: PREQUALIFY_V2_BODY, headers: {} }),
+    });
+    const envelope = await isa.zyins.prequalifyV2({
+      applicant: TEST_APPLICANT,
+      coverage: TEST_COVERAGE,
+      products: TEST_PRODUCTS,
+    });
+
+    expect(envelope.livemode).toBe(false);
+    expect(envelope.data.livemode).toBe(false);
   });
 });
 
@@ -133,7 +189,6 @@ describe('client-version mismatch notifications', () => {
       {
         keycode: TEST_AUTH.licenseKey,
         email: TEST_AUTH.email,
-        deviceId: TEST_AUTH.deviceId,
         orderId: TEST_AUTH.orderId,
         licenseKey: TEST_AUTH.licenseKey,
         transport: async () => ({
@@ -167,7 +222,6 @@ describe('client-version mismatch notifications', () => {
       {
         keycode: TEST_AUTH.licenseKey,
         email: TEST_AUTH.email,
-        deviceId: TEST_AUTH.deviceId,
         orderId: TEST_AUTH.orderId,
         licenseKey: TEST_AUTH.licenseKey,
         transport: async () => ({
@@ -188,19 +242,23 @@ describe('client-version mismatch notifications', () => {
 });
 
 describe('.withRawResponse variant (Phase 2 §5.4)', () => {
-  it('returns { data, response } with status/headers/url', async () => {
+  it('returns { data, response } from the pinned prequalify version', async () => {
+    const requests: Array<{ url: string }> = [];
     const isa = await buildIsa({
-      transport: async () => ({ status: 200, body: OK_BODY, headers: { 'x-foo': 'bar' } }),
+      transport: async (request) => {
+        requests.push({ url: request.url });
+        return { status: 200, body: PREQUALIFY_V2_BODY, headers: { 'x-foo': 'bar' } };
+      },
     });
-    const raw: RawResponseResult<{
-      plans: ReadonlyArray<{ brand: string }>;
-      requestId: string;
-    }> = await isa.zyins.prequalifyRaw({
+    const raw = await isa.zyins.prequalifyRaw({
       applicant: TEST_APPLICANT,
       coverage: TEST_COVERAGE,
       products: TEST_PRODUCTS,
     });
-    expect(raw.data.plans[0]?.brand).toBe('colonial-penn');
+    const data = raw.data as { plans: readonly unknown[]; has_more: boolean };
+    expect(requests[0]?.url).toContain('/v2/prequalify');
+    expect(data.plans).toEqual([]);
+    expect(data.has_more).toBe(false);
     expect(raw.response.status).toBe(200);
     expect(typeof raw.response.headers).toBe('object');
     expect(typeof raw.response.url).toBe('string');

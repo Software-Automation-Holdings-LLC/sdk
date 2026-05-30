@@ -1,44 +1,58 @@
 /**
- * Tier 3 cases operations — `POST /v1/case`.
+ * Tier 3 zyins case share — the zyins-flavored sugar over the zero-knowledge
+ * `/v1/case` store (E2EE Phase 2).
  *
- * Cases are content-addressed shareable artifacts created from a quote
- * input + results + selected products. The server hashes the (xml,
- * results, products) tuple — identical inputs dedupe to the same `hash`
- * regardless of which license created the case. ZIP+4 fields are stripped
- * from the input before hashing.
+ * `share` pins `product: 'zyins'`, shapes the payload as
+ * `{ input, results?, products? }`, and delegates to the shared opaque-case
+ * `create` in `../account/cases`. The payload is encrypted client-side; the
+ * server stores opaque ciphertext and never sees the key. The result is the
+ * case id plus the fragment-keyed share link.
  *
- * Today this module exposes `create`; the existing `case.email` Tier-3
- * helper is re-exported via the `cases` sub-client for case-share email.
- * Future `list` / `get` / `delete` RPCs require new server work (see the
- * design doc; tracked as issue #149 follow-ups).
+ * HARD RULE — no key/fragment leakage: the link is returned as a value only.
+ * It is never logged, never put on a telemetry payload, and never attached to
+ * a thrown error. See `../account/cases` for the enforced guarantee.
  */
 import { type AuthContext } from './auth';
 import { type Transport } from './transport';
 import { type Clock } from '../core';
 /**
- * Inputs for `cases.create`. The `input` field is polymorphic at the wire:
- * a JSON object is converted to XML server-side; a raw XML string passes
- * through as-is.
+ * Inputs for `cases.share`. `input` is the quote payload; `results` and
+ * `products` are an optional analysis snapshot. All three are encrypted
+ * together — the server never reads any of them.
  */
-export interface CaseCreateRequest {
+export interface CaseShareRequest {
     input: Record<string, unknown> | string;
     results?: unknown;
     products?: string[];
 }
-export interface CaseCreateResult {
-    object: string;
-    hash: string;
-    url: string;
-    readonly: boolean;
-    createdAt: string;
+/** Result of `cases.share`: the case id and assembled fragment-keyed link. */
+export interface CaseShareResult {
+    /** Server-assigned case uuid. */
+    id: string;
+    /** Full share link `${caseViewerBaseUrl}/c/<id>#k=<base64url(key)>`. */
+    link: string;
 }
 export interface CasesContext {
     baseUrl: string;
+    /** Viewer origin for share-link assembly; threaded from the namespace. */
+    caseViewerBaseUrl: string;
     auth: AuthContext;
     transport: Transport;
     clock: Clock;
     idempotencyKey?: string;
 }
-/** Create a new shareable case. */
-export declare function create(request: CaseCreateRequest, ctx: CasesContext): Promise<CaseCreateResult>;
+/**
+ * Share a zyins case: encrypt `{ input, results?, products? }` under a fresh
+ * key, store the opaque envelope, and return the fragment-keyed link.
+ *
+ * @example
+ * ```ts
+ * const { id, link } = await isa.zyins.cases.share({
+ *   input: currentCaseToJSON(),
+ *   results: currentAnalysisResult,
+ *   products: ['colonial-penn'],
+ * });
+ * ```
+ */
+export declare function share(request: CaseShareRequest, ctx: CasesContext): Promise<CaseShareResult>;
 //# sourceMappingURL=cases.d.ts.map

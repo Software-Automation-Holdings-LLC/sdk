@@ -14,6 +14,7 @@ import { describe, it, expect } from 'vitest';
 import {
   Isa,
   IsaConfigError,
+  IsaTimeoutError,
   SESSIONS_REISSUE_PATH,
 } from '../../src';
 import type { Transport, TransportRequest } from '../../src/zyins/transport';
@@ -22,6 +23,7 @@ import type { Transport, TransportRequest } from '../../src/zyins/transport';
 // do not flag literal strings as committed credentials.
 const FAKE_FORM_TOKEN = ['fixture', 'form', 'tok'].join('-');
 const FAKE_SESSION_ID = ['sess', 'form', 'abc'].join('_');
+const SHORT_TIMEOUT_MS = 1;
 const fakeSecret = (suffix: string): string =>
   ['fixture', 'value', suffix].join('_');
 
@@ -88,6 +90,22 @@ describe('Isa.forForm', () => {
     await expect(
       Isa.forForm({ formToken: FAKE_FORM_TOKEN }, { transport }),
     ).rejects.toBeInstanceOf(IsaConfigError);
+  });
+
+  it('applies timeout to the session reissue request', async () => {
+    let signal: AbortSignal | undefined;
+    const transport: Transport = async (req) => {
+      signal = req.signal;
+      return new Promise(() => {});
+    };
+
+    const result = Isa.forForm(
+      { formToken: FAKE_FORM_TOKEN },
+      { transport, timeout: SHORT_TIMEOUT_MS },
+    );
+    await expect(result).rejects.toBeInstanceOf(IsaTimeoutError);
+    await expect(result).rejects.toThrow('timed out');
+    expect(signal?.aborted).toBe(true);
   });
 
   it('throws IsaConfigError when the response is non-JSON', async () => {
