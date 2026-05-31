@@ -10,10 +10,13 @@ namespace Isa\Sdk\Zyins\Reference;
  * display — there is no `result_index`, no client-side sort key, no
  * synthetic rank.
  *
- * `deathBenefit` is always present (`period: null` — a one-time lump
- * sum). `budget` is present only on monthly-budget quotes
- * (`period: V3Period::Monthly`, the requested budget — the stable
- * grouping key for budget responses).
+ * `deathBenefit` is present (non-null) for life products
+ * (fex/term/preneed) as a one-time lump sum (`period: null`); it is `null`
+ * for premium-only products (medsup), whose coverage value lives entirely
+ * in `pricing[].premium`. Always present as a field — `null` rather than
+ * absent — so consumers null-check it. `budget` is present only on
+ * monthly-budget quotes (`period: V3Period::Monthly`, the requested budget
+ * — the stable grouping key for budget responses).
  *
  * `eligible` is a convenience field — equivalent to
  * `count(array_filter($pricing, fn ($r) => $r->eligibility->eligible)) > 0`.
@@ -32,7 +35,7 @@ final readonly class V3Offer
         public V3OfferCarrier $carrier,
         public V3OfferProduct $product,
         public array $planInfo,
-        public V3Money $deathBenefit,
+        public ?V3Money $deathBenefit,
         public array $pricing,
         public array $metadata,
         public ?V3Money $budget = null,

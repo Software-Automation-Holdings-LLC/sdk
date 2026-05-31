@@ -66,9 +66,8 @@ final class PrequalifyV3Test extends TestCase
                                 'eligibility' => ['category' => 'immediate', 'eligible' => true, 'reasons' => []],
                                 'rank' => 1,
                                 'premium' => [
-                                    'cents' => 4250,
-                                    'display' => '$42.50',
-                                    'default' => ['cents' => 4250, 'display' => '$42.50'],
+                                    'amount' => ['cents' => 4250, 'display' => '$42.50'],
+                                    'default_mode' => 'MONTHLY-EFT',
                                     'modes' => [
                                         'MONTHLY-EFT' => ['cents' => 4250, 'display' => '$42.50'],
                                         'ANNUAL' => ['cents' => 51000, 'display' => '$510.00'],
@@ -111,6 +110,7 @@ final class PrequalifyV3Test extends TestCase
         self::assertCount(1, $result->plans);
         $offer = $result->plans[0];
         self::assertSame('plan_offer', $offer->object);
+        self::assertNotNull($offer->deathBenefit);
         self::assertSame(2500000, $offer->deathBenefit->amount->cents);
         self::assertNull($offer->deathBenefit->period);
         self::assertNull($offer->budget);
@@ -123,7 +123,8 @@ final class PrequalifyV3Test extends TestCase
         self::assertSame(V3EligibilityCategory::Immediate, $primary->eligibility->category);
         self::assertTrue($primary->eligibility->eligible);
         self::assertNotNull($primary->premium);
-        self::assertSame(4250, $primary->premium->cents);
+        self::assertSame(4250, $primary->premium->amount->cents);
+        self::assertSame('MONTHLY-EFT', $primary->premium->defaultMode);
         self::assertSame(51000, $primary->premium->modes['ANNUAL']->cents);
 
         $graded = $offer->pricing[1];
@@ -183,9 +184,45 @@ final class PrequalifyV3Test extends TestCase
         $coverage = $decoded['coverage'];
         self::assertSame(2500000, $coverage['face_amount_cents']);
         self::assertSame('NC', $coverage['state']);
+        // No applicant zip supplied → coverage.zip MUST be absent (not an
+        // empty string; the server pattern ^\d{5}(-\d{4})?$ rejects "").
+        self::assertArrayNotHasKey('zip', $coverage);
 
         self::assertSame(['p|term'], $decoded['products']);
         self::assertTrue($decoded['include_ineligible']);
+    }
+
+    public function testThreadsApplicantZipIntoCoverage(): void
+    {
+        // applicant.zip MUST surface as coverage.zip on the v3 prequalify
+        // envelope. Before the fix the serializer dropped zip, so the
+        // server zip-gated and silently filtered medsup products (prod
+        // incident, bpp2.0). zip rides the coverage envelope, mirroring
+        // the /v3/quote path.
+        $http = new MockHttpClient();
+        $http->queue(200, '{"data":{"plans":[]},"request_id":"req_x"}');
+
+        $client = new ZyInsClient(token: self::TOKEN, httpClient: $http);
+        $client->prequalifyV3->run(
+            new PrequalifyV3Request(
+                applicant: new Applicant(
+                    dob: '1962-04-18',
+                    sex: Sex::Male,
+                    height: Height::fromFeetInches(5, 10),
+                    weight: Weight::fromPounds(195),
+                    state: 'NC',
+                    nicotineUse: NicotineUsage::None,
+                    zip: '75001',
+                ),
+                coverage: Coverage::faceValue(25000),
+                products: [new Product('Carrier', ProductType::Term, 'p|term', 'Product')],
+            ),
+        );
+
+        $body = (string) $http->lastRequest()->getBody();
+        /** @var array<string,mixed> $decoded */
+        $decoded = json_decode($body, true, flags: JSON_THROW_ON_ERROR);
+        self::assertSame('75001', $decoded['coverage']['zip']);
     }
 
     public function testEmitsV3EnvelopeWithConditionsMedicationsAndSpecificity(): void

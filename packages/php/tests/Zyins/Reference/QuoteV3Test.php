@@ -61,10 +61,11 @@ final class QuoteV3Test extends TestCase
                                 'eligibility' => ['category' => 'immediate', 'eligible' => true, 'reasons' => []],
                                 'rank' => 1,
                                 'premium' => [
-                                    'cents' => 4250,
-                                    'display' => '$42.50',
-                                    'default' => ['cents' => 4250, 'display' => '$42.50'],
-                                    'modes' => [],
+                                    'amount' => ['cents' => 4250, 'display' => '$42.50'],
+                                    'default_mode' => 'MONTHLY-EFT',
+                                    'modes' => [
+                                        'MONTHLY-EFT' => ['cents' => 4250, 'display' => '$42.50'],
+                                    ],
                                 ],
                             ],
                         ],
@@ -92,12 +93,13 @@ final class QuoteV3Test extends TestCase
         self::assertCount(1, $result->plans);
         $offer = $result->plans[0];
         self::assertSame('plan_offer', $offer->object);
+        self::assertNotNull($offer->deathBenefit);
         self::assertSame(2500000, $offer->deathBenefit->amount->cents);
         self::assertNull($offer->deathBenefit->period);
         self::assertCount(1, $offer->pricing);
         self::assertSame('A', $offer->pricing[0]->rateClass);
         self::assertNotNull($offer->pricing[0]->premium);
-        self::assertSame(4250, $offer->pricing[0]->premium->cents);
+        self::assertSame(4250, $offer->pricing[0]->premium->amount->cents);
 
         // Outbound request transport assertions — mirrors PrequalifyV3Test.
         $request = $http->lastRequest();

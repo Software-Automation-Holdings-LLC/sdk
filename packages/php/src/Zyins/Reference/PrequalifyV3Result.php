@@ -40,7 +40,9 @@ final readonly class PrequalifyV3Result
      *
      * In budget mode, an offer missing `budget` is skipped (contract
      * violation) rather than falling back to deathBenefit, which would
-     * mis-bucket mixed offers.
+     * mis-bucket mixed offers. In face-amount mode, an offer with a `null`
+     * deathBenefit (a medsup product, which has no face amount) is likewise
+     * skipped — it has no face-amount dimension to group on.
      *
      * @param list<V3Offer> $plans
      * @return array<int,list<V3Offer>>
@@ -56,17 +58,32 @@ final readonly class PrequalifyV3Result
         }
         $grouped = [];
         foreach ($plans as $offer) {
-            if ($isBudget) {
-                if ($offer->budget === null) {
-                    // In budget mode, missing budget is a contract violation; skip.
-                    continue;
-                }
-                $dimension = $offer->budget;
-            } else {
-                $dimension = $offer->deathBenefit;
+            $dimension = $isBudget ? $offer->budget : $offer->deathBenefit;
+            // Budget mode: missing budget is a contract violation. Face-amount
+            // mode: a null deathBenefit is a medsup product with no face-amount
+            // dimension. Either way there is nothing to group on, so skip.
+            if ($dimension === null) {
+                continue;
             }
             $grouped[$dimension->amount->cents][] = $offer;
         }
         return $grouped;
+    }
+
+    /**
+     * The premium facade for an offer — the {@see V3Premium} of the single
+     * `primary` (best-qualifying) pricing row, or `null` when the offer has
+     * no qualifying row (every row ineligible, or the rare eligible row
+     * whose carrier returned no priceable mode). This is the one premium a
+     * list UI shows per product without walking `pricing`.
+     */
+    public static function offerPremium(V3Offer $offer): ?V3Premium
+    {
+        foreach ($offer->pricing as $row) {
+            if ($row->primary) {
+                return $row->premium;
+            }
+        }
+        return null;
     }
 }

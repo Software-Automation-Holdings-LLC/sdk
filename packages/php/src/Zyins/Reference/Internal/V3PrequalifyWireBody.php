@@ -22,18 +22,20 @@ use Isa\Sdk\Zyins\Reference\PrequalifyV3Options;
  * Emits the `PrequalifyV3Request` envelope shape per the OpenAPI spec —
  * `{ applicant, coverage, products[] }`, with `applicant` carrying
  * demographics + conditions + medications + nicotine, and `coverage`
- * carrying `face_amount_cents` + `state`. This is NOT the legacy v2
- * flat shape — emitting `date_of_birth` / `gender` / `state` at the
- * payload root produces `unknown field "date_of_birth"` from the zyins
- * server (prod incident 2026-05-29).
+ * carrying `face_amount_cents` + `state` + `zip`. This is NOT the
+ * legacy v2 flat shape — emitting `date_of_birth` / `gender` / `state`
+ * at the payload root produces `unknown field "date_of_birth"` from the
+ * zyins server (prod incident 2026-05-29).
  *
  * `/v3/quote` still consumes the v2 flat body via {@see V3WireBody}; do
  * not merge the two until the server contract aligns.
  *
- * Inputs the v3 envelope does NOT carry are dropped here rather than
- * sent through and rejected: `applicant.zip`, and every
- * {@see PrequalifyV3Options} field except `includeIneligible`. Callers
- * needing those affordances must use `/v3/quote` (legacy flat body).
+ * `applicant.zip` rides the coverage envelope (required for medsup
+ * quotes; the server zip-gates and silently filters medsup products
+ * when it is absent). Every {@see PrequalifyV3Options} field except
+ * `includeIneligible` is dropped here rather than sent through and
+ * rejected; callers needing those affordances must use `/v3/quote`
+ * (legacy flat body).
  *
  * @see PrequalifyV3Request OpenAPI schema (go/zyins/api/openapi.yaml).
  */
@@ -98,7 +100,7 @@ final class V3PrequalifyWireBody
 
         $payload = [
             'applicant' => $applicantWire,
-            'coverage' => self::buildCoverage($coverage, $applicant->state),
+            'coverage' => self::buildCoverage($coverage, $applicant->state, $applicant->zip),
             'products' => Product::toWireArray($products),
         ];
 
@@ -122,13 +124,19 @@ final class V3PrequalifyWireBody
      * (integer cents). A single monthly budget and any multi-amount probe
      * ride the `/v3/quote` `quote_options` block — `{quote_type, amounts}`
      * — satisfying the server's additive `face_amount_cents` XOR
-     * `quote_options` contract (zyins #400). `state` rides the envelope in
-     * every case.
+     * `quote_options` contract (zyins #400). `state` and `zip` ride the
+     * envelope in every case; `zip` is omitted when null/empty (the
+     * server pattern `^\d{5}(-\d{4})?$` rejects an empty string and zip
+     * is required only for medsup quotes).
      *
      * @return array<string,mixed>
      */
-    private static function buildCoverage(Coverage $coverage, string $state): array
+    private static function buildCoverage(Coverage $coverage, string $state, ?string $zip): array
     {
+        $locale = ['state' => $state];
+        if ($zip !== null && $zip !== '') {
+            $locale['zip'] = $zip;
+        }
         if ($coverage->isMulti()) {
             $quoteType = $coverage->isFaceValue()
                 ? QuoteType::FaceAmounts->value
@@ -138,7 +146,7 @@ final class V3PrequalifyWireBody
                     'quote_type' => $quoteType,
                     'amounts' => array_map(static fn (int $a): string => (string) $a, $coverage->amounts),
                 ],
-                'state' => $state,
+                ...$locale,
             ];
         }
         if (! $coverage->isFaceValue()) {
@@ -152,12 +160,12 @@ final class V3PrequalifyWireBody
                     'quote_type' => QuoteType::MonthlyBudget->value,
                     'amounts' => [(string) $coverage->amount],
                 ],
-                'state' => $state,
+                ...$locale,
             ];
         }
         return [
             'face_amount_cents' => self::dollarsToCents($coverage->amount),
-            'state' => $state,
+            ...$locale,
         ];
     }
 

@@ -69,10 +69,11 @@ final class PrequalifyV3MultiAmountTest extends TestCase
                 'primary' => true,
                 'eligibility' => ['category' => 'immediate', 'eligible' => true, 'reasons' => []],
                 'premium' => [
-                    'cents' => $premiumCents,
-                    'display' => '$' . number_format($premiumCents / 100, 2),
-                    'default' => ['cents' => $premiumCents, 'display' => '$' . number_format($premiumCents / 100, 2)],
-                    'modes' => [],
+                    'amount' => ['cents' => $premiumCents, 'display' => '$' . number_format($premiumCents / 100, 2)],
+                    'default_mode' => 'MONTHLY-EFT',
+                    'modes' => [
+                        'MONTHLY-EFT' => ['cents' => $premiumCents, 'display' => '$' . number_format($premiumCents / 100, 2)],
+                    ],
                 ],
                 'rank' => 1,
             ]],
@@ -146,11 +147,12 @@ final class PrequalifyV3MultiAmountTest extends TestCase
         ));
 
         self::assertCount(2, $result->plans);
+        self::assertNotNull($result->plans[0]->deathBenefit);
         self::assertSame(2500000, $result->plans[0]->deathBenefit->amount->cents);
         self::assertSame('$25,000', $result->plans[0]->deathBenefit->amount->display);
         self::assertNull($result->plans[0]->deathBenefit->period);
         self::assertNull($result->plans[0]->budget);
-        self::assertSame(8100, $result->plans[1]->pricing[0]->premium?->cents);
+        self::assertSame(8100, $result->plans[1]->pricing[0]->premium?->amount->cents);
 
         $grouped = PrequalifyV3Result::byAmount($result->plans);
         self::assertSame([2500000, 5000000], array_keys($grouped));

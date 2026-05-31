@@ -1619,6 +1619,7 @@ namespace Isa\Sdk\Zyins\Reference;
 class PrequalifyV3Result
     public function __construct(public array $plans, public string $requestId, public string $idempotencyKey, public bool $livemode, public int $retryAttempts,)
     public function byAmount(array $plans) : array
+    public function offerPremium(V3Offer $offer) : ?V3Premium
 
 === Zyins/Reference/QuoteV3.php ===
 namespace Isa\Sdk\Zyins\Reference;
@@ -1738,7 +1739,7 @@ class V3Money
 === Zyins/Reference/V3Offer.php ===
 namespace Isa\Sdk\Zyins\Reference;
 class V3Offer
-    public function __construct(public string $object, public string $id, public bool $eligible, public V3OfferCarrier $carrier, public V3OfferProduct $product, public array $planInfo, public V3Money $deathBenefit, public array $pricing, public array $metadata, public ?V3Money $budget = null,)
+    public function __construct(public string $object, public string $id, public bool $eligible, public V3OfferCarrier $carrier, public V3OfferProduct $product, public array $planInfo, public ?V3Money $deathBenefit, public array $pricing, public array $metadata, public ?V3Money $budget = null,)
 
 === Zyins/Reference/V3OfferCarrier.php ===
 namespace Isa\Sdk\Zyins\Reference;
@@ -1757,7 +1758,7 @@ enum V3Period : string
 === Zyins/Reference/V3Premium.php ===
 namespace Isa\Sdk\Zyins\Reference;
 class V3Premium
-    public function __construct(public int $cents, public string $display, public V3Amount $default, public array $modes,)
+    public function __construct(public V3Amount $amount, public string $defaultMode, public array $modes,)
 
 === Zyins/Reference/V3PricingRow.php ===
 namespace Isa\Sdk\Zyins\Reference;

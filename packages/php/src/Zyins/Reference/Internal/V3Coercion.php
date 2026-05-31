@@ -143,10 +143,18 @@ final class V3Coercion
                 $modes[$k] = self::amount($v);
             }
         }
+        $defaultMode = self::asString($raw['default_mode'] ?? null);
+        // `amount` is byte-identical to `modes[default_mode]`; read the wire
+        // `amount` when present, else fall back to the mode grid so a server
+        // that only populated `modes` still yields the headline value.
+        if (isset($raw['amount'])) {
+            $amount = self::amount($raw['amount']);
+        } else {
+            $amount = $modes[$defaultMode] ?? self::amount(null);
+        }
         return new V3Premium(
-            cents: self::asInt($raw['cents'] ?? null),
-            display: self::asString($raw['display'] ?? null),
-            default: self::amount($raw['default'] ?? null),
+            amount: $amount,
+            defaultMode: $defaultMode,
             modes: $modes,
         );
     }
@@ -239,6 +247,10 @@ final class V3Coercion
         $metadata = is_array($r['metadata'] ?? null) ? $r['metadata'] : [];
         $object = self::asString($r['object'] ?? null);
         $budget = is_array($r['budget'] ?? null) ? self::money($r['budget']) : null;
+        // death_benefit is null on the wire for premium-only products (medsup);
+        // a Money object for life products. Preserve null rather than coercing
+        // it into a zero-cents Money, so consumers null-check medsup correctly.
+        $deathBenefit = is_array($r['death_benefit'] ?? null) ? self::money($r['death_benefit']) : null;
         return new V3Offer(
             object: $object !== '' ? $object : 'plan_offer',
             id: self::asString($r['id'] ?? null),
@@ -246,7 +258,7 @@ final class V3Coercion
             carrier: self::carrier($r['carrier'] ?? null),
             product: self::product($r['product'] ?? null),
             planInfo: $planInfo,
-            deathBenefit: self::money($r['death_benefit'] ?? null),
+            deathBenefit: $deathBenefit,
             pricing: $pricing,
             metadata: $metadata,
             budget: $budget,
