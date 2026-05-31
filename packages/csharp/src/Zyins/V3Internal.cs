@@ -173,7 +173,7 @@ internal static class V3WireBuilder
 
             // coverage envelope (CoverageV3Input)
             writer.WritePropertyName("coverage");
-            WriteV3Coverage(writer, coverage, applicant.State);
+            WriteV3Coverage(writer, coverage, applicant.State, applicant.Zip);
 
             // products[]
             writer.WritePropertyName("products");
@@ -195,10 +195,12 @@ internal static class V3WireBuilder
     /// cents). A single monthly budget and any multi-amount probe ride the
     /// <c>/v3/quote</c> <c>quote_options</c> block — <c>{quote_type, amounts}</c>
     /// — satisfying the server's additive <c>face_amount_cents</c> XOR
-    /// <c>quote_options</c> contract (zyins #400). <c>state</c> rides the
-    /// envelope in every case.
+    /// <c>quote_options</c> contract (zyins #400). <c>state</c> and
+    /// <c>zip</c> ride the envelope in every case; <c>zip</c> is omitted
+    /// when null/empty (the server pattern <c>^\d{5}(-\d{4})?$</c> rejects
+    /// an empty string and zip is required only for medsup quotes).
     /// </summary>
-    private static void WriteV3Coverage(Utf8JsonWriter writer, Coverage coverage, string state)
+    private static void WriteV3Coverage(Utf8JsonWriter writer, Coverage coverage, string state, string? zip)
     {
         writer.WriteStartObject();
         if (coverage.IsMulti)
@@ -213,7 +215,7 @@ internal static class V3WireBuilder
             foreach (var a in amounts) writer.WriteStringValue(a.ToString(CultureInfo.InvariantCulture));
             writer.WriteEndArray();
             writer.WriteEndObject();
-            writer.WriteString("state", state);
+            WriteV3CoverageLocale(writer, state, zip);
             writer.WriteEndObject();
             return;
         }
@@ -231,14 +233,25 @@ internal static class V3WireBuilder
             writer.WriteStringValue(budget.ToString(CultureInfo.InvariantCulture));
             writer.WriteEndArray();
             writer.WriteEndObject();
-            writer.WriteString("state", state);
+            WriteV3CoverageLocale(writer, state, zip);
             writer.WriteEndObject();
             return;
         }
         var faceCents = checked((long)coverage.FaceValue.Value * CentsPerDollar);
         writer.WriteNumber("face_amount_cents", faceCents);
-        writer.WriteString("state", state);
+        WriteV3CoverageLocale(writer, state, zip);
         writer.WriteEndObject();
+    }
+
+    /// <summary>
+    /// Write the coverage <c>state</c> (always) and <c>zip</c> (only when
+    /// the caller supplied a non-empty value). Shared by every coverage
+    /// shape so the locale fields are emitted identically.
+    /// </summary>
+    private static void WriteV3CoverageLocale(Utf8JsonWriter writer, string state, string? zip)
+    {
+        writer.WriteString("state", state);
+        if (!string.IsNullOrEmpty(zip)) writer.WriteString("zip", zip);
     }
 
     /// <summary>v3 nicotine frequency wire enum (<c>NicotineFrequencyV3</c>).
@@ -633,6 +646,12 @@ internal static class V3ResponseParser
         V3Money? budget = raw.ValueKind == JsonValueKind.Object && raw.TryGetProperty("budget", out var bd) && bd.ValueKind == JsonValueKind.Object
             ? CoerceMoney(bd)
             : null;
+        // death_benefit is null on the wire for premium-only products (medsup);
+        // a Money object for life products. Preserve null rather than coercing
+        // it into a zero-cents Money, so consumers null-check medsup correctly.
+        V3Money? deathBenefit = raw.ValueKind == JsonValueKind.Object && raw.TryGetProperty("death_benefit", out var db) && db.ValueKind == JsonValueKind.Object
+            ? CoerceMoney(db)
+            : null;
         return new V3Offer(
             Object: "plan_offer",
             Id: ReadString(raw, "id"),
@@ -640,7 +659,7 @@ internal static class V3ResponseParser
             Carrier: CoerceCarrier(raw.ValueKind == JsonValueKind.Object && raw.TryGetProperty("carrier", out var c) ? c : default),
             Product: CoerceProduct(raw.ValueKind == JsonValueKind.Object && raw.TryGetProperty("product", out var pp) ? pp : default),
             PlanInfo: planInfo,
-            DeathBenefit: CoerceMoney(raw.ValueKind == JsonValueKind.Object && raw.TryGetProperty("death_benefit", out var db) ? db : default),
+            DeathBenefit: deathBenefit,
             Pricing: pricing,
             Metadata: metadata,
             Budget: budget);
@@ -700,9 +719,7 @@ internal static class V3ResponseParser
 
     private static V3Premium? CoercePremium(JsonElement raw)
     {
-        var cents = ReadLong(raw, "cents");
-        var display = ReadString(raw, "display");
-        var def = CoerceAmount(raw.TryGetProperty("default", out var d) ? d : default);
+        var defaultMode = ReadString(raw, "default_mode");
         var modes = new Dictionary<string, V3Amount>(StringComparer.Ordinal);
         if (raw.TryGetProperty("modes", out var m) && m.ValueKind == JsonValueKind.Object)
         {
@@ -711,7 +728,19 @@ internal static class V3ResponseParser
                 modes[prop.Name] = CoerceAmount(prop.Value);
             }
         }
-        return new V3Premium(cents, display, def, modes);
+        // Amount is byte-identical to Modes[DefaultMode]; read the wire amount
+        // when present, else fall back to the mode grid so a server that only
+        // populated modes still yields the headline value.
+        V3Amount amount;
+        if (raw.TryGetProperty("amount", out var a) && a.ValueKind == JsonValueKind.Object)
+        {
+            amount = CoerceAmount(a);
+        }
+        else
+        {
+            amount = modes.TryGetValue(defaultMode, out var fromMode) ? fromMode : new V3Amount(0, string.Empty);
+        }
+        return new V3Premium(amount, defaultMode, modes);
     }
 
     // Coerce the leaf {cents, display} amount (OpenAPI AmountResponse).

@@ -71,13 +71,16 @@ public enum V3Period
 public sealed record V3Money(V3Amount Amount, V3Period? Period);
 
 /// <summary>
-/// Premium for one row of the pricing table. Premium carries no period this
-/// release — the per-mode recurrence is a documented future addition.
+/// Premium for one row of the pricing table. <c>Amount</c> is the headline
+/// value clients compare across carriers; it is byte-identical to
+/// <c>Modes[DefaultMode]</c>. <c>DefaultMode</c> names which <c>Modes</c> entry
+/// <c>Amount</c> was drawn from — the carrier mode token
+/// (<c>MONTHLY-EFT</c>, <c>ANNUAL</c>, …), which itself encodes the recurrence,
+/// so premium carries no period field. <c>Modes</c> is the full carrier grid.
 /// </summary>
 public sealed record V3Premium(
-    long Cents,
-    string Display,
-    V3Amount Default,
+    V3Amount Amount,
+    string DefaultMode,
     IReadOnlyDictionary<string, V3Amount> Modes
 );
 
@@ -108,9 +111,11 @@ public sealed record V3OfferProduct(
 
 /// <summary>
 /// One product's v3 offer, returned identically by <c>POST /v3/prequalify</c>
-/// and <c>POST /v3/quote</c>. <c>DeathBenefit</c> is always present
-/// (<c>Period</c> null — a one-time lump sum). <c>Budget</c> is present only
-/// on monthly-budget quotes (<c>Period</c> Monthly, the requested budget — the
+/// and <c>POST /v3/quote</c>. <c>DeathBenefit</c> is non-null for life products
+/// (fex/term/preneed) as a one-time lump sum (<c>Period</c> null); it is
+/// <c>null</c> for premium-only products (medsup), whose coverage value lives
+/// entirely in <c>Pricing[].Premium</c>. <c>Budget</c> is present only on
+/// monthly-budget quotes (<c>Period</c> Monthly, the requested budget — the
 /// stable grouping key for budget responses). Array order in <c>Pricing</c> is
 /// authoritative for display.
 /// </summary>
@@ -121,7 +126,7 @@ public sealed record V3Offer(
     V3OfferCarrier Carrier,
     V3OfferProduct Product,
     IReadOnlyList<PlanInfoItem> PlanInfo,
-    V3Money DeathBenefit,
+    V3Money? DeathBenefit,
     IReadOnlyList<V3PricingRow> Pricing,
     IReadOnlyDictionary<string, object?> Metadata,
     V3Money? Budget = null
@@ -169,7 +174,9 @@ public static class V3Grouping
     ///
     /// In budget mode, an offer missing <c>Budget</c> is skipped (contract
     /// violation) rather than falling back to DeathBenefit, which would
-    /// mis-bucket mixed offers.
+    /// mis-bucket mixed offers. In face-amount mode, an offer with a
+    /// <c>null</c> DeathBenefit (a medsup product, which has no face amount) is
+    /// likewise skipped — it has no face-amount dimension to group on.
     /// </summary>
     public static IReadOnlyDictionary<long, IReadOnlyList<V3Offer>> ByAmount(
         IReadOnlyList<V3Offer> plans)
@@ -179,19 +186,13 @@ public static class V3Grouping
         var order = new List<long>();
         foreach (var offer in plans)
         {
-            V3Money dimension;
-            if (isBudget)
+            var dimension = isBudget ? offer.Budget : offer.DeathBenefit;
+            // Budget mode: missing budget is a contract violation. Face-amount
+            // mode: a null DeathBenefit is a medsup product with no face-amount
+            // dimension. Either way there is nothing to group on, so skip.
+            if (dimension is null)
             {
-                if (offer.Budget is null)
-                {
-                    // In budget mode, missing budget is a contract violation; skip.
-                    continue;
-                }
-                dimension = offer.Budget;
-            }
-            else
-            {
-                dimension = offer.DeathBenefit;
+                continue;
             }
             var key = dimension.Amount.Cents;
             if (!grouped.TryGetValue(key, out var bucket))
@@ -208,6 +209,26 @@ public static class V3Grouping
             result[key] = grouped[key];
         }
         return result;
+    }
+
+    /// <summary>
+    /// The premium facade for an offer — the <see cref="V3Premium"/> of the
+    /// single <c>Primary</c> (best-qualifying) pricing row, or <c>null</c> when
+    /// the offer has no qualifying row (every row ineligible, or the rare
+    /// eligible row whose carrier returned no priceable mode). This is the one
+    /// premium a list UI shows per product without walking
+    /// <see cref="V3Offer.Pricing"/>.
+    /// </summary>
+    public static V3Premium? OfferPremium(V3Offer offer)
+    {
+        foreach (var row in offer.Pricing)
+        {
+            if (row.Primary)
+            {
+                return row.Premium;
+            }
+        }
+        return null;
     }
 }
 

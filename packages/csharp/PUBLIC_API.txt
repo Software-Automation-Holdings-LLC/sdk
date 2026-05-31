@@ -748,6 +748,7 @@ public interface IPrequalifyV3Service
 public interface IQuoteV3Service
 public class PrequalifyV3SubClient : IPrequalifyV3Service
     public IReadOnlyDictionary<long, IReadOnlyList<V3Offer>> ByAmount(...)
+    public V3Premium? OfferPremium(...)
     public Task<PrequalifyV3Result> RunAsync(...)
     public Task<PrequalifyV3Result> RunAsync(...)
 
