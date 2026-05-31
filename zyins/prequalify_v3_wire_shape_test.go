@@ -92,8 +92,9 @@ type v3ApplicantInput struct {
 }
 
 type v3CoverageInput struct {
-	FaceAmountCents int    `json:"face_amount_cents"`
-	State           string `json:"state"`
+	FaceAmountCents int     `json:"face_amount_cents"`
+	State           string  `json:"state"`
+	Zip             *string `json:"zip,omitempty"`
 }
 
 type v3NicotineInput struct {
@@ -243,6 +244,12 @@ func TestPrequalifyV3Run_EmitsEnvelopeShape(t *testing.T) {
 	if got, want := env.Coverage.State, "NC"; got != want {
 		t.Errorf("coverage.state = %q, want %q", got, want)
 	}
+	// An applicant with no zip must NOT emit coverage.zip — the server
+	// pattern ^\d{5}(-\d{4})?$ rejects an empty string for non-medsup
+	// callers who left it blank.
+	if env.Coverage.Zip != nil {
+		t.Errorf("coverage.zip = %q, want absent (no applicant zip supplied)", *env.Coverage.Zip)
+	}
 
 	// Products list: flat slugs, in caller-preferred order.
 	if len(env.Products) != 1 || env.Products[0] != "fidelity-life-instabrain-pure-term" {
@@ -251,6 +258,37 @@ func TestPrequalifyV3Run_EmitsEnvelopeShape(t *testing.T) {
 
 	if !env.IncludeIneligible {
 		t.Errorf("include_ineligible = false, want true (default)")
+	}
+}
+
+// TestPrequalifyV3Run_ThreadsApplicantZipIntoCoverage pins the medsup
+// zip fix: applicant.Zip MUST surface as coverage.zip on the v3
+// prequalify envelope. Before the fix the serializer dropped zip, so the
+// server zip-gated and silently filtered medsup products (prod incident,
+// bpp2.0). This test fails on the dropped-zip behavior and passes once
+// zip rides the coverage envelope, mirroring the /v3/quote path.
+func TestPrequalifyV3Run_ThreadsApplicantZipIntoCoverage(t *testing.T) {
+	srv := newCapturingV3Server(t)
+	client := newV3PinnedClient(t, srv.server)
+
+	req := v3TestRequest(t)
+	req.Applicant.Zip = "75001"
+
+	if _, err := client.PrequalifyV3.Run(context.Background(), req); err != nil {
+		t.Fatalf("PrequalifyV3.Run: %v", err)
+	}
+
+	var env v3PrequalifyEnvelope
+	dec := json.NewDecoder(bytes.NewReader(srv.body))
+	dec.DisallowUnknownFields()
+	if err := dec.Decode(&env); err != nil {
+		t.Fatalf("decode v3 envelope: %v\nbody=%s", err, string(srv.body))
+	}
+	if env.Coverage.Zip == nil {
+		t.Fatalf("coverage.zip absent, want %q (applicant zip must thread into coverage); body=%s", "75001", string(srv.body))
+	}
+	if got, want := *env.Coverage.Zip, "75001"; got != want {
+		t.Errorf("coverage.zip = %q, want %q", got, want)
 	}
 }
 

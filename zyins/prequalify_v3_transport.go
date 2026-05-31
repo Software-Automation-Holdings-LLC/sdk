@@ -188,8 +188,10 @@ func (s *QuoteV3Service) Run(ctx context.Context, req *QuoteV3Request, opts ...V
 // buildV3PrequalifyEnvelopeBody serializes a PrequalifyV3Request into
 // the `PrequalifyV3Request` wire envelope.
 //
-// `applicant.state` moves into the coverage envelope per the v3
-// schema. `applicant.zip`, `options.MinRank`, `options.ShowUnreleased`,
+// `applicant.state` and `applicant.zip` move into the coverage envelope
+// per the v3 schema (zip is required for medsup quotes; the server
+// zip-gates and silently filters medsup products when it is absent).
+// `options.MinRank`, `options.ShowUnreleased`,
 // `options.SkipHealthBasedUnderwriting`, `options.OnlyProductClass`,
 // `options.IncludeProductClass` are not part of the v3 prequalify
 // envelope and are silently dropped — they survive on /v3/quote via
@@ -228,7 +230,7 @@ func buildV3PrequalifyEnvelopeBody(app Applicant, cov Coverage, products Product
 
 	payload := map[string]any{
 		"applicant": applicant,
-		"coverage":  buildV3Coverage(cov, string(app.State)),
+		"coverage":  buildV3Coverage(cov, string(app.State), app.Zip),
 		"products":  products.WireTokens(),
 	}
 	if options != nil && options.IncludeIneligible != nil {
@@ -252,39 +254,45 @@ func buildV3PrequalifyEnvelopeBody(app Applicant, cov Coverage, products Product
 // (integer cents). A multi-amount probe mirrors the /v3/quote
 // quote_options block — {quote_type, amounts: []string} — so the server's
 // additive face_amount_cents XOR quote_options contract (zyins #400) is
-// satisfied with one serializer per shape. state rides the envelope in
-// both cases.
-func buildV3Coverage(cov Coverage, state string) map[string]any {
+// satisfied with one serializer per shape. state and zip ride the
+// envelope in every case; zip is omitted when empty (the server pattern
+// ^\d{5}(-\d{4})?$ rejects an empty string and zip is required only for
+// medsup quotes).
+func buildV3Coverage(cov Coverage, state, zip string) map[string]any {
+	withLocale := func(coverage map[string]any) map[string]any {
+		coverage["state"] = state
+		if zip != "" {
+			coverage["zip"] = zip
+		}
+		return coverage
+	}
 	if cov.IsMulti() {
 		amounts := make([]string, len(cov.Amounts))
 		for i, a := range cov.Amounts {
 			amounts[i] = fmt.Sprintf("%d", a)
 		}
-		return map[string]any{
+		return withLocale(map[string]any{
 			"quote_options": map[string]any{
 				"quote_type": v3QuoteType(cov),
 				"amounts":    amounts,
 			},
-			"state": state,
-		}
+		})
 	}
 	// A single monthly budget has no face_amount_cents to express, so it
 	// rides the quote_options block with one amount — the same path the
 	// server (zyins #400) accepts for the multi-amount budget probe. A
 	// single face amount keeps the proven face_amount_cents wire shape.
 	if cov.IsMonthlyBudget() {
-		return map[string]any{
+		return withLocale(map[string]any{
 			"quote_options": map[string]any{
 				"quote_type": "monthly_budget",
 				"amounts":    []string{fmt.Sprintf("%d", cov.Amount)},
 			},
-			"state": state,
-		}
+		})
 	}
-	return map[string]any{
+	return withLocale(map[string]any{
 		"face_amount_cents": cov.Amount * centsPerDollar,
-		"state":             state,
-	}
+	})
 }
 
 // v3QuoteType maps a multi-amount coverage to its quote_options
@@ -604,7 +612,7 @@ type v3WireOffer struct {
 	Carrier      V3OfferCarrier    `json:"carrier"`
 	Product      V3OfferProduct    `json:"product"`
 	PlanInfo     json.RawMessage   `json:"plan_info"`
-	DeathBenefit v3WireMoney       `json:"death_benefit"`
+	DeathBenefit *v3WireMoney      `json:"death_benefit"`
 	Budget       *v3WireMoney      `json:"budget"`
 	Pricing      []json.RawMessage `json:"pricing"`
 	Metadata     map[string]any    `json:"metadata"`
@@ -648,15 +656,21 @@ func decodeV3Offer(raw json.RawMessage) (V3Offer, error) {
 		metadata = map[string]any{}
 	}
 	offer := V3Offer{
-		Object:       "plan_offer",
-		ID:           w.ID,
-		Eligible:     w.Eligible,
-		Carrier:      w.Carrier,
-		Product:      w.Product,
-		PlanInfo:     planInfoTyped,
-		DeathBenefit: coerceV3Money(w.DeathBenefit),
-		Pricing:      pricing,
-		Metadata:     metadata,
+		Object:   "plan_offer",
+		ID:       w.ID,
+		Eligible: w.Eligible,
+		Carrier:  w.Carrier,
+		Product:  w.Product,
+		PlanInfo: planInfoTyped,
+		Pricing:  pricing,
+		Metadata: metadata,
+	}
+	// death_benefit is null on the wire for premium-only products (medsup); a
+	// Money object for life products. Preserve nil rather than coercing it into
+	// a zero-cents Money, so consumers nil-check medsup correctly.
+	if w.DeathBenefit != nil {
+		deathBenefit := coerceV3Money(*w.DeathBenefit)
+		offer.DeathBenefit = &deathBenefit
 	}
 	if w.Budget != nil {
 		budget := coerceV3Money(*w.Budget)
@@ -680,10 +694,9 @@ type v3WireEligibility struct {
 }
 
 type v3WirePremium struct {
-	Cents   int64               `json:"cents"`
-	Display string              `json:"display"`
-	Default V3Amount            `json:"default"`
-	Modes   map[string]V3Amount `json:"modes"`
+	Amount      *V3Amount           `json:"amount"`
+	DefaultMode string              `json:"default_mode"`
+	Modes       map[string]V3Amount `json:"modes"`
 }
 
 func decodeV3PricingRow(raw json.RawMessage) (V3PricingRow, error) {
@@ -718,11 +731,20 @@ func decodeV3PricingRow(raw json.RawMessage) (V3PricingRow, error) {
 		if modes == nil {
 			modes = map[string]V3Amount{}
 		}
+		// Amount is byte-identical to Modes[DefaultMode]; read the wire amount
+		// when present, else fall back to the mode grid so a server that only
+		// populated Modes still yields the headline value.
+		var amount V3Amount
+		switch {
+		case w.Premium.Amount != nil:
+			amount = *w.Premium.Amount
+		default:
+			amount = modes[w.Premium.DefaultMode]
+		}
 		row.Premium = &V3Premium{
-			Cents:   w.Premium.Cents,
-			Display: w.Premium.Display,
-			Default: w.Premium.Default,
-			Modes:   modes,
+			Amount:      amount,
+			DefaultMode: w.Premium.DefaultMode,
+			Modes:       modes,
 		}
 	}
 	return row, nil

@@ -73,13 +73,15 @@ type V3Money struct {
 	Period *V3Period `json:"period"`
 }
 
-// V3Premium is the premium for one pricing row. Premium carries no period
-// this release — the per-mode recurrence is a documented future addition.
+// V3Premium is the premium for one pricing row. Amount is the headline
+// value clients compare across carriers; it is byte-identical to
+// Modes[DefaultMode]. DefaultMode names which Modes entry Amount was drawn
+// from — the carrier mode token (MONTHLY-EFT, ANNUAL, ...), which itself
+// encodes the recurrence, so premium carries no period field.
 type V3Premium struct {
-	Cents   int64               `json:"cents"`
-	Display string              `json:"display"`
-	Default V3Amount            `json:"default"`
-	Modes   map[string]V3Amount `json:"modes"`
+	Amount      V3Amount            `json:"amount"`
+	DefaultMode string              `json:"default_mode"`
+	Modes       map[string]V3Amount `json:"modes"`
 }
 
 // V3PricingRow is one row of the uniform pricing[] table — a single
@@ -93,10 +95,12 @@ type V3PricingRow struct {
 }
 
 // V3Offer is one product's offer, returned identically by /v3/prequalify
-// and /v3/quote. DeathBenefit is always present (Period nil — a one-time
-// lump sum). Budget is present only on monthly-budget quotes (Period
-// "monthly", the requested budget — the stable grouping key for budget
-// responses). Array order of Pricing is authoritative for display.
+// and /v3/quote. DeathBenefit is non-nil for life products (fex/term/preneed)
+// as a one-time lump sum (Period nil); it is nil for premium-only products
+// (medsup), whose coverage value lives entirely in Pricing[].Premium. Budget
+// is present only on monthly-budget quotes (Period "monthly", the requested
+// budget — the stable grouping key for budget responses). Array order of
+// Pricing is authoritative for display.
 type V3Offer struct {
 	Object       string         `json:"object"`
 	ID           string         `json:"id"`
@@ -104,7 +108,7 @@ type V3Offer struct {
 	Carrier      V3OfferCarrier `json:"carrier"`
 	Product      V3OfferProduct `json:"product"`
 	PlanInfo     []PlanInfoItem `json:"plan_info"`
-	DeathBenefit V3Money        `json:"death_benefit"`
+	DeathBenefit *V3Money       `json:"death_benefit"`
 	Budget       *V3Money       `json:"budget,omitempty"`
 	Pricing      []V3PricingRow `json:"pricing"`
 	Metadata     map[string]any `json:"metadata"`
@@ -141,7 +145,9 @@ type QuoteV3Result struct {
 //
 // In budget mode, an offer missing Budget is skipped (contract violation)
 // rather than falling back to DeathBenefit, which would mis-bucket mixed
-// offers.
+// offers. In face-amount mode, an offer with a nil DeathBenefit (a medsup
+// product, which has no face amount) is likewise skipped — it has no
+// face-amount dimension to group on.
 func ByAmount(plans []V3Offer) map[int64][]V3Offer {
 	isBudget := false
 	for i := range plans {
@@ -152,17 +158,35 @@ func ByAmount(plans []V3Offer) map[int64][]V3Offer {
 	}
 	grouped := make(map[int64][]V3Offer, len(plans))
 	for _, offer := range plans {
+		var dimension *V3Money
 		if isBudget {
-			if offer.Budget == nil {
-				// In budget mode, missing budget is a contract violation; skip.
-				continue
-			}
-			grouped[offer.Budget.Amount.Cents] = append(grouped[offer.Budget.Amount.Cents], offer)
+			dimension = offer.Budget
+		} else {
+			dimension = offer.DeathBenefit
+		}
+		// Budget mode: missing budget is a contract violation. Face-amount
+		// mode: a nil death_benefit is a medsup product with no face-amount
+		// dimension. Either way there is nothing to group on, so skip.
+		if dimension == nil {
 			continue
 		}
-		grouped[offer.DeathBenefit.Amount.Cents] = append(grouped[offer.DeathBenefit.Amount.Cents], offer)
+		grouped[dimension.Amount.Cents] = append(grouped[dimension.Amount.Cents], offer)
 	}
 	return grouped
+}
+
+// OfferPremium returns the premium facade for an offer: the V3Premium of the
+// single primary (best-qualifying) pricing row, or nil when the offer has no
+// qualifying row (every row ineligible, or the rare eligible row whose carrier
+// returned no priceable mode). This is the one premium a list UI shows per
+// product without walking Pricing.
+func OfferPremium(offer V3Offer) *V3Premium {
+	for i := range offer.Pricing {
+		if offer.Pricing[i].Primary {
+			return offer.Pricing[i].Premium
+		}
+	}
+	return nil
 }
 
 // PrequalifyV3Options carries request controls unique to the v3 API.

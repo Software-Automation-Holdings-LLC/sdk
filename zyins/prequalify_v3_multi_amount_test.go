@@ -43,8 +43,8 @@ const flatFaceV3Response = `{
 	"idempotency_key":"550e8400-e29b-41d4-a716-446655440000",
 	"livemode":true,
 	"data":{"plans":[
-		{"object":"plan_offer","id":"p1","eligible":true,"plan_info":[],"metadata":{},"death_benefit":{"amount":{"cents":2500000,"display":"$25,000"},"period":null},"pricing":[{"rate_class":"Preferred","primary":true,"eligibility":{"category":"immediate","eligible":true,"reasons":[]},"premium":{"cents":4500,"display":"$45.00","default":{"cents":4500,"display":"$45.00"},"modes":{}},"rank":1}]},
-		{"object":"plan_offer","id":"p2","eligible":true,"plan_info":[],"metadata":{},"death_benefit":{"amount":{"cents":5000000,"display":"$50,000"},"period":null},"pricing":[{"rate_class":"Preferred","primary":true,"eligibility":{"category":"immediate","eligible":true,"reasons":[]},"premium":{"cents":8100,"display":"$81.00","default":{"cents":8100,"display":"$81.00"},"modes":{}},"rank":1}]}
+		{"object":"plan_offer","id":"p1","eligible":true,"plan_info":[],"metadata":{},"death_benefit":{"amount":{"cents":2500000,"display":"$25,000"},"period":null},"pricing":[{"rate_class":"Preferred","primary":true,"eligibility":{"category":"immediate","eligible":true,"reasons":[]},"premium":{"amount":{"cents":4500,"display":"$45.00"},"default_mode":"MONTHLY-EFT","modes":{"MONTHLY-EFT":{"cents":4500,"display":"$45.00"}}},"rank":1}]},
+		{"object":"plan_offer","id":"p2","eligible":true,"plan_info":[],"metadata":{},"death_benefit":{"amount":{"cents":5000000,"display":"$50,000"},"period":null},"pricing":[{"rate_class":"Preferred","primary":true,"eligibility":{"category":"immediate","eligible":true,"reasons":[]},"premium":{"amount":{"cents":8100,"display":"$81.00"},"default_mode":"MONTHLY-EFT","modes":{"MONTHLY-EFT":{"cents":8100,"display":"$81.00"}}},"rank":1}]}
 	]}
 }`
 
@@ -117,6 +117,9 @@ func TestPrequalifyV3Run_MultiAmount_ParsesFlatPlansAsMoney(t *testing.T) {
 	if len(out.Plans) != 2 {
 		t.Fatalf("Plans = %d, want 2", len(out.Plans))
 	}
+	if out.Plans[0].DeathBenefit == nil {
+		t.Fatal("Plans[0].DeathBenefit must be non-nil for a life product")
+	}
 	if got := out.Plans[0].DeathBenefit.Amount.Cents; got != 2500000 {
 		t.Errorf("Plans[0].DeathBenefit.Amount.Cents = %d, want 2500000", got)
 	}
@@ -126,7 +129,7 @@ func TestPrequalifyV3Run_MultiAmount_ParsesFlatPlansAsMoney(t *testing.T) {
 	if out.Plans[0].Budget != nil {
 		t.Errorf("face-amount offer must not carry budget, got %+v", out.Plans[0].Budget)
 	}
-	if out.Plans[1].Pricing[0].Premium == nil || out.Plans[1].Pricing[0].Premium.Cents != 8100 {
+	if out.Plans[1].Pricing[0].Premium == nil || out.Plans[1].Pricing[0].Premium.Amount.Cents != 8100 {
 		t.Errorf("Plans[1] premium not decoded: %+v", out.Plans[1].Pricing)
 	}
 }
@@ -189,13 +192,13 @@ func TestByAmount_BudgetMode_SkipsOfferMissingBudget(t *testing.T) {
 		{
 			ID:           "offer_with_budget",
 			Budget:       &V3Money{Amount: V3Amount{Cents: 5000}, Period: &monthly},
-			DeathBenefit: V3Money{Amount: V3Amount{Cents: 2500000}},
+			DeathBenefit: &V3Money{Amount: V3Amount{Cents: 2500000}},
 		},
 		{
 			// In budget mode this offer is missing budget; it must be
 			// skipped rather than mis-bucketed under its death benefit.
 			ID:           "offer_missing_budget",
-			DeathBenefit: V3Money{Amount: V3Amount{Cents: 5000000}},
+			DeathBenefit: &V3Money{Amount: V3Amount{Cents: 5000000}},
 		},
 	}
 
