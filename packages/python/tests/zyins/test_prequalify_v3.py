@@ -102,7 +102,7 @@ def _sample_envelope() -> str:
                             "wire_token": "fex",
                         },
                         "plan_info": [{"label": "Riders", "value": "ADB"}],
-                        "death_benefit": {"cents": 1000000, "display": "$10,000"},
+                        "death_benefit": {"amount": {"cents": 1000000, "display": "$10,000"}, "period": None},
                         "pricing": [
                             {
                                 "rate_class": "preferred",
@@ -204,8 +204,10 @@ def test_parse_envelope_typed_pricing_rows() -> None:
     offer = result.plans[0]
     assert offer.object == "plan_offer"
     assert offer.carrier.name == "Aetna Accendo"
-    assert offer.death_benefit.cents == 1_000_000
-    assert offer.death_benefit.display == "$10,000"
+    assert offer.death_benefit.amount.cents == 1_000_000
+    assert offer.death_benefit.amount.display == "$10,000"
+    assert offer.death_benefit.period is None
+    assert offer.budget is None
     assert len(offer.pricing) == 2
     first = offer.pricing[0]
     assert first.primary is True

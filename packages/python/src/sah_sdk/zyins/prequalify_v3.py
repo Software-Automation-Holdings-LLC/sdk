@@ -67,11 +67,37 @@ class V3Eligibility:
 
 
 @dataclass(frozen=True, slots=True)
-class V3Money:
-    """A money value in integer minor units paired with a display string."""
+class V3Amount:
+    """A money amount in integer minor units paired with a display string.
+
+    The OpenAPI ``AmountResponse``. ``cents`` is canonical for
+    arithmetic; ``display`` renders verbatim and is never parsed.
+    """
 
     cents: int
     display: str
+
+
+#: Recurrence period for a :class:`V3Money`. ``None`` is a one-time /
+#: lump-sum amount (a death benefit); the named values are premium
+#: billing cycles.
+V3Period = Literal["monthly", "quarterly", "semiannual", "annual"]
+
+_V3_PERIODS: frozenset[str] = frozenset({"monthly", "quarterly", "semiannual", "annual"})
+
+
+@dataclass(frozen=True, slots=True)
+class V3Money:
+    """A money value with a recurrence period (the OpenAPI ``Money``).
+
+    Used for ``death_benefit`` (``period=None``, a one-time lump sum)
+    and ``budget`` (``period="monthly"``, the requested monthly budget).
+    ``amount`` is the canonical :class:`V3Amount`; ``period``
+    disambiguates one-time vs recurring.
+    """
+
+    amount: V3Amount
+    period: V3Period | None
 
 
 @dataclass(frozen=True, slots=True)
@@ -81,12 +107,13 @@ class V3Premium:
     ``default`` is always present — it is the carrier's apples-to-
     apples comparison value at the carrier's default pricing mode.
     ``modes`` is the full grid (``MONTHLY-EFT``, ``ANNUAL``, …).
+    Premium carries no period this release.
     """
 
     cents: int
     display: str
-    default: V3Money
-    modes: Mapping[str, V3Money]
+    default: V3Amount
+    modes: Mapping[str, V3Amount]
 
 
 @dataclass(frozen=True, slots=True)
@@ -122,12 +149,16 @@ class V3OfferProduct:
 
 
 @dataclass(frozen=True, slots=True)
-class PrequalifyV3Offer:
-    """One product's v3 prequalification result.
+class V3Offer:
+    """One product's v3 offer, returned identically by ``/v3/prequalify``
+    and ``/v3/quote``.
 
-    Array order of :attr:`pricing` is authoritative for display —
-    there is no ``result_index``, no client-side sort key, no
-    synthetic rank.
+    ``death_benefit`` is always present (``period=None`` — a one-time
+    lump sum). ``budget`` is present only on monthly-budget quotes
+    (``period="monthly"``, the requested budget — the stable grouping
+    key for budget responses). Array order of :attr:`pricing` is
+    authoritative for display — there is no ``result_index``, no
+    client-side sort key, no synthetic rank.
     """
 
     object: Literal["plan_offer"]
@@ -139,17 +170,52 @@ class PrequalifyV3Offer:
     death_benefit: V3Money
     pricing: Sequence[V3PricingRow]
     metadata: Mapping[str, Any]
+    budget: V3Money | None = None
 
 
 @dataclass(frozen=True, slots=True)
 class PrequalifyV3Result:
-    """Output of ``POST /v3/prequalify``."""
+    """Output of ``POST /v3/prequalify``.
 
-    plans: Sequence[PrequalifyV3Offer]
+    Always a flat :attr:`plans` sequence — single amount and
+    multi-amount alike. Group client-side by the requested dimension
+    with :func:`by_amount` (``death_benefit`` for face-amount requests,
+    ``budget`` for monthly-budget requests); the shape never changes
+    with the amount count.
+    """
+
+    plans: Sequence[V3Offer]
     request_id: str
     idempotency_key: str
     livemode: bool
     retry_attempts: int
+
+
+def by_amount(plans: Sequence[V3Offer]) -> dict[int, list[V3Offer]]:
+    """Group a flat ``plans`` sequence by the requested coverage dimension.
+
+    When any offer carries a ``budget`` (a monthly-budget response) the
+    offers key off ``budget.amount.cents``; otherwise off
+    ``death_benefit.amount.cents`` (a face-amount response). Insertion
+    order of first appearance is preserved (Python dicts are ordered) so
+    callers can render a stable side-by-side table.
+
+    In budget mode, an offer missing ``budget`` is an error per the
+    grouping contract — the function skips it rather than falling back
+    to death_benefit (which would mis-bucket mixed offers).
+    """
+    is_budget = any(offer.budget is not None for offer in plans)
+    grouped: dict[int, list[V3Offer]] = {}
+    for offer in plans:
+        if is_budget:
+            if offer.budget is None:
+                # In budget mode, missing budget is a contract violation; skip.
+                continue
+            dimension = offer.budget
+        else:
+            dimension = offer.death_benefit
+        grouped.setdefault(dimension.amount.cents, []).append(offer)
+    return grouped
 
 
 # ---------------------------------------------------------------------------
@@ -353,6 +419,47 @@ def _serialize_v3_nicotine(
     return {"last_used": legacy_map.get(nicotine_use, NicotineDuration.NEVER).value}
 
 
+def _serialize_v3_coverage(coverage: Coverage, state: str) -> dict[str, Any]:
+    """Build the v3 coverage envelope from the input shape.
+
+    Single face amount keeps the proven ``{face_amount_cents}`` shape
+    (integer cents). A single monthly budget and any multi-amount probe
+    ride the ``/v3/quote`` ``quote_options`` block — ``{quote_type,
+    amounts}`` — satisfying the server's additive ``face_amount_cents``
+    XOR ``quote_options`` contract (zyins #400). ``state`` rides the
+    envelope in every case.
+    """
+    if coverage.is_multi:
+        quote_type = (
+            QuoteType.FACE_AMOUNTS.value
+            if coverage.type is CoverageType.FACE_VALUE
+            else QuoteType.MONTHLY_BUDGET.value
+        )
+        return {
+            "quote_options": {
+                "quote_type": quote_type,
+                "amounts": [str(a) for a in coverage.amounts],
+            },
+            "state": state,
+        }
+    # A single monthly budget has no face_amount_cents to express, so it
+    # rides the quote_options block with one amount — the same path the
+    # server accepts for the multi-amount budget probe. A single face
+    # amount keeps the proven face_amount_cents wire shape.
+    if not coverage.is_face_value:
+        return {
+            "quote_options": {
+                "quote_type": QuoteType.MONTHLY_BUDGET.value,
+                "amounts": [str(coverage.amount)],
+            },
+            "state": state,
+        }
+    return {
+        "face_amount_cents": _dollars_to_cents(coverage.amount),
+        "state": state,
+    }
+
+
 def serialize_v3_prequalify_body(
     *,
     applicant: Applicant,
@@ -362,29 +469,20 @@ def serialize_v3_prequalify_body(
 ) -> str:
     """Build the ``PrequalifyV3Request`` wire body — the envelope shape.
 
-    v3 prequalify is a face-amount-only evaluation; monthly-budget
-    callers must use ``quote_v3``. The envelope carries a single
-    ``face_amount_cents`` with no ``quote_type`` discriminator, so a
-    monthly-budget :class:`Coverage` would otherwise be serialized as a
-    face amount (a ``$50/month`` budget sent as a ``$50`` death benefit,
-    which the server accepts as valid). We reject it here rather than
-    send a semantically wrong request. ``applicant.state`` moves into
-    the coverage envelope per the v3 schema.
+    Coverage serialization is shape-driven (see
+    :func:`_serialize_v3_coverage`): a single face amount sends
+    ``coverage.face_amount_cents``; a single monthly budget or a
+    multi-amount probe sends ``coverage.quote_options`` (mirroring
+    ``/v3/quote``). The server (zyins #400) answers every shape with a
+    flat ``plans`` array. ``applicant.state`` moves into the coverage
+    envelope per the v3 schema.
 
     ``applicant.zip``, ``options.min_rank``, ``options.show_unreleased``,
     ``options.skip_health_based_underwriting``, ``options.only_product_class``,
     ``options.include_product_class`` are NOT part of the v3 prequalify
     envelope and are silently dropped — they survive on ``/v3/quote``
     via :func:`serialize_wire_body`.
-
-    Raises:
-        ValueError: If ``coverage`` is not face-value.
     """
-    if not coverage.is_face_value:
-        raise ValueError(
-            "prequalify_v3 supports face-amount coverage only; "
-            "use quote_v3 for monthly-budget coverage"
-        )
     applicant_wire: dict[str, Any] = {
         "sex": applicant.sex.value,
         "dob": applicant.dob,
@@ -398,10 +496,7 @@ def serialize_v3_prequalify_body(
         applicant_wire["medications"] = [_serialize_v3_medication(m) for m in applicant.medications]
     payload: dict[str, Any] = {
         "applicant": applicant_wire,
-        "coverage": {
-            "face_amount_cents": _dollars_to_cents(coverage.amount),
-            "state": applicant.state,
-        },
+        "coverage": _serialize_v3_coverage(coverage, applicant.state),
         "products": list(products.to_wire_array()),
     }
     if options is not None and options.include_ineligible is not None:
@@ -517,7 +612,14 @@ def parse_prequalify_v3_envelope(
     livemode = True if livemode_raw is None else _to_bool(livemode_raw)
     data_raw = root.get("data")
     data = data_raw if isinstance(data_raw, dict) else {}
-    plans_raw = data.get("plans")
+    # The v3 response is always a flat ``plans[]`` array — single amount
+    # and multi-amount alike. Group client-side with :func:`by_amount` on
+    # the requested dimension (death_benefit for face amounts, budget for
+    # monthly budgets).
+    # Absent plans (vs present-but-empty) indicates wire-shape drift; fail fast.
+    if "plans" not in data:
+        raise ValueError("ZyIns prequalify_v3: missing plans field in v3 response")
+    plans_raw = data["plans"]
     plans_seq = plans_raw if isinstance(plans_raw, list) else []
     plans = tuple(_coerce_offer(p) for p in plans_seq)
     return PrequalifyV3Result(
@@ -575,10 +677,25 @@ def _to_nullable_int(value: object) -> int | None:
     return None
 
 
-def coerce_money(raw: object) -> V3Money:
+def coerce_amount(raw: object) -> V3Amount:
+    """Coerce the leaf ``{cents, display}`` amount (OpenAPI ``AmountResponse``)."""
     if not isinstance(raw, dict):
-        return V3Money(cents=0, display="")
-    return V3Money(cents=_to_int(raw.get("cents")), display=_to_str(raw.get("display")))
+        return V3Amount(cents=0, display="")
+    return V3Amount(cents=_to_int(raw.get("cents")), display=_to_str(raw.get("display")))
+
+
+def coerce_money(raw: object) -> V3Money:
+    """Coerce a ``{amount: {cents, display}, period}`` value (OpenAPI ``Money``).
+
+    ``period`` falls back to ``None`` (a one-time lump sum) for any value
+    outside the closed enum, so an unknown future period never poisons the
+    type.
+    """
+    if not isinstance(raw, dict):
+        return V3Money(amount=V3Amount(cents=0, display=""), period=None)
+    period_raw = raw.get("period")
+    period: V3Period | None = period_raw if period_raw in _V3_PERIODS else None
+    return V3Money(amount=coerce_amount(raw.get("amount")), period=period)
 
 
 def coerce_carrier(raw: object) -> V3OfferCarrier:
@@ -630,14 +747,14 @@ def _coerce_premium(raw: object) -> V3Premium | None:
     if raw is None or not isinstance(raw, dict):
         return None
     modes_raw = raw.get("modes")
-    modes: dict[str, V3Money] = {}
+    modes: dict[str, V3Amount] = {}
     if isinstance(modes_raw, dict):
         for mode_name, mode_money in modes_raw.items():
-            modes[mode_name] = coerce_money(mode_money)
+            modes[mode_name] = coerce_amount(mode_money)
     return V3Premium(
         cents=_to_int(raw.get("cents")),
         display=_to_str(raw.get("display")),
-        default=coerce_money(raw.get("default")),
+        default=coerce_amount(raw.get("default")),
         modes=MappingProxyType(modes),
     )
 
@@ -659,7 +776,7 @@ def _coerce_plan_info(raw: object) -> Sequence[Mapping[str, Any]]:
     return tuple(item for item in raw if isinstance(item, dict))
 
 
-def _coerce_offer(raw: object) -> PrequalifyV3Offer:
+def _coerce_offer(raw: object) -> V3Offer:
     obj = raw if isinstance(raw, dict) else {}
     pricing_raw = obj.get("pricing")
     pricing = (
@@ -669,7 +786,9 @@ def _coerce_offer(raw: object) -> PrequalifyV3Offer:
     )
     metadata_raw = obj.get("metadata")
     metadata = metadata_raw if isinstance(metadata_raw, dict) else {}
-    return PrequalifyV3Offer(
+    budget_raw = obj.get("budget")
+    budget = coerce_money(budget_raw) if isinstance(budget_raw, dict) else None
+    return V3Offer(
         object="plan_offer",
         id=_to_str(obj.get("id")),
         eligible=_to_bool(obj.get("eligible")),
@@ -679,6 +798,7 @@ def _coerce_offer(raw: object) -> PrequalifyV3Offer:
         death_benefit=coerce_money(obj.get("death_benefit")),
         pricing=pricing,
         metadata=MappingProxyType(dict(metadata)),
+        budget=budget,
     )
 
 
@@ -717,17 +837,21 @@ def _retry_attempts_from_headers(headers: Mapping[str, str]) -> int:
 
 
 __all__ = [
-    "PrequalifyV3Offer",
     "PrequalifyV3Options",
     "PrequalifyV3Request",
     "PrequalifyV3Result",
+    "V3Amount",
     "V3Eligibility",
     "V3EligibilityCategory",
     "V3Money",
+    "V3Offer",
     "V3OfferCarrier",
     "V3OfferProduct",
+    "V3Period",
     "V3Premium",
     "V3PricingRow",
+    "by_amount",
+    "coerce_amount",
     "coerce_carrier",
     "coerce_money",
     "coerce_pricing_row",

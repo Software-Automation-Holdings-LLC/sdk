@@ -2,11 +2,13 @@
 
 Mirror of ``packages/ts/src/zyins/quote-v3.ts``.
 
-Shares the uniform ``pricing[]`` table shape with v3 prequalify
-(see :mod:`sah_sdk.zyins.prequalify_v3`). The quote endpoint groups
-qualifying products by requested amount for side-by-side comparison
-tables. Money is integer cents + display string; the v2 string-money
-map is gone in v3.
+Shares the uniform ``pricing[]`` table and the flat ``plans[]`` envelope
+with v3 prequalify (see :mod:`sah_sdk.zyins.prequalify_v3`). Both
+endpoints answer one flat array; group client-side by the requested
+dimension with :func:`~sah_sdk.zyins.prequalify_v3.by_amount`
+(``death_benefit`` for face amounts, ``budget`` for monthly budgets).
+Money is the ``{cents, display}`` amount paired with a recurrence
+period; the v2 string-money map is gone in v3.
 """
 
 from __future__ import annotations
@@ -14,7 +16,6 @@ from __future__ import annotations
 import json
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
-from typing import Literal
 
 from ..core.errors import from_http_response
 from ..core.idempotency import generate_idempotency_key
@@ -23,50 +24,23 @@ from .applicant import Applicant
 from .coverage import Coverage
 from .prequalify_v3 import (
     PrequalifyV3Options,
-    V3Money,
-    V3OfferCarrier,
-    V3OfferProduct,
-    V3PricingRow,
+    V3Offer,
     _coerce_offer,  # internal: shared offer coercion
     _retry_after_seconds,
     _retry_attempts_from_headers,
     _to_bool,
     _to_str,
-    coerce_carrier,
-    coerce_money,
-    coerce_pricing_row,
-    coerce_product,
     serialize_wire_body,
 )
 from .product import ProductSelection
 
 
 @dataclass(frozen=True, slots=True)
-class QuoteV3Product:
-    """One product within a quote amount group."""
-
-    object: Literal["plan_offer"]
-    id: str
-    eligible: bool
-    carrier: V3OfferCarrier
-    product: V3OfferProduct
-    death_benefit: V3Money
-    pricing: Sequence[V3PricingRow]
-
-
-@dataclass(frozen=True, slots=True)
-class QuoteV3Group:
-    """All qualifying products for one requested amount."""
-
-    amount: str
-    products: Sequence[QuoteV3Product]
-
-
-@dataclass(frozen=True, slots=True)
 class QuoteV3Result:
-    """Output of ``POST /v3/quote``."""
+    """Output of ``POST /v3/quote`` — the identical flat ``plans`` shape as
+    :class:`~sah_sdk.zyins.prequalify_v3.PrequalifyV3Result`."""
 
-    results: Sequence[QuoteV3Group]
+    plans: Sequence[V3Offer]
     request_id: str
     idempotency_key: str
     livemode: bool
@@ -105,7 +79,7 @@ def quote_v3(
     headers: Mapping[str, str],
     idempotency_key: str | None = None,
 ) -> QuoteV3Result:
-    """Run a v3 quote call. Returns typed amount groups; raises typed errors."""
+    """Run a v3 quote call. Returns a flat ``plans`` list; raises typed errors."""
     body = serialize_wire_body(
         applicant=request.applicant,
         coverage=request.coverage,
@@ -155,11 +129,14 @@ def parse_quote_v3_envelope(
     livemode = True if livemode_raw is None else _to_bool(livemode_raw)
     data_raw = root.get("data")
     data = data_raw if isinstance(data_raw, dict) else {}
-    groups_raw = data.get("results")
-    groups_seq = groups_raw if isinstance(groups_raw, list) else []
-    results = tuple(_coerce_group(g) for g in groups_seq)
+    # Absent plans (vs present-but-empty) indicates wire-shape drift; fail fast.
+    if "plans" not in data:
+        raise ValueError("ZyIns quote_v3: missing plans field in v3 response")
+    plans_raw = data["plans"]
+    plans_seq = plans_raw if isinstance(plans_raw, list) else []
+    plans = tuple(_coerce_offer(p) for p in plans_seq)
     return QuoteV3Result(
-        results=results,
+        plans=plans,
         request_id=request_id,
         idempotency_key=echo_key,
         livemode=livemode,
@@ -167,45 +144,8 @@ def parse_quote_v3_envelope(
     )
 
 
-def _coerce_quote_product(raw: object) -> QuoteV3Product:
-    obj = raw if isinstance(raw, dict) else {}
-    pricing_raw = obj.get("pricing")
-    pricing = (
-        tuple(coerce_pricing_row(row) for row in pricing_raw)
-        if isinstance(pricing_raw, list)
-        else ()
-    )
-    return QuoteV3Product(
-        object="plan_offer",
-        id=_to_str(obj.get("id")),
-        eligible=_to_bool(obj.get("eligible")),
-        carrier=coerce_carrier(obj.get("carrier")),
-        product=coerce_product(obj.get("product")),
-        death_benefit=coerce_money(obj.get("death_benefit")),
-        pricing=pricing,
-    )
-
-
-def _coerce_group(raw: object) -> QuoteV3Group:
-    obj = raw if isinstance(raw, dict) else {}
-    products_raw = obj.get("products")
-    products = (
-        tuple(_coerce_quote_product(p) for p in products_raw)
-        if isinstance(products_raw, list)
-        else ()
-    )
-    return QuoteV3Group(amount=_to_str(obj.get("amount")), products=products)
-
-
-# Re-export the offer coercion symbol so it stays reachable for tests
-# that probe the parser without using the public envelope path.
-_ = _coerce_offer  # keep import binding alive for type checkers
-
-
 __all__ = [
-    "QuoteV3Group",
     "QuoteV3Options",
-    "QuoteV3Product",
     "QuoteV3Request",
     "QuoteV3Result",
     "parse_quote_v3_envelope",

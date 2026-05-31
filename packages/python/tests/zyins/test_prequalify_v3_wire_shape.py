@@ -21,8 +21,6 @@ import json
 from dataclasses import dataclass, field
 from typing import Any
 
-import pytest
-
 from sah_sdk.core.transport import TransportResponse
 from sah_sdk.zyins.applicant import (
     Applicant,
@@ -283,14 +281,61 @@ def test_v3_quote_marshaler_unchanged_still_flat() -> None:
     assert "coverage" not in payload
 
 
-def test_prequalify_v3_rejects_monthly_budget_coverage() -> None:
-    """v3 prequalify is face-amount-only. A monthly-budget Coverage must
-    be rejected at the marshaler rather than serialized as a face amount
-    (a ``$50/month`` budget must not become ``face_amount_cents: 5000``,
-    which the server would accept as a valid $50 death benefit)."""
-    with pytest.raises(ValueError, match="face-amount coverage only"):
-        serialize_v3_prequalify_body(
-            applicant=_basic_applicant(),
-            coverage=Coverage.monthly_budget(50),
-            products=_product_selection(),
-        )
+def test_prequalify_v3_single_monthly_budget_serializes_quote_options() -> None:
+    """A SINGLE monthly-budget Coverage rides ``coverage.quote_options`` with
+    one amount and the ``monthly_budget`` discriminator — it must NOT throw,
+    and must NOT serialize as a face amount (a ``$50/month`` budget is not a
+    ``$50`` face amount)."""
+    body = serialize_v3_prequalify_body(
+        applicant=_basic_applicant(),
+        coverage=Coverage.monthly_budget(50),
+        products=_product_selection(),
+    )
+    coverage = json.loads(body)["coverage"]
+    assert "face_amount_cents" not in coverage
+    assert coverage["quote_options"] == {"quote_type": "monthly_budget", "amounts": ["50"]}
+
+
+def test_prequalify_v3_parse_absent_plans_field_raises() -> None:
+    """Missing plans key (wire-shape drift) should fail, not silently return
+    empty. Matches Go/TS/PHP/C# cross-lang parity — absent vs present-but-empty
+    is a meaningful distinction."""
+    from sah_sdk.zyins.prequalify_v3 import parse_prequalify_v3_envelope
+
+    # Response envelope with data object but NO plans key
+    body_without_plans = json.dumps(
+        {
+            "object": "prequalify_result",
+            "request_id": "req_01HZK2N5GQR9T8X4B6FJW3Y1AS",
+            "idempotency_key": "550e8400-e29b-41d4-a716-446655440000",
+            "livemode": True,
+            "data": {"other_field": "value"},  # plans key absent
+        }
+    )
+
+    try:
+        parse_prequalify_v3_envelope(body_without_plans, idempotency_key="")
+        raise AssertionError("expected ValueError when plans field is absent, got None")
+    except ValueError as exc:
+        # Verify error message matches other SDKs
+        assert "missing plans field" in str(exc).lower()
+
+
+def test_prequalify_v3_parse_empty_plans_array_returns_empty() -> None:
+    """Present-but-empty plans array is valid (no offers). Matches Go/TS/PHP/C#
+    behavior — this is NOT an error."""
+    from sah_sdk.zyins.prequalify_v3 import parse_prequalify_v3_envelope
+
+    # Response envelope with empty plans array (valid no-offers result)
+    body_with_empty_plans = json.dumps(
+        {
+            "object": "prequalify_result",
+            "request_id": "req_01HZK2N5GQR9T8X4B6FJW3Y1AS",
+            "idempotency_key": "550e8400-e29b-41d4-a716-446655440000",
+            "livemode": True,
+            "data": {"plans": []},  # plans key present, array empty
+        }
+    )
+
+    result = parse_prequalify_v3_envelope(body_with_empty_plans, idempotency_key="")
+    assert len(result.plans) == 0, "expected empty plans tuple, not an error"

@@ -509,12 +509,16 @@ class QuoteType(str, Enum)
 class Coverage(BaseModel)
     type: CoverageType
     amount: int
+    amounts: tuple[int, ...]
     FACE_VALUE: ClassVar[CoverageType]
     MONTHLY_BUDGET: ClassVar[CoverageType]
     def face_value(cls, amount: int) -> Coverage
     def monthly_budget(cls, amount: int) -> Coverage
+    def face_values(cls, amounts: Sequence[int]) -> Coverage
+    def monthly_budgets(cls, amounts: Sequence[int]) -> Coverage
     def is_face_value(self) -> bool
     def is_monthly_budget(self) -> bool
+    def is_multi(self) -> bool
 
 === zyins/credential_state.py ===
 class LicenseCredentialSnapshot
@@ -832,14 +836,17 @@ class V3Eligibility
     category: V3EligibilityCategory | None
     eligible: bool
     reasons: Sequence[str]
-class V3Money
+class V3Amount
     cents: int
     display: str
+class V3Money
+    amount: V3Amount
+    period: V3Period | None
 class V3Premium
     cents: int
     display: str
-    default: V3Money
-    modes: Mapping[str, V3Money]
+    default: V3Amount
+    modes: Mapping[str, V3Amount]
 class V3PricingRow
     rate_class: str
     primary: bool
@@ -857,7 +864,7 @@ class V3OfferProduct
     display_name: str
     type: str
     wire_token: str
-class PrequalifyV3Offer
+class V3Offer
     object: Literal['plan_offer']
     id: str
     eligible: bool
@@ -867,12 +874,14 @@ class PrequalifyV3Offer
     death_benefit: V3Money
     pricing: Sequence[V3PricingRow]
     metadata: Mapping[str, Any]
+    budget: V3Money | None
 class PrequalifyV3Result
-    plans: Sequence[PrequalifyV3Offer]
+    plans: Sequence[V3Offer]
     request_id: str
     idempotency_key: str
     livemode: bool
     retry_attempts: int
+def by_amount(plans: Sequence[V3Offer]) -> dict[int, list[V3Offer]]
 class PrequalifyV3Options
     only_product_class: str | None
     include_product_class: Sequence[str]
@@ -889,6 +898,7 @@ def prequalify_v3(request: PrequalifyV3Request, *, transport: Transport, base_ur
 def serialize_v3_prequalify_body(*, applicant: Applicant, coverage: Coverage, products: ProductSelection, options: PrequalifyV3Options | None) -> str
 def serialize_wire_body(*, applicant: Applicant, coverage: Coverage, products: ProductSelection, options: PrequalifyV3Options | None) -> str
 def parse_prequalify_v3_envelope(body: str, *, idempotency_key: str, retry_attempts: int) -> PrequalifyV3Result
+def coerce_amount(raw: object) -> V3Amount
 def coerce_money(raw: object) -> V3Money
 def coerce_carrier(raw: object) -> V3OfferCarrier
 def coerce_product(raw: object) -> V3OfferProduct
@@ -943,19 +953,8 @@ class QuoteResult(BaseModel)
 def parse_quote_response(body: str) -> QuoteResult
 
 === zyins/quote_v3.py ===
-class QuoteV3Product
-    object: Literal['plan_offer']
-    id: str
-    eligible: bool
-    carrier: V3OfferCarrier
-    product: V3OfferProduct
-    death_benefit: V3Money
-    pricing: Sequence[V3PricingRow]
-class QuoteV3Group
-    amount: str
-    products: Sequence[QuoteV3Product]
 class QuoteV3Result
-    results: Sequence[QuoteV3Group]
+    plans: Sequence[V3Offer]
     request_id: str
     idempotency_key: str
     livemode: bool
