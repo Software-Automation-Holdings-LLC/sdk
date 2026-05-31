@@ -169,9 +169,36 @@ def test_prequalify_v3_emits_envelope_shape_targets_v3_path_sends_api_version() 
     # face_value(100_000) dollars → 10_000_000 cents.
     assert coverage["face_amount_cents"] == 10_000_000
     assert coverage["state"] == "NC"
+    # No applicant zip supplied → coverage.zip MUST be absent (not an
+    # empty string; the server pattern ^\d{5}(-\d{4})?$ rejects "").
+    assert "zip" not in coverage
 
     # Products: flat slug list per the PrequalifyV3Request schema.
     assert payload["products"] == ["fex"]
+
+
+def test_prequalify_v3_threads_applicant_zip_into_coverage() -> None:
+    """``applicant.zip`` MUST surface as ``coverage.zip`` on the v3
+    prequalify envelope. Before the fix the serializer dropped zip, so
+    the server zip-gated and silently filtered medsup products (prod
+    incident, bpp2.0). zip rides the coverage envelope, mirroring the
+    ``/v3/quote`` path."""
+    applicant = Applicant(
+        dob="1962-04-18",
+        sex=Sex.MALE,
+        height_inches=70,
+        weight_pounds=195,
+        state="NC",
+        nicotine_use=NicotineUsageInput(last_used=NicotineDuration.NEVER),
+        zip="75001",
+    )
+    body = serialize_v3_prequalify_body(
+        applicant=applicant,
+        coverage=Coverage.face_value(100_000),
+        products=_product_selection(),
+    )
+    coverage = json.loads(body)["coverage"]
+    assert coverage["zip"] == "75001"
 
 
 def test_prequalify_v3_serializes_conditions_medications_and_nicotine_specificity() -> None:

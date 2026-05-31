@@ -843,9 +843,8 @@ class V3Money
     amount: V3Amount
     period: V3Period | None
 class V3Premium
-    cents: int
-    display: str
-    default: V3Amount
+    amount: V3Amount
+    default_mode: str
     modes: Mapping[str, V3Amount]
 class V3PricingRow
     rate_class: str
@@ -871,7 +870,7 @@ class V3Offer
     carrier: V3OfferCarrier
     product: V3OfferProduct
     plan_info: Sequence[Mapping[str, Any]]
-    death_benefit: V3Money
+    death_benefit: V3Money | None
     pricing: Sequence[V3PricingRow]
     metadata: Mapping[str, Any]
     budget: V3Money | None
@@ -882,6 +881,7 @@ class PrequalifyV3Result
     livemode: bool
     retry_attempts: int
 def by_amount(plans: Sequence[V3Offer]) -> dict[int, list[V3Offer]]
+def offer_premium(offer: V3Offer) -> V3Premium | None
 class PrequalifyV3Options
     only_product_class: str | None
     include_product_class: Sequence[str]

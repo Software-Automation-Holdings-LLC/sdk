@@ -113,10 +113,11 @@ def _sample_envelope() -> str:
                                 },
                                 "rank": 1,
                                 "premium": {
-                                    "cents": 8742,
-                                    "display": "$87.42",
-                                    "default": {"cents": 8742, "display": "$87.42"},
-                                    "modes": {},
+                                    "amount": {"cents": 8742, "display": "$87.42"},
+                                    "default_mode": "MONTHLY-EFT",
+                                    "modes": {
+                                        "MONTHLY-EFT": {"cents": 8742, "display": "$87.42"},
+                                    },
                                 },
                             }
                         ],
@@ -134,10 +135,11 @@ def test_parse_envelope_returns_flat_plans() -> None:
     offer = result.plans[0]
     assert offer.object == "plan_offer"
     assert offer.carrier.name == "Aetna Accendo"
+    assert offer.death_benefit is not None
     assert offer.death_benefit.amount.cents == 1_000_000
     assert offer.death_benefit.period is None
     assert offer.pricing[0].premium is not None
-    assert offer.pricing[0].premium.cents == 8742
+    assert offer.pricing[0].premium.amount.cents == 8742
 
 
 def test_quote_v3_mints_idempotency_key_and_posts_to_v3_quote() -> None:

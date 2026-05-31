@@ -114,9 +114,8 @@ def _sample_envelope() -> str:
                                 },
                                 "rank": 1,
                                 "premium": {
-                                    "cents": 8742,
-                                    "display": "$87.42",
-                                    "default": {"cents": 8742, "display": "$87.42"},
+                                    "amount": {"cents": 8742, "display": "$87.42"},
+                                    "default_mode": "MONTHLY-EFT",
                                     "modes": {
                                         "MONTHLY-EFT": {
                                             "cents": 8742,
@@ -204,6 +203,7 @@ def test_parse_envelope_typed_pricing_rows() -> None:
     offer = result.plans[0]
     assert offer.object == "plan_offer"
     assert offer.carrier.name == "Aetna Accendo"
+    assert offer.death_benefit is not None
     assert offer.death_benefit.amount.cents == 1_000_000
     assert offer.death_benefit.amount.display == "$10,000"
     assert offer.death_benefit.period is None
@@ -216,8 +216,8 @@ def test_parse_envelope_typed_pricing_rows() -> None:
     assert first.eligibility.eligible is True
     assert first.rank == 1
     assert first.premium is not None
-    assert first.premium.cents == 8742
-    assert first.premium.default.cents == 8742
+    assert first.premium.amount.cents == 8742
+    assert first.premium.default_mode == "MONTHLY-EFT"
     assert first.premium.modes["ANNUAL"].cents == 100_000
     second = offer.pricing[1]
     assert second.primary is False

@@ -104,15 +104,16 @@ class V3Money:
 class V3Premium:
     """Premium for one row of the pricing table.
 
-    ``default`` is always present — it is the carrier's apples-to-
-    apples comparison value at the carrier's default pricing mode.
-    ``modes`` is the full grid (``MONTHLY-EFT``, ``ANNUAL``, …).
-    Premium carries no period this release.
+    ``amount`` is the headline value clients compare across carriers; it
+    is byte-identical to ``modes[default_mode]``. ``default_mode`` names
+    which ``modes`` entry ``amount`` was drawn from — the carrier mode
+    token (``MONTHLY-EFT``, ``ANNUAL``, …), which itself encodes the
+    recurrence, so premium carries no ``period`` field. ``modes`` is the
+    full grid.
     """
 
-    cents: int
-    display: str
-    default: V3Amount
+    amount: V3Amount
+    default_mode: str
     modes: Mapping[str, V3Amount]
 
 
@@ -153,8 +154,12 @@ class V3Offer:
     """One product's v3 offer, returned identically by ``/v3/prequalify``
     and ``/v3/quote``.
 
-    ``death_benefit`` is always present (``period=None`` — a one-time
-    lump sum). ``budget`` is present only on monthly-budget quotes
+    ``death_benefit`` is present (non-``None``) for life products
+    (fex/term/preneed) as a one-time lump sum (``period=None``); it is
+    ``None`` for premium-only products (medsup), whose coverage value
+    lives entirely in ``pricing[].premium``. Always present as an
+    attribute — ``None`` rather than absent — so consumers null-check it.
+    ``budget`` is present only on monthly-budget quotes
     (``period="monthly"``, the requested budget — the stable grouping
     key for budget responses). Array order of :attr:`pricing` is
     authoritative for display — there is no ``result_index``, no
@@ -167,7 +172,7 @@ class V3Offer:
     carrier: V3OfferCarrier
     product: V3OfferProduct
     plan_info: Sequence[Mapping[str, Any]]
-    death_benefit: V3Money
+    death_benefit: V3Money | None
     pricing: Sequence[V3PricingRow]
     metadata: Mapping[str, Any]
     budget: V3Money | None = None
@@ -202,20 +207,37 @@ def by_amount(plans: Sequence[V3Offer]) -> dict[int, list[V3Offer]]:
 
     In budget mode, an offer missing ``budget`` is an error per the
     grouping contract — the function skips it rather than falling back
-    to death_benefit (which would mis-bucket mixed offers).
+    to death_benefit (which would mis-bucket mixed offers). In
+    face-amount mode, an offer with a ``None`` death_benefit (a medsup
+    product, which has no face amount) is likewise skipped — it has no
+    face-amount dimension to group on.
     """
     is_budget = any(offer.budget is not None for offer in plans)
     grouped: dict[int, list[V3Offer]] = {}
     for offer in plans:
-        if is_budget:
-            if offer.budget is None:
-                # In budget mode, missing budget is a contract violation; skip.
-                continue
-            dimension = offer.budget
-        else:
-            dimension = offer.death_benefit
+        dimension = offer.budget if is_budget else offer.death_benefit
+        # Budget mode: missing budget is a contract violation. Face-amount
+        # mode: a None death_benefit is a medsup product with no face-amount
+        # dimension. Either way there is nothing to group on, so skip.
+        if dimension is None:
+            continue
         grouped.setdefault(dimension.amount.cents, []).append(offer)
     return grouped
+
+
+def offer_premium(offer: V3Offer) -> V3Premium | None:
+    """Return the premium facade for an offer.
+
+    The :class:`V3Premium` of the single ``primary`` (best-qualifying)
+    pricing row, or ``None`` when the offer has no qualifying row (every
+    row ineligible, or the rare eligible row whose carrier returned no
+    priceable mode). This is the one premium a list UI shows per product
+    without walking :attr:`V3Offer.pricing`.
+    """
+    for row in offer.pricing:
+        if row.primary:
+            return row.premium
+    return None
 
 
 # ---------------------------------------------------------------------------
@@ -419,16 +441,21 @@ def _serialize_v3_nicotine(
     return {"last_used": legacy_map.get(nicotine_use, NicotineDuration.NEVER).value}
 
 
-def _serialize_v3_coverage(coverage: Coverage, state: str) -> dict[str, Any]:
+def _serialize_v3_coverage(coverage: Coverage, state: str, zip_code: str | None) -> dict[str, Any]:
     """Build the v3 coverage envelope from the input shape.
 
     Single face amount keeps the proven ``{face_amount_cents}`` shape
     (integer cents). A single monthly budget and any multi-amount probe
     ride the ``/v3/quote`` ``quote_options`` block — ``{quote_type,
     amounts}`` — satisfying the server's additive ``face_amount_cents``
-    XOR ``quote_options`` contract (zyins #400). ``state`` rides the
-    envelope in every case.
+    XOR ``quote_options`` contract (zyins #400). ``state`` and ``zip``
+    ride the envelope in every case; ``zip`` is omitted when the caller
+    supplied none — the server pattern ``^\\d{5}(-\\d{4})?$`` rejects an
+    empty string and zip is required only for medsup quotes.
     """
+    locale: dict[str, Any] = {"state": state}
+    if zip_code:
+        locale["zip"] = zip_code
     if coverage.is_multi:
         quote_type = (
             QuoteType.FACE_AMOUNTS.value
@@ -440,7 +467,7 @@ def _serialize_v3_coverage(coverage: Coverage, state: str) -> dict[str, Any]:
                 "quote_type": quote_type,
                 "amounts": [str(a) for a in coverage.amounts],
             },
-            "state": state,
+            **locale,
         }
     # A single monthly budget has no face_amount_cents to express, so it
     # rides the quote_options block with one amount — the same path the
@@ -452,11 +479,11 @@ def _serialize_v3_coverage(coverage: Coverage, state: str) -> dict[str, Any]:
                 "quote_type": QuoteType.MONTHLY_BUDGET.value,
                 "amounts": [str(coverage.amount)],
             },
-            "state": state,
+            **locale,
         }
     return {
         "face_amount_cents": _dollars_to_cents(coverage.amount),
-        "state": state,
+        **locale,
     }
 
 
@@ -474,10 +501,12 @@ def serialize_v3_prequalify_body(
     ``coverage.face_amount_cents``; a single monthly budget or a
     multi-amount probe sends ``coverage.quote_options`` (mirroring
     ``/v3/quote``). The server (zyins #400) answers every shape with a
-    flat ``plans`` array. ``applicant.state`` moves into the coverage
-    envelope per the v3 schema.
+    flat ``plans`` array. ``applicant.state`` and ``applicant.zip`` move
+    into the coverage envelope per the v3 schema (``zip`` is required for
+    medsup quotes; the server zip-gates and silently filters medsup
+    products when it is absent).
 
-    ``applicant.zip``, ``options.min_rank``, ``options.show_unreleased``,
+    ``options.min_rank``, ``options.show_unreleased``,
     ``options.skip_health_based_underwriting``, ``options.only_product_class``,
     ``options.include_product_class`` are NOT part of the v3 prequalify
     envelope and are silently dropped — they survive on ``/v3/quote``
@@ -496,7 +525,7 @@ def serialize_v3_prequalify_body(
         applicant_wire["medications"] = [_serialize_v3_medication(m) for m in applicant.medications]
     payload: dict[str, Any] = {
         "applicant": applicant_wire,
-        "coverage": _serialize_v3_coverage(coverage, applicant.state),
+        "coverage": _serialize_v3_coverage(coverage, applicant.state, applicant.zip),
         "products": list(products.to_wire_array()),
     }
     if options is not None and options.include_ineligible is not None:
@@ -751,10 +780,17 @@ def _coerce_premium(raw: object) -> V3Premium | None:
     if isinstance(modes_raw, dict):
         for mode_name, mode_money in modes_raw.items():
             modes[mode_name] = coerce_amount(mode_money)
+    default_mode = _to_str(raw.get("default_mode"))
+    # ``amount`` is byte-identical to ``modes[default_mode]``; read it from the
+    # wire ``amount`` when present, else fall back to the mode grid so a server
+    # that only populated ``modes`` still yields the headline value.
+    if raw.get("amount") is not None:
+        amount = coerce_amount(raw.get("amount"))
+    else:
+        amount = modes.get(default_mode, coerce_amount(None))
     return V3Premium(
-        cents=_to_int(raw.get("cents")),
-        display=_to_str(raw.get("display")),
-        default=coerce_amount(raw.get("default")),
+        amount=amount,
+        default_mode=default_mode,
         modes=MappingProxyType(modes),
     )
 
@@ -788,6 +824,11 @@ def _coerce_offer(raw: object) -> V3Offer:
     metadata = metadata_raw if isinstance(metadata_raw, dict) else {}
     budget_raw = obj.get("budget")
     budget = coerce_money(budget_raw) if isinstance(budget_raw, dict) else None
+    # death_benefit is null on the wire for premium-only products (medsup); a
+    # Money object for life products. Preserve None rather than coercing it into
+    # a zero-cents Money, so consumers null-check medsup correctly.
+    death_benefit_raw = obj.get("death_benefit")
+    death_benefit = coerce_money(death_benefit_raw) if isinstance(death_benefit_raw, dict) else None
     return V3Offer(
         object="plan_offer",
         id=_to_str(obj.get("id")),
@@ -795,7 +836,7 @@ def _coerce_offer(raw: object) -> V3Offer:
         carrier=coerce_carrier(obj.get("carrier")),
         product=coerce_product(obj.get("product")),
         plan_info=_coerce_plan_info(obj.get("plan_info")),
-        death_benefit=coerce_money(obj.get("death_benefit")),
+        death_benefit=death_benefit,
         pricing=pricing,
         metadata=MappingProxyType(dict(metadata)),
         budget=budget,

@@ -64,10 +64,14 @@ def _face_offer(amount_cents: int, display: str, premium_cents: int) -> dict:
                 "primary": True,
                 "eligibility": {"category": "immediate", "eligible": True, "reasons": []},
                 "premium": {
-                    "cents": premium_cents,
-                    "display": f"${premium_cents / 100:.2f}",
-                    "default": {"cents": premium_cents, "display": f"${premium_cents / 100:.2f}"},
-                    "modes": {},
+                    "amount": {"cents": premium_cents, "display": f"${premium_cents / 100:.2f}"},
+                    "default_mode": "MONTHLY-EFT",
+                    "modes": {
+                        "MONTHLY-EFT": {
+                            "cents": premium_cents,
+                            "display": f"${premium_cents / 100:.2f}",
+                        },
+                    },
                 },
                 "rank": 1,
             }
@@ -143,12 +147,13 @@ def test_multi_monthly_budgets_emit_monthly_budget_quote_type() -> None:
 def test_flat_face_response_parses_money_typed_death_benefit() -> None:
     result = parse_prequalify_v3_envelope(_FLAT_FACE_RESPONSE)
     assert len(result.plans) == 2
+    assert result.plans[0].death_benefit is not None
     assert result.plans[0].death_benefit.amount.cents == 2_500_000
     assert result.plans[0].death_benefit.amount.display == "$25,000"
     assert result.plans[0].death_benefit.period is None
     assert result.plans[0].budget is None
     assert result.plans[1].pricing[0].premium is not None
-    assert result.plans[1].pricing[0].premium.cents == 8_100
+    assert result.plans[1].pricing[0].premium.amount.cents == 8_100
 
 
 def test_by_amount_groups_face_response_by_death_benefit() -> None:
