@@ -40,7 +40,7 @@
  * signature.
  */
 
-import type * as sdk from './index';
+import type * as sdk from './index.js';
 
 // =========================================================================
 // Tier 1 — symbols that exist today and MUST remain.

@@ -17,15 +17,15 @@
  * HMAC and is handled server-side — see ADR-035 (amended in this PR).
  */
 
-import { type SessionIdentity } from '../zyins/envFactory';
+import { type SessionIdentity } from '../zyins/envFactory.js';
 import {
   IsaApiError,
   IsaConfigError,
   IsaIdempotencyConflictError,
   IsaUnauthorizedError,
   IsaValidationError,
-} from '../zyins/apiError';
-import { type SignClock, signRequest } from '../core/auth/signRequest';
+} from '../zyins/apiError.js';
+import { type SignClock, signRequest } from '../core/auth/signRequest.js';
 
 const PROXY_CALL_PATH = '/v1/call';
 

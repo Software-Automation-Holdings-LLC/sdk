@@ -7,7 +7,7 @@
  * the server lands.
  */
 
-import { RapidSignError } from './errors';
+import { RapidSignError } from './errors.js';
 
 const ISSUE_URL = 'https://github.com/Software-Automation-Holdings-LLC/isa-platform/issues/38';
 

@@ -19,8 +19,8 @@
  * caller already holds. Downstream consumers (bpp2.0, Phase 3) must scrub
  * `location.hash` before any telemetry call.
  */
-import { type TCaseListEntry } from './caseWire';
-import { type TCaseRequestContext } from './caseTransport';
+import { type TCaseListEntry } from './caseWire.js';
+import { type TCaseRequestContext } from './caseTransport.js';
 /**
  * Default share-link viewer origin. The SDK appends `/c/<id>#k=<key>`; the
  * base intentionally omits the `/c/` segment so a deployment can point the

@@ -16,18 +16,18 @@
  * the cryptographic surface.
  */
 
-import { encryptCase, decryptCase } from '../../account/caseCrypto';
+import { encryptCase, decryptCase } from '../../account/caseCrypto.js';
 import {
   parseCreatedId,
   parseCaseDetail,
-} from '../../account/caseWire';
+} from '../../account/caseWire.js';
 import {
   signedCaseRequest,
   isSuccess,
   type TCaseRequestContext,
-} from '../../account/caseTransport';
-import { fromHttpResponse } from '../errors';
-import type { CaseRecord, CaseStorage, CaseStoragePutResult } from './CaseStorage';
+} from '../../account/caseTransport.js';
+import { fromHttpResponse } from '../errors.js';
+import type { CaseRecord, CaseStorage, CaseStoragePutResult } from './CaseStorage.js';
 
 /** Wire path for the opaque case store. Versioned by the `cases` surface. */
 const CASE_PATH = '/v1/case';
@@ -36,7 +36,7 @@ const HTTP_NOT_FOUND = 404;
 
 /**
  * Per-operation context needed by the default zero-knowledge adapter.
- * Mirrors {@link import('../../account/cases').CasesContext} without the
+ * Mirrors {@link import('../../account/cases.js').CasesContext} without the
  * viewer-origin field — share-link assembly is the consumer's call,
  * not the adapter's.
  */
@@ -46,7 +46,7 @@ export type ZeroKnowledgeCaseStorageContext = TCaseRequestContext;
  * Default zero-knowledge implementation of {@link CaseStorage}. Constructed
  * with the same signed-request context the legacy `account.cases` surface
  * uses; the parent `Isa` wires this automatically when no override is
- * supplied on {@link import('../isaOptions').IsaCreateOptions.caseStorage}.
+ * supplied on {@link import('../isaOptions.js').IsaCreateOptions.caseStorage}.
  */
 export class ZeroKnowledgeCaseStorage implements CaseStorage {
   constructor(private readonly contextOnce: () => ZeroKnowledgeCaseStorageContext) {}

@@ -3,8 +3,8 @@
  * License-HMAC header construction + transport call so each operation in
  * `cases.ts` only assembles its body and routes status codes.
  */
-import { deriveIdempotencyKey } from '../zyins/idempotency';
-import { buildLicenseHMACHeaders, systemClock } from '../core';
+import { deriveIdempotencyKey } from '../zyins/idempotency.js';
+import { buildLicenseHMACHeaders, systemClock } from '../core/index.js';
 /**
  * Build License-HMAC headers and dispatch one `/v1/case` request, eliminating
  * the per-operation header/transport boilerplate. The caller routes status

@@ -7,8 +7,8 @@
  * and Node.
  */
 
-import { DEFAULT_FETCH_TIMEOUT_MS, REQUEST, RETURN_TYPE, type RequestMethod, type HttpReturnType } from './constants';
-import { resolveFetch as resolveFetchFacade } from '../internal/crypto';
+import { DEFAULT_FETCH_TIMEOUT_MS, REQUEST, RETURN_TYPE, type RequestMethod, type HttpReturnType } from './constants.js';
+import { resolveFetch as resolveFetchFacade } from '../internal/crypto.js';
 
 /** Context label passed to runtime resolvers for error attribution. */
 const HTTP_CONTEXT = 'http';

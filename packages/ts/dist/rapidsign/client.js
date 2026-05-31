@@ -12,12 +12,12 @@
  * mandatory: a curator only using RapidSign can construct this class
  * directly and skip the umbrella entirely.
  */
-import { DocumentsService } from './documents';
-import { RapidSignError } from './errors';
-import { WebhooksService } from './webhooks';
-import { defaultTransport } from './internal/transport';
-import { defaultDecompressor } from './internal/decompress';
-import { defaultSleeper, defaultUUIDGenerator, systemClock, } from './internal/random';
+import { DocumentsService } from './documents.js';
+import { RapidSignError } from './errors.js';
+import { WebhooksService } from './webhooks.js';
+import { defaultTransport } from './internal/transport.js';
+import { defaultDecompressor } from './internal/decompress.js';
+import { defaultSleeper, defaultUUIDGenerator, systemClock, } from './internal/random.js';
 /** Production RapidSign endpoint. Override only for staging / local. */
 export const DEFAULT_RAPIDSIGN_BASE_URL = 'https://rapidsign.isaapi.com';
 /** Default User-Agent string. The version is updated on each release. */

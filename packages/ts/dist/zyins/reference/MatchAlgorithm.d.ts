@@ -22,7 +22,7 @@
  * });
  * ```
  */
-import type { Concept, UnknownConcept } from './Concept';
+import type { Concept, UnknownConcept } from './Concept.js';
 /**
  * Resolve free text to exactly one `Concept` from a candidate pool.
  *

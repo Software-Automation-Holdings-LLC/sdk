@@ -7,13 +7,13 @@
  * Source data:
  *   - (barrel re-export of every catalog module in this directory)
  */
-export { Product, Products } from './products';
-export { ProductType, Products as ProductsByType, } from './productsByType';
-export { State, States } from './states';
-export { ProductCarriers } from './carriers';
-export { ConditionCategories } from './conditions';
-export { MedicationUses } from './medications';
-export { Scope, ScopeDescriptions } from './scopes';
-export { SignEvent, SignEventLabels } from './signEvents';
-export { ErrorCode, ErrorAdviceCodes, ErrorDocUrls } from './errors';
+export { Product, Products } from './products.js';
+export { ProductType, Products as ProductsByType, } from './productsByType.js';
+export { State, States } from './states.js';
+export { ProductCarriers } from './carriers.js';
+export { ConditionCategories } from './conditions.js';
+export { MedicationUses } from './medications.js';
+export { Scope, ScopeDescriptions } from './scopes.js';
+export { SignEvent, SignEventLabels } from './signEvents.js';
+export { ErrorCode, ErrorAdviceCodes, ErrorDocUrls } from './errors.js';
 //# sourceMappingURL=index.js.map

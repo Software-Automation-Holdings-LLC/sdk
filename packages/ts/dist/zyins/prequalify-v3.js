@@ -9,14 +9,15 @@
  * Idempotency: every v3 mutating call requires a UUID v4 in
  * `Idempotency-Key`. We auto-mint when the caller does not supply one.
  */
-import { NicotineUsage, NicotineDuration, } from './applicant';
-import { QuoteType, isMulti } from './coverage';
-import { fromHttpResponse } from './errors';
-import { buildLicenseHMACHeaders } from '../core';
-import { systemClock } from '../core';
-import { retryAttemptsFromHeaders } from './retryAttempts';
-import { coercePlanInfo } from './planInfo';
-import { coerceCarrier, coerceMoney, coerceProduct, isRecord, toBool, toNullableNum, toNum, toStr, } from './v3Coercion';
+import { NicotineUsage, NicotineDuration, } from './applicant.js';
+import { QuoteType, isMulti } from './coverage.js';
+import { fromHttpResponse } from './errors.js';
+import { buildLicenseHMACHeaders } from '../core/index.js';
+import { systemClock } from '../core/index.js';
+import { retryAttemptsFromHeaders } from './retryAttempts.js';
+import { coercePlanInfo } from './planInfo.js';
+import { coerceAmount, coerceCarrier, coerceMoney, coerceProduct, isRecord, toBool, toNullableNum, toNum, toStr, } from './v3Coercion.js';
+export { byAmount } from './prequalify-v3-types.js';
 const PREQUALIFY_V3_PATH = '/v3/prequalify';
 /**
  * Run a v3 prequalify call. Builds the wire body, mints a UUID v4 for
@@ -159,14 +160,52 @@ function serializeV3Nicotine(nicotineUse) {
     }
 }
 /**
+ * Build the v3 `coverage` envelope from the input discriminator.
+ *
+ * Single amount keeps the proven `{ face_amount_cents }` wire shape
+ * (integer cents, SDK dollars × 100 rounded). Multi-amount mirrors the
+ * `/v3/quote` `quote_options` block — `{ quote_type, amounts: string[] }`
+ * — so the server's additive `face_amount_cents` XOR `quote_options`
+ * contract (zyins #400) is satisfied with one serializer per shape.
+ * `state` is carried on the envelope per the v3 schema in both cases.
+ */
+function serializeV3Coverage(coverage, state) {
+    if (isMulti(coverage)) {
+        return {
+            quote_options: {
+                quote_type: coverage.type === 'face_value' ? QuoteType.FaceAmounts : QuoteType.MonthlyBudget,
+                amounts: coverage.amounts.map((n) => String(n)),
+            },
+            state,
+        };
+    }
+    // A single monthly budget has no face_amount_cents to express, so it
+    // rides the quote_options block with one amount and the monthly_budget
+    // discriminator — the same path the server (zyins #400) accepts for the
+    // multi-amount budget probe. A single face amount keeps the proven
+    // face_amount_cents wire shape.
+    if (coverage.type !== 'face_value') {
+        return {
+            quote_options: {
+                quote_type: QuoteType.MonthlyBudget,
+                amounts: [String(coverage.amount)],
+            },
+            state,
+        };
+    }
+    return {
+        face_amount_cents: dollarsToCents(coverage.amount),
+        state,
+    };
+}
+/**
  * Build the `PrequalifyV3Request` wire body — the envelope shape with
  * `applicant`, `coverage`, `products[]` per the OpenAPI spec.
  *
- * v3 prequalify is a face-amount-only evaluation; multi-amount /
- * monthly-budget callers must use `quoteV3`. We collapse multi-amount
- * coverage to its first amount here so a misuse fails loudly server-side
- * rather than silently dropping the others. `face_amount_cents` is
- * integer cents (SDK input dollars × 100, rounded).
+ * Coverage serialization is shape-driven (see {@link serializeV3Coverage}):
+ * a single face amount sends `coverage.face_amount_cents`; a multi-amount
+ * probe sends `coverage.quote_options`. The server (zyins #400) answers
+ * the former with flat `plans` and the latter with grouped `results`.
  *
  * `applicant.state` is moved into the coverage envelope per the v3
  * schema. `applicant.zip`, `options.minRank`, `options.showUnreleased`,
@@ -190,18 +229,6 @@ export function serializeV3PrequalifyBody(request) {
         productsWire['include_product_class'].length > 0) {
         throw new Error('ProductSelection.byTypes is not supported on v3 prequalify; the v3 envelope accepts explicit products only. Use ProductSelection.of(...) here, or pin apiVersion { prequalify: "v2" } to select by product class.');
     }
-    // v3 prequalify is a single face-amount evaluation. Reject both
-    // reinterpretations the old code performed silently: collapsing a
-    // multi-amount probe to amounts[0], and treating a monthly_budget
-    // coverage as a face amount. Either misuse must fail loudly here, not
-    // mis-price server-side. Multi-amount / monthly-budget belong on quoteV3.
-    if (isMulti(coverage)) {
-        throw new Error('v3 prequalify accepts a single face amount; a multi-amount coverage was supplied. Use Coverage.faceValue(amount) here, or quoteV3 for multi-amount probes.');
-    }
-    if (coverage.type !== 'face_value') {
-        throw new Error(`v3 prequalify accepts only face_value coverage; got ${JSON.stringify(coverage.type)}. Use Coverage.faceValue(amount) here, or quoteV3 for monthly-budget evaluations.`);
-    }
-    const firstAmount = coverage.amount;
     const productsList = Array.isArray(productsWire['products'])
         ? productsWire['products'].map((p) => String(p))
         : [];
@@ -220,10 +247,7 @@ export function serializeV3PrequalifyBody(request) {
     }
     const payload = {
         applicant: applicantWire,
-        coverage: {
-            face_amount_cents: dollarsToCents(firstAmount),
-            state: applicant.state,
-        },
+        coverage: serializeV3Coverage(coverage, applicant.state),
         products: productsList,
     };
     if (options?.includeIneligible !== undefined) {
@@ -378,8 +402,15 @@ function parsePrequalifyEnvelope(body, idempotencyKey, retryAttempts) {
     const echoKey = toStr(root['idempotency_key']) || idempotencyKey;
     const livemode = root['livemode'] === undefined ? true : toBool(root['livemode']);
     const data = isRecord(root['data']) ? root['data'] : {};
+    // The v3 response is always a flat `plans[]` array — single amount and
+    // multi-amount alike. Group client-side with `byAmount` on the requested
+    // dimension (deathBenefit for face amounts, budget for monthly budgets).
+    // Absent plans (vs present-but-empty) indicates wire-shape drift; fail fast.
+    if (!('plans' in data)) {
+        throw new Error('ZyIns prequalifyV3: missing plans field in v3 response');
+    }
     const plansRaw = Array.isArray(data['plans']) ? data['plans'] : [];
-    const plans = plansRaw.map(coercePrequalifyOffer);
+    const plans = plansRaw.map(coerceV3Offer);
     return {
         plans,
         requestId,
@@ -412,12 +443,12 @@ function coercePremium(raw) {
     const modesRaw = isRecord(raw['modes']) ? raw['modes'] : {};
     const modes = {};
     for (const [k, v] of Object.entries(modesRaw)) {
-        modes[k] = coerceMoney(v);
+        modes[k] = coerceAmount(v);
     }
     return {
         cents: toNum(raw['cents']),
         display: toStr(raw['display']),
-        default: coerceMoney(raw['default']),
+        default: coerceAmount(raw['default']),
         modes,
     };
 }
@@ -433,12 +464,17 @@ export function coercePricingRow(raw) {
     };
     return base;
 }
-function coercePrequalifyOffer(raw) {
+/**
+ * Coerce one flat `plans[]` entry. Shared by `prequalifyV3` and `quoteV3`
+ * — both endpoints return the identical {@link V3Offer} shape. `budget` is
+ * present only on monthly-budget responses (`undefined` otherwise).
+ */
+export function coerceV3Offer(raw) {
     const r = isRecord(raw) ? raw : {};
     const pricingRaw = Array.isArray(r['pricing']) ? r['pricing'] : [];
     const metadata = isRecord(r['metadata']) ? r['metadata'] : {};
     const planInfo = coercePlanInfo(r['plan_info']);
-    return {
+    const base = {
         object: 'plan_offer',
         id: toStr(r['id']),
         eligible: toBool(r['eligible']),
@@ -448,6 +484,8 @@ function coercePrequalifyOffer(raw) {
         deathBenefit: coerceMoney(r['death_benefit']),
         pricing: pricingRaw.map(coercePricingRow),
         metadata,
+        ...(isRecord(r['budget']) ? { budget: coerceMoney(r['budget']) } : {}),
     };
+    return base;
 }
 //# sourceMappingURL=prequalify-v3.js.map

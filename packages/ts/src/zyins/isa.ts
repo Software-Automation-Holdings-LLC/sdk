@@ -27,18 +27,18 @@ import {
   resolveLicenseIdentity,
   resolveSessionIdentity,
   ENV_VAR_NAMES,
-} from './envFactory';
-import { IsaConfigError, IsaNotActivatedError, IsaTimeoutError } from './apiError';
+} from './envFactory.js';
+import { IsaConfigError, IsaNotActivatedError, IsaTimeoutError } from './apiError.js';
 import {
   type CredentialStore,
   CREDENTIAL_KEYS,
   inMemoryCredentialStore,
   loadOrMintDeviceId,
-} from '../core';
+} from '../core/index.js';
 import {
   IsaCredentialState,
   type LicenseRefreshedListener,
-} from './credentialState';
+} from './credentialState.js';
 import {
   type DebugLogger,
   type EnvReader,
@@ -46,38 +46,38 @@ import {
   debugLoggerFromEnv,
   processEnv,
   stderrSink,
-} from './logger';
+} from './logger.js';
 import {
   type Envelope,
   type RawResponse,
   type RawResponseResult,
-} from './envelope';
-import { type AuthContext } from './auth';
-import { ZyInsClient, DEFAULT_ZYINS_BASE_URL, type ZyInsClientOptions } from './client';
-import { defaultTransport, type Transport } from './transport';
-import { type LogosFetch } from './logos';
+} from './envelope.js';
+import { type AuthContext } from './auth.js';
+import { ZyInsClient, DEFAULT_ZYINS_BASE_URL, type ZyInsClientOptions } from './client.js';
+import { defaultTransport, type Transport } from './transport.js';
+import { type LogosFetch } from './logos.js';
 import {
   type PrequalifyRequest,
   type PrequalifyResult,
-} from './prequalify';
+} from './prequalify.js';
 import {
   type PrequalifyV2Request,
   type PrequalifyV2Result,
-} from './prequalify-v2';
+} from './prequalify-v2.js';
 import {
   type PrequalifyV3Request,
   type PrequalifyV3Result,
   type QuoteV3Request,
   type QuoteV3Result,
-} from './prequalify-v3-types';
-import { SDK_RETRY_ATTEMPTS_HEADER } from './retryAttempts';
-import { WebhooksService } from '../rapidsign/webhooks';
+} from './prequalify-v3-types.js';
+import { SDK_RETRY_ATTEMPTS_HEADER } from './retryAttempts.js';
+import { WebhooksService } from '../rapidsign/webhooks.js';
 import {
   type ProxyCallOptions,
   type ProxyCallResult,
   assertSessionIdentityForProxyCall,
   proxyCall as runProxyCall,
-} from '../proxy/call';
+} from '../proxy/call.js';
 import {
   BrandingFacade,
   DatasetsFacade,
@@ -95,15 +95,15 @@ import {
   type MatchAlgorithm,
   type AutocompleteAlgorithm,
   type DefaultAutocorrectorOptions,
-} from './isaNamespaces';
-import { ProductsFacade } from './products';
+} from './isaNamespaces.js';
+import { ProductsFacade } from './products.js';
 import {
   type ClientVersionListener,
   type ClientVersionStatus,
   evaluateClientVersion,
-} from './clientVersion';
-import { AccountNamespace } from '../account';
-import { buildAccountNamespace } from '../account/factory';
+} from './clientVersion.js';
+import { AccountNamespace } from '../account/index.js';
+import { buildAccountNamespace } from '../account/factory.js';
 import {
   type IsaApiVersion,
   type IsaApiVersionOverride,
@@ -114,11 +114,11 @@ import {
   resolveIsaOptions,
   resolveApiVersions,
   DEFAULT_TIMEOUT_MS,
-} from './isaOptions';
-import { surfaceForPath } from './bundledApiVersions';
-import type { CaseStorage } from './cases/CaseStorage';
-import { ZeroKnowledgeCaseStorage } from './cases/ZeroKnowledgeCaseStorage';
-import { DEFAULT_CASE_VIEWER_BASE_URL } from '../account/cases';
+} from './isaOptions.js';
+import { surfaceForPath } from './bundledApiVersions.js';
+import type { CaseStorage } from './cases/CaseStorage.js';
+import { ZeroKnowledgeCaseStorage } from './cases/ZeroKnowledgeCaseStorage.js';
+import { DEFAULT_CASE_VIEWER_BASE_URL } from '../account/cases.js';
 
 /** Constructor options for `Isa`. */
 export interface IsaOptions {
@@ -185,7 +185,7 @@ export interface IsaOptions {
   timeout?: number;
   /**
    * Per-surface API-version override. Surfaces absent from the override
-   * fall back to {@link import('./bundledApiVersions').BundledApiVersions}.
+   * fall back to {@link import('./bundledApiVersions.js').BundledApiVersions}.
    * Surfaced per-call via the `Api-Version` request header, resolved from
    * the request path.
    */
@@ -239,7 +239,7 @@ export interface IsaFactoryOptions {
   timeout?: number;
   /**
    * Per-surface API-version override. Surfaces absent from the override
-   * fall back to {@link import('./bundledApiVersions').BundledApiVersions}.
+   * fall back to {@link import('./bundledApiVersions.js').BundledApiVersions}.
    * Immutable per-instance; surfaced via the `Api-Version` request header
    * resolved per-call from the request path.
    */

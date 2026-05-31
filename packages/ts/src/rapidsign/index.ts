@@ -19,7 +19,7 @@ export {
   DEFAULT_USER_AGENT,
   DEFAULT_MAX_RETRIES,
   type RapidSignClientOptions,
-} from './client';
+} from './client.js';
 
 export {
   RapidSignError,
@@ -27,7 +27,7 @@ export {
   fromProblemDetails,
   type ErrorCode,
   type RapidSignErrorInit,
-} from './errors';
+} from './errors.js';
 
 export {
   type Envelope,
@@ -38,10 +38,10 @@ export {
   type CancelRequest,
   type AwaitOpts,
   type Signature,
-} from './types';
+} from './types.js';
 
-export { DocumentsService, type DocumentsContext } from './documents';
-export { WebhooksService, type WebhookEvent } from './webhooks';
+export { DocumentsService, type DocumentsContext } from './documents.js';
+export { WebhooksService, type WebhookEvent } from './webhooks.js';
 
 export {
   defaultTransport,
@@ -49,13 +49,13 @@ export {
   type TransportRequest,
   type TransportResponse,
   type HttpMethod,
-} from './internal/transport';
+} from './internal/transport.js';
 
 export {
   defaultDecompressor,
   decodeGzipBase64,
   type Decompressor,
-} from './internal/decompress';
+} from './internal/decompress.js';
 
 export {
   defaultUUIDGenerator,
@@ -64,6 +64,6 @@ export {
   type Clock,
   type Sleeper,
   type UUIDGenerator,
-} from './internal/random';
+} from './internal/random.js';
 
-export { parseDuration, MAX_DURATION_MS } from './internal/duration';
+export { parseDuration, MAX_DURATION_MS } from './internal/duration.js';

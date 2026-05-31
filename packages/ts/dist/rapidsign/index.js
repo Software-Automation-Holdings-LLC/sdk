@@ -12,12 +12,12 @@
  * Cross-language naming: these names are the spec the Go and PHP agents
  * mirror with their language casing. Renames are breaking.
  */
-export { RapidSignClient, DEFAULT_RAPIDSIGN_BASE_URL, DEFAULT_USER_AGENT, DEFAULT_MAX_RETRIES, } from './client';
-export { RapidSignError, fromHttpResponse, fromProblemDetails, } from './errors';
-export { DocumentsService } from './documents';
-export { WebhooksService } from './webhooks';
-export { defaultTransport, } from './internal/transport';
-export { defaultDecompressor, decodeGzipBase64, } from './internal/decompress';
-export { defaultUUIDGenerator, defaultSleeper, systemClock, } from './internal/random';
-export { parseDuration, MAX_DURATION_MS } from './internal/duration';
+export { RapidSignClient, DEFAULT_RAPIDSIGN_BASE_URL, DEFAULT_USER_AGENT, DEFAULT_MAX_RETRIES, } from './client.js';
+export { RapidSignError, fromHttpResponse, fromProblemDetails, } from './errors.js';
+export { DocumentsService } from './documents.js';
+export { WebhooksService } from './webhooks.js';
+export { defaultTransport, } from './internal/transport.js';
+export { defaultDecompressor, decodeGzipBase64, } from './internal/decompress.js';
+export { defaultUUIDGenerator, defaultSleeper, systemClock, } from './internal/random.js';
+export { parseDuration, MAX_DURATION_MS } from './internal/duration.js';
 //# sourceMappingURL=index.js.map

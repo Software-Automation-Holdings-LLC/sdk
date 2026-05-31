@@ -10,12 +10,12 @@
  * `IsaConfigError` with a description of what's missing.
  */
 
-import { type IsaIdentity } from '../zyins/envFactory';
-import { IsaConfigError } from '../zyins/apiError';
-import { type IsaCredentialState } from '../zyins/credentialState';
-import { DEFAULT_ZYINS_BASE_URL } from '../zyins/client';
-import { type Transport } from '../zyins/transport';
-import { AccountNamespace } from './index';
+import { type IsaIdentity } from '../zyins/envFactory.js';
+import { IsaConfigError } from '../zyins/apiError.js';
+import { type IsaCredentialState } from '../zyins/credentialState.js';
+import { DEFAULT_ZYINS_BASE_URL } from '../zyins/client.js';
+import { type Transport } from '../zyins/transport.js';
+import { AccountNamespace } from './index.js';
 
 /** Inputs the unified `Isa` factory hands down for namespace construction. */
 export interface AccountFactoryOptions {

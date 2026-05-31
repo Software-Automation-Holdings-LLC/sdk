@@ -13,9 +13,9 @@
  * This module owns ONLY the wire shape + the parser. Consumer-side index
  * construction (`ReferenceIndex`) lives in `./reference/referenceIndex.ts`.
  */
-import { buildLicenseHMACHeaders } from '../core';
-import { systemClock } from '../core';
-import { fromHttpResponse } from './errors';
+import { buildLicenseHMACHeaders } from '../core/index.js';
+import { systemClock } from '../core/index.js';
+import { fromHttpResponse } from './errors.js';
 const DATASETS_V3_PATH = '/v3/datasets';
 /**
  * Discriminator helper. Lets a caller switch on the result without

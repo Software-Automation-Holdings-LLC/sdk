@@ -9,7 +9,7 @@
  * `refresh()` is a no-op today; it remains in the surface so future
  * server-driven catalog refresh lands without an API-shape change.
  */
-import { Products, type Product, type ProductClassValue } from './product';
+import { Products, type Product, type ProductClassValue } from './product.js';
 /** `isa.zyins.products` — typed catalog access. */
 export declare class ProductsFacade {
     constructor(_deps?: unknown);

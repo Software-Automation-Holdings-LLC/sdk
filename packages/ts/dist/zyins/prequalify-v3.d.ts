@@ -9,12 +9,13 @@
  * Idempotency: every v3 mutating call requires a UUID v4 in
  * `Idempotency-Key`. We auto-mint when the caller does not supply one.
  */
-import { type Applicant } from './applicant';
-import { type CoverageInput } from './coverage';
-import { type AuthContext } from './auth';
-import { type Clock } from '../core';
-import { type PrequalifyV3Context, type PrequalifyV3Request, type PrequalifyV3Result, type V3PricingRow } from './prequalify-v3-types';
-export type { PrequalifyV3Context, PrequalifyV3Offer, PrequalifyV3Options, PrequalifyV3Request, PrequalifyV3Result, QuoteV3Context, QuoteV3Group, QuoteV3Options, QuoteV3Product, QuoteV3Request, QuoteV3Result, V3DeathBenefit, V3Eligibility, V3EligibilityCategory, V3Money, V3Premium, V3PricingRow, } from './prequalify-v3-types';
+import { type Applicant } from './applicant.js';
+import { type CoverageInput } from './coverage.js';
+import { type AuthContext } from './auth.js';
+import { type Clock } from '../core/index.js';
+import { type PrequalifyV3Context, type PrequalifyV3Request, type PrequalifyV3Result, type V3Offer, type V3PricingRow } from './prequalify-v3-types.js';
+export { byAmount } from './prequalify-v3-types.js';
+export type { PrequalifyV3Context, PrequalifyV3Options, PrequalifyV3Request, PrequalifyV3Result, QuoteV3Context, QuoteV3Options, QuoteV3Request, QuoteV3Result, V3Amount, V3Eligibility, V3EligibilityCategory, V3Money, V3Offer, V3Period, V3Premium, V3PricingRow, } from './prequalify-v3-types.js';
 /**
  * Run a v3 prequalify call. Builds the wire body, mints a UUID v4 for
  * `Idempotency-Key` if the caller did not pass one, signs the request,
@@ -25,11 +26,10 @@ export declare function prequalifyV3(request: PrequalifyV3Request, ctx: Prequali
  * Build the `PrequalifyV3Request` wire body — the envelope shape with
  * `applicant`, `coverage`, `products[]` per the OpenAPI spec.
  *
- * v3 prequalify is a face-amount-only evaluation; multi-amount /
- * monthly-budget callers must use `quoteV3`. We collapse multi-amount
- * coverage to its first amount here so a misuse fails loudly server-side
- * rather than silently dropping the others. `face_amount_cents` is
- * integer cents (SDK input dollars × 100, rounded).
+ * Coverage serialization is shape-driven (see {@link serializeV3Coverage}):
+ * a single face amount sends `coverage.face_amount_cents`; a multi-amount
+ * probe sends `coverage.quote_options`. The server (zyins #400) answers
+ * the former with flat `plans` and the latter with grouped `results`.
  *
  * `applicant.state` is moved into the coverage envelope per the v3
  * schema. `applicant.zip`, `options.minRank`, `options.showUnreleased`,
@@ -60,4 +60,10 @@ export declare function buildHeaders(args: {
 }): Promise<Record<string, string>>;
 export declare function mintUuidV4(): string;
 export declare function coercePricingRow(raw: unknown): V3PricingRow;
+/**
+ * Coerce one flat `plans[]` entry. Shared by `prequalifyV3` and `quoteV3`
+ * — both endpoints return the identical {@link V3Offer} shape. `budget` is
+ * present only on monthly-budget responses (`undefined` otherwise).
+ */
+export declare function coerceV3Offer(raw: unknown): V3Offer;
 //# sourceMappingURL=prequalify-v3.d.ts.map

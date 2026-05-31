@@ -17,30 +17,30 @@
  *   - Retries and backoff are NOT exposed here; they live in Tier 2.
  */
 
-import { type AuthContext } from './auth';
-import { type Transport, defaultTransport } from './transport';
-import { type Clock, systemClock } from '../core';
+import { type AuthContext } from './auth.js';
+import { type Transport, defaultTransport } from './transport.js';
+import { type Clock, systemClock } from '../core/index.js';
 import {
   prequalify,
   type PrequalifyRequest,
   type PrequalifyResult,
-} from './prequalify';
+} from './prequalify.js';
 import {
   prequalifyV2,
   type PrequalifyV2Request,
   type PrequalifyV2Result,
-} from './prequalify-v2';
+} from './prequalify-v2.js';
 import {
   prequalifyV3,
   type PrequalifyV3Request,
   type PrequalifyV3Result,
-} from './prequalify-v3';
+} from './prequalify-v3.js';
 import {
   quoteV3,
   type QuoteV3Request,
   type QuoteV3Result,
-} from './quote-v3';
-import { DatasetsV3SubClient } from './datasets-v3';
+} from './quote-v3.js';
+import { DatasetsV3SubClient } from './datasets-v3.js';
 import {
   activate as licenseActivate,
   check as licenseCheck,
@@ -51,25 +51,25 @@ import {
   type LicenseCheckResult,
   type LicenseDeactivateRequest,
   type LicenseDeactivateResult,
-} from './license';
-import { getReadiness, type ReadinessResult } from './health';
-import { email, type CaseEmailRequest, type CaseEmailResult } from './case';
-import { lookup as brandingLookup, type BrandingDetail } from './branding';
-import { DatasetsSubClient } from './datasets';
+} from './license.js';
+import { getReadiness, type ReadinessResult } from './health.js';
+import { email, type CaseEmailRequest, type CaseEmailResult } from './case.js';
+import { lookup as brandingLookup, type BrandingDetail } from './branding.js';
+import { DatasetsSubClient } from './datasets.js';
 import {
   lookup as preferencesLookup,
   set as preferencesSet,
   type PreferencesLookupResult,
   type PreferencesSetRequest,
   type PreferencesSetResult,
-} from './preferences';
+} from './preferences.js';
 import {
   share as casesShare,
   type CaseShareRequest,
   type CaseShareResult,
-} from './cases';
-import { DEFAULT_CASE_VIEWER_BASE_URL } from '../account/cases';
-import { LogosSubClient, type LogosFetch } from './logos';
+} from './cases.js';
+import { DEFAULT_CASE_VIEWER_BASE_URL } from '../account/cases.js';
+import { LogosSubClient, type LogosFetch } from './logos.js';
 
 /** Per-call context shared across sub-clients. */
 export interface OperationContext {

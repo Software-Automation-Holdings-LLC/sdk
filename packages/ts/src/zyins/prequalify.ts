@@ -15,23 +15,23 @@
  *    request_id, idempotency_key }`.
  */
 
-import { type Applicant, NicotineUsage, type NicotineUsageInput, NicotineDuration } from './applicant';
+import { type Applicant, NicotineUsage, type NicotineUsageInput, NicotineDuration } from './applicant.js';
 import {
   type CoverageInput,
   type CoverageType,
   QuoteType,
   isMulti,
-} from './coverage';
-import { type ProductSelection, type Product, type ProductClassValue, Products } from './product';
-import { type AuthContext } from './auth';
-import { type Transport } from './transport';
-import { fromHttpResponse } from './errors';
-import { deriveIdempotencyKey } from './idempotency';
-import { buildLicenseHMACHeaders } from '../core';
-import { type Clock, systemClock } from '../core';
-import { coercePlanInfo } from './planInfo';
-import { retryAttemptsFromHeaders } from './retryAttempts';
-import type { OfferPlanInfo, OfferPlanInfoLegacy } from './prequalify-v2-types';
+} from './coverage.js';
+import { type ProductSelection, type Product, type ProductClassValue, Products } from './product.js';
+import { type AuthContext } from './auth.js';
+import { type Transport } from './transport.js';
+import { fromHttpResponse } from './errors.js';
+import { deriveIdempotencyKey } from './idempotency.js';
+import { buildLicenseHMACHeaders } from '../core/index.js';
+import { type Clock, systemClock } from '../core/index.js';
+import { coercePlanInfo } from './planInfo.js';
+import { retryAttemptsFromHeaders } from './retryAttempts.js';
+import type { OfferPlanInfo, OfferPlanInfoLegacy } from './prequalify-v2-types.js';
 
 /** Optional per-call knobs that map onto the server's filter primitives. */
 export interface PrequalifyOptions {

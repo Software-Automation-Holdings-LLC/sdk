@@ -2,9 +2,9 @@
  * Structured proxy-call helper. Wraps httpRequest with the `/v1/call` envelope
  * shape and the Algosure HMAC headers required by the platform proxy.
  */
-import { buildAlgosureHeaders } from '../algosure/hmac';
-import { HttpRequestError, httpRequest } from '../../core';
-import { REQUEST, RETURN_TYPE } from '../../core';
+import { buildAlgosureHeaders } from '../algosure/hmac.js';
+import { HttpRequestError, httpRequest } from '../../core/index.js';
+import { REQUEST, RETURN_TYPE } from '../../core/index.js';
 const PROXY_CALL_PATH = '/v1/call';
 /**
  * Issues a POST {proxyOrigin}/v1/call with the structured

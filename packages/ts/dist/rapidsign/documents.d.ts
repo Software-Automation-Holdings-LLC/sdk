@@ -14,10 +14,10 @@
  * `cancel` throws `NotImplemented` until the matching server endpoint ships
  * (tracked in issue #38). The SDK surface is the product.
  */
-import { type AwaitOpts, type CancelRequest, type Envelope, type SendRequest, type Signature } from './types';
-import { type Transport } from './internal/transport';
-import { type Decompressor } from './internal/decompress';
-import { type Clock, type Sleeper, type UUIDGenerator } from './internal/random';
+import { type AwaitOpts, type CancelRequest, type Envelope, type SendRequest, type Signature } from './types.js';
+import { type Transport } from './internal/transport.js';
+import { type Decompressor } from './internal/decompress.js';
+import { type Clock, type Sleeper, type UUIDGenerator } from './internal/random.js';
 /** Per-call context the parent client injects. */
 export interface DocumentsContext {
     readonly token: string;

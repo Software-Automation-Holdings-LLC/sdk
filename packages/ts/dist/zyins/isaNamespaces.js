@@ -6,11 +6,11 @@
  * Separated from `isa.ts` to keep that file under the 250-line cap; this
  * module owns only the facade shape, not the unified `Isa` class itself.
  */
-import { assembleLink } from '../account/caseWire';
-export { ReferenceFacade, ReferenceMedicationsFacade, ReferenceConditionsFacade, ReferenceConceptsFacade, ReferenceBundleCache, DefaultAutocorrector, DefaultMatchAlgorithm, DefaultAutocompleteAlgorithm, buildSuggestion, } from './reference/index';
-import { activate as licenseActivate, check as licenseCheck, deactivate as licenseDeactivate, } from './license';
-import { systemClock } from '../core';
-import { LogosSubClient, } from './logos';
+import { assembleLink } from '../account/caseWire.js';
+export { ReferenceFacade, ReferenceMedicationsFacade, ReferenceConditionsFacade, ReferenceConceptsFacade, ReferenceBundleCache, DefaultAutocorrector, DefaultMatchAlgorithm, DefaultAutocompleteAlgorithm, buildSuggestion, } from './reference/index.js';
+import { activate as licenseActivate, check as licenseCheck, deactivate as licenseDeactivate, } from './license.js';
+import { systemClock } from '../core/index.js';
+import { LogosSubClient, } from './logos.js';
 /**
  * One-shot deprecation warning helpers. Each surface that has a singular →
  * plural (or method-rename) shim logs a `console.warn` exactly once per

@@ -9,7 +9,7 @@
  * Vue installed do not pull it into their bundle.
  */
 import { inject, provide } from 'vue';
-import { ZyInsClient } from '../client';
+import { ZyInsClient } from '../client.js';
 /** Symbol-keyed injection slot. */
 export const ZyInsKey = Symbol('zyins:client');
 /**

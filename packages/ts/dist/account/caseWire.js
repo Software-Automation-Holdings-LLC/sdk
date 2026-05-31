@@ -7,7 +7,7 @@
  * The link is the capability: it carries the case id in the path and the
  * decryption key in the `#k=` fragment. These helpers never log it.
  */
-import { isRecord, parseJsonResponse, stringField, unwrapEnvelope } from '../zyins/response';
+import { isRecord, parseJsonResponse, stringField, unwrapEnvelope } from '../zyins/response.js';
 const FRAGMENT_KEY_PREFIX = '#k=';
 /**
  * Assemble `${base}/c/<id>#k=<keyFragment>`, normalizing a trailing slash on

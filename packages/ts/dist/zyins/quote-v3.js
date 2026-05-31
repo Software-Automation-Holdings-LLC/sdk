@@ -1,16 +1,18 @@
 /**
  * Tier 3 quote v3 operation — `POST /v3/quote`.
  *
- * Shares the uniform `pricing[]` table shape with v3 prequalify (see
- * `prequalify-v3-types.ts`). The quote endpoint groups qualifying
- * products by requested amount for side-by-side comparison tables.
- * Money is integer cents + display string; the v2 string-money map is
- * gone in v3.
+ * Shares the uniform `pricing[]` table and the flat `plans[]` envelope
+ * with v3 prequalify (see `prequalify-v3-types.ts`). Both endpoints answer
+ * one flat array; group client-side by the requested dimension with
+ * {@link byAmount} (deathBenefit for face amounts, budget for monthly
+ * budgets). Money is the {cents, display} amount paired with a recurrence
+ * period; the v2 string-money map is gone in v3.
  */
-import { fromHttpResponse } from './errors';
-import { retryAttemptsFromHeaders } from './retryAttempts';
-import { buildHeaders, coercePricingRow, mintUuidV4, serializeWireBody, } from './prequalify-v3';
-import { coerceCarrier, coerceMoney, coerceProduct, isRecord, toBool, toStr, } from './v3Coercion';
+import { fromHttpResponse } from './errors.js';
+import { retryAttemptsFromHeaders } from './retryAttempts.js';
+import { buildHeaders, coerceV3Offer, mintUuidV4, serializeWireBody } from './prequalify-v3.js';
+import { isRecord, toBool, toStr } from './v3Coercion.js';
+export { byAmount } from './prequalify-v3-types.js';
 const QUOTE_V3_PATH = '/v3/quote';
 export async function quoteV3(request, ctx) {
     const body = serializeWireBody(request);
@@ -42,35 +44,18 @@ function parseQuoteEnvelope(body, idempotencyKey, retryAttempts) {
     const echoKey = toStr(root['idempotency_key']) || idempotencyKey;
     const livemode = root['livemode'] === undefined ? true : toBool(root['livemode']);
     const data = isRecord(root['data']) ? root['data'] : {};
-    const groupsRaw = Array.isArray(data['results']) ? data['results'] : [];
-    const results = groupsRaw.map(coerceGroup);
+    // Absent plans (vs present-but-empty) indicates wire-shape drift; fail fast.
+    if (!('plans' in data)) {
+        throw new Error('ZyIns quoteV3: missing plans field in v3 response');
+    }
+    const plansRaw = Array.isArray(data['plans']) ? data['plans'] : [];
+    const plans = plansRaw.map(coerceV3Offer);
     return {
-        results,
+        plans,
         requestId,
         idempotencyKey: echoKey,
         livemode,
         retryAttempts,
-    };
-}
-function coerceQuoteProduct(raw) {
-    const r = isRecord(raw) ? raw : {};
-    const pricingRaw = Array.isArray(r['pricing']) ? r['pricing'] : [];
-    return {
-        object: 'plan_offer',
-        id: toStr(r['id']),
-        eligible: toBool(r['eligible']),
-        carrier: coerceCarrier(r['carrier']),
-        product: coerceProduct(r['product']),
-        deathBenefit: coerceMoney(r['death_benefit']),
-        pricing: pricingRaw.map(coercePricingRow),
-    };
-}
-function coerceGroup(raw) {
-    const r = isRecord(raw) ? raw : {};
-    const productsRaw = Array.isArray(r['products']) ? r['products'] : [];
-    return {
-        amount: toStr(r['amount']),
-        products: productsRaw.map(coerceQuoteProduct),
     };
 }
 //# sourceMappingURL=quote-v3.js.map

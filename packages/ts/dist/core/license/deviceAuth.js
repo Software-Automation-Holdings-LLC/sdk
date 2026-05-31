@@ -10,7 +10,7 @@
  * @see go/zyins/server/auth_middleware.go
  * @see go/zyins/server/device_signature.go
  */
-import { base64EncodeUtf8, resolveSubtle, arrayBufferToHex, systemClock, } from '../internal/crypto';
+import { base64EncodeUtf8, resolveSubtle, arrayBufferToHex, systemClock, } from '../internal/crypto.js';
 const QUOTE_CHAR = '"';
 /** Module label used for error attribution by runtime resolvers. */
 const LICENSE_CONTEXT = 'License';

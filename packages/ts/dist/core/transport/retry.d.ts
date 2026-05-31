@@ -1,4 +1,4 @@
-import type { FetchImpl } from './bearer';
+import type { FetchImpl } from './bearer.js';
 /** Returns the current instant in ms since epoch. */
 export type Clock = () => number;
 /** Sleeps for a duration. Tests inject a recording fake. */

@@ -12,12 +12,12 @@
  * deliberately does NOT 404 for missing branding rows.
  */
 
-import { type AuthContext } from './auth';
-import { type Transport } from './transport';
-import { fromHttpResponse } from './errors';
-import { boolField, isRecord, parseJsonResponse, stringField, unwrapEnvelope } from './response';
-import { buildLicenseHMACHeaders } from '../core';
-import { type Clock, systemClock } from '../core';
+import { type AuthContext } from './auth.js';
+import { type Transport } from './transport.js';
+import { fromHttpResponse } from './errors.js';
+import { boolField, isRecord, parseJsonResponse, stringField, unwrapEnvelope } from './response.js';
+import { buildLicenseHMACHeaders } from '../core/index.js';
+import { type Clock, systemClock } from '../core/index.js';
 
 const BRANDING_PATH = '/v2/branding';
 

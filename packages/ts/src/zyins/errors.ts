@@ -15,8 +15,8 @@
  * "legacy error formats are absorbed" invariant from ADR-035.
  */
 
-import { isProblemDetails, type ProblemDetails } from '../core';
-import { IsaIdempotencyConflictError } from './apiError';
+import { isProblemDetails, type ProblemDetails } from '../core/index.js';
+import { IsaIdempotencyConflictError } from './apiError.js';
 
 /**
  * License-specific error codes. Drawn from the legacy CGI's ERR_* set;

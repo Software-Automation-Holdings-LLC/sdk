@@ -13,7 +13,7 @@
  * (timeout handling, transient tagging) into Tier 3 — that is Tier 2's job,
  * and Tier 3 is allowed to assume the protocol layer above it is reliable.
  */
-import { resolveFetch } from '../core';
+import { resolveFetch } from '../core/index.js';
 /**
  * Construct the default transport. Accepts an optional `fetchImpl` override
  * so tests inject a stub without touching globals.

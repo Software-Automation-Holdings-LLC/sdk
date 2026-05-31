@@ -19,14 +19,14 @@ export {
   bytesToBase64Url,
   systemRandomBytes,
   systemClock,
-} from './internal/crypto';
-export type { Clock, RandomBytes } from './internal/crypto';
+} from './internal/crypto.js';
+export type { Clock, RandomBytes } from './internal/crypto.js';
 
-export * from './license/deviceAuth';
-export * from './problem-details/types';
-export * from './http/constants';
-export * from './http/request';
-export * from './transport';
+export * from './license/deviceAuth.js';
+export * from './problem-details/types.js';
+export * from './http/constants.js';
+export * from './http/request.js';
+export * from './transport/index.js';
 export {
   canonicalString,
   formatTimestamp,
@@ -35,14 +35,14 @@ export {
   type SignRequestHeaders,
   type SignRequestInput,
   type SignRequestResult,
-} from './auth/signRequest';
+} from './auth/signRequest.js';
 
 // Namespaced re-exports so identically-named symbols (compress / decompress
 // in compression, encode / decode in obfuscation) don't collide at the
 // barrel level. Callers import as `import { compression, obfuscation } from
 // '@isa-sdk/core'` then call `compression.compress(...)`.
-export * as compression from './compression/gzip';
-export * as obfuscation from './obfuscation/xor';
+export * as compression from './compression/gzip.js';
+export * as obfuscation from './obfuscation/xor.js';
 
 export {
   type CredentialStore,
@@ -54,4 +54,4 @@ export {
   fromLocalStorage,
   loadOrMintDeviceId,
   mintDeviceId,
-} from './storage';
+} from './storage/index.js';

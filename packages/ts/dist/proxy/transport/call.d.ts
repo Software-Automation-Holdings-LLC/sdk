@@ -2,7 +2,7 @@
  * Structured proxy-call helper. Wraps httpRequest with the `/v1/call` envelope
  * shape and the Algosure HMAC headers required by the platform proxy.
  */
-import { type Clock } from '../../core';
+import { type Clock } from '../../core/index.js';
 export interface ProxyCallParams {
     /** e.g., "https://proxy.isaapi.com" */
     proxyOrigin: string;

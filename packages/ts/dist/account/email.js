@@ -11,10 +11,10 @@
  * BPP enqueue surface; both values are accepted and normalized to
  * `'queued'`.
  */
-import { fromHttpResponse } from '../zyins/errors';
-import { deriveIdempotencyKey } from '../zyins/idempotency';
-import { buildLicenseHMACHeaders } from '../core';
-import { systemClock } from '../core';
+import { fromHttpResponse } from '../zyins/errors.js';
+import { deriveIdempotencyKey } from '../zyins/idempotency.js';
+import { buildLicenseHMACHeaders } from '../core/index.js';
+import { systemClock } from '../core/index.js';
 const EMAIL_PATH = '/v1/email/enqueue';
 /** Enqueue a transactional email. */
 export async function enqueue(request, ctx) {

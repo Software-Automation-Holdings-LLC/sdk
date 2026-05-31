@@ -1,9 +1,9 @@
-import { titleCaseLabel } from './planInfoLabel';
+import { titleCaseLabel } from './planInfoLabel.js';
 import type {
   OfferPlanInfo,
   OfferPlanInfoItem,
   OfferPlanInfoLegacy,
-} from './prequalify-v2-types';
+} from './prequalify-v2-types.js';
 
 type PlanInfoCoercion = {
   array: OfferPlanInfo;

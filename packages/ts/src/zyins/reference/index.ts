@@ -22,15 +22,15 @@
  * ```
  */
 
-import type { DatasetBundleV3 } from '../datasets-v3';
-import { buildFrequencyMap, buildTypoMap } from '../datasets-v3';
-import { ReferenceIndex, buildUnknownConcept } from './referenceIndex';
-import { Sort } from './Sort';
-import { type Concept, type ConceptKind, type ConditionConcept, type MedicationConcept, type UnknownConcept } from './Concept';
-import { type Autocorrector, type AutocorrectOptions, DefaultAutocorrector } from './Autocorrector';
-import { type MatchAlgorithm, DefaultMatchAlgorithm } from './MatchAlgorithm';
-import { type AutocompleteAlgorithm, type AutocompleteOptions, DefaultAutocompleteAlgorithm } from './AutocompleteAlgorithm';
-import { type Suggestion } from './Suggestion';
+import type { DatasetBundleV3 } from '../datasets-v3.js';
+import { buildFrequencyMap, buildTypoMap } from '../datasets-v3.js';
+import { ReferenceIndex, buildUnknownConcept } from './referenceIndex.js';
+import { Sort } from './Sort.js';
+import { type Concept, type ConceptKind, type ConditionConcept, type MedicationConcept, type UnknownConcept } from './Concept.js';
+import { type Autocorrector, type AutocorrectOptions, DefaultAutocorrector } from './Autocorrector.js';
+import { type MatchAlgorithm, DefaultMatchAlgorithm } from './MatchAlgorithm.js';
+import { type AutocompleteAlgorithm, type AutocompleteOptions, DefaultAutocompleteAlgorithm } from './AutocompleteAlgorithm.js';
+import { type Suggestion } from './Suggestion.js';
 
 /**
  * Shared bundle cache. One instance per `ZyInsNamespace`; the
@@ -334,9 +334,9 @@ export class ReferenceConceptsFacade {
 const DEFAULT_LIMIT = 25;
 
 // Re-export public types for consumers reaching them via the namespace.
-export { Sort } from './Sort';
-export type { Concept, ConceptKind, ConditionConcept, MedicationConcept, UnknownConcept } from './Concept';
-export { type Autocorrector, type AutocorrectOptions, type AutocorrectAppliedEvent, type DefaultAutocorrectorOptions, DefaultAutocorrector } from './Autocorrector';
-export { type MatchAlgorithm, type DefaultMatchAlgorithmOptions, DefaultMatchAlgorithm } from './MatchAlgorithm';
-export { type AutocompleteAlgorithm, type AutocompleteOptions, type DefaultAutocompleteAlgorithmOptions, DefaultAutocompleteAlgorithm } from './AutocompleteAlgorithm';
-export { type Suggestion, buildSuggestion } from './Suggestion';
+export { Sort } from './Sort.js';
+export type { Concept, ConceptKind, ConditionConcept, MedicationConcept, UnknownConcept } from './Concept.js';
+export { type Autocorrector, type AutocorrectOptions, type AutocorrectAppliedEvent, type DefaultAutocorrectorOptions, DefaultAutocorrector } from './Autocorrector.js';
+export { type MatchAlgorithm, type DefaultMatchAlgorithmOptions, DefaultMatchAlgorithm } from './MatchAlgorithm.js';
+export { type AutocompleteAlgorithm, type AutocompleteOptions, type DefaultAutocompleteAlgorithmOptions, DefaultAutocompleteAlgorithm } from './AutocompleteAlgorithm.js';
+export { type Suggestion, buildSuggestion } from './Suggestion.js';

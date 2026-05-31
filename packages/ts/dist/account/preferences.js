@@ -10,11 +10,11 @@
  * settings shape and pass through. Identity comes from License-HMAC auth
  * headers — body carries no credentials.
  */
-import { fromHttpResponse } from '../zyins/errors';
-import { deriveIdempotencyKey } from '../zyins/idempotency';
-import { unwrapEnvelope } from '../zyins/response';
-import { buildLicenseHMACHeaders } from '../core';
-import { systemClock } from '../core';
+import { fromHttpResponse } from '../zyins/errors.js';
+import { deriveIdempotencyKey } from '../zyins/idempotency.js';
+import { unwrapEnvelope } from '../zyins/response.js';
+import { buildLicenseHMACHeaders } from '../core/index.js';
+import { systemClock } from '../core/index.js';
 const PREFERENCES_RESTORE_PATH = '/v2/preferences/restore';
 const PREFERENCES_BACKUP_PATH = '/v2/preferences/backup';
 /** Fetch the preferences document for the supplied scope. */

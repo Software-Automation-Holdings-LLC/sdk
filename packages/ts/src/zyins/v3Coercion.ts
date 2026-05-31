@@ -1,10 +1,12 @@
 /** Shared v3 response coercion helpers for prequalify and quote parsing. */
 
-import { isRecord } from './response';
-import type { OfferCarrier, OfferProduct } from './prequalify-v2-types';
-import type { V3Money } from './prequalify-v3-types';
+import { isRecord } from './response.js';
+import type { OfferCarrier, OfferProduct } from './prequalify-v2-types.js';
+import type { V3Amount, V3Money, V3Period } from './prequalify-v3-types.js';
 
 export { isRecord };
+
+const V3_PERIODS: ReadonlySet<string> = new Set(['monthly', 'quarterly', 'semiannual', 'annual']);
 
 export const toStr = (v: unknown): string => (typeof v === 'string' ? v : '');
 export const toNum = (v: unknown): number =>
@@ -34,7 +36,21 @@ export function coerceProduct(raw: unknown): OfferProduct {
   };
 }
 
-export function coerceMoney(raw: unknown): V3Money {
+/** Coerce the leaf `{cents, display}` amount (OpenAPI `AmountResponse`). */
+export function coerceAmount(raw: unknown): V3Amount {
   const r = isRecord(raw) ? raw : {};
   return { cents: toNum(r['cents']), display: toStr(r['display']) };
+}
+
+/**
+ * Coerce a `{amount: {cents, display}, period}` value (OpenAPI `Money`).
+ * `period` falls back to `null` (a one-time lump sum) for any value outside
+ * the closed enum, so an unknown future period never poisons the type.
+ */
+export function coerceMoney(raw: unknown): V3Money {
+  const r = isRecord(raw) ? raw : {};
+  const periodRaw = r['period'];
+  const period: V3Period =
+    typeof periodRaw === 'string' && V3_PERIODS.has(periodRaw) ? (periodRaw as V3Period) : null;
+  return { amount: coerceAmount(r['amount']), period };
 }

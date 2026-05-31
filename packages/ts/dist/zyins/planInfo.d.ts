@@ -1,4 +1,4 @@
-import type { OfferPlanInfo, OfferPlanInfoLegacy } from './prequalify-v2-types';
+import type { OfferPlanInfo, OfferPlanInfoLegacy } from './prequalify-v2-types.js';
 type PlanInfoCoercion = {
     array: OfferPlanInfo;
     legacy?: OfferPlanInfoLegacy;

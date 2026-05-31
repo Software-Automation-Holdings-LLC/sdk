@@ -16,8 +16,8 @@
  * This is the SDK↔proxy hop. The proxy↔downstream hop remains Algosure
  * HMAC and is handled server-side — see ADR-035 (amended in this PR).
  */
-import { IsaApiError, IsaConfigError, IsaIdempotencyConflictError, IsaUnauthorizedError, IsaValidationError, } from '../zyins/apiError';
-import { signRequest } from '../core/auth/signRequest';
+import { IsaApiError, IsaConfigError, IsaIdempotencyConflictError, IsaUnauthorizedError, IsaValidationError, } from '../zyins/apiError.js';
+import { signRequest } from '../core/auth/signRequest.js';
 const PROXY_CALL_PATH = '/v1/call';
 /**
  * Execute one call against `/v1/call`. The binding carries credentials and

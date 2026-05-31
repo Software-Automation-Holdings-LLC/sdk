@@ -10,11 +10,11 @@
  * elevation. When session credentials replace License-HMAC the SDK surface
  * stays unchanged.
  */
-import { fromHttpResponse } from './errors';
-import { deriveIdempotencyKey } from './idempotency';
-import { isRecord, parseJsonResponse, unwrapEnvelope } from './response';
-import { buildLicenseHMACHeaders } from '../core';
-import { systemClock } from '../core';
+import { fromHttpResponse } from './errors.js';
+import { deriveIdempotencyKey } from './idempotency.js';
+import { isRecord, parseJsonResponse, unwrapEnvelope } from './response.js';
+import { buildLicenseHMACHeaders } from '../core/index.js';
+import { systemClock } from '../core/index.js';
 const PREFERENCES_RESTORE_PATH = '/v2/preferences/restore';
 const PREFERENCES_BACKUP_PATH = '/v2/preferences/backup';
 /** Fetch the caller's preferences document. */

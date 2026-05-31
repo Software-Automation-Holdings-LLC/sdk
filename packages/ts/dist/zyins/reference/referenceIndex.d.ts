@@ -10,8 +10,8 @@
  * Module-private. Consumers only ever see `Concept` handles via the
  * `ReferenceFacade`.
  */
-import type { DatasetBundleV3 } from '../datasets-v3';
-import { type Concept, type ConditionConcept, type MedicationConcept, type UnknownConcept } from './Concept';
+import type { DatasetBundleV3 } from '../datasets-v3.js';
+import { type Concept, type ConditionConcept, type MedicationConcept, type UnknownConcept } from './Concept.js';
 export declare class ReferenceIndex {
     private readonly conditionById;
     private readonly conditionByKey;

@@ -9,7 +9,7 @@
  * reuse.
  */
 
-import { resolveFetch, resolveSubtle, arrayBufferToHex, type Clock, systemClock } from '../../core';
+import { resolveFetch, resolveSubtle, arrayBufferToHex, type Clock, systemClock } from '../../core/index.js';
 
 /** Context label passed to runtime resolvers for error attribution. */
 const ALGOSURE_CONTEXT = 'Algosure';

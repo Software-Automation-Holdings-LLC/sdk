@@ -9,8 +9,8 @@
  * Vue installed do not pull it into their bundle.
  */
 import { type InjectionKey } from 'vue';
-import { type AuthContext } from '../auth';
-import { ZyInsClient, type ZyInsClientOptions } from '../client';
+import { type AuthContext } from '../auth.js';
+import { ZyInsClient, type ZyInsClientOptions } from '../client.js';
 /** Provider config shape mirrors the React provider's. */
 export interface ZyInsProviderConfig extends Omit<ZyInsClientOptions, 'auth'> {
     auth: AuthContext;

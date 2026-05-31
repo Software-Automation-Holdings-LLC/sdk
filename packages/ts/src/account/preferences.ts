@@ -11,13 +11,13 @@
  * headers — body carries no credentials.
  */
 
-import { type AuthContext } from './auth';
-import { type Transport } from '../zyins/transport';
-import { fromHttpResponse } from '../zyins/errors';
-import { deriveIdempotencyKey } from '../zyins/idempotency';
-import { unwrapEnvelope } from '../zyins/response';
-import { buildLicenseHMACHeaders } from '../core';
-import { type Clock, systemClock } from '../core';
+import { type AuthContext } from './auth.js';
+import { type Transport } from '../zyins/transport.js';
+import { fromHttpResponse } from '../zyins/errors.js';
+import { deriveIdempotencyKey } from '../zyins/idempotency.js';
+import { unwrapEnvelope } from '../zyins/response.js';
+import { buildLicenseHMACHeaders } from '../core/index.js';
+import { type Clock, systemClock } from '../core/index.js';
 
 const PREFERENCES_RESTORE_PATH = '/v2/preferences/restore';
 const PREFERENCES_BACKUP_PATH = '/v2/preferences/backup';

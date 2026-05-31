@@ -6,8 +6,8 @@
  * behind injectable facades so the same primitive serves web, React Native,
  * and Node.
  */
-import { DEFAULT_FETCH_TIMEOUT_MS, REQUEST, RETURN_TYPE } from './constants';
-import { resolveFetch as resolveFetchFacade } from '../internal/crypto';
+import { DEFAULT_FETCH_TIMEOUT_MS, REQUEST, RETURN_TYPE } from './constants.js';
+import { resolveFetch as resolveFetchFacade } from '../internal/crypto.js';
 /** Context label passed to runtime resolvers for error attribution. */
 const HTTP_CONTEXT = 'http';
 /** Status codes whose bodies MUST be empty per RFC 7230/9110. */

@@ -4,10 +4,10 @@
  * `cases.ts` only assembles its body and routes status codes.
  */
 
-import { type AuthContext } from './auth';
-import { type Transport } from '../zyins/transport';
-import { deriveIdempotencyKey } from '../zyins/idempotency';
-import { buildLicenseHMACHeaders, type Clock, systemClock } from '../core';
+import { type AuthContext } from './auth.js';
+import { type Transport } from '../zyins/transport.js';
+import { deriveIdempotencyKey } from '../zyins/idempotency.js';
+import { buildLicenseHMACHeaders, type Clock, systemClock } from '../core/index.js';
 
 /** The auth + transport context a signed case request needs. */
 export interface TCaseRequestContext {

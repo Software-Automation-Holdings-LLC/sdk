@@ -18,14 +18,14 @@
  * `/tmp/sdk-syntax-proposal.md` post-lock correction #3.
  */
 
-import { type AuthContext } from './auth';
-import { type Transport, defaultTransport } from '../zyins/transport';
-import { type Clock, systemClock } from '../core';
+import { type AuthContext } from './auth.js';
+import { type Transport, defaultTransport } from '../zyins/transport.js';
+import { type Clock, systemClock } from '../core/index.js';
 import {
   lookup as brandingLookup,
   type BrandingDetail,
   type BrandingLookupRequest,
-} from './branding';
+} from './branding.js';
 import {
   lookup as preferencesLookup,
   set as preferencesSet,
@@ -33,7 +33,7 @@ import {
   type PreferencesLookupResult,
   type PreferencesSetRequest,
   type PreferencesSetResult,
-} from './preferences';
+} from './preferences.js';
 import {
   create as casesCreate,
   open as casesOpen,
@@ -47,12 +47,12 @@ import {
   type CaseEmailResult,
   type CaseSummary,
   type TCaseProduct,
-} from './cases';
+} from './cases.js';
 import {
   enqueue as emailEnqueue,
   type EmailEnqueueRequest,
   type EmailEnqueueResult,
-} from './email';
+} from './email.js';
 
 /** Construction options for {@link AccountNamespace}. */
 export interface AccountNamespaceOptions {

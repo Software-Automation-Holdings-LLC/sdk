@@ -11,7 +11,7 @@
  * requirement on the value; the only invariant is that it is stable across
  * a device's lifetime so HMAC signatures stay verifiable.
  */
-import { CREDENTIAL_KEYS } from './credentialStore';
+import { CREDENTIAL_KEYS } from './credentialStore.js';
 /**
  * 16 random bytes = 128 bits of entropy. Matches Stripe's `cus_…` /
  * `pi_…` id lengths in security level and renders to 32 hex chars.

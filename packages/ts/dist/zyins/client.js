@@ -16,22 +16,22 @@
  *     surface beyond an internal override used by replay tests.
  *   - Retries and backoff are NOT exposed here; they live in Tier 2.
  */
-import { defaultTransport } from './transport';
-import { systemClock } from '../core';
-import { prequalify, } from './prequalify';
-import { prequalifyV2, } from './prequalify-v2';
-import { prequalifyV3, } from './prequalify-v3';
-import { quoteV3, } from './quote-v3';
-import { DatasetsV3SubClient } from './datasets-v3';
-import { activate as licenseActivate, check as licenseCheck, deactivate as licenseDeactivate, } from './license';
-import { getReadiness } from './health';
-import { email } from './case';
-import { lookup as brandingLookup } from './branding';
-import { DatasetsSubClient } from './datasets';
-import { lookup as preferencesLookup, set as preferencesSet, } from './preferences';
-import { share as casesShare, } from './cases';
-import { DEFAULT_CASE_VIEWER_BASE_URL } from '../account/cases';
-import { LogosSubClient } from './logos';
+import { defaultTransport } from './transport.js';
+import { systemClock } from '../core/index.js';
+import { prequalify, } from './prequalify.js';
+import { prequalifyV2, } from './prequalify-v2.js';
+import { prequalifyV3, } from './prequalify-v3.js';
+import { quoteV3, } from './quote-v3.js';
+import { DatasetsV3SubClient } from './datasets-v3.js';
+import { activate as licenseActivate, check as licenseCheck, deactivate as licenseDeactivate, } from './license.js';
+import { getReadiness } from './health.js';
+import { email } from './case.js';
+import { lookup as brandingLookup } from './branding.js';
+import { DatasetsSubClient } from './datasets.js';
+import { lookup as preferencesLookup, set as preferencesSet, } from './preferences.js';
+import { share as casesShare, } from './cases.js';
+import { DEFAULT_CASE_VIEWER_BASE_URL } from '../account/cases.js';
+import { LogosSubClient } from './logos.js';
 /** Production ZyINS endpoint. Override only for staging / local. */
 export const DEFAULT_ZYINS_BASE_URL = 'https://zyins.isaapi.com';
 /**

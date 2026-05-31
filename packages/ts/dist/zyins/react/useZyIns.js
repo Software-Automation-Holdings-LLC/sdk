@@ -11,7 +11,7 @@
  * pulling React into their bundle — they simply do not import this file.
  */
 import { createContext, createElement, useContext, useMemo } from 'react';
-import { ZyInsClient } from '../client';
+import { ZyInsClient } from '../client.js';
 const ZyInsContext = createContext(null);
 /**
  * Provider component. Wrap the app (or a subtree) so descendants can call

@@ -17,7 +17,7 @@ import {
   arrayBufferToHex,
   type Clock,
   systemClock,
-} from '../internal/crypto';
+} from '../internal/crypto.js';
 
 const QUOTE_CHAR = '"';
 /** Module label used for error attribution by runtime resolvers. */

@@ -15,11 +15,11 @@
  * (`encryptCase` / `decryptCase` / `signedCaseRequest`) to avoid forking
  * the cryptographic surface.
  */
-import { type TCaseRequestContext } from '../../account/caseTransport';
-import type { CaseRecord, CaseStorage, CaseStoragePutResult } from './CaseStorage';
+import { type TCaseRequestContext } from '../../account/caseTransport.js';
+import type { CaseRecord, CaseStorage, CaseStoragePutResult } from './CaseStorage.js';
 /**
  * Per-operation context needed by the default zero-knowledge adapter.
- * Mirrors {@link import('../../account/cases').CasesContext} without the
+ * Mirrors {@link import('../../account/cases.js').CasesContext} without the
  * viewer-origin field — share-link assembly is the consumer's call,
  * not the adapter's.
  */
@@ -28,7 +28,7 @@ export type ZeroKnowledgeCaseStorageContext = TCaseRequestContext;
  * Default zero-knowledge implementation of {@link CaseStorage}. Constructed
  * with the same signed-request context the legacy `account.cases` surface
  * uses; the parent `Isa` wires this automatically when no override is
- * supplied on {@link import('../isaOptions').IsaCreateOptions.caseStorage}.
+ * supplied on {@link import('../isaOptions.js').IsaCreateOptions.caseStorage}.
  */
 export declare class ZeroKnowledgeCaseStorage implements CaseStorage {
     private readonly contextOnce;

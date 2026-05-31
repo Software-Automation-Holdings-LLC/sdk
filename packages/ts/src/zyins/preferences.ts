@@ -11,13 +11,13 @@
  * stays unchanged.
  */
 
-import { type AuthContext } from './auth';
-import { type Transport } from './transport';
-import { fromHttpResponse } from './errors';
-import { deriveIdempotencyKey } from './idempotency';
-import { isRecord, parseJsonResponse, unwrapEnvelope } from './response';
-import { buildLicenseHMACHeaders } from '../core';
-import { type Clock, systemClock } from '../core';
+import { type AuthContext } from './auth.js';
+import { type Transport } from './transport.js';
+import { fromHttpResponse } from './errors.js';
+import { deriveIdempotencyKey } from './idempotency.js';
+import { isRecord, parseJsonResponse, unwrapEnvelope } from './response.js';
+import { buildLicenseHMACHeaders } from '../core/index.js';
+import { type Clock, systemClock } from '../core/index.js';
 
 const PREFERENCES_RESTORE_PATH = '/v2/preferences/restore';
 const PREFERENCES_BACKUP_PATH = '/v2/preferences/backup';

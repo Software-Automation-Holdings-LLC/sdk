@@ -12,8 +12,8 @@
  * silent absence.
  */
 
-import { IsaConfigError } from './apiError';
-import { type EnvReader, processEnv } from './logger';
+import { IsaConfigError } from './apiError.js';
+import { type EnvReader, processEnv } from './logger.js';
 
 /** Bearer-mode identity. */
 export interface BearerIdentity {

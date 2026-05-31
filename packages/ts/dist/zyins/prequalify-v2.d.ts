@@ -15,9 +15,9 @@
  * Typed value objects live in `prequalify-v2-types.ts`; this file owns the
  * wire serialization, header building, and response parsing.
  */
-import { type PrequalifyV2Context, type PrequalifyV2Request, type PrequalifyV2Result } from './prequalify-v2-types';
-export type { OfferCarrier, OfferCategory, OfferEligibility, OfferMoney, OfferPlanInfo, OfferPlanInfoItem, OfferPlanInfoLegacy, OfferPremium, OfferProduct, OtherOffer, PlanOffer, PrequalifyV2Context, PrequalifyV2Request, PrequalifyV2Result, } from './prequalify-v2-types';
-export type { OfferDeathBenefit, PrequalifyV2Options, } from './prequalify-v2-types';
+import { type PrequalifyV2Context, type PrequalifyV2Request, type PrequalifyV2Result } from './prequalify-v2-types.js';
+export type { OfferCarrier, OfferCategory, OfferEligibility, OfferMoney, OfferPlanInfo, OfferPlanInfoItem, OfferPlanInfoLegacy, OfferPremium, OfferProduct, OtherOffer, PlanOffer, PrequalifyV2Context, PrequalifyV2Request, PrequalifyV2Result, } from './prequalify-v2-types.js';
+export type { OfferDeathBenefit, PrequalifyV2Options, } from './prequalify-v2-types.js';
 /**
  * Run a v2 prequalify call. Builds the wire body, derives the idempotency
  * key, signs the request, and parses the envelope into typed offers.

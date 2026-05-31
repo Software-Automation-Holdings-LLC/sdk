@@ -1,2 +1,2 @@
-export * from "./xor";
+export * from "./xor.js";
 //# sourceMappingURL=index.js.map

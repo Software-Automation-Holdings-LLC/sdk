@@ -13,13 +13,13 @@
  * a thrown error. See `../account/cases` for the enforced guarantee.
  */
 
-import { type AuthContext } from './auth';
-import { type Transport } from './transport';
+import { type AuthContext } from './auth.js';
+import { type Transport } from './transport.js';
 import {
   create as opaqueCreate,
   type CaseCreateResult as OpaqueCreateResult,
-} from '../account/cases';
-import { type Clock } from '../core';
+} from '../account/cases.js';
+import { type Clock } from '../core/index.js';
 
 /** zyins routing tag pinned by {@link share}. */
 const ZYINS_PRODUCT = 'zyins' as const;

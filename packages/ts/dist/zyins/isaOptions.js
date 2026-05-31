@@ -20,7 +20,7 @@
  * and returns the typed offer envelope. `'v1'` preserves the legacy
  * contract for callers still wired against the old envelope.
  */
-import { BundledApiVersions, resolveApiVersions, } from './bundledApiVersions';
+import { BundledApiVersions, resolveApiVersions, } from './bundledApiVersions.js';
 export { BundledApiVersions, resolveApiVersions };
 /**
  * Bearer-auth supplier factory. Resolves a server-to-server `isa_live_…`

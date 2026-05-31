@@ -10,7 +10,7 @@
  * @see go/zyins/server/auth_middleware.go
  * @see go/zyins/server/device_signature.go
  */
-import { type Clock } from '../internal/crypto';
+import { type Clock } from '../internal/crypto.js';
 /**
  * Strips surrounding double-quote characters from a string.
  * AsyncStorage values may retain JSON serialization quotes depending on the

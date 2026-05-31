@@ -7,7 +7,7 @@
  * imports the product facade, which has @isa-sdk/proxy as a transitive
  * dependency (ADR-035 "Proxy is internal-facing").
  */
-export * from "./algosure";
-export * from "./transport/call";
-export { assertSessionIdentityForProxyCall, proxyCall as proxyCallV2, } from "./call";
+export * from "./algosure/index.js";
+export * from "./transport/call.js";
+export { assertSessionIdentityForProxyCall, proxyCall as proxyCallV2, } from "./call.js";
 //# sourceMappingURL=index.js.map

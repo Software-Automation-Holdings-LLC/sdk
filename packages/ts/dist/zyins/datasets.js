@@ -1,7 +1,7 @@
-import { buildLicenseHMACHeaders } from '../core';
-import { systemClock } from '../core';
-import { fromHttpResponse } from './errors';
-import { __internal as referenceInternal } from './reference';
+import { buildLicenseHMACHeaders } from '../core/index.js';
+import { systemClock } from '../core/index.js';
+import { fromHttpResponse } from './errors.js';
+import { __internal as referenceInternal } from './reference.js';
 const DATASETS_PATH = '/v2/reference-data';
 export async function getDatasets(options, ctx) {
     const headers = await buildLicenseHMACHeaders(ctx.auth.licenseKey, ctx.auth.orderId, ctx.auth.email, 'GET', DATASETS_PATH, '', ctx.auth.deviceId, ctx.clock ?? systemClock);

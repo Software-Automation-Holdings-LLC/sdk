@@ -36,7 +36,7 @@ const SAMPLE_V3_OFFER = {
     wire_token: 'fex',
   },
   plan_info: [],
-  death_benefit: { cents: 2500000, display: '$25,000.00' },
+  death_benefit: { amount: { cents: 2500000, display: '$25,000' }, period: null },
   pricing: [
     {
       rate_class: 'Preferred Plus',
@@ -85,6 +85,11 @@ describe('ZyInsClient.prequalifyV3', () => {
     expect(result.plans).toHaveLength(1);
     const offer = result.plans[0]!;
     expect(offer.eligible).toBe(true);
+    expect(offer.deathBenefit).toEqual({
+      amount: { cents: 2500000, display: '$25,000' },
+      period: null,
+    });
+    expect(offer.budget).toBeUndefined();
     expect(offer.pricing).toHaveLength(2);
 
     const primary = offer.pricing[0]!;

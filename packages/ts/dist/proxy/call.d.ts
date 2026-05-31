@@ -16,8 +16,8 @@
  * This is the SDK↔proxy hop. The proxy↔downstream hop remains Algosure
  * HMAC and is handled server-side — see ADR-035 (amended in this PR).
  */
-import { type SessionIdentity } from '../zyins/envFactory';
-import { type SignClock } from '../core/auth/signRequest';
+import { type SessionIdentity } from '../zyins/envFactory.js';
+import { type SignClock } from '../core/auth/signRequest.js';
 /** Inputs to {@link proxyCall}. Exactly one of integrationUuid/integrationId. */
 export interface ProxyCallOptions {
     /** Preferred opaque identifier (UUID). Mutually exclusive with integrationId. */

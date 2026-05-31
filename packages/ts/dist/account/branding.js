@@ -12,10 +12,10 @@
  * query parameter when supplied so we don't churn the typed surface when
  * the server lands the extension.
  */
-import { fromHttpResponse } from '../zyins/errors';
-import { boolField, firstStringField, isRecord, stringField, unwrapEnvelope } from '../zyins/response';
-import { buildLicenseHMACHeaders } from '../core';
-import { systemClock } from '../core';
+import { fromHttpResponse } from '../zyins/errors.js';
+import { boolField, firstStringField, isRecord, stringField, unwrapEnvelope } from '../zyins/response.js';
+import { buildLicenseHMACHeaders } from '../core/index.js';
+import { systemClock } from '../core/index.js';
 const BRANDING_PATH = '/v2/branding';
 /** Fetch the whitelabel branding for the caller's license. */
 export async function lookup(request, ctx) {

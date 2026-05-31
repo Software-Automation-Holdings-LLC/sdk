@@ -8,7 +8,7 @@
  * The base is abstract so `new RapidSignError(...)` is impossible — every
  * thrown error has a specific subclass with a stable `code`.
  */
-import { type ProblemDetails } from '../core';
+import { type ProblemDetails } from '../core/index.js';
 /**
  * Wire-stable error codes mirroring `api.isa.v1.ErrorCode` values in their
  * lowercase snake_case form. Cross-language SDKs share this set.

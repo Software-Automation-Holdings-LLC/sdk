@@ -9,7 +9,7 @@
  * thrown error has a specific subclass with a stable `code`.
  */
 
-import { isProblemDetails, type ProblemDetails } from '../core';
+import { isProblemDetails, type ProblemDetails } from '../core/index.js';
 
 /**
  * Wire-stable error codes mirroring `api.isa.v1.ErrorCode` values in their

@@ -11,10 +11,10 @@
  * Returns a zero-value `BrandingDetail` when no row exists; the server
  * deliberately does NOT 404 for missing branding rows.
  */
-import { fromHttpResponse } from './errors';
-import { boolField, isRecord, parseJsonResponse, stringField, unwrapEnvelope } from './response';
-import { buildLicenseHMACHeaders } from '../core';
-import { systemClock } from '../core';
+import { fromHttpResponse } from './errors.js';
+import { boolField, isRecord, parseJsonResponse, stringField, unwrapEnvelope } from './response.js';
+import { buildLicenseHMACHeaders } from '../core/index.js';
+import { systemClock } from '../core/index.js';
 const BRANDING_PATH = '/v2/branding';
 /** Fetch the whitelabel branding for the caller's license. */
 export async function lookup(ctx) {

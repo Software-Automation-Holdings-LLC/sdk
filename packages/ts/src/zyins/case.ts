@@ -11,11 +11,11 @@
  * browser `btoa` paths).
  */
 
-import { type AuthContext } from './auth';
-import { type Transport } from './transport';
-import { fromHttpResponse } from './errors';
-import { buildLicenseHMACHeaders } from '../core';
-import { base64EncodeUtf8, type Clock, systemClock } from '../core';
+import { type AuthContext } from './auth.js';
+import { type Transport } from './transport.js';
+import { fromHttpResponse } from './errors.js';
+import { buildLicenseHMACHeaders } from '../core/index.js';
+import { base64EncodeUtf8, type Clock, systemClock } from '../core/index.js';
 
 const EMAIL_PATH = '/v1/email/enqueue';
 

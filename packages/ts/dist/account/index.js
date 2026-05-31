@@ -17,12 +17,12 @@
  * deprecated `isa.account.referenceData` surface has been removed per
  * `/tmp/sdk-syntax-proposal.md` post-lock correction #3.
  */
-import { defaultTransport } from '../zyins/transport';
-import { systemClock } from '../core';
-import { lookup as brandingLookup, } from './branding';
-import { lookup as preferencesLookup, set as preferencesSet, } from './preferences';
-import { create as casesCreate, open as casesOpen, list as casesList, email as casesEmail, DEFAULT_CASE_VIEWER_BASE_URL, } from './cases';
-import { enqueue as emailEnqueue, } from './email';
+import { defaultTransport } from '../zyins/transport.js';
+import { systemClock } from '../core/index.js';
+import { lookup as brandingLookup, } from './branding.js';
+import { lookup as preferencesLookup, set as preferencesSet, } from './preferences.js';
+import { create as casesCreate, open as casesOpen, list as casesList, email as casesEmail, DEFAULT_CASE_VIEWER_BASE_URL, } from './cases.js';
+import { enqueue as emailEnqueue, } from './email.js';
 /** Top-level `isa.account.*` namespace. */
 export class AccountNamespace {
     /** `isa.account.branding` — whitelabel lookup. */

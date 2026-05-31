@@ -11,12 +11,12 @@
  *    convention (`requestId`, `idempotencyKey`).
  */
 
-import { type Applicant } from './applicant';
-import { type CoverageInput } from './coverage';
-import { type ProductSelection, type ProductClassValue } from './product';
-import { type AuthContext } from './auth';
-import { type Transport } from './transport';
-import { type Clock } from '../core';
+import { type Applicant } from './applicant.js';
+import { type CoverageInput } from './coverage.js';
+import { type ProductSelection, type ProductClassValue } from './product.js';
+import { type AuthContext } from './auth.js';
+import { type Transport } from './transport.js';
+import { type Clock } from '../core/index.js';
 
 /** Eligibility category — closed enum on qualifying offers, `null` otherwise. */
 export type OfferCategory = 'immediate' | 'graded' | 'rop' | null;

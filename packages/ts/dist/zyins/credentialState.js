@@ -14,7 +14,7 @@
  * single process so per-call AsyncStorage round-trips stay off the hot
  * path.
  */
-import { CREDENTIAL_KEYS } from '../core';
+import { CREDENTIAL_KEYS } from '../core/index.js';
 /**
  * Holds the shared `AuthContext` reference plus a small event-emitter for
  * `onLicenseRefreshed`. One instance per `Isa`.

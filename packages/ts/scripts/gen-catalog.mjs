@@ -261,8 +261,8 @@ export const Products = Object.freeze({
   const carrierSlugs = carriers.map((c) => `'${c.slug}'`).join(', ');
 
   const carriersModule = `${HEADER(sources)}
-import { Product } from './products';
-import type { State } from './states';
+import { Product } from './products.js';
+import type { State } from './states.js';
 
 /** Public metadata for a single carrier. */
 export interface ProductCarrierMetadata {
@@ -328,8 +328,8 @@ export const Products = Object.freeze({
 
 function emptyCarriersModule() {
   return `
-import type { Product } from './products';
-import type { State } from './states';
+import type { Product } from './products.js';
+import type { State } from './states.js';
 export interface ProductCarrierMetadata {
   readonly displayName: string;
   readonly products: readonly Product[];
@@ -1027,20 +1027,20 @@ export const Products = Object.freeze({
 
 function genIndex() {
   const module = `${HEADER(['(barrel re-export of every catalog module in this directory)'])}
-export { Product, Products, type ProductMetadata } from './products';
+export { Product, Products, type ProductMetadata } from './products.js';
 export {
   ProductType,
   Products as ProductsByType,
   type Product as TypedProduct,
   type ProductTypeValue,
-} from './productsByType';
-export { State, States, type StateMetadata } from './states';
-export { ProductCarriers, type ProductCarrierMetadata } from './carriers';
-export { ConditionCategories, type ConditionCategoryMetadata } from './conditions';
-export { MedicationUses, type MedicationUseMetadata } from './medications';
-export { Scope, ScopeDescriptions } from './scopes';
-export { SignEvent, SignEventLabels } from './signEvents';
-export { ErrorCode, ErrorAdviceCodes, ErrorDocUrls } from './errors';
+} from './productsByType.js';
+export { State, States, type StateMetadata } from './states.js';
+export { ProductCarriers, type ProductCarrierMetadata } from './carriers.js';
+export { ConditionCategories, type ConditionCategoryMetadata } from './conditions.js';
+export { MedicationUses, type MedicationUseMetadata } from './medications.js';
+export { Scope, ScopeDescriptions } from './scopes.js';
+export { SignEvent, SignEventLabels } from './signEvents.js';
+export { ErrorCode, ErrorAdviceCodes, ErrorDocUrls } from './errors.js';
 `;
   writeFile('index.ts', module);
 }

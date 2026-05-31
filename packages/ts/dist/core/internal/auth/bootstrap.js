@@ -22,7 +22,7 @@
  * break and requires a major SDK bump + doc + fixture update.
  */
 import { createHmac as nodeCreateHmac } from 'node:crypto';
-import { resolveSubtle, arrayBufferToHex } from '../crypto';
+import { resolveSubtle, arrayBufferToHex } from '../crypto.js';
 /**
  * Synchronous Node-only implementation. Used by the conformance test and
  * any server-side code that runs in Node ≥20. Browser callers should use

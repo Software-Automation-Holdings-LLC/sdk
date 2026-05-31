@@ -14,7 +14,7 @@
  * and Tier 3 is allowed to assume the protocol layer above it is reliable.
  */
 
-import { resolveFetch } from '../core';
+import { resolveFetch } from '../core/index.js';
 
 /** Method shape Tier 3 emits. The wire supports more; this is what we use. */
 export type HttpMethod = 'GET' | 'POST' | 'PUT' | 'DELETE';

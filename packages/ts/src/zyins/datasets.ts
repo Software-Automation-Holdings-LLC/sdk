@@ -1,8 +1,8 @@
-import type { OperationContext } from './client';
-import { buildLicenseHMACHeaders } from '../core';
-import { systemClock } from '../core';
-import { fromHttpResponse } from './errors';
-import { __internal as referenceInternal } from './reference';
+import type { OperationContext } from './client.js';
+import { buildLicenseHMACHeaders } from '../core/index.js';
+import { systemClock } from '../core/index.js';
+import { fromHttpResponse } from './errors.js';
+import { __internal as referenceInternal } from './reference.js';
 
 export type DatasetName =
     | 'nicotineOptions'

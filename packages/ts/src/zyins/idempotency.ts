@@ -12,7 +12,7 @@
  * the caller to "make one up".
  */
 
-import { arrayBufferToHex, resolveSubtle } from '../core';
+import { arrayBufferToHex, resolveSubtle } from '../core/index.js';
 
 /** Derive the deterministic idempotency key for a Tier 3 operation. */
 export async function deriveIdempotencyKey(args: {

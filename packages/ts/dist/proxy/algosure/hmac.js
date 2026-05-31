@@ -8,7 +8,7 @@
  * timestamp, session) to prevent replay, tampering, and cross-endpoint
  * reuse.
  */
-import { resolveFetch, resolveSubtle, arrayBufferToHex, systemClock } from '../../core';
+import { resolveFetch, resolveSubtle, arrayBufferToHex, systemClock } from '../../core/index.js';
 /** Context label passed to runtime resolvers for error attribution. */
 const ALGOSURE_CONTEXT = 'Algosure';
 /** 30-second buckets for clock-skew tolerance. Must match server. */

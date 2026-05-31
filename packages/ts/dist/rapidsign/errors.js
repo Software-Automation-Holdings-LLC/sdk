@@ -8,7 +8,7 @@
  * The base is abstract so `new RapidSignError(...)` is impossible — every
  * thrown error has a specific subclass with a stable `code`.
  */
-import { isProblemDetails } from '../core';
+import { isProblemDetails } from '../core/index.js';
 /**
  * Abstract base class. Every error thrown by the RapidSign SDK is a subclass.
  * Callers `import { RapidSignError } from '@isa-sdk/rapidsign'` and either:

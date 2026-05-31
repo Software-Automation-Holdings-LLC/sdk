@@ -17,13 +17,13 @@
  * deprecated `isa.account.referenceData` surface has been removed per
  * `/tmp/sdk-syntax-proposal.md` post-lock correction #3.
  */
-import { type AuthContext } from './auth';
-import { type Transport } from '../zyins/transport';
-import { type Clock } from '../core';
-import { type BrandingDetail, type BrandingLookupRequest } from './branding';
-import { type PreferencesLookupRequest, type PreferencesLookupResult, type PreferencesSetRequest, type PreferencesSetResult } from './preferences';
-import { type CaseCreateRequest, type CaseCreateResult, type CaseOpenResult, type CaseEmailRequest, type CaseEmailResult, type CaseSummary, type TCaseProduct } from './cases';
-import { type EmailEnqueueRequest, type EmailEnqueueResult } from './email';
+import { type AuthContext } from './auth.js';
+import { type Transport } from '../zyins/transport.js';
+import { type Clock } from '../core/index.js';
+import { type BrandingDetail, type BrandingLookupRequest } from './branding.js';
+import { type PreferencesLookupRequest, type PreferencesLookupResult, type PreferencesSetRequest, type PreferencesSetResult } from './preferences.js';
+import { type CaseCreateRequest, type CaseCreateResult, type CaseOpenResult, type CaseEmailRequest, type CaseEmailResult, type CaseSummary, type TCaseProduct } from './cases.js';
+import { type EmailEnqueueRequest, type EmailEnqueueResult } from './email.js';
 /** Construction options for {@link AccountNamespace}. */
 export interface AccountNamespaceOptions {
     auth: AuthContext;

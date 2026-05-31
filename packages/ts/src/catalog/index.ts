@@ -8,17 +8,17 @@
  *   - (barrel re-export of every catalog module in this directory)
  */
 
-export { Product, Products, type ProductMetadata } from './products';
+export { Product, Products, type ProductMetadata } from './products.js';
 export {
   ProductType,
   Products as ProductsByType,
   type Product as TypedProduct,
   type ProductTypeValue,
-} from './productsByType';
-export { State, States, type StateMetadata } from './states';
-export { ProductCarriers, type ProductCarrierMetadata } from './carriers';
-export { ConditionCategories, type ConditionCategoryMetadata } from './conditions';
-export { MedicationUses, type MedicationUseMetadata } from './medications';
-export { Scope, ScopeDescriptions } from './scopes';
-export { SignEvent, SignEventLabels } from './signEvents';
-export { ErrorCode, ErrorAdviceCodes, ErrorDocUrls } from './errors';
+} from './productsByType.js';
+export { State, States, type StateMetadata } from './states.js';
+export { ProductCarriers, type ProductCarrierMetadata } from './carriers.js';
+export { ConditionCategories, type ConditionCategoryMetadata } from './conditions.js';
+export { MedicationUses, type MedicationUseMetadata } from './medications.js';
+export { Scope, ScopeDescriptions } from './scopes.js';
+export { SignEvent, SignEventLabels } from './signEvents.js';
+export { ErrorCode, ErrorAdviceCodes, ErrorDocUrls } from './errors.js';

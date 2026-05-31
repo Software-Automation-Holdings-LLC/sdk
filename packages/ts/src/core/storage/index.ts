@@ -13,6 +13,6 @@ export {
   inMemoryCredentialStore,
   fromAsyncStorage,
   fromLocalStorage,
-} from './credentialStore';
+} from './credentialStore.js';
 
-export { loadOrMintDeviceId, mintDeviceId } from './deviceId';
+export { loadOrMintDeviceId, mintDeviceId } from './deviceId.js';

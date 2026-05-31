@@ -25,7 +25,7 @@ export interface CaseRecord {
   /**
    * Cleartext routing tag identifying the app that owns the payload
    * (`'zyins'`, `'eapp'`, `'rapidsign'`, or a carrier-defined value).
-   * Mirrors {@link import('../../account/cases').TCaseProduct}.
+   * Mirrors {@link import('../../account/cases.js').TCaseProduct}.
    */
   product: string;
   /**

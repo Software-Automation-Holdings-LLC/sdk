@@ -15,14 +15,14 @@
  * Typed value objects live in `prequalify-v2-types.ts`; this file owns the
  * wire serialization, header building, and response parsing.
  */
-import { NicotineUsage, NicotineDuration } from './applicant';
-import { QuoteType, isMulti } from './coverage';
-import { fromHttpResponse } from './errors';
-import { deriveIdempotencyKey } from './idempotency';
-import { buildLicenseHMACHeaders } from '../core';
-import { systemClock } from '../core';
-import { coercePlanInfo } from './planInfo';
-import { retryAttemptsFromHeaders } from './retryAttempts';
+import { NicotineUsage, NicotineDuration } from './applicant.js';
+import { QuoteType, isMulti } from './coverage.js';
+import { fromHttpResponse } from './errors.js';
+import { deriveIdempotencyKey } from './idempotency.js';
+import { buildLicenseHMACHeaders } from '../core/index.js';
+import { systemClock } from '../core/index.js';
+import { coercePlanInfo } from './planInfo.js';
+import { retryAttemptsFromHeaders } from './retryAttempts.js';
 const PREQUALIFY_V2_PATH = '/v2/prequalify';
 /**
  * Run a v2 prequalify call. Builds the wire body, derives the idempotency

@@ -1,1 +1,1 @@
-export * from "./gzip";
+export * from "./gzip.js";

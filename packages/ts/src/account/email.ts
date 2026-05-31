@@ -12,12 +12,12 @@
  * `'queued'`.
  */
 
-import { type AuthContext } from './auth';
-import { type Transport } from '../zyins/transport';
-import { fromHttpResponse } from '../zyins/errors';
-import { deriveIdempotencyKey } from '../zyins/idempotency';
-import { buildLicenseHMACHeaders } from '../core';
-import { type Clock, systemClock } from '../core';
+import { type AuthContext } from './auth.js';
+import { type Transport } from '../zyins/transport.js';
+import { fromHttpResponse } from '../zyins/errors.js';
+import { deriveIdempotencyKey } from '../zyins/idempotency.js';
+import { buildLicenseHMACHeaders } from '../core/index.js';
+import { type Clock, systemClock } from '../core/index.js';
 
 const EMAIL_PATH = '/v1/email/enqueue';
 

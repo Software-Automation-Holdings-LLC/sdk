@@ -10,8 +10,8 @@
  * Module-private. Consumers only ever see `Concept` handles via the
  * `ReferenceFacade`.
  */
-import { _makeKey } from './_makeKey';
-import { Sort } from './Sort';
+import { _makeKey } from './_makeKey.js';
+import { Sort } from './Sort.js';
 export class ReferenceIndex {
     conditionById;
     conditionByKey;

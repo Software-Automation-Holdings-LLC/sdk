@@ -12,7 +12,7 @@
  * It is never logged, never put on a telemetry payload, and never attached to
  * a thrown error. See `../account/cases` for the enforced guarantee.
  */
-import { create as opaqueCreate, } from '../account/cases';
+import { create as opaqueCreate, } from '../account/cases.js';
 /** zyins routing tag pinned by {@link share}. */
 const ZYINS_PRODUCT = 'zyins';
 /**

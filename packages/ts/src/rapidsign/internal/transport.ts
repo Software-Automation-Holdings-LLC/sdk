@@ -8,7 +8,7 @@
  * Header assembly is the caller's responsibility; this facade moves bytes.
  */
 
-import { resolveFetch } from '../../core';
+import { resolveFetch } from '../../core/index.js';
 
 /** Supported HTTP methods. */
 export type HttpMethod = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';

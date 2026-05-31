@@ -14,9 +14,9 @@
  * `cancel` throws `NotImplemented` until the matching server endpoint ships
  * (tracked in issue #38). The SDK surface is the product.
  */
-import { RapidSignError, fromHttpResponse, } from './errors';
-import { decodeGzipBase64 } from './internal/decompress';
-import { isIso8601Duration, parseDuration, MAX_DURATION_MS } from './internal/duration';
+import { RapidSignError, fromHttpResponse, } from './errors.js';
+import { decodeGzipBase64 } from './internal/decompress.js';
+import { isIso8601Duration, parseDuration, MAX_DURATION_MS } from './internal/duration.js';
 /** Path prefixes (a single source of truth for routing). */
 const PATH = {
     documents: '/v1/documents',

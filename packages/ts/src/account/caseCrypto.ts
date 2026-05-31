@@ -19,8 +19,8 @@ import {
   bytesToBase64Url,
   systemRandomBytes,
   type RandomBytes,
-} from '../core';
-import { IsaError } from '../zyins/apiError';
+} from '../core/index.js';
+import { IsaError } from '../zyins/apiError.js';
 
 /** AES-256 data-key length in bytes. */
 const KEY_BYTES = 32;

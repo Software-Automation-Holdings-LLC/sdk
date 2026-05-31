@@ -13,7 +13,7 @@
  * This module owns ONLY the wire shape + the parser. Consumer-side index
  * construction (`ReferenceIndex`) lives in `./reference/referenceIndex.ts`.
  */
-import type { OperationContext } from './client';
+import type { OperationContext } from './client.js';
 /** Closed enum of dataset categories the server returns. */
 export type DatasetCategory = 'medications' | 'conditions' | 'products' | 'spelling_corrections' | 'nicotine_options';
 /** Base reference entity: every row carries at least `id` + `name`. */

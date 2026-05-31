@@ -10,9 +10,9 @@
  * settings shape and pass through. Identity comes from License-HMAC auth
  * headers — body carries no credentials.
  */
-import { type AuthContext } from './auth';
-import { type Transport } from '../zyins/transport';
-import { type Clock } from '../core';
+import { type AuthContext } from './auth.js';
+import { type Transport } from '../zyins/transport.js';
+import { type Clock } from '../core/index.js';
 /** Opaque preferences document — keys and values are caller-defined. */
 export type PreferencesDocument = Record<string, unknown>;
 /** Input for `account.preferences.lookup`. */

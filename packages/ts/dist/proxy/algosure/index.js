@@ -1,3 +1,3 @@
-export * from "./hmac";
-export * from "./embedded";
+export * from "./hmac.js";
+export * from "./embedded.js";
 //# sourceMappingURL=index.js.map

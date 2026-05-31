@@ -7,9 +7,9 @@
  * framework into their bundle.
  */
 
-export { ZyInsClient, DEFAULT_ZYINS_BASE_URL, type ZyInsClientOptions } from './client';
+export { ZyInsClient, DEFAULT_ZYINS_BASE_URL, type ZyInsClientOptions } from './client.js';
 
-export { isAuthContext, type AuthContext } from './auth';
+export { isAuthContext, type AuthContext } from './auth.js';
 
 export {
   Sex,
@@ -22,7 +22,7 @@ export {
   type Condition,
   type NicotineUsageInput,
   type NicotineProductUsage,
-} from './applicant';
+} from './applicant.js';
 
 export {
   Coverage,
@@ -34,7 +34,7 @@ export {
   type MultiCoverage,
   type FaceValueCoverage,
   type MonthlyBudgetCoverage,
-} from './coverage';
+} from './coverage.js';
 
 export {
   ProductSelection,
@@ -43,9 +43,9 @@ export {
   Products,
   type Product,
   type ProductClassValue,
-} from './product';
+} from './product.js';
 
-export { ProductsFacade } from './products';
+export { ProductsFacade } from './products.js';
 
 export {
   ZyInsError,
@@ -56,7 +56,7 @@ export {
   fromProblemDetails,
   type LicenseErrorCode,
   type PrequalifyErrorCode,
-} from './errors';
+} from './errors.js';
 
 export {
   type PrequalifyRequest,
@@ -67,7 +67,7 @@ export {
   type PrequalifyResultMeta,
   type SinglePrequalifyResult,
   type MultiPrequalifyResult,
-} from './prequalify';
+} from './prequalify.js';
 
 export {
   prequalifyV2,
@@ -87,32 +87,32 @@ export {
   type OfferDeathBenefit,
   type OfferPremium,
   type OfferMoney,
-} from './prequalify-v2';
+} from './prequalify-v2.js';
 
 // --- v3 reference + pricing surface (Phase 3) -----------------------------
 export {
   prequalifyV3,
+  byAmount,
   type PrequalifyV3Request,
   type PrequalifyV3Result,
   type PrequalifyV3Options,
   type PrequalifyV3Context,
-  type PrequalifyV3Offer,
+  type V3Offer,
   type V3Eligibility,
   type V3EligibilityCategory,
+  type V3Amount,
   type V3Money,
+  type V3Period,
   type V3Premium,
   type V3PricingRow,
-  type V3DeathBenefit,
-} from './prequalify-v3';
+} from './prequalify-v3.js';
 export {
   quoteV3,
   type QuoteV3Request,
   type QuoteV3Result,
   type QuoteV3Options,
   type QuoteV3Context,
-  type QuoteV3Group,
-  type QuoteV3Product,
-} from './quote-v3';
+} from './quote-v3.js';
 export {
   getDatasetsV3,
   isNotModified,
@@ -131,7 +131,7 @@ export {
   type MedicationUsedFor,
   type NicotineOptionEntity,
   type SpellingCorrectionEntity,
-} from './datasets-v3';
+} from './datasets-v3.js';
 export {
   Sort as ReferenceSort,
   matchCondition,
@@ -142,7 +142,7 @@ export {
   type ConditionConcept,
   type MedicationConcept,
   type UnknownConcept,
-} from './reference';
+} from './reference.js';
 export {
   DefaultAutocorrector,
   DefaultMatchAlgorithm,
@@ -159,7 +159,7 @@ export {
   type DefaultAutocompleteAlgorithmOptions,
   type Suggestion,
   type ReferenceAdapters,
-} from './reference/index';
+} from './reference/index.js';
 
 export {
   BearerAuth,
@@ -181,18 +181,18 @@ export {
   type IsaEngine,
   type IsaCreateOptions,
   type ResolvedIsaOptions,
-} from './isaOptions';
+} from './isaOptions.js';
 export type {
   CaseStorage,
   CaseRecord,
   CaseStoragePutResult,
-} from './cases/CaseStorage';
-export { ZeroKnowledgeCaseStorage } from './cases/ZeroKnowledgeCaseStorage';
+} from './cases/CaseStorage.js';
+export { ZeroKnowledgeCaseStorage } from './cases/ZeroKnowledgeCaseStorage.js';
 
 export {
   type ClientVersionStatus,
   type ClientVersionListener,
-} from './clientVersion';
+} from './clientVersion.js';
 
 export {
   type LicenseActivateRequest,
@@ -203,7 +203,7 @@ export {
   type LicenseDeactivateRequest,
   type LicenseDeactivateResult,
   type LicenseValidationStatus,
-} from './license';
+} from './license.js';
 
 export {
   getReadiness,
@@ -211,12 +211,12 @@ export {
   type ProbeResult,
   type ServingStatus,
   type HealthContext,
-} from './health';
+} from './health.js';
 
 export {
   type CaseEmailRequest,
   type CaseEmailResult,
-} from './case';
+} from './case.js';
 
 export {
   defaultTransport,
@@ -224,22 +224,22 @@ export {
   type TransportRequest,
   type TransportResponse,
   type HttpMethod,
-} from './transport';
+} from './transport.js';
 
 // --- Phase 1+2 additions (SDK_DESIGN.md §§3,4,5,6,7,10) -------------------
-export { Isa, ZyInsNamespace, type IsaOptions } from './isa';
+export { Isa, ZyInsNamespace, type IsaOptions } from './isa.js';
 export {
   ReferenceFacade,
   ReferenceMedicationsFacade,
   ReferenceConditionsFacade,
   ReferenceConceptsFacade,
-} from './isaNamespaces';
+} from './isaNamespaces.js';
 export {
   IsaCredentialState,
   type LicenseCredentialSnapshot,
   type LicenseRefreshedEvent,
   type LicenseRefreshedListener,
-} from './credentialState';
+} from './credentialState.js';
 export {
   type IsaIdentity,
   type BearerIdentity,
@@ -249,7 +249,7 @@ export {
   resolveLicenseIdentity,
   resolveSessionIdentity,
   ENV_VAR_NAMES,
-} from './envFactory';
+} from './envFactory.js';
 export {
   IsaError,
   IsaApiError,
@@ -259,12 +259,12 @@ export {
   IsaNotActivatedError,
   IsaTimeoutError,
   type IsaNotActivatedCode,
-} from './apiError';
+} from './apiError.js';
 export {
   type Envelope,
   type RawResponse,
   type RawResponseResult,
-} from './envelope';
+} from './envelope.js';
 export {
   type DebugLogger,
   type EnvReader,
@@ -276,4 +276,4 @@ export {
   redactBodyString,
   processEnv,
   stderrSink,
-} from './logger';
+} from './logger.js';

@@ -20,10 +20,10 @@
  * and returns the typed offer envelope. `'v1'` preserves the legacy
  * contract for callers still wired against the old envelope.
  */
-import type { CredentialStore } from '../core';
-import type { LicenseRefreshedListener } from './credentialState';
-import { type Transport } from './transport';
-import { type IsaApiVersion, type IsaApiVersionOverride, type IsaApiSurface, BundledApiVersions, resolveApiVersions } from './bundledApiVersions';
+import type { CredentialStore } from '../core/index.js';
+import type { LicenseRefreshedListener } from './credentialState.js';
+import { type Transport } from './transport.js';
+import { type IsaApiVersion, type IsaApiVersionOverride, type IsaApiSurface, BundledApiVersions, resolveApiVersions } from './bundledApiVersions.js';
 export type { IsaApiVersion, IsaApiVersionOverride, IsaApiSurface };
 export { BundledApiVersions, resolveApiVersions };
 /**
@@ -150,12 +150,12 @@ export interface IsaCreateOptions {
     transport?: Transport;
     /**
      * Optional case-storage adapter. Defaults to
-     * {@link import('./cases/ZeroKnowledgeCaseStorage').ZeroKnowledgeCaseStorage}
+     * {@link import('./cases/ZeroKnowledgeCaseStorage.js').ZeroKnowledgeCaseStorage}
      * — client-side AES-256-GCM, opaque ciphertext on the wire, fragment
      * key as the recall token. Carrier adapters may substitute a portal-
      * backed store; the SDK only sees the {@link CaseStorage} interface.
      */
-    caseStorage?: import('./cases/CaseStorage').CaseStorage;
+    caseStorage?: import('./cases/CaseStorage.js').CaseStorage;
 }
 /** Resolved view of `IsaCreateOptions` with defaults applied. */
 export interface ResolvedIsaOptions {
@@ -169,7 +169,7 @@ export interface ResolvedIsaOptions {
     readonly transport: Transport | undefined;
     readonly baseUrl: string;
     readonly proxyOrigin: string | undefined;
-    readonly caseStorage: import('./cases/CaseStorage').CaseStorage | undefined;
+    readonly caseStorage: import('./cases/CaseStorage.js').CaseStorage | undefined;
 }
 /**
  * Resolve `IsaCreateOptions` into a fully-defaulted view. Pure — no side

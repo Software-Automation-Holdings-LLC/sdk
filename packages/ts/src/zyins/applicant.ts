@@ -8,7 +8,7 @@
  * prequalify builder is the only consumer that knows how to serialize them.
  */
 
-import type { State } from '../catalog/states';
+import type { State } from '../catalog/states.js';
 
 /**
  * Applicant biological sex. The server accepts `male` and `female`

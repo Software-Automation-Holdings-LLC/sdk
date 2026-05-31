@@ -21,12 +21,12 @@
  * const ranked = await isa.zyins.medications.autocomplete('lisi', { limit: 5 });
  * ```
  */
-import { buildFrequencyMap, buildTypoMap } from '../datasets-v3';
-import { ReferenceIndex, buildUnknownConcept } from './referenceIndex';
-import { Sort } from './Sort';
-import { DefaultAutocorrector } from './Autocorrector';
-import { DefaultMatchAlgorithm } from './MatchAlgorithm';
-import { DefaultAutocompleteAlgorithm } from './AutocompleteAlgorithm';
+import { buildFrequencyMap, buildTypoMap } from '../datasets-v3.js';
+import { ReferenceIndex, buildUnknownConcept } from './referenceIndex.js';
+import { Sort } from './Sort.js';
+import { DefaultAutocorrector } from './Autocorrector.js';
+import { DefaultMatchAlgorithm } from './MatchAlgorithm.js';
+import { DefaultAutocompleteAlgorithm } from './AutocompleteAlgorithm.js';
 /**
  * Shared bundle cache. One instance per `ZyInsNamespace`; the
  * `DatasetsFacade.getV3()` call writes the latest bundle here, and the
@@ -322,9 +322,9 @@ export class ReferenceConceptsFacade {
 }
 const DEFAULT_LIMIT = 25;
 // Re-export public types for consumers reaching them via the namespace.
-export { Sort } from './Sort';
-export { DefaultAutocorrector } from './Autocorrector';
-export { DefaultMatchAlgorithm } from './MatchAlgorithm';
-export { DefaultAutocompleteAlgorithm } from './AutocompleteAlgorithm';
-export { buildSuggestion } from './Suggestion';
+export { Sort } from './Sort.js';
+export { DefaultAutocorrector } from './Autocorrector.js';
+export { DefaultMatchAlgorithm } from './MatchAlgorithm.js';
+export { DefaultAutocompleteAlgorithm } from './AutocompleteAlgorithm.js';
+export { buildSuggestion } from './Suggestion.js';
 //# sourceMappingURL=index.js.map

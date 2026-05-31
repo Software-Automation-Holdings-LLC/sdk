@@ -12,8 +12,8 @@
  */
 
 import { createContext, createElement, useContext, useMemo, type ReactNode } from 'react';
-import { type AuthContext } from '../auth';
-import { ZyInsClient, type ZyInsClientOptions } from '../client';
+import { type AuthContext } from '../auth.js';
+import { ZyInsClient, type ZyInsClientOptions } from '../client.js';
 
 /** Shape carried by the provider. Extends auth with optional client overrides. */
 export interface ZyInsProviderConfig extends Omit<ZyInsClientOptions, 'auth'> {

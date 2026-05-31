@@ -11,7 +11,7 @@
  * requirement on the value; the only invariant is that it is stable across
  * a device's lifetime so HMAC signatures stay verifiable.
  */
-import { type CredentialStore } from './credentialStore';
+import { type CredentialStore } from './credentialStore.js';
 /**
  * Load the persisted device id from `store`, or mint a new one and persist
  * it. The result is stable across calls within a single process AND across

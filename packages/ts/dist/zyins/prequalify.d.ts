@@ -14,13 +14,13 @@
  *  - Server response shape is `{ data: { meta, results: { <amount>: [...] } },
  *    request_id, idempotency_key }`.
  */
-import { type Applicant } from './applicant';
-import { type CoverageInput, type CoverageType } from './coverage';
-import { type ProductSelection, type Product, type ProductClassValue } from './product';
-import { type AuthContext } from './auth';
-import { type Transport } from './transport';
-import { type Clock } from '../core';
-import type { OfferPlanInfo, OfferPlanInfoLegacy } from './prequalify-v2-types';
+import { type Applicant } from './applicant.js';
+import { type CoverageInput, type CoverageType } from './coverage.js';
+import { type ProductSelection, type Product, type ProductClassValue } from './product.js';
+import { type AuthContext } from './auth.js';
+import { type Transport } from './transport.js';
+import { type Clock } from '../core/index.js';
+import type { OfferPlanInfo, OfferPlanInfoLegacy } from './prequalify-v2-types.js';
 /** Optional per-call knobs that map onto the server's filter primitives. */
 export interface PrequalifyOptions {
     /** Restrict to a single product class (server `only_product_class`). */

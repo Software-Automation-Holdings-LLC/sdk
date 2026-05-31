@@ -14,7 +14,7 @@
  * `aliases` is intentionally absent. Aliases are resolved server-side and
  * not surfaced; consumers compare on `id` (use `Concept.equals`).
  */
-import type { Sort } from './Sort';
+import type { Sort } from './Sort.js';
 /** Discriminator on a concept handle. */
 export type ConceptKind = 'medication' | 'condition' | 'unknown';
 export interface Concept {

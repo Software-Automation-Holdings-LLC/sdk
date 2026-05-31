@@ -23,9 +23,9 @@
  * ```
  */
 
-import type { Concept, UnknownConcept } from './Concept';
-import { _makeKey } from './_makeKey';
-import { buildUnknownConcept } from './referenceIndex';
+import type { Concept, UnknownConcept } from './Concept.js';
+import { _makeKey } from './_makeKey.js';
+import { buildUnknownConcept } from './referenceIndex.js';
 
 /**
  * Resolve free text to exactly one `Concept` from a candidate pool.

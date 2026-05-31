@@ -22,8 +22,8 @@
  * module.
  */
 
-import { resolveSubtle, arrayBufferToHex, type Clock, systemClock } from '../../core';
-import { ALGOSURE_TIME_BUCKET_MS, deriveSimpleKey } from './hmac';
+import { resolveSubtle, arrayBufferToHex, type Clock, systemClock } from '../../core/index.js';
+import { ALGOSURE_TIME_BUCKET_MS, deriveSimpleKey } from './hmac.js';
 
 const CONTEXT = 'Algosure';
 
@@ -138,4 +138,4 @@ export async function buildEmbeddedAlgosureHeaders(args: EmbeddedAlgosureArgs): 
     };
 }
 
-export { ALGOSURE_TIME_BUCKET_MS } from './hmac';
+export { ALGOSURE_TIME_BUCKET_MS } from './hmac.js';

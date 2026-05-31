@@ -11,9 +11,9 @@
  * the client; the server ignores them on this route.
  */
 
-import { type AuthContext } from './auth';
-import { type Transport } from './transport';
-import { fromHttpResponse } from './errors';
+import { type AuthContext } from './auth.js';
+import { type Transport } from './transport.js';
+import { fromHttpResponse } from './errors.js';
 
 const READINESS_PATH = '/ready';
 

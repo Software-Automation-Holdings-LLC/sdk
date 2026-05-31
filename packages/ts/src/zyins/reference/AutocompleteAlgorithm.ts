@@ -29,9 +29,9 @@
  * ```
  */
 
-import type { Concept, ConceptKind } from './Concept';
-import { Sort } from './Sort';
-import { type Suggestion, buildSuggestion } from './Suggestion';
+import type { Concept, ConceptKind } from './Concept.js';
+import { Sort } from './Sort.js';
+import { type Suggestion, buildSuggestion } from './Suggestion.js';
 
 /** Per-call options for {@link AutocompleteAlgorithm.rank}. */
 export interface AutocompleteOptions {

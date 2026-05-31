@@ -3,10 +3,10 @@
  * shape and the Algosure HMAC headers required by the platform proxy.
  */
 
-import { buildAlgosureHeaders } from '../algosure/hmac';
-import { type Clock } from '../../core';
-import { HttpRequestError, httpRequest } from '../../core';
-import { REQUEST, RETURN_TYPE } from '../../core';
+import { buildAlgosureHeaders } from '../algosure/hmac.js';
+import { type Clock } from '../../core/index.js';
+import { HttpRequestError, httpRequest } from '../../core/index.js';
+import { REQUEST, RETURN_TYPE } from '../../core/index.js';
 
 const PROXY_CALL_PATH = '/v1/call';
 

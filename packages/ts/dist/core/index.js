@@ -8,18 +8,18 @@
  * workspace protocol during development; the publish workflow pins
  * the workspace dep to a concrete sdk/core/v* tag at publish time.
  */
-export { resolveSubtle, arrayBufferToHex, resolveFetch, base64EncodeUtf8, base64ToBytes, bytesToBase64, bytesToBase64Url, systemRandomBytes, systemClock, } from './internal/crypto';
-export * from './license/deviceAuth';
-export * from './problem-details/types';
-export * from './http/constants';
-export * from './http/request';
-export * from './transport';
-export { canonicalString, formatTimestamp, signRequest, } from './auth/signRequest';
+export { resolveSubtle, arrayBufferToHex, resolveFetch, base64EncodeUtf8, base64ToBytes, bytesToBase64, bytesToBase64Url, systemRandomBytes, systemClock, } from './internal/crypto.js';
+export * from './license/deviceAuth.js';
+export * from './problem-details/types.js';
+export * from './http/constants.js';
+export * from './http/request.js';
+export * from './transport/index.js';
+export { canonicalString, formatTimestamp, signRequest, } from './auth/signRequest.js';
 // Namespaced re-exports so identically-named symbols (compress / decompress
 // in compression, encode / decode in obfuscation) don't collide at the
 // barrel level. Callers import as `import { compression, obfuscation } from
 // '@isa-sdk/core'` then call `compression.compress(...)`.
-export * as compression from './compression/gzip';
-export * as obfuscation from './obfuscation/xor';
-export { CREDENTIAL_KEYS, inMemoryCredentialStore, fromAsyncStorage, fromLocalStorage, loadOrMintDeviceId, mintDeviceId, } from './storage';
+export * as compression from './compression/gzip.js';
+export * as obfuscation from './obfuscation/xor.js';
+export { CREDENTIAL_KEYS, inMemoryCredentialStore, fromAsyncStorage, fromLocalStorage, loadOrMintDeviceId, mintDeviceId, } from './storage/index.js';
 //# sourceMappingURL=index.js.map

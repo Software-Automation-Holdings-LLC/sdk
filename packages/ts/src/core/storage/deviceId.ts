@@ -12,7 +12,7 @@
  * a device's lifetime so HMAC signatures stay verifiable.
  */
 
-import { type CredentialStore, CREDENTIAL_KEYS } from './credentialStore';
+import { type CredentialStore, CREDENTIAL_KEYS } from './credentialStore.js';
 
 /**
  * 16 random bytes = 128 bits of entropy. Matches Stripe's `cus_…` /

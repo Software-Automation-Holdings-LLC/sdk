@@ -6,7 +6,7 @@
  * behind injectable facades so the same primitive serves web, React Native,
  * and Node.
  */
-import { type RequestMethod, type HttpReturnType } from './constants';
+import { type RequestMethod, type HttpReturnType } from './constants.js';
 /** Structured logger facade. Callers can inject console, pino, winston, etc. */
 export interface Logger {
     debug: (msg: string, ctx?: unknown) => void;

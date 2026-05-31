@@ -1,4 +1,4 @@
-import { titleCaseLabel } from './planInfoLabel';
+import { titleCaseLabel } from './planInfoLabel.js';
 const toStr = (v) => (typeof v === 'string' ? v : '');
 const isRecord = (v) => typeof v === 'object' && v !== null && !Array.isArray(v);
 /**

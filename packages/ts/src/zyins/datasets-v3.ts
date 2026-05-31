@@ -14,10 +14,10 @@
  * construction (`ReferenceIndex`) lives in `./reference/referenceIndex.ts`.
  */
 
-import type { OperationContext } from './client';
-import { buildLicenseHMACHeaders } from '../core';
-import { systemClock } from '../core';
-import { fromHttpResponse } from './errors';
+import type { OperationContext } from './client.js';
+import { buildLicenseHMACHeaders } from '../core/index.js';
+import { systemClock } from '../core/index.js';
+import { fromHttpResponse } from './errors.js';
 
 /** Closed enum of dataset categories the server returns. */
 export type DatasetCategory = 'medications' | 'conditions' | 'products' | 'spelling_corrections' | 'nicotine_options';

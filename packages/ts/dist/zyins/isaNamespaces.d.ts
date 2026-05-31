@@ -6,22 +6,22 @@
  * Separated from `isa.ts` to keep that file under the 250-line cap; this
  * module owns only the facade shape, not the unified `Isa` class itself.
  */
-import { type ZyInsClient } from './client';
-import { type BrandingDetail } from './branding';
-import { type PreferencesLookupResult, type PreferencesSetRequest, type PreferencesSetResult } from './preferences';
-import { type CaseShareRequest, type CaseShareResult } from './cases';
-import { type CaseEmailRequest, type CaseEmailResult } from './case';
-import type { CaseRecord, CaseStorage, CaseStoragePutResult } from './cases/CaseStorage';
-import { type DatasetBundle, type DatasetsGetOptions } from './datasets';
-import { type DatasetBundleV3, type DatasetsV3GetOptions, type DatasetsV3NotModified } from './datasets-v3';
-import { type Concept, type ConditionConcept, type MedicationConcept, type UnknownConcept } from './reference';
-export { ReferenceFacade, ReferenceMedicationsFacade, ReferenceConditionsFacade, ReferenceConceptsFacade, ReferenceBundleCache, DefaultAutocorrector, DefaultMatchAlgorithm, DefaultAutocompleteAlgorithm, buildSuggestion, } from './reference/index';
-export type { Autocorrector, AutocorrectOptions, AutocorrectAppliedEvent, DefaultAutocorrectorOptions, MatchAlgorithm, DefaultMatchAlgorithmOptions, AutocompleteAlgorithm, AutocompleteOptions, DefaultAutocompleteAlgorithmOptions, Suggestion, ReferenceAdapters, } from './reference/index';
-import { type LicenseActivateRequest, type LicenseActivateResult, type LicenseCheckRequest, type LicenseCheckResult, type LicenseDeactivateRequest, type LicenseDeactivateResult } from './license';
-import { type IsaCredentialState } from './credentialState';
-import { type Transport } from './transport';
-import { type Clock } from '../core';
-import { type LogosFetch, type LogosGetOptions } from './logos';
+import { type ZyInsClient } from './client.js';
+import { type BrandingDetail } from './branding.js';
+import { type PreferencesLookupResult, type PreferencesSetRequest, type PreferencesSetResult } from './preferences.js';
+import { type CaseShareRequest, type CaseShareResult } from './cases.js';
+import { type CaseEmailRequest, type CaseEmailResult } from './case.js';
+import type { CaseRecord, CaseStorage, CaseStoragePutResult } from './cases/CaseStorage.js';
+import { type DatasetBundle, type DatasetsGetOptions } from './datasets.js';
+import { type DatasetBundleV3, type DatasetsV3GetOptions, type DatasetsV3NotModified } from './datasets-v3.js';
+import { type Concept, type ConditionConcept, type MedicationConcept, type UnknownConcept } from './reference.js';
+export { ReferenceFacade, ReferenceMedicationsFacade, ReferenceConditionsFacade, ReferenceConceptsFacade, ReferenceBundleCache, DefaultAutocorrector, DefaultMatchAlgorithm, DefaultAutocompleteAlgorithm, buildSuggestion, } from './reference/index.js';
+export type { Autocorrector, AutocorrectOptions, AutocorrectAppliedEvent, DefaultAutocorrectorOptions, MatchAlgorithm, DefaultMatchAlgorithmOptions, AutocompleteAlgorithm, AutocompleteOptions, DefaultAutocompleteAlgorithmOptions, Suggestion, ReferenceAdapters, } from './reference/index.js';
+import { type LicenseActivateRequest, type LicenseActivateResult, type LicenseCheckRequest, type LicenseCheckResult, type LicenseDeactivateRequest, type LicenseDeactivateResult } from './license.js';
+import { type IsaCredentialState } from './credentialState.js';
+import { type Transport } from './transport.js';
+import { type Clock } from '../core/index.js';
+import { type LogosFetch, type LogosGetOptions } from './logos.js';
 type ClientThunk = () => ZyInsClient;
 /** `isa.zyins.branding` — whitelabel lookup. */
 export declare class BrandingFacade {

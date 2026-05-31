@@ -21,8 +21,8 @@
  * not yet migrated; new callers should prefer the functions in this
  * module.
  */
-import { resolveSubtle, arrayBufferToHex, systemClock } from '../../core';
-import { deriveSimpleKey } from './hmac';
+import { resolveSubtle, arrayBufferToHex, systemClock } from '../../core/index.js';
+import { deriveSimpleKey } from './hmac.js';
 const CONTEXT = 'Algosure';
 /**
  * Returns true when `saltId` round-trips cleanly to the proxy verifier's
@@ -94,5 +94,5 @@ export async function buildEmbeddedAlgosureHeaders(args) {
         '*SaltId': saltIdHeader,
     };
 }
-export { ALGOSURE_TIME_BUCKET_MS } from './hmac';
+export { ALGOSURE_TIME_BUCKET_MS } from './hmac.js';
 //# sourceMappingURL=embedded.js.map

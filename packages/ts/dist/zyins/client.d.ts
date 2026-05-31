@@ -16,22 +16,22 @@
  *     surface beyond an internal override used by replay tests.
  *   - Retries and backoff are NOT exposed here; they live in Tier 2.
  */
-import { type AuthContext } from './auth';
-import { type Transport } from './transport';
-import { type Clock } from '../core';
-import { type PrequalifyRequest, type PrequalifyResult } from './prequalify';
-import { type PrequalifyV2Request, type PrequalifyV2Result } from './prequalify-v2';
-import { type PrequalifyV3Request, type PrequalifyV3Result } from './prequalify-v3';
-import { type QuoteV3Request, type QuoteV3Result } from './quote-v3';
-import { DatasetsV3SubClient } from './datasets-v3';
-import { type LicenseActivateRequest, type LicenseActivateResult, type LicenseCheckRequest, type LicenseCheckResult, type LicenseDeactivateRequest, type LicenseDeactivateResult } from './license';
-import { type ReadinessResult } from './health';
-import { type CaseEmailRequest, type CaseEmailResult } from './case';
-import { type BrandingDetail } from './branding';
-import { DatasetsSubClient } from './datasets';
-import { type PreferencesLookupResult, type PreferencesSetRequest, type PreferencesSetResult } from './preferences';
-import { type CaseShareRequest, type CaseShareResult } from './cases';
-import { LogosSubClient, type LogosFetch } from './logos';
+import { type AuthContext } from './auth.js';
+import { type Transport } from './transport.js';
+import { type Clock } from '../core/index.js';
+import { type PrequalifyRequest, type PrequalifyResult } from './prequalify.js';
+import { type PrequalifyV2Request, type PrequalifyV2Result } from './prequalify-v2.js';
+import { type PrequalifyV3Request, type PrequalifyV3Result } from './prequalify-v3.js';
+import { type QuoteV3Request, type QuoteV3Result } from './quote-v3.js';
+import { DatasetsV3SubClient } from './datasets-v3.js';
+import { type LicenseActivateRequest, type LicenseActivateResult, type LicenseCheckRequest, type LicenseCheckResult, type LicenseDeactivateRequest, type LicenseDeactivateResult } from './license.js';
+import { type ReadinessResult } from './health.js';
+import { type CaseEmailRequest, type CaseEmailResult } from './case.js';
+import { type BrandingDetail } from './branding.js';
+import { DatasetsSubClient } from './datasets.js';
+import { type PreferencesLookupResult, type PreferencesSetRequest, type PreferencesSetResult } from './preferences.js';
+import { type CaseShareRequest, type CaseShareResult } from './cases.js';
+import { LogosSubClient, type LogosFetch } from './logos.js';
 /** Per-call context shared across sub-clients. */
 export interface OperationContext {
     auth: AuthContext;

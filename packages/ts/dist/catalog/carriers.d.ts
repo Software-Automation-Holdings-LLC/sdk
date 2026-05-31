@@ -7,8 +7,8 @@
  * Source data:
  *   - insurance/v2_products.json
  */
-import type { Product } from './products';
-import type { State } from './states';
+import type { Product } from './products.js';
+import type { State } from './states.js';
 export interface ProductCarrierMetadata {
     readonly displayName: string;
     readonly products: readonly Product[];

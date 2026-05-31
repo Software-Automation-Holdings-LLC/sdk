@@ -1,4 +1,4 @@
-import type { OperationContext } from './client';
+import type { OperationContext } from './client.js';
 export type DatasetName = 'nicotineOptions' | 'products' | 'discontinuedProducts' | 'stateDerivatives' | 'typos' | 'conditions' | 'conditionNames' | 'medications' | 'medicationNames' | 'medicationsByCondition' | 'frequencyGraphs';
 export interface DatasetBundle {
     nicotineOptions: ReadonlyArray<string>;

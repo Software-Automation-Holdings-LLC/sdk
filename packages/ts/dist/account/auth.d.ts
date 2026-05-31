@@ -8,5 +8,5 @@
  * When the License auth path is replaced by session credentials (#149), the
  * change lands in `zyins/auth.ts` and propagates here unchanged.
  */
-export { type AuthContext, isAuthContext } from '../zyins/auth';
+export { type AuthContext, isAuthContext } from '../zyins/auth.js';
 //# sourceMappingURL=auth.d.ts.map

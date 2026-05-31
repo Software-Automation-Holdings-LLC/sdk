@@ -14,8 +14,8 @@
  * `error.code` — never on HTTP status, never on message text. This is the
  * "legacy error formats are absorbed" invariant from ADR-035.
  */
-import { isProblemDetails } from '../core';
-import { IsaIdempotencyConflictError } from './apiError';
+import { isProblemDetails } from '../core/index.js';
+import { IsaIdempotencyConflictError } from './apiError.js';
 /**
  * Base class for every error the Tier 3 facade emits. Mirrors the
  * ProblemDetails shape so callers get the same field set whether the

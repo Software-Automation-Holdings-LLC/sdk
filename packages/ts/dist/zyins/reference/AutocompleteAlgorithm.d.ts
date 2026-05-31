@@ -28,9 +28,9 @@
  * for (const s of ranked) console.log(s.rank, s.name, s.score);
  * ```
  */
-import type { Concept, ConceptKind } from './Concept';
-import { Sort } from './Sort';
-import { type Suggestion } from './Suggestion';
+import type { Concept, ConceptKind } from './Concept.js';
+import { Sort } from './Sort.js';
+import { type Suggestion } from './Suggestion.js';
 /** Per-call options for {@link AutocompleteAlgorithm.rank}. */
 export interface AutocompleteOptions {
     /** Maximum suggestions to return; default 25, max 250. */

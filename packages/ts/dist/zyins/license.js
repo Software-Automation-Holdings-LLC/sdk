@@ -11,10 +11,10 @@
  * bpp2.0's `useSoftwareActivator.js`, which reads `result.auth.licenseKey`.
  * Only the wire parsing adapts to the v2 envelope shape.
  */
-import { fromHttpResponse } from './errors';
-import { deriveIdempotencyKey } from './idempotency';
-import { parseJsonResponse, unwrapEnvelope as unwrapParsedEnvelope } from './response';
-import { stripQuotes } from '../core/license/deviceAuth';
+import { fromHttpResponse } from './errors.js';
+import { deriveIdempotencyKey } from './idempotency.js';
+import { parseJsonResponse, unwrapEnvelope as unwrapParsedEnvelope } from './response.js';
+import { stripQuotes } from '../core/license/deviceAuth.js';
 const LICENSES_ACTIVATE_PATH = '/v2/licenses/activate';
 const LICENSES_CHECK_PATH = '/v2/licenses/check';
 const LICENSES_DEACTIVATE_PATH = '/v2/licenses/deactivate';

@@ -162,7 +162,9 @@ const QUOTE_V3_BODY = JSON.stringify({
   request_id: 'req_01HZK2N5GQR9T8X4B6FJW3Y1AS',
   idempotency_key: '550e8400-e29b-41d4-a716-446655440000',
   livemode: true,
-  data: { results: [] },
+  // v3 quote shares the flat `plans[]` envelope with v3 prequalify; an
+  // absent plans key is wire-shape drift and now fails fast.
+  data: { plans: [] },
 });
 
 describe('v3 facade routing (selector dispatches to prequalifyV3 / quoteV3)', () => {

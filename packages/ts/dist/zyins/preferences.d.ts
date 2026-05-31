@@ -10,9 +10,9 @@
  * elevation. When session credentials replace License-HMAC the SDK surface
  * stays unchanged.
  */
-import { type AuthContext } from './auth';
-import { type Transport } from './transport';
-import { type Clock } from '../core';
+import { type AuthContext } from './auth.js';
+import { type Transport } from './transport.js';
+import { type Clock } from '../core/index.js';
 /** Opaque preferences document. */
 export type PreferencesDocument = Record<string, unknown>;
 export interface PreferencesLookupResult {

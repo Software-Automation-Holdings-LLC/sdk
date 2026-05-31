@@ -14,7 +14,7 @@
  * `error.code` — never on HTTP status, never on message text. This is the
  * "legacy error formats are absorbed" invariant from ADR-035.
  */
-import { type ProblemDetails } from '../core';
+import { type ProblemDetails } from '../core/index.js';
 /**
  * License-specific error codes. Drawn from the legacy CGI's ERR_* set;
  * additions ship with API minor versions. The string values are stable

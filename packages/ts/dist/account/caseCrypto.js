@@ -11,8 +11,8 @@
  * contract carries `ciphertext` and `tag` separately (mirroring zyins #363),
  * so this module splits on encrypt and rejoins on decrypt.
  */
-import { resolveSubtle, base64ToBytes, bytesToBase64, bytesToBase64Url, systemRandomBytes, } from '../core';
-import { IsaError } from '../zyins/apiError';
+import { resolveSubtle, base64ToBytes, bytesToBase64, bytesToBase64Url, systemRandomBytes, } from '../core/index.js';
+import { IsaError } from '../zyins/apiError.js';
 /** AES-256 data-key length in bytes. */
 const KEY_BYTES = 32;
 /** AES-GCM nonce length in bytes (96-bit, the GCM-recommended size). */

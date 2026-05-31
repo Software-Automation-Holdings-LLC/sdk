@@ -12,9 +12,9 @@
  * query parameter when supplied so we don't churn the typed surface when
  * the server lands the extension.
  */
-import { type AuthContext } from './auth';
-import { type Transport } from '../zyins/transport';
-import { type Clock } from '../core';
+import { type AuthContext } from './auth.js';
+import { type Transport } from '../zyins/transport.js';
+import { type Clock } from '../core/index.js';
 /** Whitelabel detail returned by `account.branding.lookup`. */
 export interface BrandingDetail {
     /** Display name of the agency. */

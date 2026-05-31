@@ -7,7 +7,7 @@
  * pounds). The factories in this module hide the bucket math; the client's
  * prequalify builder is the only consumer that knows how to serialize them.
  */
-import type { State } from '../catalog/states';
+import type { State } from '../catalog/states.js';
 /**
  * Applicant biological sex. The server accepts `male` and `female`
  * (canonical lowercase per ADR-012) and normalises legacy single-letter codes

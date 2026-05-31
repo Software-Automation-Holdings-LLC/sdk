@@ -15,10 +15,10 @@
  * (`encryptCase` / `decryptCase` / `signedCaseRequest`) to avoid forking
  * the cryptographic surface.
  */
-import { encryptCase, decryptCase } from '../../account/caseCrypto';
-import { parseCreatedId, parseCaseDetail, } from '../../account/caseWire';
-import { signedCaseRequest, isSuccess, } from '../../account/caseTransport';
-import { fromHttpResponse } from '../errors';
+import { encryptCase, decryptCase } from '../../account/caseCrypto.js';
+import { parseCreatedId, parseCaseDetail, } from '../../account/caseWire.js';
+import { signedCaseRequest, isSuccess, } from '../../account/caseTransport.js';
+import { fromHttpResponse } from '../errors.js';
 /** Wire path for the opaque case store. Versioned by the `cases` surface. */
 const CASE_PATH = '/v1/case';
 /** HTTP status that maps to a `null` record on recall (absent / expired). */
@@ -27,7 +27,7 @@ const HTTP_NOT_FOUND = 404;
  * Default zero-knowledge implementation of {@link CaseStorage}. Constructed
  * with the same signed-request context the legacy `account.cases` surface
  * uses; the parent `Isa` wires this automatically when no override is
- * supplied on {@link import('../isaOptions').IsaCreateOptions.caseStorage}.
+ * supplied on {@link import('../isaOptions.js').IsaCreateOptions.caseStorage}.
  */
 export class ZeroKnowledgeCaseStorage {
     contextOnce;

@@ -19,11 +19,11 @@
  * caller already holds. Downstream consumers (bpp2.0, Phase 3) must scrub
  * `location.hash` before any telemetry call.
  */
-import { encryptCase, decryptCase } from './caseCrypto';
-import { assembleLink, parseLink, parseCreatedId, parseCaseDetail, parseCaseList, } from './caseWire';
-import { signedCaseRequest, isSuccess } from './caseTransport';
-import { fromHttpResponse } from '../zyins/errors';
-import { IsaCaseExpiredError } from '../zyins/apiError';
+import { encryptCase, decryptCase } from './caseCrypto.js';
+import { assembleLink, parseLink, parseCreatedId, parseCaseDetail, parseCaseList, } from './caseWire.js';
+import { signedCaseRequest, isSuccess } from './caseTransport.js';
+import { fromHttpResponse } from '../zyins/errors.js';
+import { IsaCaseExpiredError } from '../zyins/apiError.js';
 const CASE_PATH = '/v1/case';
 const CASE_LIST_PATH = '/v1/case/list';
 const HTTP_NOT_FOUND = 404;

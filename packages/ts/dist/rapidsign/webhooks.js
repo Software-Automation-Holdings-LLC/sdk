@@ -6,7 +6,7 @@
  * write against the final shape today, and we flip the implementation when
  * the server lands.
  */
-import { RapidSignError } from './errors';
+import { RapidSignError } from './errors.js';
 const ISSUE_URL = 'https://github.com/Software-Automation-Holdings-LLC/isa-platform/issues/38';
 /**
  * Webhook service exposed as `isa.rapidsign.webhooks`. Today every method

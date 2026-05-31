@@ -24,19 +24,19 @@ import {
   type Recipient,
   type SendRequest,
   type Signature,
-} from './types';
+} from './types.js';
 import {
   RapidSignError,
   fromHttpResponse,
-} from './errors';
-import { type Transport } from './internal/transport';
-import { decodeGzipBase64, type Decompressor } from './internal/decompress';
+} from './errors.js';
+import { type Transport } from './internal/transport.js';
+import { decodeGzipBase64, type Decompressor } from './internal/decompress.js';
 import {
   type Clock,
   type Sleeper,
   type UUIDGenerator,
-} from './internal/random';
-import { isIso8601Duration, parseDuration, MAX_DURATION_MS } from './internal/duration';
+} from './internal/random.js';
+import { isIso8601Duration, parseDuration, MAX_DURATION_MS } from './internal/duration.js';
 
 /** Per-call context the parent client injects. */
 export interface DocumentsContext {

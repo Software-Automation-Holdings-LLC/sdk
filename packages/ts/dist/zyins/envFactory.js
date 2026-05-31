@@ -11,8 +11,8 @@
  * factory and the missing variable — the caller never has to chase down a
  * silent absence.
  */
-import { IsaConfigError } from './apiError';
-import { processEnv } from './logger';
+import { IsaConfigError } from './apiError.js';
+import { processEnv } from './logger.js';
 /**
  * Env-var names for each factory. Names are composed at runtime from
  * pieces so static-analysis pattern matchers do not flag the literal

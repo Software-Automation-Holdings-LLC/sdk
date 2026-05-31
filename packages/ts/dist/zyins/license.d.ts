@@ -11,9 +11,9 @@
  * bpp2.0's `useSoftwareActivator.js`, which reads `result.auth.licenseKey`.
  * Only the wire parsing adapts to the v2 envelope shape.
  */
-import { type AuthContext } from './auth';
-import { type Transport } from './transport';
-import { type Clock } from '../core';
+import { type AuthContext } from './auth.js';
+import { type Transport } from './transport.js';
+import { type Clock } from '../core/index.js';
 /** Mirror of proto `LicenseStatus`. Unknown wire values surface as-is. */
 export type LicenseValidationStatus = string;
 /** Inputs accepted by `license.activate`. */

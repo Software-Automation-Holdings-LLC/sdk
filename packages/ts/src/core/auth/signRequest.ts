@@ -19,7 +19,7 @@
  * @see shared/go/auth/session/canonical.go (the source of truth)
  */
 
-import { resolveSubtle, arrayBufferToHex } from '../internal/crypto';
+import { resolveSubtle, arrayBufferToHex } from '../internal/crypto.js';
 
 const CONTEXT = 'SignRequest';
 const PRECOMPUTED_EMPTY_SHA256 =

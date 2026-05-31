@@ -1,4 +1,4 @@
-import { type Clock } from '../../core';
+import { type Clock } from '../../core/index.js';
 export type EmbeddedAlgosureHeaders = {
     'Authorization': string;
     '*Host': string;
@@ -48,5 +48,5 @@ export declare function computeEmbeddedAlgosureHMAC(args: EmbeddedAlgosureArgs):
  * regardless of minor clock skew; the verifier still enforces ±30s drift.
  */
 export declare function buildEmbeddedAlgosureHeaders(args: EmbeddedAlgosureArgs): Promise<EmbeddedAlgosureHeaders>;
-export { ALGOSURE_TIME_BUCKET_MS } from './hmac';
+export { ALGOSURE_TIME_BUCKET_MS } from './hmac.js';
 //# sourceMappingURL=embedded.d.ts.map

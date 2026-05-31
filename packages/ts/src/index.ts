@@ -22,7 +22,7 @@
  */
 
 // --- Unified facade ------------------------------------------------------
-export { Isa, ZyInsNamespace, RapidSignNamespace, ProxyNamespace, SESSIONS_REISSUE_PATH, type IsaOptions, type IsaFactoryOptions, type IsaAuthArgs } from './zyins/isa';
+export { Isa, ZyInsNamespace, RapidSignNamespace, ProxyNamespace, SESSIONS_REISSUE_PATH, type IsaOptions, type IsaFactoryOptions, type IsaAuthArgs } from './zyins/isa.js';
 
 // --- Account namespace --------------------------------------------------
 export {
@@ -47,29 +47,29 @@ export {
     type TCaseProduct,
     type EmailEnqueueRequest as AccountEmailEnqueueRequest,
     type EmailEnqueueResult as AccountEmailEnqueueResult,
-} from './account';
+} from './account/index.js';
 
 // --- Auth / identity / env factory --------------------------------------
 // `SessionIdentity` and `resolveSessionIdentity` are intentionally omitted
 // from the public surface — sessions are SDK-internal refresh state minted
 // by `Isa.withKeycode` / `Isa.forForm`, not a consumer-constructed auth
 // mode (sdk-syntax-proposal.md §4 + §6).
-export { type IsaIdentity, type BearerIdentity, type LicenseIdentity, resolveBearerIdentity, resolveLicenseIdentity, ENV_VAR_NAMES } from './zyins/envFactory';
+export { type IsaIdentity, type BearerIdentity, type LicenseIdentity, resolveBearerIdentity, resolveLicenseIdentity, ENV_VAR_NAMES } from './zyins/envFactory.js';
 
 // --- Errors -------------------------------------------------------------
-export { IsaError, IsaApiError, IsaConfigError, IsaCaseExpiredError, IsaIdempotencyConflictError, IsaNotActivatedError, IsaTimeoutError, type IsaNotActivatedCode } from './zyins/apiError';
+export { IsaError, IsaApiError, IsaConfigError, IsaCaseExpiredError, IsaIdempotencyConflictError, IsaNotActivatedError, IsaTimeoutError, type IsaNotActivatedCode } from './zyins/apiError.js';
 
 // --- Case crypto (zero-knowledge envelope) ------------------------------
-export { encryptCase, decryptCase, IsaCaseDecryptError, type TCaseEnvelope, type TEncryptedCase, type TCaseCryptoOptions } from './account/caseCrypto';
+export { encryptCase, decryptCase, IsaCaseDecryptError, type TCaseEnvelope, type TEncryptedCase, type TCaseCryptoOptions } from './account/caseCrypto.js';
 
 // --- Envelope -----------------------------------------------------------
-export { type Envelope, type RawResponse, type RawResponseResult } from './zyins/envelope';
-export { canonicalString, formatTimestamp, signRequest, type SignClock, type SignRequestHeaders, type SignRequestInput, type SignRequestResult } from './core/auth/signRequest';
+export { type Envelope, type RawResponse, type RawResponseResult } from './zyins/envelope.js';
+export { canonicalString, formatTimestamp, signRequest, type SignClock, type SignRequestHeaders, type SignRequestInput, type SignRequestResult } from './core/auth/signRequest.js';
 
 // --- Value types / domain primitives (zyins-flavored, public) ----------
-export { Sex, NicotineUsage, NicotineDuration, Height, Weight, type Applicant, type Medication, type Condition, type NicotineUsageInput, type NicotineProductUsage } from './zyins/applicant';
-export { Coverage, QuoteType, isMulti, type CoverageInput, type CoverageType, type SingleCoverage, type MultiCoverage, type FaceValueCoverage, type MonthlyBudgetCoverage } from './zyins/coverage';
-export { ProductSelection, ProductClass, ProductType, Products, type Product, type ProductClassValue } from './zyins/product';
+export { Sex, NicotineUsage, NicotineDuration, Height, Weight, type Applicant, type Medication, type Condition, type NicotineUsageInput, type NicotineProductUsage } from './zyins/applicant.js';
+export { Coverage, QuoteType, isMulti, type CoverageInput, type CoverageType, type SingleCoverage, type MultiCoverage, type FaceValueCoverage, type MonthlyBudgetCoverage } from './zyins/coverage.js';
+export { ProductSelection, ProductClass, ProductType, Products, type Product, type ProductClassValue } from './zyins/product.js';
 
 // --- Reference catalog (typed concepts, sort, adapters) ----------------
 // `ReferenceSort` + the concept/adapter types are the surface bpp2.0 (and
@@ -101,7 +101,7 @@ export {
     type AutocompleteAlgorithm,
     type AutocompleteOptions,
     type ReferenceAdapters,
-} from './zyins';
+} from './zyins/index.js';
 
 // --- Prequalify v2 (typed offer surface) -------------------------------
 export {
@@ -120,7 +120,7 @@ export {
     type OfferDeathBenefit,
     type OfferPremium,
     type OfferMoney,
-} from './zyins/prequalify-v2';
+} from './zyins/prequalify-v2.js';
 
 // --- IsaOptions sugar constructor -------------------------------------
 export {
@@ -143,12 +143,12 @@ export {
     type IsaEngine,
     type IsaCreateOptions,
     type ResolvedIsaOptions,
-} from './zyins/isaOptions';
-export type { CaseStorage, CaseRecord, CaseStoragePutResult } from './zyins/cases/CaseStorage';
-export { ZeroKnowledgeCaseStorage } from './zyins/cases/ZeroKnowledgeCaseStorage';
+} from './zyins/isaOptions.js';
+export type { CaseStorage, CaseRecord, CaseStoragePutResult } from './zyins/cases/CaseStorage.js';
+export { ZeroKnowledgeCaseStorage } from './zyins/cases/ZeroKnowledgeCaseStorage.js';
 
 // --- Logos (public images; no auth) ------------------------------------
-export { type LogosGetOptions, type LogosFetch, type LogosResponse } from './zyins/logos';
+export { type LogosGetOptions, type LogosFetch, type LogosResponse } from './zyins/logos.js';
 
 // --- Generated catalogs -------------------------------------------------
 // Every name in this block is produced by `scripts/gen-catalog.mjs`. See
@@ -178,7 +178,7 @@ export {
     ErrorCode,
     ErrorAdviceCodes,
     ErrorDocUrls,
-} from './catalog';
+} from './catalog/index.js';
 
 // --- Debug logger / env reader -----------------------------------------
-export { type DebugLogger, type EnvReader, type LogSink, debugLoggerFromEnv, makeLogger, redactHeaders, redactBody, redactBodyString, processEnv, stderrSink } from './zyins/logger';
+export { type DebugLogger, type EnvReader, type LogSink, debugLoggerFromEnv, makeLogger, redactHeaders, redactBody, redactBodyString, processEnv, stderrSink } from './zyins/logger.js';

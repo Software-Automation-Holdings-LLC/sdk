@@ -7,7 +7,7 @@
  * The link is the capability: it carries the case id in the path and the
  * decryption key in the `#k=` fragment. These helpers never log it.
  */
-import { type TCaseEnvelope } from './caseCrypto';
+import { type TCaseEnvelope } from './caseCrypto.js';
 /** A case's id and fragment key, parsed out of a share link. */
 export interface TParsedLink {
     id: string;

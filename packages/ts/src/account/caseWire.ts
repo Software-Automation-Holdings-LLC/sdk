@@ -8,8 +8,8 @@
  * decryption key in the `#k=` fragment. These helpers never log it.
  */
 
-import { type TCaseEnvelope } from './caseCrypto';
-import { isRecord, parseJsonResponse, stringField, unwrapEnvelope } from '../zyins/response';
+import { type TCaseEnvelope } from './caseCrypto.js';
+import { isRecord, parseJsonResponse, stringField, unwrapEnvelope } from '../zyins/response.js';
 
 const FRAGMENT_KEY_PREFIX = '#k=';
 

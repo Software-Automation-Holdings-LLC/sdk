@@ -28,8 +28,8 @@
  * for (const s of ranked) console.log(s.rank, s.name, s.score);
  * ```
  */
-import { Sort } from './Sort';
-import { buildSuggestion } from './Suggestion';
+import { Sort } from './Sort.js';
+import { buildSuggestion } from './Suggestion.js';
 /**
  * Default ranker. Bucket + frequency-boost algorithm ported from the
  * bpp2.0 picker hook.

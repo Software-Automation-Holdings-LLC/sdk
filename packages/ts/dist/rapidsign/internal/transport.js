@@ -7,7 +7,7 @@
  *
  * Header assembly is the caller's responsibility; this facade moves bytes.
  */
-import { resolveFetch } from '../../core';
+import { resolveFetch } from '../../core/index.js';
 /**
  * Build the default transport. Tests pass `fetchImpl` to avoid the global.
  * The returned function always lowercases response header keys so the

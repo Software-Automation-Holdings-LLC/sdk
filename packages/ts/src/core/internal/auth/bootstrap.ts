@@ -24,7 +24,7 @@
 
 import { createHmac as nodeCreateHmac } from 'node:crypto';
 
-import { resolveSubtle, arrayBufferToHex } from '../crypto';
+import { resolveSubtle, arrayBufferToHex } from '../crypto.js';
 
 /**
  * Inputs to the bootstrap signature. Mirrors the auth-vector fixture

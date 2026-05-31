@@ -10,7 +10,7 @@
  * it without credentials. We still send any auth headers attached to
  * the client; the server ignores them on this route.
  */
-import { fromHttpResponse } from './errors';
+import { fromHttpResponse } from './errors.js';
 const READINESS_PATH = '/ready';
 /**
  * Query the platform `/ready` endpoint and return the typed result. A

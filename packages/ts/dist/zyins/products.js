@@ -9,7 +9,7 @@
  * `refresh()` is a no-op today; it remains in the surface so future
  * server-driven catalog refresh lands without an API-shape change.
  */
-import { Products } from './product';
+import { Products } from './product.js';
 /** `isa.zyins.products` — typed catalog access. */
 export class ProductsFacade {
     // Constructor accepts an opaque dependency so the namespace wiring stays

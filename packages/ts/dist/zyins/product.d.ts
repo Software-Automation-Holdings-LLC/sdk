@@ -11,9 +11,9 @@
  * regex / string-based product matching is gone; the server treats `products`
  * as an exact-slug list.
  */
-export { ProductType as ProductClass, type ProductTypeValue as ProductClassValue, type Product, Products, } from '../catalog/productsByType';
-import type { Product, ProductTypeValue as ProductClassValue } from '../catalog/productsByType';
-export { ProductType } from './productType';
+export { ProductType as ProductClass, type ProductTypeValue as ProductClassValue, type Product, Products, } from '../catalog/productsByType.js';
+import type { Product, ProductTypeValue as ProductClassValue } from '../catalog/productsByType.js';
+export { ProductType } from './productType.js';
 /**
  * One or more products selected for a single prequalify call.
  *

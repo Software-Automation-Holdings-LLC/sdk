@@ -19,24 +19,24 @@
  * Concurrency: the client carries no shared mutable state. Multiple in-
  * flight calls on one instance are safe (see README "Concurrency safety").
  */
-import { resolveBearerIdentity, resolveLicenseIdentity, resolveSessionIdentity, ENV_VAR_NAMES, } from './envFactory';
-import { IsaConfigError, IsaNotActivatedError, IsaTimeoutError } from './apiError';
-import { CREDENTIAL_KEYS, inMemoryCredentialStore, loadOrMintDeviceId, } from '../core';
-import { IsaCredentialState, } from './credentialState';
-import { debugLoggerFromEnv, processEnv, stderrSink, } from './logger';
-import { ZyInsClient, DEFAULT_ZYINS_BASE_URL } from './client';
-import { defaultTransport } from './transport';
-import { SDK_RETRY_ATTEMPTS_HEADER } from './retryAttempts';
-import { WebhooksService } from '../rapidsign/webhooks';
-import { assertSessionIdentityForProxyCall, proxyCall as runProxyCall, } from '../proxy/call';
-import { BrandingFacade, DatasetsFacade, PreferencesFacade, CasesFacade, EmailFacade, LicenseFacade, LogosFacade, ReferenceFacade, ReferenceBundleCache, DefaultAutocorrector, } from './isaNamespaces';
-import { ProductsFacade } from './products';
-import { evaluateClientVersion, } from './clientVersion';
-import { buildAccountNamespace } from '../account/factory';
-import { resolveIsaOptions, resolveApiVersions, DEFAULT_TIMEOUT_MS, } from './isaOptions';
-import { surfaceForPath } from './bundledApiVersions';
-import { ZeroKnowledgeCaseStorage } from './cases/ZeroKnowledgeCaseStorage';
-import { DEFAULT_CASE_VIEWER_BASE_URL } from '../account/cases';
+import { resolveBearerIdentity, resolveLicenseIdentity, resolveSessionIdentity, ENV_VAR_NAMES, } from './envFactory.js';
+import { IsaConfigError, IsaNotActivatedError, IsaTimeoutError } from './apiError.js';
+import { CREDENTIAL_KEYS, inMemoryCredentialStore, loadOrMintDeviceId, } from '../core/index.js';
+import { IsaCredentialState, } from './credentialState.js';
+import { debugLoggerFromEnv, processEnv, stderrSink, } from './logger.js';
+import { ZyInsClient, DEFAULT_ZYINS_BASE_URL } from './client.js';
+import { defaultTransport } from './transport.js';
+import { SDK_RETRY_ATTEMPTS_HEADER } from './retryAttempts.js';
+import { WebhooksService } from '../rapidsign/webhooks.js';
+import { assertSessionIdentityForProxyCall, proxyCall as runProxyCall, } from '../proxy/call.js';
+import { BrandingFacade, DatasetsFacade, PreferencesFacade, CasesFacade, EmailFacade, LicenseFacade, LogosFacade, ReferenceFacade, ReferenceBundleCache, DefaultAutocorrector, } from './isaNamespaces.js';
+import { ProductsFacade } from './products.js';
+import { evaluateClientVersion, } from './clientVersion.js';
+import { buildAccountNamespace } from '../account/factory.js';
+import { resolveIsaOptions, resolveApiVersions, DEFAULT_TIMEOUT_MS, } from './isaOptions.js';
+import { surfaceForPath } from './bundledApiVersions.js';
+import { ZeroKnowledgeCaseStorage } from './cases/ZeroKnowledgeCaseStorage.js';
+import { DEFAULT_CASE_VIEWER_BASE_URL } from '../account/cases.js';
 /**
  * Unified SDK entry point.
  *

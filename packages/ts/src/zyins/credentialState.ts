@@ -15,8 +15,8 @@
  * path.
  */
 
-import { type AuthContext } from './auth';
-import { type CredentialStore, CREDENTIAL_KEYS } from '../core';
+import { type AuthContext } from './auth.js';
+import { type CredentialStore, CREDENTIAL_KEYS } from '../core/index.js';
 
 /** Snapshot of the credentials needed for one license-mode call. */
 export interface LicenseCredentialSnapshot {

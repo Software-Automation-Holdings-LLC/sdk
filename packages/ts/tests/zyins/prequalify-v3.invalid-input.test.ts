@@ -5,11 +5,12 @@
  *  - ProductSelection.byTypes carries a product-class dimension the v3
  *    prequalify envelope has no field for; the old serializer dropped it
  *    and sent products: [] (underwriting the wrong set).
- *  - A multi-amount coverage was collapsed to amounts[0].
- *  - A monthly_budget coverage was sent as a face amount.
+ *  - A single monthly_budget coverage was sent as a face amount.
  *  - An unrecognized nicotine frequency was coerced to 'daily'.
  *
- * Each is now a loud client-side throw.
+ * Each is a loud client-side throw. Multi-amount probes (face or budget)
+ * are now serialized natively via `coverage.quote_options` — see
+ * `prequalify-v3.multi-amount.test.ts`.
  */
 import { describe, expect, it } from 'vitest';
 import { serializeV3PrequalifyBody } from '../../src/zyins/prequalify-v3';
@@ -42,14 +43,16 @@ describe('serializeV3PrequalifyBody — invalid input rejection', () => {
     expect(body.products.length).toBeGreaterThan(0);
   });
 
-  it('rejects a multi-amount coverage rather than collapsing to amounts[0]', () => {
-    const request = requestWith({ coverage: Coverage.faceValues([25_000, 50_000]) });
-    expect(() => serializeV3PrequalifyBody(request)).toThrow(/single face amount/);
-  });
-
-  it('rejects a monthly_budget coverage rather than sending it as a face amount', () => {
+  it('serializes a single monthly_budget coverage to quote_options instead of throwing', () => {
     const request = requestWith({ coverage: Coverage.monthlyBudget(150) });
-    expect(() => serializeV3PrequalifyBody(request)).toThrow(/only face_value coverage/);
+    const body = JSON.parse(serializeV3PrequalifyBody(request)) as {
+      coverage: { quote_options?: { quote_type: string; amounts: string[] }; face_amount_cents?: number };
+    };
+    expect(body.coverage.face_amount_cents).toBeUndefined();
+    expect(body.coverage.quote_options).toEqual({
+      quote_type: 'monthly_budget',
+      amounts: ['150'],
+    });
   });
 
   it('rejects an unrecognized nicotine frequency rather than coercing to daily', () => {

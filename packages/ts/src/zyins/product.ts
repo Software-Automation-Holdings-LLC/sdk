@@ -17,11 +17,11 @@ export {
   type ProductTypeValue as ProductClassValue,
   type Product,
   Products,
-} from '../catalog/productsByType';
+} from '../catalog/productsByType.js';
 
-import type { Product, ProductTypeValue as ProductClassValue } from '../catalog/productsByType';
+import type { Product, ProductTypeValue as ProductClassValue } from '../catalog/productsByType.js';
 
-export { ProductType } from './productType';
+export { ProductType } from './productType.js';
 
 /**
  * One or more products selected for a single prequalify call.

@@ -20,8 +20,8 @@
  * 404 — when the carrier has no logo asset — surfaces as a typed
  * `ZyInsError` with code `not_found`, matching the rest of the Tier 3 funnel.
  */
-import { resolveFetch } from '../core';
-import { fromHttpResponse, ZyInsError } from './errors';
+import { resolveFetch } from '../core/index.js';
+import { fromHttpResponse, ZyInsError } from './errors.js';
 /** Path prefix for the carrier-logo endpoint (canonical per api-standards.md). */
 const LOGOS_PATH = '/v1/logos';
 export async function get(carrier, opts, ctx) {

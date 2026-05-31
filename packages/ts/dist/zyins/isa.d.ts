@@ -19,24 +19,24 @@
  * Concurrency: the client carries no shared mutable state. Multiple in-
  * flight calls on one instance are safe (see README "Concurrency safety").
  */
-import { type IsaIdentity } from './envFactory';
-import { type CredentialStore } from '../core';
-import { IsaCredentialState, type LicenseRefreshedListener } from './credentialState';
-import { type DebugLogger, type EnvReader, type LogSink } from './logger';
-import { type Envelope, type RawResponseResult } from './envelope';
-import { type Transport } from './transport';
-import { type LogosFetch } from './logos';
-import { type PrequalifyRequest, type PrequalifyResult } from './prequalify';
-import { type PrequalifyV2Request, type PrequalifyV2Result } from './prequalify-v2';
-import { type PrequalifyV3Request, type PrequalifyV3Result, type QuoteV3Request, type QuoteV3Result } from './prequalify-v3-types';
-import { WebhooksService } from '../rapidsign/webhooks';
-import { type ProxyCallOptions, type ProxyCallResult } from '../proxy/call';
-import { BrandingFacade, DatasetsFacade, PreferencesFacade, CasesFacade, EmailFacade, LicenseFacade, LogosFacade, ReferenceFacade, ReferenceMedicationsFacade, ReferenceConditionsFacade, type Autocorrector, type MatchAlgorithm, type AutocompleteAlgorithm, type DefaultAutocorrectorOptions } from './isaNamespaces';
-import { ProductsFacade } from './products';
-import { type ClientVersionListener } from './clientVersion';
-import { AccountNamespace } from '../account';
-import { type IsaApiVersion, type IsaApiVersionOverride, type IsaApiSurface, type IsaCreateOptions } from './isaOptions';
-import type { CaseStorage } from './cases/CaseStorage';
+import { type IsaIdentity } from './envFactory.js';
+import { type CredentialStore } from '../core/index.js';
+import { IsaCredentialState, type LicenseRefreshedListener } from './credentialState.js';
+import { type DebugLogger, type EnvReader, type LogSink } from './logger.js';
+import { type Envelope, type RawResponseResult } from './envelope.js';
+import { type Transport } from './transport.js';
+import { type LogosFetch } from './logos.js';
+import { type PrequalifyRequest, type PrequalifyResult } from './prequalify.js';
+import { type PrequalifyV2Request, type PrequalifyV2Result } from './prequalify-v2.js';
+import { type PrequalifyV3Request, type PrequalifyV3Result, type QuoteV3Request, type QuoteV3Result } from './prequalify-v3-types.js';
+import { WebhooksService } from '../rapidsign/webhooks.js';
+import { type ProxyCallOptions, type ProxyCallResult } from '../proxy/call.js';
+import { BrandingFacade, DatasetsFacade, PreferencesFacade, CasesFacade, EmailFacade, LicenseFacade, LogosFacade, ReferenceFacade, ReferenceMedicationsFacade, ReferenceConditionsFacade, type Autocorrector, type MatchAlgorithm, type AutocompleteAlgorithm, type DefaultAutocorrectorOptions } from './isaNamespaces.js';
+import { ProductsFacade } from './products.js';
+import { type ClientVersionListener } from './clientVersion.js';
+import { AccountNamespace } from '../account/index.js';
+import { type IsaApiVersion, type IsaApiVersionOverride, type IsaApiSurface, type IsaCreateOptions } from './isaOptions.js';
+import type { CaseStorage } from './cases/CaseStorage.js';
 /** Constructor options for `Isa`. */
 export interface IsaOptions {
     /** Auth identity from one of the three factories. */
@@ -102,7 +102,7 @@ export interface IsaOptions {
     timeout?: number;
     /**
      * Per-surface API-version override. Surfaces absent from the override
-     * fall back to {@link import('./bundledApiVersions').BundledApiVersions}.
+     * fall back to {@link import('./bundledApiVersions.js').BundledApiVersions}.
      * Surfaced per-call via the `Api-Version` request header, resolved from
      * the request path.
      */
@@ -155,7 +155,7 @@ export interface IsaFactoryOptions {
     timeout?: number;
     /**
      * Per-surface API-version override. Surfaces absent from the override
-     * fall back to {@link import('./bundledApiVersions').BundledApiVersions}.
+     * fall back to {@link import('./bundledApiVersions.js').BundledApiVersions}.
      * Immutable per-instance; surfaced via the `Api-Version` request header
      * resolved per-call from the request path.
      */

@@ -11,7 +11,7 @@
  * factory and the missing variable — the caller never has to chase down a
  * silent absence.
  */
-import { type EnvReader } from './logger';
+import { type EnvReader } from './logger.js';
 /** Bearer-mode identity. */
 export interface BearerIdentity {
     readonly mode: 'bearer';

@@ -15,15 +15,15 @@ import type {
   ConditionEntity,
   DatasetBundleV3,
   MedicationEntity,
-} from '../datasets-v3';
-import { _makeKey } from './_makeKey';
-import { Sort } from './Sort';
+} from '../datasets-v3.js';
+import { _makeKey } from './_makeKey.js';
+import { Sort } from './Sort.js';
 import {
   type Concept,
   type ConditionConcept,
   type MedicationConcept,
   type UnknownConcept,
-} from './Concept';
+} from './Concept.js';
 
 export class ReferenceIndex {
   private readonly conditionById: ReadonlyMap<string, ConditionEntity>;

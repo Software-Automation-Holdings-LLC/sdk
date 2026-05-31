@@ -9,4 +9,4 @@
  * change lands in `zyins/auth.ts` and propagates here unchanged.
  */
 
-export { type AuthContext, isAuthContext } from '../zyins/auth';
+export { type AuthContext, isAuthContext } from '../zyins/auth.js';

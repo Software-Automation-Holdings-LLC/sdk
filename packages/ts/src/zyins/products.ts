@@ -10,7 +10,7 @@
  * server-driven catalog refresh lands without an API-shape change.
  */
 
-import { Products, type Product, type ProductClassValue } from './product';
+import { Products, type Product, type ProductClassValue } from './product.js';
 
 /** `isa.zyins.products` — typed catalog access. */
 export class ProductsFacade {

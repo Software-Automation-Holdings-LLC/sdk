@@ -13,11 +13,11 @@
  * directly and skip the umbrella entirely.
  */
 
-import { DocumentsService, type DocumentsContext } from './documents';
-import { RapidSignError } from './errors';
-import { WebhooksService } from './webhooks';
-import { defaultTransport, type Transport } from './internal/transport';
-import { defaultDecompressor, type Decompressor } from './internal/decompress';
+import { DocumentsService, type DocumentsContext } from './documents.js';
+import { RapidSignError } from './errors.js';
+import { WebhooksService } from './webhooks.js';
+import { defaultTransport, type Transport } from './internal/transport.js';
+import { defaultDecompressor, type Decompressor } from './internal/decompress.js';
 import {
   defaultSleeper,
   defaultUUIDGenerator,
@@ -25,7 +25,7 @@ import {
   type Clock,
   type Sleeper,
   type UUIDGenerator,
-} from './internal/random';
+} from './internal/random.js';
 
 /** Production RapidSign endpoint. Override only for staging / local. */
 export const DEFAULT_RAPIDSIGN_BASE_URL = 'https://rapidsign.isaapi.com';

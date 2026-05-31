@@ -9,12 +9,12 @@
  * New code should use `isa.zyins.reference.medications.match(text)` —
  * the bundle is cached inside the facade.
  */
-import type { DatasetBundleV3 } from './datasets-v3';
-import { buildUnknownConcept } from './reference/referenceIndex';
-import { _makeKey } from './reference/_makeKey';
-import { type Concept, type ConditionConcept, type MedicationConcept, type UnknownConcept } from './reference/Concept';
-export { Sort } from './reference/Sort';
-export type { Concept, ConceptKind, ConditionConcept, MedicationConcept, UnknownConcept, } from './reference/Concept';
+import type { DatasetBundleV3 } from './datasets-v3.js';
+import { buildUnknownConcept } from './reference/referenceIndex.js';
+import { _makeKey } from './reference/_makeKey.js';
+import { type Concept, type ConditionConcept, type MedicationConcept, type UnknownConcept } from './reference/Concept.js';
+export { Sort } from './reference/Sort.js';
+export type { Concept, ConceptKind, ConditionConcept, MedicationConcept, UnknownConcept, } from './reference/Concept.js';
 /**
  * Resolve free text against the medication catalog using an explicit
  * bundle. Returns a `MedicationConcept` on a hit; returns an unknown
