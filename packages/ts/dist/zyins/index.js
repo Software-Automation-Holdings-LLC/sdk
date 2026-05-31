@@ -15,7 +15,7 @@ export { ProductsFacade } from './products.js';
 export { ZyInsError, LicenseError, PrequalifyError, RateLimitedError, fromHttpResponse, fromProblemDetails, } from './errors.js';
 export { prequalifyV2, } from './prequalify-v2.js';
 // --- v3 reference + pricing surface (Phase 3) -----------------------------
-export { prequalifyV3, byAmount, } from './prequalify-v3.js';
+export { prequalifyV3, byAmount, offerPremium, } from './prequalify-v3.js';
 export { quoteV3, } from './quote-v3.js';
 export { getDatasetsV3, isNotModified, buildTypoMap, buildFrequencyMap, DatasetsV3SubClient, } from './datasets-v3.js';
 export { Sort as ReferenceSort, matchCondition, matchConcept, matchMedication, } from './reference.js';

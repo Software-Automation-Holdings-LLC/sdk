@@ -62,10 +62,11 @@ function faceOffer(amountCents: number, display: string, premiumCents: number): 
         primary: true,
         eligibility: { category: 'immediate', eligible: true, reasons: [] },
         premium: {
-          cents: premiumCents,
-          display: `$${(premiumCents / 100).toFixed(2)}`,
-          default: { cents: premiumCents, display: `$${(premiumCents / 100).toFixed(2)}` },
-          modes: {},
+          amount: { cents: premiumCents, display: `$${(premiumCents / 100).toFixed(2)}` },
+          default_mode: 'MONTHLY-EFT',
+          modes: {
+            'MONTHLY-EFT': { cents: premiumCents, display: `$${(premiumCents / 100).toFixed(2)}` },
+          },
         },
         rank: 1,
       },
@@ -168,7 +169,7 @@ describe('prequalifyV3 flat plans[] parsing', () => {
       period: null,
     });
     expect(result.plans[0]!.budget).toBeUndefined();
-    expect(result.plans[1]!.pricing[0]!.premium?.cents).toBe(8_100);
+    expect(result.plans[1]!.pricing[0]!.premium?.amount.cents).toBe(8_100);
   });
 
   it('byAmount groups a face-amount response by deathBenefit.amount.cents', async () => {

@@ -64,19 +64,30 @@ export interface V3Money {
     readonly amount: V3Amount;
     readonly period: V3Period;
 }
-/** Premium for one row of the pricing table. */
+/**
+ * Premium for one row of the pricing table.
+ *
+ * `amount` is the headline value clients compare across carriers; it is
+ * byte-identical to `modes[defaultMode]`. `defaultMode` names which `modes`
+ * entry `amount` was drawn from — the carrier mode token (`MONTHLY-EFT`,
+ * `ANNUAL`, …) which itself encodes the recurrence, so premium carries no
+ * `period` field. Read `amount` directly, or index `modes` by `defaultMode`
+ * for the same value plus the rest of the grid.
+ */
 export interface V3Premium {
-    /** Premium for the default mode in integer cents. */
-    readonly cents: number;
-    /** Server-formatted display string for the default mode. */
-    readonly display: string;
     /**
-     * The premium at the carrier's default pricing mode, as a self-
-     * contained {@link V3Amount}. ALWAYS present. This is the
-     * apples-to-apples comparison value. Premium carries no `period` this
-     * release — the per-mode recurrence is a documented future addition.
+     * The headline premium clients compare across carriers, as a self-
+     * contained {@link V3Amount}. ALWAYS byte-identical to
+     * `modes[defaultMode]`. Premium carries no `period` — the carrier mode
+     * token in {@link defaultMode} already encodes the recurrence.
      */
-    readonly default: V3Amount;
+    readonly amount: V3Amount;
+    /**
+     * The `modes` key naming which carrier pricing mode {@link amount} was
+     * drawn from (for example `MONTHLY-EFT`, `ANNUAL`). Always a key present
+     * in {@link modes}.
+     */
+    readonly defaultMode: string;
     /** Full grid of carrier modes (`MONTHLY-EFT`, `ANNUAL`, ...). */
     readonly modes: Readonly<Record<string, V3Amount>>;
 }
@@ -124,10 +135,14 @@ export interface V3Offer {
     readonly planInfo: OfferPlanInfo;
     /**
      * The coverage amount this offer provides, with `period: null` (a
-     * one-time lump sum). Always present. On multi-amount face-amount
-     * requests this is the grouping key — see {@link byAmount}.
+     * one-time lump sum). Present (non-null) for life products
+     * (fex/term/preneed); `null` for premium-only products (medsup), whose
+     * coverage value lives entirely in `pricing[].premium`. Always present
+     * on the wire as a key — `null` rather than omitted — so consumers
+     * null-check it. On multi-amount face-amount requests this is the
+     * grouping key — see {@link byAmount}.
      */
-    readonly deathBenefit: V3Money;
+    readonly deathBenefit: V3Money | null;
     /**
      * The requested monthly budget this offer answers, with
      * `period: "monthly"`. Present only on monthly-budget quotes
@@ -170,8 +185,19 @@ export interface PrequalifyV3Result {
  *
  * In budget mode, an offer missing `budget` is skipped (contract violation)
  * rather than falling back to deathBenefit, which would mis-bucket mixed offers.
+ * In face-amount mode, an offer with a `null` deathBenefit (a medsup product,
+ * which has no face amount) is likewise skipped — it has no face-amount
+ * dimension to group on.
  */
 export declare function byAmount(plans: readonly V3Offer[]): ReadonlyMap<number, readonly V3Offer[]>;
+/**
+ * The premium facade for an offer — the {@link V3Premium} of the single
+ * `primary` (best-qualifying) pricing row, or `null` when the offer has no
+ * qualifying row (every row ineligible, or the rare eligible row whose
+ * carrier returned no priceable mode). This is the one premium a list UI
+ * shows per product without walking `pricing[]`.
+ */
+export declare function offerPremium(offer: V3Offer): V3Premium | null;
 /** Options layered on top of the v3 prequalify request. */
 export interface PrequalifyV3Options {
     readonly onlyProductClass?: ProductClassValue;

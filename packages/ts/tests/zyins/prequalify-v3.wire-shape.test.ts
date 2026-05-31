@@ -114,10 +114,37 @@ describe('prequalifyV3 wire shape', () => {
     // TEST_COVERAGE = Coverage.faceValue(100_000) → 10_000_000 cents.
     expect(coverage['face_amount_cents']).toBe(10_000_000);
     expect(coverage['state']).toBe('NC');
+    // No applicant zip supplied → coverage.zip MUST be absent (not an
+    // empty string; the server pattern ^\d{5}(-\d{4})?$ rejects "").
+    expect(coverage).not.toHaveProperty('zip');
 
     // Products: flat slug list per the PrequalifyV3Request schema.
     expect(Array.isArray(body['products'])).toBe(true);
     expect((body['products'] as readonly unknown[]).length).toBeGreaterThan(0);
+  });
+
+  it('threads applicant.zip into coverage.zip (medsup fix)', async () => {
+    // Before the fix the serializer dropped applicant.zip on the v3
+    // prequalify path, so the server zip-gated and silently filtered
+    // medsup products. zip must ride the coverage envelope, mirroring the
+    // /v3/quote path.
+    const { transport, captured } = captureTransport();
+    const client = new ZyInsClient({
+      auth: TEST_AUTH,
+      baseUrl: 'https://test.example',
+      transport,
+      clock: FIXED_CLOCK,
+    });
+    await client.prequalifyV3({
+      applicant: { ...TEST_APPLICANT, zip: '75001' },
+      coverage: TEST_COVERAGE,
+      products: TEST_PRODUCTS,
+    });
+
+    const body = parseBody(captured.req?.body);
+    const coverage = body['coverage'];
+    if (!isRecord(coverage)) throw new Error('coverage must be an object');
+    expect(coverage['zip']).toBe('75001');
   });
 
   it('serializes conditions, medications, and nicotine specificity per the v3 schemas', async () => {

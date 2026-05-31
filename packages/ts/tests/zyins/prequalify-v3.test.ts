@@ -43,9 +43,8 @@ const SAMPLE_V3_OFFER = {
       primary: true,
       eligibility: { category: 'immediate', eligible: true, reasons: [] },
       premium: {
-        cents: 9122,
-        display: '$91.22',
-        default: { cents: 9122, display: '$91.22' },
+        amount: { cents: 9122, display: '$91.22' },
+        default_mode: 'MONTHLY-EFT',
         modes: { 'MONTHLY-EFT': { cents: 9122, display: '$91.22' } },
       },
       rank: 1,
@@ -97,8 +96,8 @@ describe('ZyInsClient.prequalifyV3', () => {
     expect(primary.rateClass).toBe('Preferred Plus');
     expect(primary.eligibility.eligible).toBe(true);
     expect(primary.eligibility.category).toBe('immediate');
-    expect(primary.premium?.cents).toBe(9122);
-    expect(primary.premium?.default).toEqual({ cents: 9122, display: '$91.22' });
+    expect(primary.premium?.amount).toEqual({ cents: 9122, display: '$91.22' });
+    expect(primary.premium?.defaultMode).toBe('MONTHLY-EFT');
     expect(primary.rank).toBe(1);
 
     const alt = offer.pricing[1]!;

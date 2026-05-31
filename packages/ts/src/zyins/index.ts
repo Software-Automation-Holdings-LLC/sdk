@@ -93,6 +93,7 @@ export {
 export {
   prequalifyV3,
   byAmount,
+  offerPremium,
   type PrequalifyV3Request,
   type PrequalifyV3Result,
   type PrequalifyV3Options,

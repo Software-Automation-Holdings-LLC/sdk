@@ -16,8 +16,8 @@ import { buildLicenseHMACHeaders } from '../core/index.js';
 import { systemClock } from '../core/index.js';
 import { retryAttemptsFromHeaders } from './retryAttempts.js';
 import { coercePlanInfo } from './planInfo.js';
-import { coerceAmount, coerceCarrier, coerceMoney, coerceProduct, isRecord, toBool, toNullableNum, toNum, toStr, } from './v3Coercion.js';
-export { byAmount } from './prequalify-v3-types.js';
+import { coerceAmount, coerceCarrier, coerceMoney, coerceProduct, isRecord, toBool, toNullableNum, toStr, } from './v3Coercion.js';
+export { byAmount, offerPremium } from './prequalify-v3-types.js';
 const PREQUALIFY_V3_PATH = '/v3/prequalify';
 /**
  * Run a v3 prequalify call. Builds the wire body, mints a UUID v4 for
@@ -167,16 +167,25 @@ function serializeV3Nicotine(nicotineUse) {
  * `/v3/quote` `quote_options` block — `{ quote_type, amounts: string[] }`
  * — so the server's additive `face_amount_cents` XOR `quote_options`
  * contract (zyins #400) is satisfied with one serializer per shape.
- * `state` is carried on the envelope per the v3 schema in both cases.
+ * `state` and `zip` are carried on the envelope per the v3 schema in
+ * both cases. `zip` is omitted when the caller supplied none — the
+ * server pattern `^\d{5}(-\d{4})?$` rejects an empty string, and zip is
+ * required only for medsup quotes.
  */
-function serializeV3Coverage(coverage, state) {
+function serializeV3Coverage(coverage, state, zip) {
+    const locale = { state };
+    // `!= null` excludes both null and undefined; the empty-string check keeps a
+    // blank zip off the wire (server pattern `^\d{5}(-\d{4})?$` rejects "").
+    if (zip != null && zip !== '') {
+        locale['zip'] = zip;
+    }
     if (isMulti(coverage)) {
         return {
             quote_options: {
                 quote_type: coverage.type === 'face_value' ? QuoteType.FaceAmounts : QuoteType.MonthlyBudget,
                 amounts: coverage.amounts.map((n) => String(n)),
             },
-            state,
+            ...locale,
         };
     }
     // A single monthly budget has no face_amount_cents to express, so it
@@ -190,12 +199,12 @@ function serializeV3Coverage(coverage, state) {
                 quote_type: QuoteType.MonthlyBudget,
                 amounts: [String(coverage.amount)],
             },
-            state,
+            ...locale,
         };
     }
     return {
         face_amount_cents: dollarsToCents(coverage.amount),
-        state,
+        ...locale,
     };
 }
 /**
@@ -207,8 +216,10 @@ function serializeV3Coverage(coverage, state) {
  * probe sends `coverage.quote_options`. The server (zyins #400) answers
  * the former with flat `plans` and the latter with grouped `results`.
  *
- * `applicant.state` is moved into the coverage envelope per the v3
- * schema. `applicant.zip`, `options.minRank`, `options.showUnreleased`,
+ * `applicant.state` and `applicant.zip` are moved into the coverage
+ * envelope per the v3 schema (`zip` is required for medsup quotes; the
+ * server zip-gates and silently filters medsup products when it is
+ * absent). `options.minRank`, `options.showUnreleased`,
  * `options.skipHealthBasedUnderwriting`, `options.onlyProductClass`,
  * `options.includeProductClass` are not part of the v3 prequalify
  * envelope and are silently dropped — they survive on `/v3/quote` via
@@ -247,7 +258,7 @@ export function serializeV3PrequalifyBody(request) {
     }
     const payload = {
         applicant: applicantWire,
-        coverage: serializeV3Coverage(coverage, applicant.state),
+        coverage: serializeV3Coverage(coverage, applicant.state, applicant.zip),
         products: productsList,
     };
     if (options?.includeIneligible !== undefined) {
@@ -445,12 +456,14 @@ function coercePremium(raw) {
     for (const [k, v] of Object.entries(modesRaw)) {
         modes[k] = coerceAmount(v);
     }
-    return {
-        cents: toNum(raw['cents']),
-        display: toStr(raw['display']),
-        default: coerceAmount(raw['default']),
-        modes,
-    };
+    const defaultMode = toStr(raw['default_mode']);
+    // `amount` is byte-identical to `modes[default_mode]`; read it from the wire
+    // `amount` when present, else fall back to the mode grid so a server that
+    // only populated `modes` still yields the headline value.
+    const amount = raw['amount'] !== undefined
+        ? coerceAmount(raw['amount'])
+        : (modes[defaultMode] ?? coerceAmount(undefined));
+    return { amount, defaultMode, modes };
 }
 export function coercePricingRow(raw) {
     const r = isRecord(raw) ? raw : {};
@@ -474,6 +487,10 @@ export function coerceV3Offer(raw) {
     const pricingRaw = Array.isArray(r['pricing']) ? r['pricing'] : [];
     const metadata = isRecord(r['metadata']) ? r['metadata'] : {};
     const planInfo = coercePlanInfo(r['plan_info']);
+    // death_benefit is null on the wire for premium-only products (medsup);
+    // a Money object for life products. Preserve the null rather than coercing
+    // it into a zero-cents Money, so consumers null-check medsup correctly.
+    const deathBenefit = isRecord(r['death_benefit']) ? coerceMoney(r['death_benefit']) : null;
     const base = {
         object: 'plan_offer',
         id: toStr(r['id']),
@@ -481,7 +498,7 @@ export function coerceV3Offer(raw) {
         carrier: coerceCarrier(r['carrier']),
         product: coerceProduct(r['product']),
         planInfo: planInfo.array,
-        deathBenefit: coerceMoney(r['death_benefit']),
+        deathBenefit,
         pricing: pricingRaw.map(coercePricingRow),
         metadata,
         ...(isRecord(r['budget']) ? { budget: coerceMoney(r['budget']) } : {}),

@@ -14,7 +14,7 @@ import { type CoverageInput } from './coverage.js';
 import { type AuthContext } from './auth.js';
 import { type Clock } from '../core/index.js';
 import { type PrequalifyV3Context, type PrequalifyV3Request, type PrequalifyV3Result, type V3Offer, type V3PricingRow } from './prequalify-v3-types.js';
-export { byAmount } from './prequalify-v3-types.js';
+export { byAmount, offerPremium } from './prequalify-v3-types.js';
 export type { PrequalifyV3Context, PrequalifyV3Options, PrequalifyV3Request, PrequalifyV3Result, QuoteV3Context, QuoteV3Options, QuoteV3Request, QuoteV3Result, V3Amount, V3Eligibility, V3EligibilityCategory, V3Money, V3Offer, V3Period, V3Premium, V3PricingRow, } from './prequalify-v3-types.js';
 /**
  * Run a v3 prequalify call. Builds the wire body, mints a UUID v4 for
@@ -31,8 +31,10 @@ export declare function prequalifyV3(request: PrequalifyV3Request, ctx: Prequali
  * probe sends `coverage.quote_options`. The server (zyins #400) answers
  * the former with flat `plans` and the latter with grouped `results`.
  *
- * `applicant.state` is moved into the coverage envelope per the v3
- * schema. `applicant.zip`, `options.minRank`, `options.showUnreleased`,
+ * `applicant.state` and `applicant.zip` are moved into the coverage
+ * envelope per the v3 schema (`zip` is required for medsup quotes; the
+ * server zip-gates and silently filters medsup products when it is
+ * absent). `options.minRank`, `options.showUnreleased`,
  * `options.skipHealthBasedUnderwriting`, `options.onlyProductClass`,
  * `options.includeProductClass` are not part of the v3 prequalify
  * envelope and are silently dropped — they survive on `/v3/quote` via
