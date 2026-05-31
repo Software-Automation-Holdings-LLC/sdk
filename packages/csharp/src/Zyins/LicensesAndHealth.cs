@@ -1,16 +1,21 @@
 // Licenses + Health sub-clients.
 //
-// Licenses targets the public BPP license-lifecycle endpoints
-// `/v1/licenses/check` and `/v1/licenses/deactivate` defined in
-// shared/schemas/api/zyins/v1/licenses.proto.
+// Licenses targets the public BPP license-lifecycle endpoints at
+// `/v2/licenses/{activate,check,deactivate}`. These three operations sit
+// OUTSIDE AuthMiddleware on the server: activate is the call that MINTS the
+// licenseKey, so we cannot sign requests with a credential we do not yet
+// have. Headers carry only Idempotency-Key and the device id; no HMAC
+// signature, no Authorization header. Wire bodies use camelCase
+// (deviceId, licenseKey).
 //
 // Health targets the shared platform readiness probe `/ready` defined
 // in shared/schemas/api/isa/v1/health.proto. The probe is
 // unauthenticated; an attached bearer header is harmless and lets one
 // client serve every operation.
+using System.Text.Json;
 using System.Text.Json.Serialization;
 
-namespace Sah.Sdk.Zyins;
+namespace Isa.Sdk.Zyins;
 
 /// <summary>License validation state mirror of the proto `LicenseStatus`
 /// enum. Wire values are lower-case strings.</summary>
@@ -39,8 +44,8 @@ public enum ServingStatus
     Unknown,
 }
 
-/// <summary>Typed request for <see cref="LicensesSubClient.CheckAsync(LicensesCheckRequest, CancellationToken)"/>.</summary>
-public sealed record LicensesCheckRequest
+/// <summary>Typed request for <see cref="LicenseSubClient.CheckAsync(LicenseCheckRequest, CancellationToken)"/>.</summary>
+public sealed record LicenseCheckRequest
 {
     /// <summary>Email associated with the license. Required.</summary>
     public string Email { get; init; } = string.Empty;
@@ -49,24 +54,25 @@ public sealed record LicensesCheckRequest
     public string Keycode { get; init; } = string.Empty;
 
     /// <summary>Optional client-generated device fingerprint.</summary>
-    [JsonPropertyName("device_id")]
+    [JsonPropertyName("deviceId")]
     public string? DeviceId { get; init; }
 
     /// <summary>Optional license key to verify.</summary>
-    [JsonPropertyName("license_key")]
+    [JsonPropertyName("licenseKey")]
     public string? LicenseKey { get; init; }
 }
 
-/// <summary>Typed response from <see cref="LicensesSubClient.CheckAsync(LicensesCheckRequest, CancellationToken)"/>.</summary>
-public sealed record LicensesCheckResult
+/// <summary>Typed response from <see cref="LicenseSubClient.CheckAsync(LicenseCheckRequest, CancellationToken)"/>.</summary>
+public sealed record LicenseCheckResult
 {
-    /// <summary>Validation outcome as the raw wire value (`valid`, `invalid`, `inactive`).</summary>
+    /// <summary>Validation outcome as the raw wire value (`active`, `valid`, `invalid`, `inactive`).</summary>
     public string Status { get; init; } = string.Empty;
 
     /// <summary>Typed accessor for <see cref="Status"/>.</summary>
     [JsonIgnore]
     public LicenseValidationStatus ValidationStatus => Status switch
     {
+        "active" => LicenseValidationStatus.Valid,
         "valid" => LicenseValidationStatus.Valid,
         "invalid" => LicenseValidationStatus.Invalid,
         "inactive" => LicenseValidationStatus.Inactive,
@@ -74,8 +80,8 @@ public sealed record LicensesCheckResult
     };
 }
 
-/// <summary>Typed request for <see cref="LicensesSubClient.DeactivateAsync(LicensesDeactivateRequest, CancellationToken)"/>.</summary>
-public sealed record LicensesDeactivateRequest
+/// <summary>Typed request for <see cref="LicenseSubClient.DeactivateAsync(LicenseDeactivateRequest, CancellationToken)"/>.</summary>
+public sealed record LicenseDeactivateRequest
 {
     /// <summary>Email associated with the license. Required.</summary>
     public string Email { get; init; } = string.Empty;
@@ -84,15 +90,20 @@ public sealed record LicensesDeactivateRequest
     public string Keycode { get; init; } = string.Empty;
 
     /// <summary>Optional device fingerprint; reset on success.</summary>
-    [JsonPropertyName("device_id")]
+    [JsonPropertyName("deviceId")]
     public string? DeviceId { get; init; }
 }
 
-/// <summary>Typed response from <see cref="LicensesSubClient.DeactivateAsync(LicensesDeactivateRequest, CancellationToken)"/>.</summary>
-public sealed record LicensesDeactivateResult
+/// <summary>Typed response from <see cref="LicenseSubClient.DeactivateAsync(LicenseDeactivateRequest, CancellationToken)"/>.</summary>
+public sealed record LicenseDeactivateResult
 {
-    /// <summary>Always `deactivated` on success.</summary>
+    /// <summary>Always <c>inactive</c> on success (legacy <c>deactivated</c> is also accepted).</summary>
     public string Status { get; init; } = string.Empty;
+
+    /// <summary>Activations remaining on the order after this call. Zero when the server
+    /// did not include the field (e.g. legacy v1 responses).</summary>
+    [JsonPropertyName("remainingActivations")]
+    public int RemainingActivations { get; init; }
 }
 
 /// <summary>Per-dependency readiness probe outcome.</summary>
@@ -148,8 +159,8 @@ public sealed record ReadinessResult
     public string CheckedAt { get; init; } = string.Empty;
 }
 
-/// <summary>Typed request for <see cref="LicensesSubClient.ActivateAsync(LicensesActivateRequest, CancellationToken)"/>.</summary>
-public sealed record LicensesActivateRequest
+/// <summary>Typed request for <see cref="LicenseSubClient.ActivateAsync(LicenseActivateRequest, CancellationToken)"/>.</summary>
+public sealed record LicenseActivateRequest
 {
     /// <summary>Email associated with the license. Required.</summary>
     public string Email { get; init; } = string.Empty;
@@ -158,41 +169,53 @@ public sealed record LicensesActivateRequest
     public string Keycode { get; init; } = string.Empty;
 
     /// <summary>Client-generated device fingerprint. Required.</summary>
-    [JsonPropertyName("device_id")]
+    [JsonPropertyName("deviceId")]
     public string DeviceId { get; init; } = string.Empty;
 }
 
-/// <summary>Auth block returned inside an activation response.</summary>
-public sealed record LicensesActivateAuth
+/// <summary>Auth block returned inside an activation response. Preserved as
+/// a stable nested shape so existing consumers (bpp2.0's
+/// <c>useSoftwareActivator</c>) keep reading <c>result.Auth.LicenseKey</c>;
+/// the v2 wire surfaces <c>licenseKey</c> at the top of the envelope data
+/// and the parser reshapes it into this block.</summary>
+public sealed record LicenseActivateAuth
 {
     /// <summary>License key minted (or reused) for this activation.</summary>
-    [JsonPropertyName("license_key")]
+    [JsonPropertyName("licenseKey")]
     public string LicenseKey { get; init; } = string.Empty;
 }
 
-/// <summary>Typed response from <see cref="LicensesSubClient.ActivateAsync(LicensesActivateRequest, CancellationToken)"/>.</summary>
-public sealed record LicensesActivateResult
+/// <summary>Typed response from <see cref="LicenseSubClient.ActivateAsync(LicenseActivateRequest, CancellationToken)"/>.</summary>
+public sealed record LicenseActivateResult
 {
     /// <summary>Activation outcome (<c>active</c> on success).</summary>
     public string Status { get; init; } = string.Empty;
 
-    /// <summary>Auth credentials minted for the device.</summary>
-    public LicensesActivateAuth Auth { get; init; } = new();
+    /// <summary>Auth credentials minted for the device. The license key is
+    /// reshaped from the top-level <c>data.licenseKey</c> on the v2 wire.</summary>
+    public LicenseActivateAuth Auth { get; init; } = new();
 
     /// <summary>Device activations remaining on the order after this call.</summary>
-    [JsonPropertyName("remaining_activations")]
+    [JsonPropertyName("remainingActivations")]
     public int RemainingActivations { get; init; }
 }
 
 /// <summary>Sub-client exposing the public BPP license-lifecycle surface
-/// (PublicActivate, PublicCheck, PublicDeactivate). The authenticated
-/// self-* surface lands with the LicenseHMAC transport in a follow-up PR.</summary>
-public sealed class LicensesSubClient
+/// (PublicActivate, PublicCheck, PublicDeactivate). All three operations
+/// target <c>/v2/licenses/*</c> and run as bootstrap calls — no
+/// <c>Authorization</c> header, no HMAC signature. The dispatcher attaches
+/// only <c>Content-Type</c>, <c>Accept</c>, <c>Idempotency-Key</c>, and
+/// (when known) <c>X-Device-ID</c>.</summary>
+public sealed class LicenseSubClient
 {
-    private const string ActivatePath = "/v1/licenses/activate";
-    private const string CheckPath = "/v1/licenses/check";
-    private const string DeactivatePath = "/v1/licenses/deactivate";
-    private const string DeactivatedStatus = "deactivated";
+    private const string ActivatePath = "/v2/licenses/activate";
+    private const string CheckPath = "/v2/licenses/check";
+    private const string DeactivatePath = "/v2/licenses/deactivate";
+    private const string InactiveStatus = "inactive";
+    private const string LegacyDeactivatedStatus = "deactivated";
+    private const string ActivateOperation = "license_activate";
+    private const string CheckOperation = "license_check";
+    private const string DeactivateOperation = "license_deactivate";
 
     private readonly OperationContext _ctx;
     // Optional credential state — populated only for license-mode Isa
@@ -200,9 +223,9 @@ public sealed class LicensesSubClient
     // the state and the activate path auto-stashes the returned key.
     private readonly IsaCredentialState? _state;
 
-    internal LicensesSubClient(OperationContext ctx) : this(ctx, state: null) { }
+    internal LicenseSubClient(OperationContext ctx) : this(ctx, state: null) { }
 
-    internal LicensesSubClient(OperationContext ctx, IsaCredentialState? state)
+    internal LicenseSubClient(OperationContext ctx, IsaCredentialState? state)
     {
         _ctx = ctx;
         _state = state;
@@ -211,8 +234,8 @@ public sealed class LicensesSubClient
     /// <summary>Activate a license on this device. Mints a fresh license key
     /// and, when the client was built with a credential store, stashes the
     /// key + fires <c>OnLicenseRefreshed</c>.</summary>
-    public async Task<LicensesActivateResult> ActivateAsync(
-        LicensesActivateRequest request,
+    public async Task<LicenseActivateResult> ActivateAsync(
+        LicenseActivateRequest request,
         CancellationToken ct = default)
     {
         if (request is null) throw new ArgumentNullException(nameof(request));
@@ -222,8 +245,26 @@ public sealed class LicensesSubClient
             throw new ArgumentException("Keycode must be non-empty", nameof(request));
         if (string.IsNullOrWhiteSpace(request.DeviceId))
             throw new ArgumentException("DeviceId must be non-empty", nameof(request));
-        var result = await HttpDispatcher.PostJsonEnvelopeAsync<LicensesActivateRequest, LicensesActivateResult>(
-            _ctx, ActivatePath, request, "licenses.activate", ct).ConfigureAwait(false);
+        var json = ZyInsJson.Serialize(request);
+        var wire = await HttpDispatcher.PostJsonBootstrapAsync<JsonElement>(
+            _ctx,
+            ActivatePath,
+            json,
+            "license.activate",
+            request.DeviceId,
+            DeriveIdempotencyKey(request.DeviceId, ActivateOperation, json),
+            ct).ConfigureAwait(false);
+        var status = RequiredString(wire, "status", "license.activate");
+        if (string.IsNullOrEmpty(status))
+        {
+            throw new System.Text.Json.JsonException("license.activate response missing status field");
+        }
+        var result = new LicenseActivateResult
+        {
+            Status = status,
+            Auth = new LicenseActivateAuth { LicenseKey = StringOrEmpty(wire, "licenseKey") },
+            RemainingActivations = IntOrZero(wire, "remainingActivations"),
+        };
         if (_state is not null && !string.IsNullOrEmpty(result.Auth.LicenseKey))
         {
             await _state.RefreshLicenseKeyAsync(result.Auth.LicenseKey, ct).ConfigureAwait(false);
@@ -235,12 +276,12 @@ public sealed class LicensesSubClient
     /// and <c>deviceId</c> from the parent <see cref="Isa"/>'s credential
     /// state. Throws <see cref="InvalidOperationException"/> when the client
     /// was not constructed in license-mode.</summary>
-    public Task<LicensesActivateResult> ActivateAsync(CancellationToken ct = default)
+    public Task<LicenseActivateResult> ActivateAsync(CancellationToken ct = default)
     {
         var state = _state ?? throw new InvalidOperationException(
             "ActivateAsync() with no args requires a license-mode Isa. " +
             "Use Isa.WithLicense(keycode, email) or pass a request explicitly.");
-        return ActivateAsync(new LicensesActivateRequest
+        return ActivateAsync(new LicenseActivateRequest
         {
             Email = state.Email,
             Keycode = state.OrderId,
@@ -252,38 +293,57 @@ public sealed class LicensesSubClient
     /// validation state. Does not require authentication on the wire.</summary>
     /// <exception cref="ArgumentNullException">when <paramref name="request"/> is null.</exception>
     /// <exception cref="ArgumentException">when required fields are empty.</exception>
-    public Task<LicensesCheckResult> CheckAsync(LicensesCheckRequest request, CancellationToken ct = default)
+    public Task<LicenseCheckResult> CheckAsync(LicenseCheckRequest request, CancellationToken ct = default)
     {
         if (request is null) throw new ArgumentNullException(nameof(request));
         if (string.IsNullOrWhiteSpace(request.Email))
             throw new ArgumentException("Email must be non-empty", nameof(request));
         if (string.IsNullOrWhiteSpace(request.Keycode))
             throw new ArgumentException("Keycode must be non-empty", nameof(request));
-        return HttpDispatcher.PostJsonEnvelopeAsync<LicensesCheckRequest, LicensesCheckResult>(
+        var bootstrapDeviceId = DeviceIdForBootstrap(request.DeviceId);
+        var json = ZyInsJson.Serialize(request);
+        return HttpDispatcher.PostJsonBootstrapAsync<LicenseCheckResult>(
             _ctx,
             CheckPath,
-            request,
-            "licenses.check",
+            json,
+            "license.check",
+            bootstrapDeviceId,
+            DeriveIdempotencyKey(bootstrapDeviceId, CheckOperation, json),
             ct);
     }
 
     /// <summary>Deactivate the license. Resets the anti-piracy device
     /// record and marks the order inactive.</summary>
-    public async Task<LicensesDeactivateResult> DeactivateAsync(LicensesDeactivateRequest request, CancellationToken ct = default)
+    public async Task<LicenseDeactivateResult> DeactivateAsync(LicenseDeactivateRequest request, CancellationToken ct = default)
     {
         if (request is null) throw new ArgumentNullException(nameof(request));
         if (string.IsNullOrWhiteSpace(request.Email))
             throw new ArgumentException("Email must be non-empty", nameof(request));
         if (string.IsNullOrWhiteSpace(request.Keycode))
             throw new ArgumentException("Keycode must be non-empty", nameof(request));
-        var result = await HttpDispatcher.PostJsonEnvelopeAsync<LicensesDeactivateRequest, LicensesDeactivateResult>(
+        var bootstrapDeviceId = DeviceIdForBootstrap(request.DeviceId);
+        var json = ZyInsJson.Serialize(request);
+        var wire = await HttpDispatcher.PostJsonBootstrapAsync<JsonElement>(
             _ctx,
             DeactivatePath,
-            request,
-            "licenses.deactivate",
+            json,
+            "license.deactivate",
+            bootstrapDeviceId,
+            DeriveIdempotencyKey(bootstrapDeviceId, DeactivateOperation, json),
             ct).ConfigureAwait(false);
-        if (!string.Equals(result.Status, DeactivatedStatus, System.StringComparison.Ordinal))
+        var result = new LicenseDeactivateResult
+        {
+            Status = StringOrEmpty(wire, "status"),
+            RemainingActivations = IntOrZero(wire, "remainingActivations"),
+        };
+        // v2 returns "inactive"; legacy v1 returned "deactivated". Accept
+        // both so a server still serving the old wire word does not break
+        // consumers mid-rollout.
+        if (!string.Equals(result.Status, InactiveStatus, System.StringComparison.Ordinal)
+            && !string.Equals(result.Status, LegacyDeactivatedStatus, System.StringComparison.Ordinal))
+        {
             throw new InvalidOperationException($"License deactivation returned unexpected status '{result.Status}'.");
+        }
         if (_state is not null)
         {
             await _state.ClearLicenseKeyAsync(ct).ConfigureAwait(false);
@@ -292,12 +352,12 @@ public sealed class LicensesSubClient
     }
 
     /// <summary>Ergonomic zero-arg check. Fills credentials from instance state.</summary>
-    public Task<LicensesCheckResult> CheckAsync(CancellationToken ct = default)
+    public Task<LicenseCheckResult> CheckAsync(CancellationToken ct = default)
     {
         var state = _state ?? throw new InvalidOperationException(
             "CheckAsync() with no args requires a license-mode Isa. " +
             "Use Isa.WithLicense(keycode, email) or pass a request explicitly.");
-        return CheckAsync(new LicensesCheckRequest
+        return CheckAsync(new LicenseCheckRequest
         {
             Email = state.Email,
             Keycode = state.OrderId,
@@ -307,17 +367,59 @@ public sealed class LicensesSubClient
     }
 
     /// <summary>Ergonomic zero-arg deactivate. Fills credentials from instance state.</summary>
-    public Task<LicensesDeactivateResult> DeactivateAsync(CancellationToken ct = default)
+    public Task<LicenseDeactivateResult> DeactivateAsync(CancellationToken ct = default)
     {
         var state = _state ?? throw new InvalidOperationException(
             "DeactivateAsync() with no args requires a license-mode Isa. " +
             "Use Isa.WithLicense(keycode, email) or pass a request explicitly.");
-        return DeactivateAsync(new LicensesDeactivateRequest
+        return DeactivateAsync(new LicenseDeactivateRequest
         {
             Email = state.Email,
             Keycode = state.OrderId,
             DeviceId = state.DeviceId,
         }, ct);
+    }
+
+    private static string DeriveIdempotencyKey(string? deviceId, string operation, string serializedBody)
+    {
+        var canonical = $"{deviceId?.Trim() ?? string.Empty}:{operation}:{serializedBody}";
+        using var sha = System.Security.Cryptography.SHA256.Create();
+        var digest = sha.ComputeHash(System.Text.Encoding.UTF8.GetBytes(canonical));
+        return CompatHex.ToLowerHex(digest);
+    }
+
+    private string? DeviceIdForBootstrap(string? requestDeviceId)
+    {
+        return string.IsNullOrWhiteSpace(requestDeviceId) ? _state?.DeviceId : requestDeviceId;
+    }
+
+    private static string RequiredString(JsonElement data, string propertyName, string context)
+    {
+        var value = StringOrEmpty(data, propertyName);
+        if (value.Length == 0)
+        {
+            throw new JsonException($"{context} response missing {propertyName} field");
+        }
+        return value;
+    }
+
+    private static string StringOrEmpty(JsonElement data, string propertyName)
+    {
+        return data.ValueKind == JsonValueKind.Object
+            && data.TryGetProperty(propertyName, out var value)
+            && value.ValueKind == JsonValueKind.String
+            ? value.GetString() ?? string.Empty
+            : string.Empty;
+    }
+
+    private static int IntOrZero(JsonElement data, string propertyName)
+    {
+        return data.ValueKind == JsonValueKind.Object
+            && data.TryGetProperty(propertyName, out var value)
+            && value.ValueKind == JsonValueKind.Number
+            && value.TryGetInt32(out var parsed)
+            ? parsed
+            : 0;
     }
 }
 
@@ -331,7 +433,7 @@ public sealed class HealthSubClient
     internal HealthSubClient(OperationContext ctx) => _ctx = ctx;
 
     /// <summary>Query the platform `/ready` endpoint. A 5xx response
-    /// surfaces as a typed <see cref="Sah.Sdk.Core.IsaException"/>.</summary>
+    /// surfaces as a typed <see cref="global::Isa.Sdk.Core.IsaException"/>.</summary>
     public Task<ReadinessResult> GetReadinessAsync(CancellationToken ct = default) =>
         HttpDispatcher.GetAsync<ReadinessResult>(_ctx, ReadinessPath, ct: ct);
 }

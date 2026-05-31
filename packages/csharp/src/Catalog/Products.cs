@@ -9,7 +9,7 @@ using System.Collections.ObjectModel;
 using System.Linq;
 using System.Reflection;
 
-namespace Sah.Sdk.Catalog;
+namespace Isa.Sdk.Catalog;
 
 /// <summary>Product slug enum. Each member's wire value is the canonical product
 /// identifier the platform uses in URLs and reference-data lookups.</summary>

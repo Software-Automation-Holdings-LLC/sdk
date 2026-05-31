@@ -12,7 +12,7 @@ using System.IO;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 
-namespace Sah.Sdk.Core;
+namespace Isa.Sdk.Core;
 
 /// <summary>Source of the debug-logging flag. Defaults to <see cref="EnvironmentDebugLogConfig"/>;
 /// tests substitute an in-memory implementation.</summary>

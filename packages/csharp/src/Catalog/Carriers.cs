@@ -7,7 +7,7 @@ using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 
-namespace Sah.Sdk.Catalog;
+namespace Isa.Sdk.Catalog;
 
 /// <summary>Public metadata for a single carrier. Today's catalog does not
 /// expose per-carrier licensure data; <c>States</c> is intentionally omitted.</summary>

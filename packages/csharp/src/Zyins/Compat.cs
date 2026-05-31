@@ -5,7 +5,7 @@
 using System;
 using System.Collections.Generic;
 
-namespace Sah.Sdk.Zyins;
+namespace Isa.Sdk.Zyins;
 
 internal static class CompatHex
 {

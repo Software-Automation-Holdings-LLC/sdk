@@ -2,7 +2,7 @@
 # Captures the public API surface; CI fails on drift.
 
 === Account/AccountNamespace.cs ===
-namespace Sah.Sdk.Account;
+namespace Isa.Sdk.Account;
 public class AccountNamespace
     public AccountBranding Branding { ... }
     public AccountPreferences Preferences { ... }
@@ -12,14 +12,14 @@ public class AccountNamespace
     public AccountNamespace FromZyInsClient(...)
 
 === Account/Branding.cs ===
-namespace Sah.Sdk.Account;
+namespace Isa.Sdk.Account;
 public record BrandingDetail
 public class AccountBranding
     public Task<BrandingDetail> LookupAsync(...)
     public Task<BrandingDetail> LookupAsync(...)
 
 === Account/Cases.cs ===
-namespace Sah.Sdk.Account;
+namespace Isa.Sdk.Account;
 public record CaseCreateRequest
 public record CaseCreateResult
 public record CaseSummary
@@ -37,7 +37,7 @@ public class AccountCases
     public Task<CaseEmailResult> EmailAsync(...)
 
 === Account/Email.cs ===
-namespace Sah.Sdk.Account;
+namespace Isa.Sdk.Account;
 public record EmailAttachment
 public record EmailEnqueueRequest
 public record EmailEnqueueResult
@@ -47,7 +47,7 @@ public class AccountEmail
     public Task<EmailEnqueueResult> EnqueueAsync(...)
 
 === Account/Preferences.cs ===
-namespace Sah.Sdk.Account;
+namespace Isa.Sdk.Account;
 public record PreferencesDocument
 public record PreferencesLookupResult
 public record PreferencesSetRequest
@@ -60,7 +60,7 @@ public class AccountPreferences
     public Task<PreferencesSetResult> SetAsync(...)
 
 === Account/ReferenceData.cs ===
-namespace Sah.Sdk.Account;
+namespace Isa.Sdk.Account;
 public record ReferenceDataRequest
 public record ReferenceDataResult
 public record ReferenceDataOptions
@@ -73,21 +73,21 @@ public class AccountReferenceData
     public Task<ReferenceDataResult> GetAsync(...)
 
 === Catalog/Carriers.cs ===
-namespace Sah.Sdk.Catalog;
+namespace Isa.Sdk.Catalog;
 public record ProductCarrierMetadata
 public class ProductCarriers
     public IReadOnlyCollection<string> Values(...)
     public ProductCarrierMetadata Metadata(...)
 
 === Catalog/Conditions.cs ===
-namespace Sah.Sdk.Catalog;
+namespace Isa.Sdk.Catalog;
 public record ConditionCategoryMetadata
 public class ConditionCategories
     public IReadOnlyCollection<string> Values(...)
     public ConditionCategoryMetadata Metadata(...)
 
 === Catalog/Errors.cs ===
-namespace Sah.Sdk.Catalog;
+namespace Isa.Sdk.Catalog;
 public enum CatalogErrorCode
 public class ErrorAdviceCodes
 public class ErrorDocUrls
@@ -95,14 +95,14 @@ public class ErrorDocUrls
     public string Get(...)
 
 === Catalog/Medications.cs ===
-namespace Sah.Sdk.Catalog;
+namespace Isa.Sdk.Catalog;
 public record MedicationUseMetadata
 public class MedicationUses
     public IReadOnlyList<string> Values(...)
     public MedicationUseMetadata Metadata(...)
 
 === Catalog/Products.cs ===
-namespace Sah.Sdk.Catalog;
+namespace Isa.Sdk.Catalog;
 public enum Product
 public record ProductMetadata
 public class Products
@@ -113,19 +113,19 @@ public class Products
     public string WireValue(...)
 
 === Catalog/Scopes.cs ===
-namespace Sah.Sdk.Catalog;
+namespace Isa.Sdk.Catalog;
 public enum Scope
 public class ScopeDescriptions
     public string Get(...)
 
 === Catalog/SignEvents.cs ===
-namespace Sah.Sdk.Catalog;
+namespace Isa.Sdk.Catalog;
 public enum SignEvent
 public class SignEventLabels
     public string Get(...)
 
 === Catalog/States.cs ===
-namespace Sah.Sdk.Catalog;
+namespace Isa.Sdk.Catalog;
 public class WireValueAttribute : Attribute
 public enum State
 public record StateMetadata
@@ -136,8 +136,18 @@ public class States
     public State? ByAbbreviation(...)
     public string WireValue(...)
 
+=== Contract.cs ===
+namespace Isa.Sdk.Internal;
+
+=== Core/Bootstrap.cs ===
+namespace Isa.Sdk.Core;
+public record BootstrapInput
+public record BootstrapSignature
+public class Bootstrap
+    public BootstrapSignature Build(...)
+
 === Core/Clock.cs ===
-namespace Sah.Sdk.Core;
+namespace Isa.Sdk.Core;
 public interface IClock
 public class SystemClock : IClock
 public class FixedClock : IClock
@@ -147,11 +157,11 @@ public class FixedClock : IClock
     public DateTimeOffset UtcNow(...)
 
 === Core/CompatHeaders.cs ===
-namespace Sah.Sdk.Core;
+namespace Isa.Sdk.Core;
     public Dictionary<string, string> Copy(...)
 
 === Core/DebugLogger.cs ===
-namespace Sah.Sdk.Core;
+namespace Isa.Sdk.Core;
 public interface IDebugLogConfig
 public class EnvironmentDebugLogConfig : IDebugLogConfig
 public interface IDebugLogSink
@@ -167,14 +177,14 @@ public class DebugLogger
     public void LogResponse(...)
 
 === Core/ErrorCode.cs ===
-namespace Sah.Sdk.Core;
+namespace Isa.Sdk.Core;
 public enum ErrorCode
 public class ErrorCodes
     public ErrorCode FromWire(...)
     public string ToWire(...)
 
 === Core/Exceptions.cs ===
-namespace Sah.Sdk.Core;
+namespace Isa.Sdk.Core;
 public class IsaException : Exception
 public class IsaAuthException : IsaException
 public class IsaLicenseException : IsaException
@@ -199,7 +209,7 @@ namespace System.Runtime.CompilerServices;
     public string RequiredMembers
 
 === Core/ProblemDetails.cs ===
-namespace Sah.Sdk.Core;
+namespace Isa.Sdk.Core;
 public record ProblemDetails
 public class ProblemDetailsParser
     public string? Code { ... }
@@ -213,8 +223,25 @@ public class ProblemDetailsParser
     public DateTimeOffset? FirstSeenAt { ... }
     public IsaException ToException(...)
 
+=== Core/Session.cs ===
+namespace Isa.Sdk.Core;
+public record Session
+public record SessionExchangeInput
+public class SessionExchangeException : Exception
+public class SessionStore : IDisposable
+public class SessionInterceptor : ITransport
+    public int Status { ... }
+    public TimeSpan ProactiveWindow
+    public int BootstrapCount { ... }
+    public Session? CurrentSecret(...)
+    public Task<Session> BootstrapAsync(...)
+    public void Invalidate(...)
+    public Task OnActivityAsync(...)
+    public void Dispose(...)
+    public Task<TransportResponse> SendAsync(...)
+
 === Core/SignRequest.cs ===
-namespace Sah.Sdk.Core;
+namespace Isa.Sdk.Core;
 public record SignedHeaders
 public class SignRequest
     public string AuthorizationHeader
@@ -228,7 +255,7 @@ public class SignRequest
     public SignedHeaders Sign(...)
 
 === Core/Transport.cs ===
-namespace Sah.Sdk.Core;
+namespace Isa.Sdk.Core;
 public enum HttpVerb
 public record TransportRequest
 public record TransportResponse
@@ -237,10 +264,34 @@ public class HttpClientTransport : ITransport
     public HttpClientTransport Default(...)
     public Task<TransportResponse> SendAsync(...)
 
+=== Isa.Autocorrector.cs ===
+namespace Isa.Sdk;
+public class Isa
+public class Autocorrector
+    public partial class Isa { ... }
+    public IAutocorrector Create(...)
+
+=== Isa.Builder.cs ===
+namespace Isa.Sdk;
+public class Isa
+public class IsaBuilder
+    public partial class Isa { ... }
+    public IsaBuilder Builder(...)
+    public IsaBuilder WithKeycode(...)
+    public IsaBuilder WithBearer(...)
+    public IsaBuilder WithSession(...)
+    public IsaBuilder ForForm(...)
+    public IsaBuilder WithAutocorrector(...)
+    public IsaBuilder WithMatchAlgorithm(...)
+    public IsaBuilder WithAutocompleteAlgorithm(...)
+    public IsaBuilder WithEnvironment(...)
+    public Isa Build(...)
+
 === Isa.cs ===
-namespace Sah.Sdk;
+namespace Isa.Sdk;
 public record LicenseOptions
 public record SessionOptions
+public record FormOptions
 public class Isa
     public required string Keycode { ... }
     public required string Email { ... }
@@ -249,6 +300,8 @@ public class Isa
     public ICredentialStore? CredentialStore { ... }
     public required string SessionId { ... }
     public required string SessionSecret { ... }
+    public required string FormToken { ... }
+    public partial class Isa { ... }
     public ZyInsClient Zyins { ... }
     public event Action<LicenseRefreshedEvent>? OnLicenseRefreshed { ... }
     public Isa WithBearer(...)
@@ -256,6 +309,13 @@ public class Isa
     public Task<Isa> WithLicenseAsync(...)
     public Task<Isa> WithLicenseAsync(...)
     public Isa WithLicense(...)
+    public Isa WithKeycode(...)
+    public Isa WithKeycode(...)
+    public Task<Isa> WithKeycodeAsync(...)
+    public Isa ForForm(...)
+    public Isa ForForm(...)
+    public Isa Authenticate(...)
+    public Isa Authenticate(...)
     public Isa WithLicense(...)
     public Isa FromEnv(...)
     public Isa FromEnv(...)
@@ -263,12 +323,12 @@ public class Isa
     public Isa WithSession(...)
 
 === Proxy/BearerTokenSigner.cs ===
-namespace Sah.Sdk.Proxy;
+namespace Isa.Sdk.Proxy;
 public class BearerTokenSigner
     public TransportRequest Sign(...)
 
 === Proxy/ProxyNamespace.cs ===
-namespace Sah.Sdk.Proxy;
+namespace Isa.Sdk.Proxy;
 public class ProxyDefaults
 public class ProxyCallOptions
 public class ProxyNamespace
@@ -282,15 +342,15 @@ public class ProxyNamespace
     public Task<string> CallAsync(...)
 
 === RapidSign/RapidSignNamespace.cs ===
-namespace Sah.Sdk.RapidSign;
+namespace Isa.Sdk.RapidSign;
 public class RapidSignNamespace
 
 === Webhooks/WebhooksNamespace.cs ===
-namespace Sah.Sdk.Webhooks;
+namespace Isa.Sdk.Webhooks;
 public class WebhooksNamespace
 
 === Zyins/AccountNamespaces.cs ===
-namespace Sah.Sdk.Zyins;
+namespace Isa.Sdk.Zyins;
 public record BrandingDetail
 public class BrandingSubClient
 public record PreferencesSetRequest
@@ -315,16 +375,39 @@ public class EmailSubClient
     public object? Results { ... }
     public IReadOnlyList<string>? Products { ... }
     public Task<CaseCreateResult> CreateAsync(...)
+    public Task<CaseCreateResult> ShareAsync(...)
     public Task<EmailEnqueueResult> EmailAsync(...)
+    public Task<PutResult> SaveAsync(...)
+    public Task<CaseRecord?> RecallAsync(...)
     public EmailAttachment? Attachment { ... }
     public Task<EmailEnqueueResult> EnqueueAsync(...)
 
+=== Zyins/Cases/ICaseStorage.cs ===
+namespace Isa.Sdk.Zyins.Cases;
+public record CaseRecord
+public record PutResult
+public interface ICaseStorage
+    public CaseRecord Of(...)
+
+=== Zyins/Cases/ZeroKnowledgeCaseStorage.cs ===
+namespace Isa.Sdk.Zyins.Cases;
+public class ZeroKnowledgeCaseStorage : ICaseStorage
+public record CipherEnvelope
+public interface ICaseStorageTransport
+    public ZeroKnowledgeCaseStorage Default { ... }
+    public ZeroKnowledgeCaseStorage WithTransport(...)
+    public Task<PutResult> PutAsync(...)
+    public Task<PutResult> PutAsync(...)
+    public Task<CaseRecord?> GetAsync(...)
+    public Task<CaseRecord?> GetAsync(...)
+    public Task DeleteAsync(...)
+
 === Zyins/Compat.cs ===
-namespace Sah.Sdk.Zyins;
+namespace Isa.Sdk.Zyins;
     public string ToLowerHex(...)
 
 === Zyins/CredentialState.cs ===
-namespace Sah.Sdk.Zyins;
+namespace Isa.Sdk.Zyins;
 public interface ICredentialStore
 public class CredentialKeys
 public class InMemoryCredentialStore : ICredentialStore
@@ -347,44 +430,98 @@ public class IsaCredentialState
     public Task RefreshLicenseKeyAsync(...)
     public Task ClearLicenseKeyAsync(...)
 
+=== Zyins/DatasetsV3.Parser.cs ===
+namespace Isa.Sdk.Zyins;
+    public DatasetBundleV3 ParseEnvelope(...)
+
+=== Zyins/DatasetsV3.Records.cs ===
+namespace Isa.Sdk.Zyins;
+public record InlineMedicationRef
+public record InlineConditionRef
+public record ConditionRow
+public record MedicationRow
+public record NicotineOptionRow
+public record SpellingCorrectionRow
+public record DatasetEntry<TRow>
+public record FrequencyGraph
+public record DatasetBundleV3
+public record ProductRef
+
+=== Zyins/DatasetsV3.RowParsers.cs ===
+namespace Isa.Sdk.Zyins;
+    public ConditionRow? ParseCondition(...)
+    public MedicationRow? ParseMedication(...)
+    public NicotineOptionRow? ParseNicotineOption(...)
+    public SpellingCorrectionRow? ParseSpellingCorrection(...)
+
+=== Zyins/DatasetsV3.cs ===
+namespace Isa.Sdk.Zyins;
+public record DatasetsV3GetOptions
+public record DatasetsV3NotModified
+public interface IDatasetsV3Service
+public class DatasetsV3Response
+public class DatasetsV3SubClient : IDatasetsV3Service
+    public DatasetBundleV3? Bundle { ... }
+    public DatasetsV3NotModified? NotModified { ... }
+    public bool IsNotModified { ... }
+    public Task<DatasetsV3Response> GetAsync(...)
+
+=== Zyins/EnumWireValues.cs ===
+namespace Isa.Sdk.Zyins;
+public class EnumWireValues
+    public IReadOnlyList<string> AllSexValues(...)
+    public IReadOnlyList<string> AllNicotineUsageValues(...)
+    public IReadOnlyList<string> AllNicotineDurationValues(...)
+    public IReadOnlyList<string> AllProductTypeValues(...)
+    public IReadOnlyList<string> AllCoverageTypeValues(...)
+
 === Zyins/Envelope.cs ===
-namespace Sah.Sdk.Zyins;
+namespace Isa.Sdk.Zyins;
 public record Envelope<T>
 public record RawResponse
     public RawResponse FromTransport(...)
 
 === Zyins/Exceptions.cs ===
-namespace Sah.Sdk.Zyins;
+namespace Isa.Sdk.Zyins;
 public class ZyInsException : IsaException
 public class ZyInsLicenseException : IsaLicenseException
 
 === Zyins/HttpDispatcher.cs ===
-namespace Sah.Sdk.Zyins;
+namespace Isa.Sdk.Zyins;
 
 === Zyins/JsonSerialization.cs ===
-namespace Sah.Sdk.Zyins;
+namespace Isa.Sdk.Zyins;
     public SnakeCaseNamingPolicy Instance
     public string ConvertName(...)
     public Sex Read(...)
+    public void Write(...)
+    public NicotineDuration Read(...)
     public void Write(...)
     public NicotineUsage Read(...)
     public void Write(...)
     public JsonSerializerOptions Options
 
+=== Zyins/LegacyWire.cs ===
+namespace Isa.Sdk.Zyins;
+    public bool Enabled { ... }
+    public Dictionary<string, object?> PrequalifyBodyFromApplicant(...)
+    public Dictionary<string, object?> QuoteBodyFromApplicant(...)
+    public int FaceAmountFromCoverage(...)
+
 === Zyins/LicensesAndHealth.cs ===
-namespace Sah.Sdk.Zyins;
+namespace Isa.Sdk.Zyins;
 public enum LicenseValidationStatus
 public enum ServingStatus
-public record LicensesCheckRequest
-public record LicensesCheckResult
-public record LicensesDeactivateRequest
-public record LicensesDeactivateResult
+public record LicenseCheckRequest
+public record LicenseCheckResult
+public record LicenseDeactivateRequest
+public record LicenseDeactivateResult
 public record ProbeResult
 public record ReadinessResult
-public record LicensesActivateRequest
-public record LicensesActivateAuth
-public record LicensesActivateResult
-public class LicensesSubClient
+public record LicenseActivateRequest
+public record LicenseActivateAuth
+public record LicenseActivateResult
+public class LicenseSubClient
 public class HealthSubClient
     public string Email { ... }
     public string Keycode { ... }
@@ -396,6 +533,7 @@ public class HealthSubClient
     public string Keycode { ... }
     public string? DeviceId { ... }
     public string Status { ... }
+    public int RemainingActivations { ... }
     public string Status { ... }
     public long LatencyMs { ... }
     public string Message { ... }
@@ -412,18 +550,18 @@ public class HealthSubClient
     public string DeviceId { ... }
     public string LicenseKey { ... }
     public string Status { ... }
-    public LicensesActivateAuth Auth { ... }
+    public LicenseActivateAuth Auth { ... }
     public int RemainingActivations { ... }
-    public Task<LicensesActivateResult> ActivateAsync(...)
-    public Task<LicensesActivateResult> ActivateAsync(...)
-    public Task<LicensesCheckResult> CheckAsync(...)
-    public Task<LicensesDeactivateResult> DeactivateAsync(...)
-    public Task<LicensesCheckResult> CheckAsync(...)
-    public Task<LicensesDeactivateResult> DeactivateAsync(...)
+    public Task<LicenseActivateResult> ActivateAsync(...)
+    public Task<LicenseActivateResult> ActivateAsync(...)
+    public Task<LicenseCheckResult> CheckAsync(...)
+    public Task<LicenseDeactivateResult> DeactivateAsync(...)
+    public Task<LicenseCheckResult> CheckAsync(...)
+    public Task<LicenseDeactivateResult> DeactivateAsync(...)
     public Task<ReadinessResult> GetReadinessAsync(...)
 
 === Zyins/Logos.cs ===
-namespace Sah.Sdk.Zyins;
+namespace Isa.Sdk.Zyins;
 public record LogosOptions
 public record LogoResult
 public class LogosSubClient
@@ -433,14 +571,22 @@ public class LogosSubClient
     public Task<LogoResult> GetAsync(...)
 
 === Zyins/Models.cs ===
-namespace Sah.Sdk.Zyins;
+namespace Isa.Sdk.Zyins;
 public enum Sex
+public enum NicotineDuration
+public record NicotineProductUsage
+public record NicotineUsageInput
 public enum NicotineUsage
+public enum QuoteType
 public record Medication
 public record Condition
 public record Applicant
+public class ApplicantExtensions
 public record Coverage
 public record Product
+public enum ProductType
+public record ProductEntry
+public class ProductCatalog
 public record PrequalifyInput
 public record PrequalifyPlan
 public record PrequalifyResult
@@ -451,19 +597,35 @@ public record DatasetSummary
 public record Dataset
 public record ReferenceDataResponse
 public record UsageSummary
+    public required NicotineDuration LastUsed { ... }
+    public IReadOnlyList<NicotineProductUsage> ProductUsage { ... }
     public required string Dob { ... }
     public required Sex Sex { ... }
     public required int HeightInches { ... }
     public required int WeightPounds { ... }
     public required string State { ... }
     public string? Zip { ... }
-    public required NicotineUsage NicotineUse { ... }
+    public NicotineUsageInput? NicotineUse { ... }
+    public NicotineUsage NicotineUseLegacy { ... }
     public IReadOnlyList<Medication> Medications { ... }
     public IReadOnlyList<Condition> Conditions { ... }
+    public Applicant WithState(...)
     public int? FaceValue { ... }
     public int? MonthlyBudget { ... }
+    public IReadOnlyList<int> FaceValues { ... }
+    public IReadOnlyList<int> MonthlyBudgets { ... }
+    public bool IsMulti { ... }
     public Coverage ByFaceValue(...)
     public Coverage ByMonthlyBudget(...)
+    public Coverage ByFaceValues(...)
+    public Coverage ByMonthlyBudgets(...)
+    public ProductCatalog DefaultCatalog(...)
+    public ProductCatalog FromDatasets(...)
+    public ProductEntry Find(...)
+    public ProductEntry? TryFind(...)
+    public ProductEntry FindBySlug(...)
+    public ProductEntry? TryFindBySlug(...)
+    public IReadOnlyList<ProductEntry> List(...)
     public required Applicant Applicant { ... }
     public required Coverage Coverage { ... }
     public IReadOnlyList<Product> Products { ... }
@@ -471,8 +633,78 @@ public record UsageSummary
     public required Coverage Coverage { ... }
     public IReadOnlyList<Product> Products { ... }
 
+=== Zyins/Options/BundledApiVersions.cs ===
+namespace Isa.Sdk.Zyins.Options;
+public class BundledApiVersions
+    public IReadOnlyDictionary<string, IsaApiVersion> Map
+
+=== Zyins/Options/IsaOptions.cs ===
+namespace Isa.Sdk.Zyins.Options;
+public enum IsaApiVersion
+public record AuthSupplier
+public record BearerAuth : AuthSupplier
+public record LicenseAuth : AuthSupplier
+public record FormAuth : AuthSupplier
+public record SessionAuth : AuthSupplier
+public record Engine
+public record RemoteEngine : Engine
+public record LocalEngine : Engine
+public record ProxyEngine : Engine
+public record InMemoryEngine : Engine
+public record IsaOptions
+public record ResolvedIsaOptions
+    public abstract record AuthSupplier { ... }
+    public abstract string Kind { ... }
+    public string Kind { ... }
+    public string? Token { ... }
+    public BearerAuth FromToken(...)
+    public BearerAuth FromEnv(...)
+    public string Kind { ... }
+    public string? Keycode { ... }
+    public string? Email { ... }
+    public LicenseAuth FromKeycode(...)
+    public LicenseAuth FromEnv(...)
+    public string Kind { ... }
+    public string FormToken { ... }
+    public FormAuth FromToken(...)
+    public string Kind { ... }
+    public string? SessionId { ... }
+    public string? SessionSecret { ... }
+    public SessionAuth FromCredentials(...)
+    public SessionAuth FromEnv(...)
+    public abstract record Engine { ... }
+    public abstract string Kind { ... }
+    public abstract string BaseUrl { ... }
+    public string ProductionOrigin
+    public string Kind { ... }
+    public string BaseUrl { ... }
+    public RemoteEngine Default { ... }
+    public RemoteEngine At(...)
+    public string Kind { ... }
+    public string BaseUrl { ... }
+    public LocalEngine At(...)
+    public string ProductionOrigin
+    public string Kind { ... }
+    public string BaseUrl { ... }
+    public string ProxyOrigin { ... }
+    public ProxyEngine Default { ... }
+    public ProxyEngine At(...)
+    public string Kind { ... }
+    public string BaseUrl { ... }
+    public InMemoryEngine Instance { ... }
+    public TimeSpan DefaultTimeout
+    public required AuthSupplier Auth { ... }
+    public Engine? Engine { ... }
+    public TimeSpan? Timeout { ... }
+    public IReadOnlyDictionary<string, IsaApiVersion>? ApiVersion { ... }
+    public ICaseStorage? CaseStorage { ... }
+    public string? ClientVersion { ... }
+    public IsaApiVersion ResolveApiVersion(...)
+    public IsaApiVersion ResolveApiVersion(...)
+    public ResolvedIsaOptions Resolve(...)
+
 === Zyins/Pagination.cs ===
-namespace Sah.Sdk.Zyins;
+namespace Isa.Sdk.Zyins;
 public record CursorPage<T>
 public record ListOptions
 public class CursorAsyncEnumerable<T> : IAsyncEnumerable<T>
@@ -483,23 +715,233 @@ public class Pagination
     public string? Cursor { ... }
     public IAsyncEnumerator<T> GetAsyncEnumerator(...)
 
+=== Zyins/PlanInfoLabel.cs ===
+namespace Isa.Sdk.Zyins;
+public record PlanInfoItem
+public class PlanInfoLabel
+    public string Key { ... }
+    public string Label { ... }
+    public IReadOnlyList<string> Values { ... }
+    public string TitleCase(...)
+    public IReadOnlyList<PlanInfoItem> Coerce(...)
+
+=== Zyins/PrequalifyV3.cs ===
+namespace Isa.Sdk.Zyins;
+public enum V3EligibilityCategory
+public record V3Eligibility
+public record V3Amount
+public enum V3Period
+public record V3Money
+public record V3Premium
+public record V3PricingRow
+public record V3OfferCarrier
+public record V3OfferProduct
+public record V3Offer
+public record PrequalifyV3Result
+public record QuoteV3Result
+public class V3Grouping
+public record PrequalifyV3Options
+public record PrequalifyV3Request
+public record QuoteV3Options
+public record QuoteV3Request
+public interface IPrequalifyV3Service
+public interface IQuoteV3Service
+public class PrequalifyV3SubClient : IPrequalifyV3Service
+    public IReadOnlyDictionary<long, IReadOnlyList<V3Offer>> ByAmount(...)
+    public Task<PrequalifyV3Result> RunAsync(...)
+    public Task<PrequalifyV3Result> RunAsync(...)
+
+=== Zyins/QuoteV3.cs ===
+namespace Isa.Sdk.Zyins;
+public class QuoteV3SubClient : IQuoteV3Service
+    public Task<QuoteV3Result> RunAsync(...)
+    public Task<QuoteV3Result> RunAsync(...)
+
+=== Zyins/Reference/CachedMatchers.cs ===
+namespace Isa.Sdk.Zyins.Reference;
+public class MedicationsNamespace : IMedicationMatcher
+public class ConditionsNamespace : IConditionMatcher
+public class ConceptsNamespace : IAnyConceptMatcher
+    public Task<DatasetBundleV3> GetAsync(...)
+    public Task<DatasetBundleV3> GetAsync(...)
+    public void Invalidate(...)
+    public Task<IConcept> MatchAsync(...)
+    public void InvalidateCache(...)
+    public IConcept Match(...)
+    public IReadOnlyList<IMedicationConcept> List(...)
+    public Task<IConcept> MatchAsync(...)
+    public void InvalidateCache(...)
+    public IConcept Match(...)
+    public IReadOnlyList<IConditionConcept> List(...)
+    public Task<IConcept> MatchAsync(...)
+    public void InvalidateCache(...)
+    public IConcept Match(...)
+    public IReadOnlyList<IConcept> MatchMany(...)
+
+=== Zyins/Reference/DefaultAutocompleteAlgorithm.Buckets.cs ===
+namespace Isa.Sdk.Zyins.Reference;
+    public List<IConcept> Filter(...)
+    public List<IConcept> StartsWith
+    public List<IConcept> SameWords
+    public List<IConcept> IndependentWordIntersection
+    public SortedDictionary<int, List<IConcept>> WordCountNoTolerance
+    public List<IConcept> SameNumWithTolerance
+    public SortedDictionary<int, List<IConcept>> WordCountWithTolerance
+    public Buckets Categorize(...)
+    public List<List<IConcept>> Flatten(...)
+    public List<List<IConcept>> ApplyGrouped(...)
+    public Dictionary<string, int> ComputeScoreLookup(...)
+    public string ScoreKey(...)
+    public List<IConcept> FlattenAlphabetical(...)
+
+=== Zyins/Reference/DefaultAutocompleteAlgorithm.cs ===
+namespace Isa.Sdk.Zyins.Reference;
+public class DefaultAutocompleteAlgorithm : IAutocompleteAlgorithm
+    public string? VersionTag { ... }
+    public DefaultAutocompleteAlgorithm Clone(...)
+    public Task<IReadOnlyList<Suggestion>> Rank(...)
+    public List<string> Tokenize(...)
+    public MatchedSpan Compute(...)
+
+=== Zyins/Reference/DefaultAutocorrector.cs ===
+namespace Isa.Sdk.Zyins.Reference;
+public class DefaultAutocorrector : IAutocorrector
+    public string? VersionTag { ... }
+    public DefaultAutocorrector Clone(...)
+    public string Correct(...)
+
+=== Zyins/Reference/DefaultMatchAlgorithm.cs ===
+namespace Isa.Sdk.Zyins.Reference;
+public class DefaultMatchAlgorithm : IMatchAlgorithm
+    public string? VersionTag { ... }
+    public DefaultMatchAlgorithm Clone(...)
+    public IConcept Match(...)
+
+=== Zyins/Reference/IAutocompleteAlgorithm.cs ===
+namespace Isa.Sdk.Zyins.Reference;
+public record AutocompleteOptions
+public interface IAutocompleteAlgorithm
+
+=== Zyins/Reference/IAutocorrector.cs ===
+namespace Isa.Sdk.Zyins.Reference;
+public enum AutocorrectMode
+public record AutocorrectOptions
+public record AutocorrectorAppliedEvent
+public interface IAutocorrector
+
+=== Zyins/Reference/IConcept.cs ===
+namespace Isa.Sdk.Zyins.Reference;
+public enum ConceptKind
+public interface IConcept : IEquatable<IConcept>
+public interface IMedicationConcept : IConcept
+public interface IConditionConcept : IConcept
+    public ConceptKind Read(...)
+    public void Write(...)
+
+=== Zyins/Reference/IMatchAlgorithm.cs ===
+namespace Isa.Sdk.Zyins.Reference;
+public interface IMatchAlgorithm
+
+=== Zyins/Reference/MakeKey.cs ===
+namespace Isa.Sdk.Zyins.Reference;
+    public string Normalize(...)
+
+=== Zyins/Reference/Reference.cs ===
+namespace Isa.Sdk.Zyins.Reference;
+public interface IConceptMatcher
+public interface IMedicationMatcher : IConceptMatcher
+public interface IConditionMatcher : IConceptMatcher
+public interface IAnyConceptMatcher : IConceptMatcher
+public interface IReferenceFacade
+public class Reference
+    public IReferenceFacade Instance
+    public IMedicationMatcher Medications { ... }
+    public IConditionMatcher Conditions { ... }
+    public IAnyConceptMatcher Concepts { ... }
+    public IMedicationMatcher Medications { ... }
+    public IConditionMatcher Conditions { ... }
+    public IAnyConceptMatcher Concepts { ... }
+    public IConcept Match(...)
+    public IReadOnlyList<IMedicationConcept> List(...)
+    public IConcept Match(...)
+    public IReadOnlyList<IConditionConcept> List(...)
+    public IConcept Match(...)
+    public IReadOnlyList<IConcept> MatchMany(...)
+    public string? Id { ... }
+    public string Name { ... }
+    public ConceptKind Kind { ... }
+    public bool IsKnown { ... }
+    public string InputText { ... }
+    public IReadOnlyList<IConditionConcept> Conditions(...)
+    public IReadOnlyList<IMedicationConcept> Medications(...)
+    public bool Equals(...)
+    public bool Equals(...)
+    public int GetHashCode(...)
+    public IMedicationConcept Medication(...)
+    public IConditionConcept Condition(...)
+    public IConcept Unknown(...)
+    public IReadOnlyList<IConditionConcept> Conditions(...)
+    public IReadOnlyList<IMedicationConcept> Medications(...)
+
+=== Zyins/Reference/ReferenceIndex.cs ===
+namespace Isa.Sdk.Zyins.Reference;
+    public ReferenceIndex ForBundle(...)
+    public string? ConditionName(...)
+    public string? MedicationName(...)
+    public bool HasCondition(...)
+    public bool HasMedication(...)
+    public IReadOnlyList<string> MedicationsForCondition(...)
+    public IReadOnlyList<string> ConditionsForMedication(...)
+    public int ConditionFrequencyForMedication(...)
+    public IEnumerable<KeyValuePair<string, string>> AllConditions(...)
+    public IEnumerable<KeyValuePair<string, string>> AllMedications(...)
+
+=== Zyins/Reference/Sort.cs ===
+namespace Isa.Sdk.Zyins.Reference;
+public enum Sort
+    public Sort Read(...)
+    public void Write(...)
+
+=== Zyins/Reference/Suggestion.cs ===
+namespace Isa.Sdk.Zyins.Reference;
+public record MatchedSpan
+public record Suggestion
+
 === Zyins/SubClients.cs ===
-namespace Sah.Sdk.Zyins;
+namespace Isa.Sdk.Zyins;
 public class PrequalifySubClient
 public class QuoteSubClient
 public class DatasetsSubClient
 public class ReferenceDataSubClient
+public class ProductsSubClient
 public class UsageSubClient
     public Task<PrequalifyResult> RunAsync(...)
-    public Task<PrequalifyResult> LegacyBlobAsync(...)
+    public Task<JsonObject> RunEnvelopeAsync(...)
     public Task<QuoteResult> RunAsync(...)
+    public Task<JsonObject> RunEnvelopeAsync(...)
     public Task<IReadOnlyList<DatasetSummary>> ListAsync(...)
     public Task<Dataset> GetAsync(...)
     public Task<ReferenceDataResponse> GetAsync(...)
+    public Task<ProductCatalog> CatalogAsync(...)
+    public Task<ProductCatalog> RefreshAsync(...)
     public Task<UsageSummary> SummaryAsync(...)
 
+=== Zyins/V3Internal.cs ===
+namespace Isa.Sdk.Zyins;
+
+=== Zyins/ZyInsClient.Adapters.cs ===
+namespace Isa.Sdk.Zyins;
+public class ZyInsClient
+    public partial class ZyInsClient { ... }
+    public IAutocorrector Autocorrector { ... }
+    public IMatchAlgorithm Matcher { ... }
+    public IAutocompleteAlgorithm AutocompleteAlgorithm { ... }
+    public string? VersionTag { ... }
+    public string Correct(...)
+    public Task<DefaultAutocorrector> Resolve(...)
+
 === Zyins/ZyInsClient.cs ===
-namespace Sah.Sdk.Zyins;
+namespace Isa.Sdk.Zyins;
 public record ZyInsClientOptions
 public class ZyInsClient
 public class ZyInsClientBuilder
@@ -512,28 +954,46 @@ public class ZyInsClientBuilder
     public ITransport? Transport { ... }
     public IClock? Clock { ... }
     public DebugLogger? Logger { ... }
+    public ICaseStorage? CaseStorage { ... }
+    public IReadOnlyDictionary<string, IsaApiVersion>? ApiVersion { ... }
+    public partial class ZyInsClient { ... }
     public string DefaultBaseUrl
     public PrequalifySubClient Prequalify { ... }
     public QuoteSubClient Quote { ... }
     public DatasetsSubClient Datasets { ... }
+    public ProductsSubClient Products { ... }
     public ReferenceDataSubClient ReferenceData { ... }
     public UsageSubClient Usage { ... }
-    public LicensesSubClient Licenses { ... }
+    public LicenseSubClient License { ... }
     public HealthSubClient Health { ... }
     public BrandingSubClient Branding { ... }
     public PreferencesSubClient Preferences { ... }
     public CasesSubClient Cases { ... }
     public EmailSubClient Email { ... }
     public LogosSubClient Logos { ... }
+    public PrequalifyV3SubClient PrequalifyV3 { ... }
+    public QuoteV3SubClient QuoteV3 { ... }
+    public DatasetsV3SubClient DatasetsV3 { ... }
+    public IReferenceFacade Reference { ... }
+    public MedicationsNamespace Medications { ... }
+    public ConditionsNamespace Conditions { ... }
+    public ConceptsNamespace Concepts { ... }
+    public IReadOnlyDictionary<string, IsaApiVersion> ApiVersion { ... }
+    public IsaApiVersion ResolveApiVersion(...)
     public ZyInsClientBuilder Configure(...)
+    public Task<PrequalifyV3Result> PrequalifyV3Async(...)
+    public Task<QuoteV3Result> QuoteV3Async(...)
+    public Task<PrequalifyV3Result> PrequalifyAsync(...)
+    public Task<QuoteV3Result> QuoteAsync(...)
     public ZyInsClientBuilder WithBaseUrl(...)
     public ZyInsClientBuilder WithTimeout(...)
     public ZyInsClientBuilder WithTransport(...)
     public ZyInsClientBuilder WithClock(...)
+    public ZyInsClientBuilder WithApiVersion(...)
     public ZyInsClient Build(...)
 
 === Zyins/ZyinsFactory.cs ===
-namespace Sah.Sdk.Zyins;
+namespace Isa.Sdk.Zyins;
 public interface IEnvironment
 public class SystemEnvironment : IEnvironment
     public SystemEnvironment Instance

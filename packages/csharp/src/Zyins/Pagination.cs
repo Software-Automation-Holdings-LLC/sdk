@@ -13,7 +13,7 @@
 
 using System.Runtime.CompilerServices;
 
-namespace Sah.Sdk.Zyins;
+namespace Isa.Sdk.Zyins;
 
 /// <summary>One page of a paginated list endpoint as returned over the wire.</summary>
 /// <typeparam name="T">Row type.</typeparam>

@@ -1,7 +1,7 @@
 // Base exception hierarchy shared across IsaSdk.* packages. Concrete
 // subclasses live in product packages (ZyINS, Proxy, ...) so each can
 // add domain-specific fields without bloating Core.
-namespace Sah.Sdk.Core;
+namespace Isa.Sdk.Core;
 
 /// <summary>Root of the IsaSdk exception hierarchy.</summary>
 public class IsaException : Exception

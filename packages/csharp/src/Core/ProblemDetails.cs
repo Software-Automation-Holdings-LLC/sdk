@@ -3,7 +3,7 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
-namespace Sah.Sdk.Core;
+namespace Isa.Sdk.Core;
 
 /// <summary>Wire shape of the RFC 7807 error body the API returns.</summary>
 public sealed record ProblemDetails
@@ -104,7 +104,7 @@ public static class ProblemDetailsParser
         404 => "not_found",
         409 => "conflict",
         422 => "validation_error",
-        429 => "rate_limited",
+        429 => ErrorCodes.ToWire(ErrorCode.RateLimited),
         >= 500 => "internal_error",
         _ => "http_error",
     };

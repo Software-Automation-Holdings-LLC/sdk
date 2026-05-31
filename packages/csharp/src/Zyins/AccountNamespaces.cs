@@ -7,9 +7,10 @@
 
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using Sah.Sdk.Core;
+using Isa.Sdk.Core;
+using Isa.Sdk.Zyins.Cases;
 
-namespace Sah.Sdk.Zyins;
+namespace Isa.Sdk.Zyins;
 
 // =====================================================================
 // Branding
@@ -147,20 +148,27 @@ public sealed record CaseCreateResult
     [JsonPropertyName("created_at")] public string CreatedAt { get; init; } = string.Empty;
 }
 
-/// <summary>Sub-client for case create + share. Future
-/// list / get / delete operations require new server work.</summary>
+/// <summary>Sub-client for case create + share, plus the locked
+/// top-level <see cref="SaveAsync"/> / <see cref="RecallAsync"/>
+/// surface backed by a pluggable
+/// <see cref="global::Isa.Sdk.Zyins.Cases.ICaseStorage"/> adapter.</summary>
 public sealed class CasesSubClient
 {
     private const string CreatePath = "/v1/case";
     private readonly OperationContext _ctx;
     private readonly EmailSubClient _email;
-    internal CasesSubClient(OperationContext ctx, EmailSubClient email)
+    private readonly ICaseStorage _caseStorage;
+    internal CasesSubClient(OperationContext ctx, EmailSubClient email, ICaseStorage caseStorage)
     {
         _ctx = ctx;
         _email = email;
+        _caseStorage = caseStorage ?? throw new ArgumentNullException(nameof(caseStorage));
     }
 
     /// <summary>Create a shareable case from quote input + results + products.</summary>
+    /// <remarks>Deprecated: use <see cref="ShareAsync"/> — the canonical
+    /// verb per the locked SDK syntax (TS canon: <c>isa.zyins.cases.share</c>).
+    /// This alias is retained for one minor and will be removed in v0.7.0.</remarks>
     public Task<CaseCreateResult> CreateAsync(CaseCreateRequest request, CancellationToken ct = default)
     {
         if (request is null) throw new ArgumentNullException(nameof(request));
@@ -172,9 +180,43 @@ public sealed class CasesSubClient
             _ctx, CreatePath, request, "cases.create", ct);
     }
 
+    /// <summary>Create (share) a shareable case. Canonical verb per the
+    /// locked SDK syntax (TS canon: <c>isa.zyins.cases.share</c>);
+    /// equivalent to <see cref="CreateAsync"/>, which is retained as a
+    /// deprecated alias.</summary>
+    public Task<CaseCreateResult> ShareAsync(CaseCreateRequest request, CancellationToken ct = default)
+        => CreateAsync(request, ct);
+
     /// <summary>Email a case-share payload — delegates to <see cref="EmailSubClient.EnqueueAsync"/>.</summary>
     public Task<EmailEnqueueResult> EmailAsync(EmailEnqueueRequest request, CancellationToken ct = default) =>
         _email.EnqueueAsync(request, ct);
+
+    /// <summary>Persist a case record through the configured
+    /// <see cref="global::Isa.Sdk.Zyins.Cases.ICaseStorage"/> adapter.
+    /// Defaults to the unwired
+    /// <see cref="global::Isa.Sdk.Zyins.Cases.ZeroKnowledgeCaseStorage"/>
+    /// singleton — pass <c>ZyInsClientOptions.CaseStorage</c> to wire a
+    /// transport.</summary>
+    public Task<PutResult> SaveAsync(
+        CaseRecord record,
+        CancellationToken ct = default)
+    {
+        if (record is null) throw new ArgumentNullException(nameof(record));
+        return _caseStorage.PutAsync(record, ct);
+    }
+
+    /// <summary>Retrieve a previously-persisted case record. The
+    /// <paramref name="recallToken"/> is required by zero-knowledge
+    /// adapters and ignored by server-side adapters.</summary>
+    public Task<CaseRecord?> RecallAsync(
+        string id,
+        string? recallToken = null,
+        CancellationToken ct = default)
+    {
+        if (string.IsNullOrWhiteSpace(id))
+            throw new ArgumentException("id must be non-empty", nameof(id));
+        return _caseStorage.GetAsync(id, recallToken, ct);
+    }
 }
 
 // =====================================================================

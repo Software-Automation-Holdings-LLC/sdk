@@ -1,9 +1,9 @@
-// ZyINS exception type-aliases over the Sah.Sdk.Core base hierarchy.
+// ZyINS exception type-aliases over the Isa.Sdk.Core base hierarchy.
 // Callers can catch the Core type or the ZyINS-specific subclass; the
 // task spec required both names to exist.
-using Sah.Sdk.Core;
+using Isa.Sdk.Core;
 
-namespace Sah.Sdk.Zyins;
+namespace Isa.Sdk.Zyins;
 
 /// <summary>Root of the ZyINS-specific exception hierarchy. Re-exports
 /// the Core base so callers can `catch (IsaException)` without

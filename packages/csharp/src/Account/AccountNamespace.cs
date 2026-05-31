@@ -18,10 +18,10 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Threading;
 using System.Threading.Tasks;
-using Sah.Sdk.Core;
-using Sah.Sdk.Zyins;
+using Isa.Sdk.Core;
+using Isa.Sdk.Zyins;
 
-namespace Sah.Sdk.Account;
+namespace Isa.Sdk.Account;
 
 /// <summary>Top-level `isa.Account.*` namespace.</summary>
 public sealed class AccountNamespace
@@ -50,7 +50,7 @@ public sealed class AccountNamespace
         ReferenceData = new AccountReferenceData(ctx);
     }
 
-    /// <summary>Bridge between <see cref="Sah.Sdk.Isa"/> and the per-license
+    /// <summary>Bridge between <see cref="global::Isa.Sdk.Isa"/> and the per-license
     /// Account surface. License-mode clients return a live namespace; other
     /// identities return a stub whose first method throws
     /// <see cref="IsaConfigException"/>.</summary>

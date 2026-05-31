@@ -1,9 +1,9 @@
 // Response envelope (SDK_DESIGN.md §4.6). Every method returns one of
 // these so the caller always has the request id, idempotency key, and
 // retry attempt count alongside their data — Stripe/Anthropic-style.
-using Sah.Sdk.Core;
+using Isa.Sdk.Core;
 
-namespace Sah.Sdk.Zyins;
+namespace Isa.Sdk.Zyins;
 
 /// <summary>Typed wrapper around a successful response. Exposes the
 /// machine-correlation fields (<see cref="RequestId"/>,

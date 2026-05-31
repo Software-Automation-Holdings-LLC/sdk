@@ -6,11 +6,11 @@
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 
-namespace Sah.Sdk.Catalog;
+namespace Isa.Sdk.Catalog;
 
 /// <summary>Stable wire-form error codes mirroring <c>api.isa.v1.ErrorCode</c>.
 /// Named <c>CatalogErrorCode</c> to avoid clashing with the legacy
-/// <see cref="Sah.Sdk.Core.ErrorCode"/> already shipped at v0.3.x.</summary>
+/// <see cref="global::Isa.Sdk.Core.ErrorCode"/> already shipped at v0.3.x.</summary>
 public enum CatalogErrorCode
 {
     /// <summary>Upstream dependency returned an unusable response.</summary>

@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 
-namespace Sah.Sdk.Core;
+namespace Isa.Sdk.Core;
 
 /// <summary>Cross-target header-map helpers for netstandard2.0.</summary>
 internal static class CompatHeaders

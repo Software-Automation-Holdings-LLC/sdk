@@ -1,6 +1,6 @@
 // Time source facade. Direct calls to DateTime.UtcNow are forbidden in
 // the SDK; every component takes an IClock so tests can pin time.
-namespace Sah.Sdk.Core;
+namespace Isa.Sdk.Core;
 
 /// <summary>Injectable time source. Default is <see cref="SystemClock"/>.</summary>
 public interface IClock

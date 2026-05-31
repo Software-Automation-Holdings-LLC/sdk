@@ -2,7 +2,7 @@
 // on these values; the underlying string is the over-the-wire form.
 // New codes are added (never renamed) and ship alongside a doc page
 // per the api-standards.md doc-url discipline.
-namespace Sah.Sdk.Core;
+namespace Isa.Sdk.Core;
 
 /// <summary>Stable error code enum mirrored across every IsaSdk language binding.
 /// Values map 1:1 to the <c>code</c> field of the RFC 7807 error body.</summary>
@@ -53,7 +53,8 @@ public static class ErrorCodes
     private const string NotFoundWire = "not_found";
     private const string ConflictWire = "conflict";
     private const string IdempotencyConflictWire = "idempotency_conflict";
-    private const string RateLimitedWire = "rate_limited";
+    private const string RateLimitExceededWire = "rate_limit_exceeded";
+    private const string LegacyRateLimitedWire = "rate_limited";
     private const string InternalErrorWire = "internal_error";
 
     /// <summary>Parse the wire form into the enum; unknown values map to <see cref="ErrorCode.Unknown"/>.</summary>
@@ -68,7 +69,7 @@ public static class ErrorCodes
         NotFoundWire => ErrorCode.NotFound,
         ConflictWire => ErrorCode.Conflict,
         IdempotencyConflictWire => ErrorCode.IdempotencyConflict,
-        RateLimitedWire => ErrorCode.RateLimited,
+        RateLimitExceededWire or LegacyRateLimitedWire => ErrorCode.RateLimited,
         InternalErrorWire => ErrorCode.InternalError,
         _ => ErrorCode.Unknown,
     };
@@ -84,7 +85,7 @@ public static class ErrorCodes
         ErrorCode.NotFound => NotFoundWire,
         ErrorCode.Conflict => ConflictWire,
         ErrorCode.IdempotencyConflict => IdempotencyConflictWire,
-        ErrorCode.RateLimited => RateLimitedWire,
+        ErrorCode.RateLimited => RateLimitExceededWire,
         ErrorCode.InternalError => InternalErrorWire,
         _ => "unknown",
     };

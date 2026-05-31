@@ -8,9 +8,9 @@
 //
 // Missing env vars produce IsaConfigException synchronously; the
 // client never silently misbehaves with empty credentials.
-using Sah.Sdk.Core;
+using Isa.Sdk.Core;
 
-namespace Sah.Sdk.Zyins;
+namespace Isa.Sdk.Zyins;
 
 /// <summary>Source of environment variables. Defaults to the OS;
 /// tests substitute an in-memory implementation.</summary>
@@ -147,7 +147,7 @@ internal static class ZyinsFactory
 
     /// <summary>Build a license-mode client with an attached credential store.
     /// The store backs the shared <see cref="IsaCredentialState"/> so the
-    /// <see cref="LicensesSubClient"/> can auto-stash the license key on
+    /// <see cref="LicenseSubClient"/> can auto-stash the license key on
     /// successful activation.</summary>
     public static ZyInsClient WithLicense(LicenseCredentials? credentials, ZyInsClientOptions? options, IEnvironment env, ICredentialStore? store)
     {

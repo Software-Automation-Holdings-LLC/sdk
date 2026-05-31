@@ -20,9 +20,9 @@ using System.Net.Http.Headers;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
-using Sah.Sdk.Core;
+using Isa.Sdk.Core;
 
-namespace Sah.Sdk.Proxy;
+namespace Isa.Sdk.Proxy;
 
 /// <summary>Default origin for the platform proxy `/v1/call` endpoint.</summary>
 public static class ProxyDefaults
@@ -51,9 +51,9 @@ public sealed class ProxyCallOptions
 }
 
 /// <summary>
-/// Session-signed `/v1/call` entry point reached via <see cref="Sah.Sdk.Isa.Proxy"/>.
-/// Carries the session binding for the parent <see cref="Sah.Sdk.Isa"/>;
-/// non-session callers see <see cref="Sah.Sdk.Core.IsaConfigException"/>
+/// Session-signed `/v1/call` entry point reached via <see cref="global::Isa.Sdk.Isa.Proxy"/>.
+/// Carries the session binding for the parent <see cref="global::Isa.Sdk.Isa"/>;
+/// non-session callers see <see cref="global::Isa.Sdk.Core.IsaConfigException"/>
 /// at the boundary so they know to exchange credentials first.
 /// </summary>
 /// <example>
@@ -87,7 +87,7 @@ public sealed class ProxyNamespace
     }
 
     /// <summary>
-    /// Construct a session-bound proxy namespace. Used by <see cref="Sah.Sdk.Isa"/>
+    /// Construct a session-bound proxy namespace. Used by <see cref="global::Isa.Sdk.Isa"/>
     /// to plumb credentials; tests pass a handler + fixed clock to drive
     /// deterministic outbound assertions.
     /// </summary>

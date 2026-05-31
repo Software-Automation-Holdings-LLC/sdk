@@ -8,7 +8,7 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Reflection;
 
-namespace Sah.Sdk.Catalog;
+namespace Isa.Sdk.Catalog;
 
 /// <summary>Attaches the canonical wire-form string to a catalog enum member.</summary>
 [AttributeUsage(AttributeTargets.Field)]

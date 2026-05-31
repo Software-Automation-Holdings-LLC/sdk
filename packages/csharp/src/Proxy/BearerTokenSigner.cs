@@ -2,9 +2,9 @@
 // `Authorization: Bearer <token>` header; this helper is the only
 // place that knows the header name and the "Bearer " prefix so call
 // sites never spell either inline.
-using Sah.Sdk.Core;
+using Isa.Sdk.Core;
 
-namespace Sah.Sdk.Proxy;
+namespace Isa.Sdk.Proxy;
 
 /// <summary>Apply <c>Authorization: Bearer &lt;token&gt;</c> to outgoing requests.</summary>
 public sealed class BearerTokenSigner

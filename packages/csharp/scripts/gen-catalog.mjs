@@ -130,7 +130,7 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Reflection;
 
-namespace Sah.Sdk.Catalog;
+namespace Isa.Sdk.Catalog;
 
 /// <summary>Attaches the canonical wire-form string to a catalog enum member.</summary>
 [AttributeUsage(AttributeTargets.Field)]
@@ -255,7 +255,7 @@ using System.Collections.ObjectModel;
 using System.Linq;
 using System.Reflection;
 
-namespace Sah.Sdk.Catalog;
+namespace Isa.Sdk.Catalog;
 
 /// <summary>Product slug enum. Each member's wire value is the canonical product
 /// identifier the platform uses in URLs and reference-data lookups.</summary>
@@ -362,7 +362,7 @@ ${metaInit}
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 
-namespace Sah.Sdk.Catalog;
+namespace Isa.Sdk.Catalog;
 
 /// <summary>Public metadata for a single carrier. Today's catalog does not
 /// expose per-carrier licensure data; <c>States</c> is intentionally omitted.</summary>
@@ -403,7 +403,7 @@ function genConditionsAndMedicationUses() {
   const condContent = `${HEADER(sources)}using System;
 using System.Collections.Generic;
 
-namespace Sah.Sdk.Catalog;
+namespace Isa.Sdk.Catalog;
 
 /// <summary>Public metadata for a condition category.</summary>
 public sealed record ConditionCategoryMetadata(
@@ -464,7 +464,7 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
 
-namespace Sah.Sdk.Catalog;
+namespace Isa.Sdk.Catalog;
 
 /// <summary>Public metadata for a single medication use (indication).</summary>
 public sealed record MedicationUseMetadata(
@@ -542,7 +542,7 @@ function genScopes() {
   const content = `${HEADER(sources)}using System.Collections.Generic;
 using System.Collections.ObjectModel;
 
-namespace Sah.Sdk.Catalog;
+namespace Isa.Sdk.Catalog;
 
 /// <summary>Bearer-token scopes recognized across the ISA platform.</summary>
 public enum Scope
@@ -590,7 +590,7 @@ function genSignEvents() {
   const content = `${HEADER(sources)}using System.Collections.Generic;
 using System.Collections.ObjectModel;
 
-namespace Sah.Sdk.Catalog;
+namespace Isa.Sdk.Catalog;
 
 /// <summary>RapidSign webhook event types.</summary>
 public enum SignEvent
@@ -675,11 +675,11 @@ function genErrors() {
   const content = `${HEADER(sources)}using System.Collections.Generic;
 using System.Collections.ObjectModel;
 
-namespace Sah.Sdk.Catalog;
+namespace Isa.Sdk.Catalog;
 
 /// <summary>Stable wire-form error codes mirroring <c>api.isa.v1.ErrorCode</c>.
 /// Named <c>CatalogErrorCode</c> to avoid clashing with the legacy
-/// <see cref="Sah.Sdk.Core.ErrorCode"/> already shipped at v0.3.x.</summary>
+/// <see cref="global::Isa.Sdk.Core.ErrorCode"/> already shipped at v0.3.x.</summary>
 public enum CatalogErrorCode
 {
 ${members}

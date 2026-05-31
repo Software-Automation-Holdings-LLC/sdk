@@ -7,7 +7,7 @@
 using System;
 using System.Collections.Generic;
 
-namespace Sah.Sdk.Catalog;
+namespace Isa.Sdk.Catalog;
 
 /// <summary>Public metadata for a condition category.</summary>
 public sealed record ConditionCategoryMetadata(

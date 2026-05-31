@@ -8,9 +8,9 @@ using System;
 using System.Text.Json.Serialization;
 using System.Threading;
 using System.Threading.Tasks;
-using Sah.Sdk.Zyins;
+using Isa.Sdk.Zyins;
 
-namespace Sah.Sdk.Account;
+namespace Isa.Sdk.Account;
 
 /// <summary>Whitelabel detail returned by <see cref="AccountBranding.LookupAsync(CancellationToken)"/>.</summary>
 public sealed record BrandingDetail

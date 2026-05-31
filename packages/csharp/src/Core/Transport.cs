@@ -4,7 +4,7 @@
 using System.Net.Http.Headers;
 using System.Text;
 
-namespace Sah.Sdk.Core;
+namespace Isa.Sdk.Core;
 
 /// <summary>The set of HTTP verbs the SDK ever issues.</summary>
 public enum HttpVerb

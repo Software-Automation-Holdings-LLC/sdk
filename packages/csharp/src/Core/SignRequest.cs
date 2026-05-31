@@ -21,7 +21,7 @@ using System.Globalization;
 using System.Security.Cryptography;
 using System.Text;
 
-namespace Sah.Sdk.Core;
+namespace Isa.Sdk.Core;
 
 /// <summary>
 /// The four headers emitted by <see cref="SignRequest.Sign(string,string,byte[],string,string,IClock)"/>.

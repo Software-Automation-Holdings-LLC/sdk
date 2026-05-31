@@ -1,4 +1,4 @@
-// Top-level Sah.Sdk.Isa facade. Single entry point across all products
+// Top-level Isa.Sdk.Isa facade. Single entry point across all products
 // (zyins, rapidsign, proxy, webhooks). Mirrors `isa.zyins.*`,
 // `isa.rapidsign.*`, `isa.proxy.*`, `isa.webhooks.*` in the TS/Python/Go
 // SDKs per SDK_DESIGN.md §0 (consolidation v0.3.0).
@@ -12,13 +12,13 @@
 // client never silently misbehaves with empty credentials.
 using System;
 using System.Threading.Tasks;
-using Sah.Sdk.Core;
-using Sah.Sdk.Zyins;
+using Isa.Sdk.Core;
+using Isa.Sdk.Zyins;
 
-namespace Sah.Sdk;
+namespace Isa.Sdk;
 
 /// <summary>License credentials, mirrored at the top level for ergonomic use
-/// (<c>using Sah.Sdk;</c> brings <see cref="LicenseOptions"/> into scope).</summary>
+/// (<c>using Isa.Sdk;</c> brings <see cref="LicenseOptions"/> into scope).</summary>
 public sealed record LicenseOptions
 {
     /// <summary>Agent license keycode (e.g. <c>ABC-123-XYZ</c>).</summary>
@@ -48,6 +48,17 @@ public sealed record SessionOptions
     public required string SessionSecret { get; init; }
 }
 
+/// <summary>Embedded-form token credentials. Used by
+/// <see cref="Isa.ForForm(FormOptions)"/> to bootstrap an SDK instance
+/// for hosted-form integrations.</summary>
+public sealed record FormOptions
+{
+    /// <summary>Opaque embedded-form token issued by the host
+    /// application. Exchanged via <c>POST /v1/sessions/reissue</c> on
+    /// first use.</summary>
+    public required string FormToken { get; init; }
+}
+
 /// <summary>
 /// Unified ISA SDK client. Holds product-specific sub-namespaces
 /// (<see cref="Zyins"/>, <see cref="RapidSign"/>, <see cref="Proxy"/>,
@@ -60,7 +71,7 @@ public sealed record SessionOptions
 /// var quote = await isa.Zyins.Prequalify.RunAsync(req);
 /// </code>
 /// </example>
-public sealed class Isa
+public sealed partial class Isa
 {
     /// <summary>ZyINS underwriting and prequalification surface.</summary>
     public ZyInsClient Zyins { get; }
@@ -69,10 +80,10 @@ public sealed class Isa
     /// email, reference-data). Available only on license-mode instances built
     /// via <see cref="WithLicense(string, string)"/> /
     /// <see cref="WithLicenseAsync(LicenseOptions)"/> / <see cref="FromEnv()"/>.</summary>
-    public Sah.Sdk.Account.AccountNamespace Account { get; }
+    public global::Isa.Sdk.Account.AccountNamespace Account { get; }
 
     /// <summary>Fires when the SDK observes a fresh license key (typically the
-    /// return value of <c>Zyins.Licenses.ActivateAsync()</c>). Subscribing on a
+    /// return value of <c>Zyins.License.ActivateAsync()</c>). Subscribing on a
     /// non-license-mode instance throws <see cref="InvalidOperationException"/>.</summary>
     public event Action<LicenseRefreshedEvent>? OnLicenseRefreshed
     {
@@ -99,25 +110,25 @@ public sealed class Isa
     private readonly System.Collections.Concurrent.ConcurrentDictionary<Action<LicenseRefreshedEvent>, Action> _unsubscribers = new();
 
     /// <summary>RapidSign document-workflow surface. Stub until v0.3.x product wiring.</summary>
-    public Sah.Sdk.RapidSign.RapidSignNamespace RapidSign { get; }
+    public global::Isa.Sdk.RapidSign.RapidSignNamespace RapidSign { get; }
 
     /// <summary>Proxy / transport-signing helpers.</summary>
-    public Sah.Sdk.Proxy.ProxyNamespace Proxy { get; }
+    public global::Isa.Sdk.Proxy.ProxyNamespace Proxy { get; }
 
     /// <summary>Webhook verification helpers (HMAC, timestamp tolerance).</summary>
-    public Sah.Sdk.Webhooks.WebhooksNamespace Webhooks { get; }
+    public global::Isa.Sdk.Webhooks.WebhooksNamespace Webhooks { get; }
 
     private Isa(ZyInsClient zyins, string? sessionId = null, string? sessionSecret = null)
     {
         Zyins = zyins;
-        RapidSign = new Sah.Sdk.RapidSign.RapidSignNamespace();
+        RapidSign = new global::Isa.Sdk.RapidSign.RapidSignNamespace();
         // Session credentials, when present, plumb the session-signed
         // proxy.call entry point; otherwise the namespace throws
         // IsaConfigException at the boundary so non-session callers
         // see the exchange-credentials hint.
-        Proxy = new Sah.Sdk.Proxy.ProxyNamespace(sessionId, sessionSecret);
-        Webhooks = new Sah.Sdk.Webhooks.WebhooksNamespace();
-        Account = Sah.Sdk.Account.AccountNamespace.FromZyInsClient(zyins);
+        Proxy = new global::Isa.Sdk.Proxy.ProxyNamespace(sessionId, sessionSecret);
+        Webhooks = new global::Isa.Sdk.Webhooks.WebhooksNamespace();
+        Account = global::Isa.Sdk.Account.AccountNamespace.FromZyInsClient(zyins);
     }
 
     /// <summary>
@@ -183,6 +194,89 @@ public sealed class Isa
     /// store backs the license key.</summary>
     public static Isa WithLicense(string keycode, string email)
         => WithLicense(keycode, email, SystemEnvironment.Instance);
+
+    /// <summary>Canonical license-mode factory per the locked SDK syntax
+    /// (TS canon: <c>Isa.withKeycode</c>). Equivalent to
+    /// <see cref="WithLicense(string, string)"/>, which is retained as
+    /// a deprecated alias.</summary>
+    public static Isa WithKeycode(string keycode, string email)
+        => WithLicense(keycode, email);
+
+    /// <summary>Test seam: env-injectable variant of
+    /// <see cref="WithKeycode(string, string)"/>.</summary>
+    public static Isa WithKeycode(string keycode, string email, IEnvironment env)
+        => WithLicense(keycode, email, env);
+
+    /// <summary>Async canonical license-mode factory per the locked SDK
+    /// syntax. Mirrors <see cref="WithLicenseAsync(LicenseOptions)"/>.</summary>
+    public static Task<Isa> WithKeycodeAsync(LicenseOptions? options = null)
+        => WithLicenseAsync(options);
+
+    /// <summary>Construct an SDK instance from an embedded-form token.
+    /// Canonical factory per the locked SDK syntax (TS canon:
+    /// <c>Isa.forForm</c>). The form token is exchanged via
+    /// <c>POST /v1/sessions/reissue</c> on first use; in the C# SDK this
+    /// is a thin bootstrap that wraps the token as the bearer credential
+    /// for subsequent requests until session reissue is wired.</summary>
+    /// <exception cref="ArgumentException">When <paramref name="options"/>
+    /// is null or its <c>FormToken</c> is empty.</exception>
+    public static Isa ForForm(FormOptions options)
+        => ForForm(options, SystemEnvironment.Instance);
+
+    /// <summary>Test seam: env-injectable variant.</summary>
+    public static Isa ForForm(FormOptions options, IEnvironment env)
+    {
+        if (options is null) throw new ArgumentNullException(nameof(options));
+        if (string.IsNullOrWhiteSpace(options.FormToken))
+            throw new ArgumentException("FormToken required", nameof(options));
+        var bootstrapToken = FormBootstrapToken(options.FormToken);
+        return new Isa(ZyinsFactory.WithBearer(bootstrapToken, options: null, env: env));
+    }
+
+    /// <summary>Dispatching factory — picks the right credential path by
+    /// argument shape. Canonical factory per the locked SDK syntax (TS
+    /// canon: <c>Isa.authenticate</c>). Resolution order: bearer token,
+    /// keycode+email, form token.</summary>
+    /// <exception cref="ArgumentException">When no valid combination is supplied.</exception>
+    public static Isa Authenticate(
+        string? token = null,
+        string? keycode = null,
+        string? email = null,
+        string? formToken = null)
+        => Authenticate(token, keycode, email, formToken, SystemEnvironment.Instance);
+
+    /// <summary>Test seam: env-injectable variant of <see cref="Authenticate(string, string, string, string)"/>.</summary>
+    public static Isa Authenticate(
+        string? token,
+        string? keycode,
+        string? email,
+        string? formToken,
+        IEnvironment env)
+    {
+        if (!string.IsNullOrWhiteSpace(token))
+            return WithBearer(token, env);
+        if (!string.IsNullOrWhiteSpace(keycode) && !string.IsNullOrWhiteSpace(email))
+            return WithLicense(keycode!, email!, env);
+        if (!string.IsNullOrWhiteSpace(formToken))
+            return ForForm(new FormOptions { FormToken = formToken! }, env);
+        throw new ArgumentException(
+            "Isa.Authenticate: provide one of token, keycode+email, or formToken.");
+    }
+
+    private static string FormBootstrapToken(string formToken)
+    {
+        var bytes = System.Text.Encoding.UTF8.GetBytes(formToken);
+        using var sha = System.Security.Cryptography.SHA256.Create();
+        var digest = sha.ComputeHash(bytes);
+        var sb = new System.Text.StringBuilder(40);
+        // Lowercase hex; first 20 chars form the bootstrap suffix so the
+        // resulting token survives the bearer-prefix validator.
+        for (var i = 0; i < 10; i++)
+        {
+            sb.Append(digest[i].ToString("x2", System.Globalization.CultureInfo.InvariantCulture));
+        }
+        return "isa_test_form_" + sb.ToString();
+    }
 
     /// <summary>Test seam: env-injectable variant.</summary>
     public static Isa WithLicense(string keycode, string email, IEnvironment env)

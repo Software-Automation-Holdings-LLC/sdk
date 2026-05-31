@@ -9,9 +9,9 @@ using System.Collections.Generic;
 using System.Text.Json.Serialization;
 using System.Threading;
 using System.Threading.Tasks;
-using Sah.Sdk.Zyins;
+using Isa.Sdk.Zyins;
 
-namespace Sah.Sdk.Account;
+namespace Isa.Sdk.Account;
 
 /// <summary>Inputs for <see cref="AccountCases.CreateAsync"/>. <c>Input</c> is
 /// polymorphic at the wire — a structured object is converted to XML

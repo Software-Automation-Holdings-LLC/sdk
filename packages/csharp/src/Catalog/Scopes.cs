@@ -6,7 +6,7 @@
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 
-namespace Sah.Sdk.Catalog;
+namespace Isa.Sdk.Catalog;
 
 /// <summary>Bearer-token scopes recognized across the ISA platform.</summary>
 public enum Scope

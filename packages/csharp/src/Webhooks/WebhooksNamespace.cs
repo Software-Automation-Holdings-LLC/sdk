@@ -1,11 +1,11 @@
 // Webhooks sub-namespace accessor on the unified Isa client.
 // HMAC-SHA256 verification with timestamp tolerance, mirroring the
 // TS/Python/Go bindings per SDK_DESIGN.md §4.
-namespace Sah.Sdk.Webhooks;
+namespace Isa.Sdk.Webhooks;
 
 /// <summary>
 /// Accessor for webhook helpers (signature verification, replay tolerance),
-/// reached via <see cref="Sah.Sdk.Isa.Webhooks"/>.
+/// reached via <see cref="global::Isa.Sdk.Isa.Webhooks"/>.
 /// </summary>
 /// <example>
 /// <code>
@@ -15,7 +15,7 @@ namespace Sah.Sdk.Webhooks;
 /// </example>
 public sealed class WebhooksNamespace
 {
-    /// <summary>Internal: bound by <see cref="Sah.Sdk.Isa"/> at construction.</summary>
+    /// <summary>Internal: bound by <see cref="global::Isa.Sdk.Isa"/> at construction.</summary>
     public WebhooksNamespace()
     {
     }

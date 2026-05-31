@@ -2,10 +2,10 @@
 // workflow (create / send / poll / webhook verify) ships in v0.3.x;
 // for now this is a discoverable shell so the public surface contract
 // is satisfied across all five language bindings.
-namespace Sah.Sdk.RapidSign;
+namespace Isa.Sdk.RapidSign;
 
 /// <summary>
-/// Accessor for RapidSign product methods, reached via <see cref="Sah.Sdk.Isa.RapidSign"/>.
+/// Accessor for RapidSign product methods, reached via <see cref="global::Isa.Sdk.Isa.RapidSign"/>.
 /// </summary>
 /// <example>
 /// <code>
@@ -15,7 +15,7 @@ namespace Sah.Sdk.RapidSign;
 /// </example>
 public sealed class RapidSignNamespace
 {
-    /// <summary>Internal: bound by <see cref="Sah.Sdk.Isa"/> at construction.</summary>
+    /// <summary>Internal: bound by <see cref="global::Isa.Sdk.Isa"/> at construction.</summary>
     public RapidSignNamespace()
     {
     }

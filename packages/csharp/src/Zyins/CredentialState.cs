@@ -12,7 +12,7 @@ using System.Collections.Concurrent;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace Sah.Sdk.Zyins;
+namespace Isa.Sdk.Zyins;
 
 /// <summary>Pluggable credential store. Backs the shared <see cref="IsaCredentialState"/>
 /// so license keys survive across process boots when the host provides a durable
@@ -36,7 +36,7 @@ public interface ICredentialStore
 /// of <see cref="ICredentialStore"/> can read them out-of-band.</summary>
 public static class CredentialKeys
 {
-    /// <summary>License key written by <see cref="LicensesSubClient.ActivateAsync(LicensesActivateRequest, CancellationToken)"/>.</summary>
+    /// <summary>License key written by <see cref="LicenseSubClient.ActivateAsync(LicenseActivateRequest, CancellationToken)"/>.</summary>
     public const string LicenseKey = "isa.licenseKey";
 
     /// <summary>Persisted device-id minted on first run.</summary>
@@ -70,7 +70,7 @@ public sealed class InMemoryCredentialStore : ICredentialStore
 }
 
 /// <summary>Event payload fired when the SDK observes a fresh license key
-/// (typically the return value of <see cref="LicensesSubClient.ActivateAsync(LicensesActivateRequest, CancellationToken)"/>).
+/// (typically the return value of <see cref="LicenseSubClient.ActivateAsync(LicenseActivateRequest, CancellationToken)"/>).
 /// Consumers wire this to UI banners, analytics, or invalidation
 /// triggers.</summary>
 public sealed record LicenseRefreshedEvent

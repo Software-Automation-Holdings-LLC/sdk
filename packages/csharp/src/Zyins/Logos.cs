@@ -14,9 +14,9 @@
 using System;
 using System.Threading;
 using System.Threading.Tasks;
-using Sah.Sdk.Core;
+using Isa.Sdk.Core;
 
-namespace Sah.Sdk.Zyins;
+namespace Isa.Sdk.Zyins;
 
 /// <summary>Options accepted by <see cref="LogosSubClient.GetAsync"/>.</summary>
 public sealed record LogosOptions
@@ -55,7 +55,7 @@ public sealed class LogosSubClient
 
     /// <summary>Fetch the carrier-logo asset.</summary>
     /// <exception cref="ArgumentException">when <paramref name="carrier"/> is empty.</exception>
-    /// <exception cref="Sah.Sdk.Core.IsaException">when the server returns a non-2xx response.</exception>
+    /// <exception cref="global::Isa.Sdk.Core.IsaException">when the server returns a non-2xx response.</exception>
     public async Task<LogoResult> GetAsync(
         string carrier,
         LogosOptions? options = null,

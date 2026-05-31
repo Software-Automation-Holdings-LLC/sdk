@@ -17,9 +17,9 @@ using System.Collections.Generic;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
-using Sah.Sdk.Zyins;
+using Isa.Sdk.Zyins;
 
-namespace Sah.Sdk.Account;
+namespace Isa.Sdk.Account;
 
 /// <summary>Inputs for <see cref="AccountReferenceData.GetAsync(ReferenceDataRequest, CancellationToken)"/>.</summary>
 public sealed record ReferenceDataRequest

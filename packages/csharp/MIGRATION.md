@@ -1,4 +1,42 @@
-# Sah.Sdk C# migration guide (v0.2.x → v0.3.0)
+# Migration — 0.x → 1.0.0-rc.1 (C#)
+
+The cross-language guide at [`../../MIGRATION.md`](../../MIGRATION.md)
+covers the full cut (constructor rename, per-surface `ApiVersion`
+resolution, v3 wire-shape, `CaseStorage` adapter, bundleless
+`Reference.MatchAsync`). C#-specific notes:
+
+- **Install (rc.1, internal channel):**
+
+  ```bash
+  # Register the GitHub Packages NuGet feed once per machine/CI:
+  dotnet nuget add source \
+      https://nuget.pkg.github.com/Software-Automation-Holdings-LLC/index.json \
+      --name github \
+      --username <gh-user> \
+      --password <gh-pat-with-read:packages> \
+      --store-password-in-clear-text
+
+  # Then:
+  dotnet add package Sah.Sdk --version 1.0.0-rc.1 --source github
+  ```
+
+- **Constructor:** `Isa.Create(...)` → `Isa.WithKeycode(...)`. The
+  `DeviceId` option is removed (internal SDK detail).
+- **ApiVersion:** single pinned string → `BundledApiVersions` table
+  + `ResolveApiVersion(surface)`. Per-surface overrides on the
+  options bag.
+- **Cases:** `Cases.SaveAsync` accepts `{ Product, Payload }` only;
+  default storage is `ZeroKnowledgeCaseStorage` (AES-GCM on net8+).
+- **Reference:** new `Reference` namespace on `ZyInsClient`. Top-level
+  `MatchAsync` fetches and caches the v3 datasets index.
+- **Target frameworks:** dual-target `netstandard2.0;net8.0`
+  preserved from 0.5.x. AES-GCM in `ZeroKnowledgeCaseStorage`
+  requires `net8.0`; the `netstandard2.0` build no-ops the envelope
+  with a documented warning.
+
+---
+
+# Historical: Sah.Sdk C# migration (v0.2.x → v0.3.0)
 
 The C# SDK has consolidated from four packages (`IsaSdk.Core`, `IsaSdk.ZyINS`,
 `IsaSdk.RapidSign`, `IsaSdk.Proxy`) into **one** package: **`Sah.Sdk`**. See
@@ -18,10 +56,10 @@ The C# SDK has consolidated from four packages (`IsaSdk.Core`, `IsaSdk.ZyINS`,
 
 | Before             | After               |
 | ------------------ | ------------------- |
-| `IsaSdk.Core`      | `Sah.Sdk.Core`      |
-| `IsaSdk.ZyINS`     | `Sah.Sdk.Zyins`     |
-| `IsaSdk.RapidSign` | `Sah.Sdk.RapidSign` |
-| `IsaSdk.Proxy`     | `Sah.Sdk.Proxy`     |
+| `IsaSdk.Core`      | `Isa.Sdk.Core`      |
+| `IsaSdk.ZyINS`     | `Isa.Sdk.Zyins`     |
+| `IsaSdk.RapidSign` | `Isa.Sdk.RapidSign` |
+| `IsaSdk.Proxy`     | `Isa.Sdk.Proxy`     |
 
 Project-wide string-replace works for the four-namespace map above. A Roslyn
 codemod (`tools/codemod/Sah.Sdk.Codemod.csproj`) ships in v0.3.x to handle the
@@ -35,7 +73,7 @@ The top-level entry point is now a class (was four static classes):
 -using IsaSdk.ZyINS;
 -var client = Isa.WithBearer();
 -await client.Prequalify.RunAsync(req);
-+using Sah.Sdk;
++using Isa.Sdk;
 +var isa = Isa.WithBearer();                       // reads ISA_TOKEN
 +await isa.Zyins.Prequalify.RunAsync(req);
 ```
@@ -67,7 +105,7 @@ sah-sdk-codemod migrate --project MyApp.csproj
 
 The codemod rewrites:
 
-1. `using IsaSdk.<X>;` -> `using Sah.Sdk.<X>;` (with case mapping for `ZyINS` ->
+1. `using IsaSdk.<X>;` -> `using Isa.Sdk.<X>;` (with case mapping for `ZyINS` ->
    `Zyins`).
 2. `Isa.WithLicense(...)` -> `await Isa.WithLicenseAsync(...)` (adds `async`
    modifier upstream).
