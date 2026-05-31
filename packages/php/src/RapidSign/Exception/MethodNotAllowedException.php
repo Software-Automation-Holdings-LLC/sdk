@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Sah\Sdk\RapidSign\Exception;
+namespace Isa\Sdk\RapidSign\Exception;
 
 /** 405 — HTTP method not allowed on this path. */
 final class MethodNotAllowedException extends RapidSignException

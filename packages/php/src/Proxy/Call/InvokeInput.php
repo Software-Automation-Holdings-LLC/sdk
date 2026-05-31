@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Sah\Sdk\Proxy\Call;
+namespace Isa\Sdk\Proxy\Call;
 
 /**
  * Inputs forwarded inside the `/v1/call` envelope.

@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Sah\Sdk\Core;
+namespace Isa\Sdk\Core;
 
 /**
  * Value object mirroring the API response envelope defined in ADR-012.

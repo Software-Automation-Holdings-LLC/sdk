@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-namespace Sah\Sdk\Tests\Proxy;
+namespace Isa\Sdk\Tests\Proxy;
 
 use InvalidArgumentException;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\TestCase;
-use Sah\Sdk\Proxy\Auth;
-use Sah\Sdk\Proxy\ProxyClient;
+use Isa\Sdk\Proxy\Auth;
+use Isa\Sdk\Proxy\ProxyClient;
 
 #[CoversClass(ProxyClient::class)]
 #[CoversClass(Auth::class)]

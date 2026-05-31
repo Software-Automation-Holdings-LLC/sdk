@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Sah\Sdk\Zyins;
+namespace Isa\Sdk\Zyins;
 
 use DateTimeImmutable;
 use DateTimeInterface;

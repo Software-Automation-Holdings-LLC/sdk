@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace Sah\Sdk\Tests\Proxy\Support;
+namespace Isa\Sdk\Tests\Proxy\Support;
 
-use Sah\Sdk\Proxy\IdempotencyKeySource;
+use Isa\Sdk\Proxy\IdempotencyKeySource;
 
 /**
  * Deterministic idempotency key source for assertions on outbound headers.

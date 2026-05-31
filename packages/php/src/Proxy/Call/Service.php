@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace Sah\Sdk\Proxy\Call;
+namespace Isa\Sdk\Proxy\Call;
 
-use Sah\Sdk\Proxy\RequestOptions;
-use Sah\Sdk\Proxy\Transport;
+use Isa\Sdk\Proxy\RequestOptions;
+use Isa\Sdk\Proxy\Transport;
 
 /**
  * The `/v1/call` service.

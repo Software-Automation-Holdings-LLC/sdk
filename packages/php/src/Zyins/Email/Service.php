@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace Sah\Sdk\Zyins\Email;
+namespace Isa\Sdk\Zyins\Email;
 
-use Sah\Sdk\Zyins\RequestOptions;
-use Sah\Sdk\Zyins\Transport;
+use Isa\Sdk\Zyins\RequestOptions;
+use Isa\Sdk\Zyins\Transport;
 
 /**
  * Email sub-service. Targets POST /v1/email/enqueue.

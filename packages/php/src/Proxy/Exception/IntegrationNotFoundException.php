@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Sah\Sdk\Proxy\Exception;
+namespace Isa\Sdk\Proxy\Exception;
 
 /**
  * 404 from `/v1/call`: the integration UUID is unknown to the proxy

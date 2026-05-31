@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace Sah\Sdk\Zyins\Licenses;
+namespace Isa\Sdk\Zyins\Licenses;
 
 use InvalidArgumentException;
-use Sah\Sdk\Zyins\RequestOptions;
+use Isa\Sdk\Zyins\RequestOptions;
 
 /**
  * Credential-aware facade over {@see Service}. Every method accepts

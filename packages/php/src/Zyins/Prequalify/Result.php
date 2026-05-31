@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Sah\Sdk\Zyins\Prequalify;
+namespace Isa\Sdk\Zyins\Prequalify;
 
 /**
  * Output of `prequalify->run()`.

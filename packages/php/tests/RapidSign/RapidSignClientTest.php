@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-namespace Sah\Sdk\Tests\RapidSign;
+namespace Isa\Sdk\Tests\RapidSign;
 
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\TestCase;
-use Sah\Sdk\RapidSign\Auth;
-use Sah\Sdk\RapidSign\Exception\ValidationException;
-use Sah\Sdk\RapidSign\RapidSignClient;
+use Isa\Sdk\RapidSign\Auth;
+use Isa\Sdk\RapidSign\Exception\ValidationException;
+use Isa\Sdk\RapidSign\RapidSignClient;
 
 #[CoversClass(RapidSignClient::class)]
 #[CoversClass(Auth::class)]

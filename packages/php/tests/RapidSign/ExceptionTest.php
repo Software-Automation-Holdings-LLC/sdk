@@ -2,29 +2,29 @@
 
 declare(strict_types=1);
 
-namespace Sah\Sdk\Tests\RapidSign;
+namespace Isa\Sdk\Tests\RapidSign;
 
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\TestCase;
-use Sah\Sdk\RapidSign\Exception\BadGatewayException;
-use Sah\Sdk\RapidSign\Exception\ConflictException;
-use Sah\Sdk\RapidSign\Exception\DeadlineExceededException;
-use Sah\Sdk\RapidSign\Exception\ErrorFactory;
-use Sah\Sdk\RapidSign\Exception\ForbiddenException;
-use Sah\Sdk\RapidSign\Exception\GatewayTimeoutException;
-use Sah\Sdk\RapidSign\Exception\InternalErrorException;
-use Sah\Sdk\RapidSign\Exception\InvalidTokenException;
-use Sah\Sdk\RapidSign\Exception\LicenseLockedException;
-use Sah\Sdk\RapidSign\Exception\MethodNotAllowedException;
-use Sah\Sdk\RapidSign\Exception\NotFoundException;
-use Sah\Sdk\RapidSign\Exception\NotImplementedException;
-use Sah\Sdk\RapidSign\Exception\RapidSignException;
-use Sah\Sdk\RapidSign\Exception\RateLimitedException;
-use Sah\Sdk\RapidSign\Exception\ServiceUnavailableException;
-use Sah\Sdk\RapidSign\Exception\TokenExpiredException;
-use Sah\Sdk\RapidSign\Exception\UnauthorizedException;
-use Sah\Sdk\RapidSign\Exception\UnknownException;
-use Sah\Sdk\RapidSign\Exception\ValidationException;
+use Isa\Sdk\RapidSign\Exception\BadGatewayException;
+use Isa\Sdk\RapidSign\Exception\ConflictException;
+use Isa\Sdk\RapidSign\Exception\DeadlineExceededException;
+use Isa\Sdk\RapidSign\Exception\ErrorFactory;
+use Isa\Sdk\RapidSign\Exception\ForbiddenException;
+use Isa\Sdk\RapidSign\Exception\GatewayTimeoutException;
+use Isa\Sdk\RapidSign\Exception\InternalErrorException;
+use Isa\Sdk\RapidSign\Exception\InvalidTokenException;
+use Isa\Sdk\RapidSign\Exception\LicenseLockedException;
+use Isa\Sdk\RapidSign\Exception\MethodNotAllowedException;
+use Isa\Sdk\RapidSign\Exception\NotFoundException;
+use Isa\Sdk\RapidSign\Exception\NotImplementedException;
+use Isa\Sdk\RapidSign\Exception\RapidSignException;
+use Isa\Sdk\RapidSign\Exception\RateLimitedException;
+use Isa\Sdk\RapidSign\Exception\ServiceUnavailableException;
+use Isa\Sdk\RapidSign\Exception\TokenExpiredException;
+use Isa\Sdk\RapidSign\Exception\UnauthorizedException;
+use Isa\Sdk\RapidSign\Exception\UnknownException;
+use Isa\Sdk\RapidSign\Exception\ValidationException;
 
 #[CoversClass(ErrorFactory::class)]
 #[CoversClass(RapidSignException::class)]

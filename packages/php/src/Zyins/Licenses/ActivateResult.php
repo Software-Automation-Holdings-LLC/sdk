@@ -2,13 +2,16 @@
 
 declare(strict_types=1);
 
-namespace Sah\Sdk\Zyins\Licenses;
+namespace Isa\Sdk\Zyins\Licenses;
 
-use Sah\Sdk\Zyins\Exception\IsaException;
+use Isa\Sdk\Zyins\Exception\IsaException;
 
 /**
- * Typed response from {@see Service::activate()}. Mirrors the proto
- * `PublicActivateResponse` shape.
+ * Typed response from {@see Service::activate()}. The v2 wire shape is
+ * flat — `{status, licenseKey, remainingActivations}` at the top of
+ * `data` — but the public PHP surface keeps the nested
+ * `result->auth->licenseKey` form so existing consumers (bpp2.0 PHP
+ * bindings, integrator code) do not need to rewrite their reads.
  */
 final readonly class ActivateResult
 {
@@ -31,24 +34,17 @@ final readonly class ActivateResult
                 'unknown',
             );
         }
-        $remaining = $data['remaining_activations'] ?? null;
-        if (! is_int($remaining)) {
-            throw new IsaException(
-                'zyins: licenses.activate response missing remaining_activations',
-                'unknown',
-            );
-        }
-        $rawAuth = $data['auth'] ?? null;
-        if (! is_array($rawAuth)) {
-            throw new IsaException(
-                'zyins: licenses.activate response missing auth block',
-                'unknown',
-            );
-        }
-        $licenseKey = $rawAuth['license_key'] ?? null;
+        $licenseKey = $data['licenseKey'] ?? null;
         if (! is_string($licenseKey) || $licenseKey === '') {
             throw new IsaException(
-                'zyins: licenses.activate response missing auth.license_key',
+                'zyins: licenses.activate response missing licenseKey field',
+                'unknown',
+            );
+        }
+        $remaining = $data['remainingActivations'] ?? null;
+        if (! is_int($remaining)) {
+            throw new IsaException(
+                'zyins: licenses.activate response missing remainingActivations field',
                 'unknown',
             );
         }

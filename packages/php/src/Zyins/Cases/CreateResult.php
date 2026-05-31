@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Sah\Sdk\Zyins\Cases;
+namespace Isa\Sdk\Zyins\Cases;
 
 /**
  * Typed response for {@see Service::create()}.

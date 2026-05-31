@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Sah\Sdk\Account;
+namespace Isa\Sdk\Account;
 
 /**
  * Canonical branding resource carried inside a BaseResponse `data`

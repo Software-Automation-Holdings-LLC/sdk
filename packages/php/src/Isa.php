@@ -2,21 +2,25 @@
 
 declare(strict_types=1);
 
-namespace Sah\Sdk;
+namespace Isa\Sdk;
 
+use Isa\Sdk\Account\AccountClient;
+use Isa\Sdk\Core\CredentialStore;
+use Isa\Sdk\Core\InMemoryCredentialStore;
+use Isa\Sdk\Core\StaticToken;
+use Isa\Sdk\Proxy\ProxyClient;
+use Isa\Sdk\RapidSign\RapidSignClient;
+use Isa\Sdk\Zyins\Auth as ZyinsAuth;
+use Isa\Sdk\Zyins\Exception\IsaConfigException;
+use Isa\Sdk\Zyins\Licenses\CredentialState;
+use Isa\Sdk\Zyins\Licenses\Facade as LicensesFacade;
+use Isa\Sdk\Zyins\Licenses\LicenseRefreshedEvent;
+use Isa\Sdk\Zyins\Reference\AutocompleteAlgorithmInterface;
+use Isa\Sdk\Zyins\Reference\AutocorrectorFactory;
+use Isa\Sdk\Zyins\Reference\AutocorrectorInterface;
+use Isa\Sdk\Zyins\Reference\MatchAlgorithmInterface;
+use Isa\Sdk\Zyins\ZyInsClient;
 use Psr\Log\LoggerInterface;
-use Sah\Sdk\Account\AccountClient;
-use Sah\Sdk\Core\CredentialStore;
-use Sah\Sdk\Core\InMemoryCredentialStore;
-use Sah\Sdk\Core\StaticToken;
-use Sah\Sdk\Proxy\ProxyClient;
-use Sah\Sdk\RapidSign\RapidSignClient;
-use Sah\Sdk\Zyins\Auth as ZyinsAuth;
-use Sah\Sdk\Zyins\Exception\IsaConfigException;
-use Sah\Sdk\Zyins\Licenses\CredentialState;
-use Sah\Sdk\Zyins\Licenses\Facade as LicensesFacade;
-use Sah\Sdk\Zyins\Licenses\LicenseRefreshedEvent;
-use Sah\Sdk\Zyins\ZyInsClient;
 
 /**
  * Unified entry point for the ISA Platform SDK.
@@ -95,10 +99,19 @@ final readonly class Isa
         string|ZyinsAuth $token,
         ?LoggerInterface $logger,
         ?CredentialState $credentialState = null,
+        ?AutocorrectorInterface $autocorrector = null,
+        ?MatchAlgorithmInterface $matchAlgorithm = null,
+        ?AutocompleteAlgorithmInterface $autocompleteAlgorithm = null,
     ) {
         $bearer = $token instanceof ZyinsAuth ? $token->token : $token;
         $proxyAuth = $token instanceof ZyinsAuth ? $token : new ZyinsAuth(token: $token);
-        $this->zyins = new ZyInsClient(token: $token, logger: $logger);
+        $this->zyins = new ZyInsClient(
+            token: $token,
+            logger: $logger,
+            autocorrector: $autocorrector,
+            matchAlgorithm: $matchAlgorithm,
+            autocompleteAlgorithm: $autocompleteAlgorithm,
+        );
         $this->rapidsign = new RapidSignClient(token: $bearer);
         $this->proxy = new ProxyClient(token: $bearer, identityAuth: $proxyAuth);
 
@@ -145,22 +158,49 @@ final readonly class Isa
      *
      * @throws IsaConfigException When neither argument nor env supplies a token.
      */
-    public static function withBearer(?string $token = null, ?LoggerInterface $logger = null): self
-    {
+    public static function withBearer(
+        ?string $token = null,
+        ?LoggerInterface $logger = null,
+        ?AutocorrectorInterface $autocorrector = null,
+        ?MatchAlgorithmInterface $matchAlgorithm = null,
+        ?AutocompleteAlgorithmInterface $autocompleteAlgorithm = null,
+    ): self {
         $resolved = $token ?? self::env('ISA_TOKEN');
         if ($resolved === null) {
             throw new IsaConfigException(
                 'Isa::withBearer(): missing token. Pass it explicitly or set ISA_TOKEN in the environment.'
             );
         }
-        return new self(token: $resolved, logger: $logger);
+        return new self(
+            token: $resolved,
+            logger: $logger,
+            autocorrector: $autocorrector,
+            matchAlgorithm: $matchAlgorithm,
+            autocompleteAlgorithm: $autocompleteAlgorithm,
+        );
+    }
+
+    /**
+     * Top-level kernel factory for the autocorrector adapter — mirrors
+     * the locked TS surface `Isa.autocorrector()`. Returns a tiny
+     * factory whose `create()` method builds a default autocorrector
+     * around the supplied typo map.
+     *
+     * @example
+     *  $typoMap = ['HBP' => 'HIGH BLOOD PRESSURE'];
+     *  $ac = Isa::autocorrector()->create($typoMap);
+     *  echo $ac->correct('hbp');                            // "HIGH BLOOD PRESSURE"
+     */
+    public static function autocorrector(): AutocorrectorFactory
+    {
+        return new AutocorrectorFactory();
     }
 
     /**
      * Construct a License-mode SDK. When invoked with no arguments,
      * reads `ISA_LICENSE_KEYCODE` and `ISA_LICENSE_EMAIL` from the
      * environment. Wires the credential-aware
-     * {@see \Sah\Sdk\Zyins\Licenses\Facade} so callers may invoke
+     * {@see \Isa\Sdk\Zyins\Licenses\Facade} so callers may invoke
      * `activate() / check() / deactivate()` with zero arguments.
      *
      * @param string|null              $keycode  License keycode; env is consulted when null.
@@ -177,6 +217,9 @@ final readonly class Isa
         ?LoggerInterface $logger = null,
         ?CredentialStore $store = null,
         ?string $deviceId = null,
+        ?AutocorrectorInterface $autocorrector = null,
+        ?MatchAlgorithmInterface $matchAlgorithm = null,
+        ?AutocompleteAlgorithmInterface $autocompleteAlgorithm = null,
     ): self {
         $resolvedKey = $keycode ?? self::env('ISA_LICENSE_KEYCODE');
         $resolvedEmail = $email ?? self::env('ISA_LICENSE_EMAIL');
@@ -212,6 +255,9 @@ final readonly class Isa
             token: ZyinsAuth::license($resolvedKey, $resolvedEmail),
             logger: $logger,
             credentialState: $state,
+            autocorrector: $autocorrector,
+            matchAlgorithm: $matchAlgorithm,
+            autocompleteAlgorithm: $autocompleteAlgorithm,
         );
     }
 
@@ -229,6 +275,9 @@ final readonly class Isa
         ?LoggerInterface $logger = null,
         ?CredentialStore $store = null,
         ?string $deviceId = null,
+        ?AutocorrectorInterface $autocorrector = null,
+        ?MatchAlgorithmInterface $matchAlgorithm = null,
+        ?AutocompleteAlgorithmInterface $autocompleteAlgorithm = null,
     ): self {
         return self::withLicense(
             keycode: $keycode,
@@ -236,6 +285,9 @@ final readonly class Isa
             logger: $logger,
             store: $store,
             deviceId: $deviceId,
+            autocorrector: $autocorrector,
+            matchAlgorithm: $matchAlgorithm,
+            autocompleteAlgorithm: $autocompleteAlgorithm,
         );
     }
 
@@ -256,7 +308,10 @@ final readonly class Isa
                 'Isa::forForm(): missing form token. Pass a non-empty embedded-form token.'
             );
         }
-        return new self(token: self::formBootstrapToken($formToken), logger: $logger);
+        // Use the form token directly as the bearer credential. The full
+        // session-reissue exchange (POST /v1/sessions/reissue) will be wired
+        // in a follow-up; for now the raw token reaches the server unchanged.
+        return new self(token: $formToken, logger: $logger);
     }
 
     /**
@@ -268,6 +323,9 @@ final readonly class Isa
      *   2. `keycode` + `email`     → {@see withKeycode()}
      *   3. `formToken`             → {@see forForm()}
      *
+     * Empty strings are treated as missing (consistent with
+     * {@see fromEnv()} and {@see forForm()}).
+     *
      * @throws IsaConfigException When no valid combination is supplied.
      */
     public static function authenticate(
@@ -278,6 +336,13 @@ final readonly class Isa
         ?LoggerInterface $logger = null,
         ?CredentialStore $store = null,
     ): self {
+        // Normalise empty strings so callers that pass '' get the same
+        // behaviour as callers that pass null.
+        $token = ($token !== null && $token !== '') ? $token : null;
+        $keycode = ($keycode !== null && $keycode !== '') ? $keycode : null;
+        $email = ($email !== null && $email !== '') ? $email : null;
+        $formToken = ($formToken !== null && $formToken !== '') ? $formToken : null;
+
         if ($token !== null) {
             return self::withBearer(token: $token, logger: $logger);
         }
@@ -290,12 +355,6 @@ final readonly class Isa
         throw new IsaConfigException(
             'Isa::authenticate(): provide one of token, keycode+email, or formToken.'
         );
-    }
-
-    private static function formBootstrapToken(string $formToken): string
-    {
-        $digest = substr(hash('sha256', $formToken), 0, 20);
-        return 'isa_test_form_' . $digest;
     }
 
     /**

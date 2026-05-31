@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Sah\Sdk\RapidSign;
+namespace Isa\Sdk\RapidSign;
 
 /** Default {@see Sleeper}: `usleep` with millisecond resolution. */
 final class SystemSleeper implements Sleeper

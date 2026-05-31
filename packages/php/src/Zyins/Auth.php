@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Sah\Sdk\Zyins;
+namespace Isa\Sdk\Zyins;
 
 use InvalidArgumentException;
 
@@ -38,14 +38,21 @@ final readonly class Auth
         // it so the surgical fix is to preserve it through Auth.
         public ?string $sessionSecret = null,
     ) {
+        if (trim($this->scheme) === '') {
+            throw new InvalidArgumentException('Isa\\Sdk\\Zyins\\Auth refuses an empty scheme');
+        }
+        if (preg_match('/[\x00-\x1F\x7F\s]/', $this->scheme) === 1) {
+            throw new InvalidArgumentException('Isa\\Sdk\\Zyins\\Auth refuses a scheme containing invalid characters');
+        }
+
         if (trim($this->token) === '') {
-            throw new InvalidArgumentException('Sah\\Sdk\\Zyins\\Auth refuses an empty token');
+            throw new InvalidArgumentException('Isa\\Sdk\\Zyins\\Auth refuses an empty token');
         }
         // Reject control characters (incl. CR / LF / tab) anywhere in the
         // token — they would corrupt the Authorization header and have
         // historically been used in header-injection attacks.
         if (preg_match('/[\x00-\x1F\x7F]/', $this->token) === 1) {
-            throw new InvalidArgumentException('Sah\\Sdk\\Zyins\\Auth refuses a token containing control characters');
+            throw new InvalidArgumentException('Isa\\Sdk\\Zyins\\Auth refuses a token containing control characters');
         }
     }
 
@@ -53,10 +60,10 @@ final readonly class Auth
     public static function license(string $keycode, string $email): self
     {
         if ($keycode === '') {
-            throw new InvalidArgumentException('Sah\\Sdk\\Zyins\\Auth::license requires a non-empty keycode');
+            throw new InvalidArgumentException('Isa\\Sdk\\Zyins\\Auth::license requires a non-empty keycode');
         }
         if ($email === '') {
-            throw new InvalidArgumentException('Sah\\Sdk\\Zyins\\Auth::license requires a non-empty email');
+            throw new InvalidArgumentException('Isa\\Sdk\\Zyins\\Auth::license requires a non-empty email');
         }
         $packed = base64_encode($keycode . ':' . $email);
         return new self(token: $packed, scheme: self::SCHEME_LICENSE);
@@ -72,10 +79,10 @@ final readonly class Auth
         $sidIsEmpty = ($sid === '');
         $secretIsEmpty = ($sessionSecret === '');
         if ($sidIsEmpty) {
-            throw new InvalidArgumentException('Sah\\Sdk\\Zyins\\Auth::session requires a non-empty session id');
+            throw new InvalidArgumentException('Isa\\Sdk\\Zyins\\Auth::session requires a non-empty session id');
         }
         if ($secretIsEmpty) {
-            throw new InvalidArgumentException('Sah\\Sdk\\Zyins\\Auth::session requires a non-empty session secret');
+            throw new InvalidArgumentException('Isa\\Sdk\\Zyins\\Auth::session requires a non-empty session secret');
         }
         return new self(
             token: $sid,

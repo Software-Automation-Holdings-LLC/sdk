@@ -2,22 +2,22 @@
 
 declare(strict_types=1);
 
-namespace Sah\Sdk\Tests\Catalog;
+namespace Isa\Sdk\Tests\Catalog;
 
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\TestCase;
-use Sah\Sdk\Catalog\Carriers;
-use Sah\Sdk\Catalog\ErrorAdviceCodes;
-use Sah\Sdk\Catalog\ErrorCode;
-use Sah\Sdk\Catalog\ErrorDocUrls;
-use Sah\Sdk\Catalog\Product;
-use Sah\Sdk\Catalog\Products;
-use Sah\Sdk\Catalog\Scope;
-use Sah\Sdk\Catalog\ScopeDescriptions;
-use Sah\Sdk\Catalog\SignEvent;
-use Sah\Sdk\Catalog\SignEventLabels;
-use Sah\Sdk\Catalog\State;
-use Sah\Sdk\Catalog\States;
+use Isa\Sdk\Catalog\Carriers;
+use Isa\Sdk\Catalog\ErrorAdviceCodes;
+use Isa\Sdk\Catalog\ErrorCode;
+use Isa\Sdk\Catalog\ErrorDocUrls;
+use Isa\Sdk\Catalog\Product;
+use Isa\Sdk\Catalog\Products;
+use Isa\Sdk\Catalog\Scope;
+use Isa\Sdk\Catalog\ScopeDescriptions;
+use Isa\Sdk\Catalog\SignEvent;
+use Isa\Sdk\Catalog\SignEventLabels;
+use Isa\Sdk\Catalog\State;
+use Isa\Sdk\Catalog\States;
 
 #[CoversClass(Products::class)]
 #[CoversClass(Carriers::class)]

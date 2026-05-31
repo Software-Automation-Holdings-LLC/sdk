@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Sah\Sdk\Zyins;
+namespace Isa\Sdk\Zyins;
 
 /**
  * Coarse product type, mirroring the JS `ProductType` enum.

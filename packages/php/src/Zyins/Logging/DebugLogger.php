@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Sah\Sdk\Zyins\Logging;
+namespace Isa\Sdk\Zyins\Logging;
 
 use Psr\Http\Message\RequestInterface;
 use Psr\Http\Message\ResponseInterface;
@@ -26,7 +26,8 @@ use Psr\Log\LoggerInterface;
  *  - Headers `Authorization`, `X-Device-Signature`, `X-Session-Signature`,
  *    `X-Isa-Signature`, `Cookie`, `Set-Cookie` → "[redacted]".
  *  - JSON body fields named `email`, `dob`, `ssn`, `phone`, `password`,
- *    `token`, `secret` → "[redacted]" (recursive, case-insensitive).
+ *    `token`, `secret`, `license_key`, `licenseKey` → "[redacted]"
+ *    (recursive, case-insensitive).
  *
  * The logger is the only diagnostic surface that can see decoded
  * bodies, so redaction lives here, never in the transport.
@@ -59,6 +60,7 @@ final class DebugLogger
         'secret',
         'session_secret',
         'license_key',
+        'licensekey',
         'keycode',
     ];
 

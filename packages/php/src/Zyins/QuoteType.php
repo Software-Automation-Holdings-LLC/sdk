@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Sah\Sdk\Zyins;
+namespace Isa\Sdk\Zyins;
 
 /**
  * Wire discriminator for the `quote_options.quote_type` field.

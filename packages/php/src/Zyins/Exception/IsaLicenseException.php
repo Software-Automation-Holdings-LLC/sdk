@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Sah\Sdk\Zyins\Exception;
+namespace Isa\Sdk\Zyins\Exception;
 
 /**
  * License-state error (mirrors JS `LicenseError`).

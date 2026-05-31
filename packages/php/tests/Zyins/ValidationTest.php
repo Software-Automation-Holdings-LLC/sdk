@@ -2,17 +2,17 @@
 
 declare(strict_types=1);
 
-namespace Sah\Sdk\Tests\Zyins;
+namespace Isa\Sdk\Tests\Zyins;
 
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\TestCase;
-use Sah\Sdk\Tests\Zyins\Support\MockHttpClient;
-use Sah\Sdk\Zyins\Applicant;
-use Sah\Sdk\Zyins\Auth;
-use Sah\Sdk\Zyins\Height;
-use Sah\Sdk\Zyins\NicotineUsage;
-use Sah\Sdk\Zyins\Sex;
-use Sah\Sdk\Zyins\Weight;
+use Isa\Sdk\Tests\Zyins\Support\MockHttpClient;
+use Isa\Sdk\Zyins\Applicant;
+use Isa\Sdk\Zyins\Auth;
+use Isa\Sdk\Zyins\Height;
+use Isa\Sdk\Zyins\NicotineUsage;
+use Isa\Sdk\Zyins\Sex;
+use Isa\Sdk\Zyins\Weight;
 
 #[CoversClass(Auth::class)]
 #[CoversClass(Height::class)]
@@ -36,6 +36,18 @@ final class ValidationTest extends TestCase
     {
         $this->expectException(\InvalidArgumentException::class);
         new Auth("isa_test_abc\x00");
+    }
+
+    public function testAuthRejectsWhitespaceOnlyScheme(): void
+    {
+        $this->expectException(\InvalidArgumentException::class);
+        new Auth("isa_test_abc", "   \t  ");
+    }
+
+    public function testAuthRejectsSchemeWithEmbeddedNewline(): void
+    {
+        $this->expectException(\InvalidArgumentException::class);
+        new Auth("isa_test_abc", "Bearer\r\nX-Injected:");
     }
 
     public function testHeightRejectsInchesGreaterThanEleven(): void

@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Sah\Sdk\Proxy;
+namespace Isa\Sdk\Proxy;
 
 /**
  * Per-request overrides callers may set without breaking the rest of

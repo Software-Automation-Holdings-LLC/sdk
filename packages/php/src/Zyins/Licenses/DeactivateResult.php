@@ -2,17 +2,23 @@
 
 declare(strict_types=1);
 
-namespace Sah\Sdk\Zyins\Licenses;
+namespace Isa\Sdk\Zyins\Licenses;
+
+use Isa\Sdk\Zyins\Exception\IsaException;
 
 /**
- * Typed response from {@see Service::deactivate()}. Mirrors the proto
- * `PublicDeactivateResponse` shape.
+ * Typed response from {@see Service::deactivate()}. The v2 wire word
+ * is `inactive`; legacy servers may still return `deactivated`. Both
+ * are surfaced to the caller as-is so consumers can match on the
+ * value they expect from their pinned server version.
  */
 final readonly class DeactivateResult
 {
-    /** @param string $status Always `deactivated` on success. */
-    public function __construct(public string $status)
-    {
+    /** @param string $status `inactive` on v2 success; `deactivated` on legacy success. */
+    public function __construct(
+        public string $status,
+        public ?int $remainingActivations = null,
+    ) {
     }
 
     /**
@@ -20,7 +26,16 @@ final readonly class DeactivateResult
      */
     public static function fromWire(array $data): self
     {
-        $status = isset($data['status']) && is_string($data['status']) ? $data['status'] : 'deactivated';
-        return new self($status);
+        $status = $data['status'] ?? null;
+        if (! is_string($status) || $status === '') {
+            throw new IsaException(
+                'zyins: licenses.deactivate response missing status field',
+                'unknown',
+            );
+        }
+        $remaining = isset($data['remainingActivations']) && is_int($data['remainingActivations'])
+            ? $data['remainingActivations']
+            : null;
+        return new self($status, $remaining);
     }
 }

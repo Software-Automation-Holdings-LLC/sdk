@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Sah\Sdk\RapidSign;
+namespace Isa\Sdk\RapidSign;
 
 /**
  * Sleep facade. Test doubles substitute an instant-return implementation

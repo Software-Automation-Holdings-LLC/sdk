@@ -2,17 +2,17 @@
 
 declare(strict_types=1);
 
-namespace Sah\Sdk\Tests\Proxy\Exception;
+namespace Isa\Sdk\Tests\Proxy\Exception;
 
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\TestCase;
-use Sah\Sdk\Proxy\Exception\AlgosureException;
-use Sah\Sdk\Proxy\Exception\IntegrationNotFoundException;
-use Sah\Sdk\Proxy\Exception\IsaException;
-use Sah\Sdk\Proxy\Exception\ProxyAuthException;
-use Sah\Sdk\Proxy\Exception\ProxyException;
-use Sah\Sdk\Proxy\Exception\ProxyRateLimitException;
-use Sah\Sdk\Proxy\Exception\ProxyValidationException;
+use Isa\Sdk\Proxy\Exception\AlgosureException;
+use Isa\Sdk\Proxy\Exception\IntegrationNotFoundException;
+use Isa\Sdk\Proxy\Exception\IsaException;
+use Isa\Sdk\Proxy\Exception\ProxyAuthException;
+use Isa\Sdk\Proxy\Exception\ProxyException;
+use Isa\Sdk\Proxy\Exception\ProxyRateLimitException;
+use Isa\Sdk\Proxy\Exception\ProxyValidationException;
 
 #[CoversClass(IsaException::class)]
 #[CoversClass(ProxyException::class)]

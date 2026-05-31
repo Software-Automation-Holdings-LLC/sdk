@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Sah\Sdk\Zyins\Branding;
+namespace Isa\Sdk\Zyins\Branding;
 
 /**
  * Whitelabel branding detail returned by {@see Service::lookup()}.

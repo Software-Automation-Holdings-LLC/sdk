@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace Sah\Sdk\RapidSign;
+namespace Isa\Sdk\RapidSign;
 
-use Sah\Sdk\RapidSign\Exception\ValidationException;
+use Isa\Sdk\RapidSign\Exception\ValidationException;
 
 /**
  * Bearer-token credential for the RapidSign API.

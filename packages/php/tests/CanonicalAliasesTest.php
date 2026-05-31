@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace Sah\Sdk\Tests;
+namespace Isa\Sdk\Tests;
 
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\TestCase;
-use Sah\Sdk\Isa;
-use Sah\Sdk\Zyins\Exception\IsaConfigException;
+use Isa\Sdk\Isa;
+use Isa\Sdk\Zyins\Exception\IsaConfigException;
 
 /**
  * Regression guard for the SDK canonical surface.

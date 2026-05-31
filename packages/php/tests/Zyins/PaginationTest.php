@@ -2,14 +2,14 @@
 
 declare(strict_types=1);
 
-namespace Sah\Sdk\Tests\Zyins;
+namespace Isa\Sdk\Tests\Zyins;
 
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\TestCase;
-use Sah\Sdk\Zyins\Pagination\CursorIterator;
-use Sah\Sdk\Zyins\Pagination\CursorPage;
-use Sah\Sdk\Zyins\Pagination\FirstPage;
-use Sah\Sdk\Zyins\Pagination\ListOptions;
+use Isa\Sdk\Zyins\Pagination\CursorIterator;
+use Isa\Sdk\Zyins\Pagination\CursorPage;
+use Isa\Sdk\Zyins\Pagination\FirstPage;
+use Isa\Sdk\Zyins\Pagination\ListOptions;
 
 #[CoversClass(CursorIterator::class)]
 #[CoversClass(CursorPage::class)]

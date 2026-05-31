@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace Sah\Sdk\Zyins\Licenses;
+namespace Isa\Sdk\Zyins\Licenses;
 
-use Sah\Sdk\Core\CredentialStore;
+use Isa\Sdk\Core\CredentialStore;
 
 /**
- * In-memory credential snapshot shared between {@see \Sah\Sdk\Isa} and
+ * In-memory credential snapshot shared between {@see \Isa\Sdk\Isa} and
  * the {@see LicensesFacade}.
  *
  * Fields are mutated in place when `licenses->activate()` returns a

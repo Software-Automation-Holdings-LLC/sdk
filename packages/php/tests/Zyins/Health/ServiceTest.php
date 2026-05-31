@@ -2,16 +2,16 @@
 
 declare(strict_types=1);
 
-namespace Sah\Sdk\Tests\Zyins\Health;
+namespace Isa\Sdk\Tests\Zyins\Health;
 
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\TestCase;
-use Sah\Sdk\Tests\Zyins\Support\MockHttpClient;
-use Sah\Sdk\Zyins\Exception\IsaException;
-use Sah\Sdk\Zyins\Health\ProbeResult;
-use Sah\Sdk\Zyins\Health\ReadinessResult;
-use Sah\Sdk\Zyins\Health\Service as HealthService;
-use Sah\Sdk\Zyins\ZyInsClient;
+use Isa\Sdk\Tests\Zyins\Support\MockHttpClient;
+use Isa\Sdk\Zyins\Exception\IsaException;
+use Isa\Sdk\Zyins\Health\ProbeResult;
+use Isa\Sdk\Zyins\Health\ReadinessResult;
+use Isa\Sdk\Zyins\Health\Service as HealthService;
+use Isa\Sdk\Zyins\ZyInsClient;
 
 #[CoversClass(HealthService::class)]
 #[CoversClass(ReadinessResult::class)]

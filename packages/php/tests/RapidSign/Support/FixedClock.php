@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace Sah\Sdk\Tests\RapidSign\Support;
+namespace Isa\Sdk\Tests\RapidSign\Support;
 
-use Sah\Sdk\RapidSign\Clock;
+use Isa\Sdk\RapidSign\Clock;
 
 /**
  * Manually-advanced clock. Polling-loop tests pin `nowMs()` to control

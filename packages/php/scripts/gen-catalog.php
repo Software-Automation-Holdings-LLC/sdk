@@ -146,7 +146,7 @@ if (! is_array($json)) {
         }
         $constants[$ident] = $slug;
     }
-    $constantsCode = "<?php\n\ndeclare(strict_types=1);\n\nnamespace Sah\\Sdk\\Catalog;\n\n";
+    $constantsCode = "<?php\n\ndeclare(strict_types=1);\n\nnamespace Isa\\Sdk\\Catalog;\n\n";
     $constantsCode .= "/**\n * Generated catalog — DO NOT hand-edit. Stable wire-form product slugs.\n *\n";
     $constantsCode .= " * Look up metadata via {@see Products::metadata()}; iterate every slug\n";
     $constantsCode .= " * via {@see Products::values()}.\n */\n";

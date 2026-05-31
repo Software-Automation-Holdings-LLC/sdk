@@ -2,31 +2,29 @@
 
 declare(strict_types=1);
 
-namespace Sah\Sdk\Tests\Zyins;
+namespace Isa\Sdk\Tests\Zyins;
 
+use Isa\Sdk\Tests\Zyins\Support\FixedKeySource;
+use Isa\Sdk\Tests\Zyins\Support\MockHttpClient;
+use Isa\Sdk\Zyins\Applicant;
+use Isa\Sdk\Zyins\Condition;
+use Isa\Sdk\Zyins\Coverage;
+use Isa\Sdk\Zyins\Height;
+use Isa\Sdk\Zyins\Medication;
+use Isa\Sdk\Zyins\NicotineUsage;
+use Isa\Sdk\Zyins\Prequalify\Input;
+use Isa\Sdk\Zyins\Product;
+use Isa\Sdk\Zyins\ProductType;
+use Isa\Sdk\Zyins\RequestOptions;
+use Isa\Sdk\Zyins\Sex;
+use Isa\Sdk\Zyins\Weight;
+use Isa\Sdk\Zyins\ZyInsClient;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\TestCase;
-use Sah\Sdk\Tests\Zyins\Support\FixedKeySource;
-use Sah\Sdk\Tests\Zyins\Support\MockHttpClient;
-use Sah\Sdk\Zyins\Applicant;
-use Sah\Sdk\Zyins\Condition;
-use Sah\Sdk\Zyins\Coverage;
-use Sah\Sdk\Zyins\Height;
-use Sah\Sdk\Zyins\Medication;
-use Sah\Sdk\Zyins\NicotineDuration;
-use Sah\Sdk\Zyins\NicotineUsage;
-use Sah\Sdk\Zyins\NicotineUsageInput;
-use Sah\Sdk\Zyins\Prequalify\Input;
-use Sah\Sdk\Zyins\Product;
-use Sah\Sdk\Zyins\ProductType;
-use Sah\Sdk\Zyins\RequestOptions;
-use Sah\Sdk\Zyins\Sex;
-use Sah\Sdk\Zyins\Weight;
-use Sah\Sdk\Zyins\ZyInsClient;
 
-#[CoversClass(\Sah\Sdk\Zyins\Prequalify\Service::class)]
-#[CoversClass(\Sah\Sdk\Zyins\Prequalify\Input::class)]
-#[CoversClass(\Sah\Sdk\Zyins\Prequalify\Result::class)]
+#[CoversClass(\Isa\Sdk\Zyins\Prequalify\Service::class)]
+#[CoversClass(\Isa\Sdk\Zyins\Prequalify\Input::class)]
+#[CoversClass(\Isa\Sdk\Zyins\Prequalify\Result::class)]
 final class PrequalifyServiceTest extends TestCase
 {
     private const FIXTURE_TOKEN = 'isa_test_' . 'EXAMPLE000000000000000';
@@ -72,6 +70,10 @@ final class PrequalifyServiceTest extends TestCase
             products: [new Product('colonial-penn', ProductType::FinalExpense, 'colonial-penn.final-expense', 'Colonial Penn FE')],
         );
 
+        // Narrow the union — this suite covers the v1 path; the v3 facade
+        // routing union (`PrequalifyService|PrequalifyV3`) is exercised in
+        // V3FacadeRoutingTest.
+        self::assertInstanceOf(\Isa\Sdk\Zyins\Prequalify\Service::class, $client->prequalify);
         $result = $client->prequalify->run($input);
 
         self::assertCount(1, $result->plans);

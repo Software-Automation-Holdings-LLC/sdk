@@ -22,16 +22,16 @@ composer require sah/sdk:^0.5.0
 ## Quick start — bearer mode
 
 ```php
-use Sah\Sdk\Isa;
-use Sah\Sdk\Zyins\Applicant;
-use Sah\Sdk\Zyins\Coverage;
-use Sah\Sdk\Zyins\Height;
-use Sah\Sdk\Zyins\NicotineUsage;
-use Sah\Sdk\Zyins\Prequalify\Input;
-use Sah\Sdk\Zyins\Product;
-use Sah\Sdk\Zyins\ProductType;
-use Sah\Sdk\Zyins\Sex;
-use Sah\Sdk\Zyins\Weight;
+use Isa\Sdk\Isa;
+use Isa\Sdk\Zyins\Applicant;
+use Isa\Sdk\Zyins\Coverage;
+use Isa\Sdk\Zyins\Height;
+use Isa\Sdk\Zyins\NicotineUsage;
+use Isa\Sdk\Zyins\Prequalify\Input;
+use Isa\Sdk\Zyins\Product;
+use Isa\Sdk\Zyins\ProductType;
+use Isa\Sdk\Zyins\Sex;
+use Isa\Sdk\Zyins\Weight;
 
 $isa = Isa::withBearer();   // reads ISA_TOKEN from env
 
@@ -63,23 +63,130 @@ $result = $isa->zyins->prequalify->run($input);
 
 `withKeycode` is the canonical factory for agent-tool (BPP) integrations. `withLicense` is a deprecated alias that will be removed in a future major version. Use `withKeycode` in new code.
 
-Missing env vars raise `Sah\Sdk\Zyins\Exception\IsaConfigException` with the
+Missing env vars raise `Isa\Sdk\Zyins\Exception\IsaConfigException` with the
 exact variable name in the message.
+
+## First call in <15 lines
+
+```php
+use Isa\Sdk\Isa;
+use Isa\Sdk\Zyins\Applicant;
+use Isa\Sdk\Zyins\Coverage;
+use Isa\Sdk\Zyins\Prequalify\Input;
+use Isa\Sdk\Zyins\Sex;
+
+$isa = Isa::withKeycode(
+    keycode: 'SDV-HWH-WDD',
+    email:   'john.doe@acme-agency.com',
+);
+$result = $isa->zyins->prequalify->run(new Input(
+    applicant: new Applicant(dob: '1962-04-18', sex: Sex::Male, state: 'NC'),
+    coverage:  Coverage::faceValue(25_000),
+));
+echo $result->data->plans[0]->monthlyPremium;
+```
+
+## Per-surface API versions
+
+The ISA API is a federation of independently versioned surfaces. Every SDK
+release exports a frozen `BundledApiVersions::MAP` recording which `/vN`
+each surface targets:
+
+```php
+use Isa\Sdk\Zyins\Options\BundledApiVersions;
+
+print_r(BundledApiVersions::MAP);
+// [
+//   'prequalify' => 'v2',
+//   'quote'      => 'v2',
+//   'datasets'   => 'v2',
+//   'reference'  => 'v2',
+//   'sessions'   => 'v1',
+//   'branding'   => 'v1',
+//   'cases'      => 'v1',
+// ]
+```
+
+Pin individual surfaces with a per-surface `apiVersion` map. There is **no**
+`default` key and **no** string shorthand — resolution is
+`$apiVersion[$surface] ?? BundledApiVersions::MAP[$surface]`:
+
+```php
+$isa = Isa::withKeycode(
+    keycode:    'SDV-HWH-WDD',
+    email:      'john.doe@acme-agency.com',
+    apiVersion: ['quote' => 'v2'],   // pin only quote; everything else bundled
+);
+```
+
+The release that retargets `prequalify` / `quote` / `datasets` / `reference`
+to `v3` will bump those entries. See [SDK syntax proposal §2.7][syntax-27].
+
+[syntax-27]: ../../docs/sdk-syntax-proposal.md#27-versioning--per-surface-not-global
+
+## Reference data — `->match()`
+
+The unversioned `$isa->zyins->reference` namespace canonicalizes free-text
+medication and condition input. Unknown text never rejects — it returns a
+structured concept with `isKnown === false`, so the final canonicalization
+fires server-side at `/vN/prequalify`:
+
+```php
+$ds = $isa->zyins->datasets->get(include: ['conditions', 'medications']);
+
+$insulin = $isa->zyins->medications->match('insulin');
+echo $insulin->id, ' ', $insulin->name, ' ', var_export($insulin->isKnown, true);
+// med_01KSR2WVAGC05ZGR6FA4QYEB12 INSULIN true
+
+// Symmetric traversal — which conditions is insulin used for?
+$usedFor = $insulin->conditions($isa->zyins->reference->sort::MostCommonFirst);
+// frequency-ordered array; cond_01KSR2WVAGC05ZGR6FA4QYEA8X first
+
+$novel = $isa->zyins->medications->match('NewExperimental XR 2026');
+// $novel->isKnown === false; $novel->inputText === 'NewExperimental XR 2026'
+```
+
+`Sort::MostCommonFirst` and `Sort::Alphabetical` are the two supported
+orderings.
+
+## Case storage — bring your own
+
+`$isa->zyins->cases->*` routes through a `CaseStorage` adapter. The
+default is the zero-knowledge store — ISA's servers only hold ciphertext
+and an opaque ID. To plug a carrier-controlled store, pass your adapter at
+construction:
+
+```php
+$isa = Isa::withKeycode(
+    keycode: $keycode, email: $email,
+    caseStorage: new CarrierCaseStorage(),  // optional; default = ZeroKnowledgeCaseStorage
+);
+```
+
+See [cases guide](https://docs.isaapi.com/docs/cases) for the full
+bring-your-own pattern.
 
 ## Product namespaces
 
 ```php
-$isa->zyins->prequalify->run($input);
-$isa->zyins->quote->run($input);
-$isa->zyins->datasets->list(...);
-$isa->zyins->referenceData->...
-$isa->zyins->usage->...
+<?php
 
-$isa->rapidsign->documents->send($req);
-$isa->rapidsign->webhooks->verify(...);
+use Isa\Sdk\Isa;
 
-$isa->proxy->call->invoke($integrationUuid, $invokeInput);
-$isa->proxy->algosure->sign(...);
+function callEverySurface(Isa $isa, $input, $req, $invokeInput, $integrationUuid): void
+{
+    $isa->zyins->prequalify->run($input);
+    $isa->zyins->quote->run($input);
+    $isa->zyins->datasets->list();
+    // $isa->zyins->referenceData->...   // see ReferenceData service
+    // $isa->zyins->usage->...           // see Usage service
+
+    $isa->rapidsign->documents->send($req);
+    // $isa->rapidsign->webhooks->verify(...);
+
+    $isa->proxy->call->invoke($integrationUuid, $invokeInput);
+    // $isa->proxy->algosure->sign(...);
+}
 ```
 
 Each sub-namespace's services preserve the same request envelope and error
@@ -114,8 +221,8 @@ The PHP SDK exposes the public BPP license-lifecycle surface and the
 platform readiness probe on every `ZyInsClient`:
 
 ```php
-use Sah\Sdk\Zyins\Licenses\CheckInput;
-use Sah\Sdk\Zyins\ZyInsClient;
+use Isa\Sdk\Zyins\Licenses\CheckInput;
+use Isa\Sdk\Zyins\ZyInsClient;
 
 $client = ZyInsClient::withBearer();
 

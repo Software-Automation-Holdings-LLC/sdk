@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Sah\Sdk\Proxy;
+namespace Isa\Sdk\Proxy;
 
 use InvalidArgumentException;
 
@@ -26,7 +26,7 @@ final readonly class Auth
     public function __construct(public string $token)
     {
         if (trim($this->token) === '' || preg_match('/[\x00-\x1F\x7F]/', $this->token) === 1) {
-            throw new InvalidArgumentException('Sah\\IsaSdk\\Proxy\\Auth refuses an empty or control-character token');
+            throw new InvalidArgumentException(self::class . ' refuses an empty or control-character token');
         }
     }
 

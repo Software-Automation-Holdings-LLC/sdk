@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Sah\Sdk\Zyins;
+namespace Isa\Sdk\Zyins;
 
 /**
  * Produces idempotency keys for mutating requests.

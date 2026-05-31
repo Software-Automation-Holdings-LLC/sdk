@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace Sah\Sdk\Zyins\Preferences;
+namespace Isa\Sdk\Zyins\Preferences;
 
-use Sah\Sdk\Zyins\RequestOptions;
-use Sah\Sdk\Zyins\Transport;
+use Isa\Sdk\Zyins\RequestOptions;
+use Isa\Sdk\Zyins\Transport;
 
 /**
  * Preferences sub-service. Targets GET / POST /v1/preferences.

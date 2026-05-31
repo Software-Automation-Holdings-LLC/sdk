@@ -2,20 +2,20 @@
 
 declare(strict_types=1);
 
-namespace Sah\Sdk\Tests\Proxy\Call;
+namespace Isa\Sdk\Tests\Proxy\Call;
 
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\TestCase;
-use Sah\Sdk\Proxy\Call\SessionCallService;
-use Sah\Sdk\Proxy\Exception\ProxyAuthException;
-use Sah\Sdk\Proxy\Exception\ProxyException;
-use Sah\Sdk\Proxy\Exception\ProxyValidationException;
-use Sah\Sdk\Tests\Proxy\Support\FixedClock;
-use Sah\Sdk\Tests\Proxy\Support\FixedKeySource;
-use Sah\Sdk\Tests\Proxy\Support\MockHttpClient;
-use Sah\Sdk\Zyins\Auth as IdentityAuth;
-use Sah\Sdk\Zyins\Exception\IsaConfigException;
-use Sah\Sdk\Zyins\Exception\IsaIdempotencyConflictException;
+use Isa\Sdk\Proxy\Call\SessionCallService;
+use Isa\Sdk\Proxy\Exception\ProxyAuthException;
+use Isa\Sdk\Proxy\Exception\ProxyException;
+use Isa\Sdk\Proxy\Exception\ProxyValidationException;
+use Isa\Sdk\Tests\Proxy\Support\FixedClock;
+use Isa\Sdk\Tests\Proxy\Support\FixedKeySource;
+use Isa\Sdk\Tests\Proxy\Support\MockHttpClient;
+use Isa\Sdk\Zyins\Auth as IdentityAuth;
+use Isa\Sdk\Zyins\Exception\IsaConfigException;
+use Isa\Sdk\Zyins\Exception\IsaIdempotencyConflictException;
 
 /**
  * Tests for the session-signed `proxy.call` entry point.

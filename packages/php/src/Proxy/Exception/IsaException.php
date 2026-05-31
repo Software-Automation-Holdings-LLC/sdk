@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Sah\Sdk\Proxy\Exception;
+namespace Isa\Sdk\Proxy\Exception;
 
 use RuntimeException;
 use Throwable;

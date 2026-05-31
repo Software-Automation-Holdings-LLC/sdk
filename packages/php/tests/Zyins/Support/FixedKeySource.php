@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace Sah\Sdk\Tests\Zyins\Support;
+namespace Isa\Sdk\Tests\Zyins\Support;
 
-use Sah\Sdk\Zyins\IdempotencyKeySource;
+use Isa\Sdk\Zyins\IdempotencyKeySource;
 
 /**
  * Deterministic key source for assertions on outbound headers.

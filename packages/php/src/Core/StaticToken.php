@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Sah\Sdk\Core;
+namespace Isa\Sdk\Core;
 
 use InvalidArgumentException;
 
@@ -18,7 +18,7 @@ final readonly class StaticToken implements TokenSource
     {
         if ($this->value === '') {
             throw new InvalidArgumentException(
-                'Sah\\Sdk\\Core\\Transport\\StaticToken refuses an empty value'
+                'Isa\\Sdk\\Core\\StaticToken refuses an empty value'
             );
         }
     }

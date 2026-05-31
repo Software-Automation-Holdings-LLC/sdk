@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Sah\Sdk\RapidSign;
+namespace Isa\Sdk\RapidSign;
 
 /** Default {@see Clock}: `microtime(true)` rounded to milliseconds. */
 final class SystemClock implements Clock

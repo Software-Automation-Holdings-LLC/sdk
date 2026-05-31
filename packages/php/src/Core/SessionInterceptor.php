@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-namespace Sah\Sdk\Core;
+namespace Isa\Sdk\Core;
 
 use GuzzleHttp\Psr7\Utils;
 use Psr\Http\Client\ClientInterface;
 use Psr\Http\Message\RequestInterface;
 use Psr\Http\Message\ResponseInterface;
-use Sah\Sdk\Zyins\SignRequest;
+use Isa\Sdk\Zyins\SignRequest;
 
 /**
  * Transparent PSR-18 client wrapper that signs every outbound product

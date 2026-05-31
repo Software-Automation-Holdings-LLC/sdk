@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Sah\Sdk\Zyins\Pagination;
+namespace Isa\Sdk\Zyins\Pagination;
 
 /**
  * First-page-only fetcher. For UI consumers that render their own paginator

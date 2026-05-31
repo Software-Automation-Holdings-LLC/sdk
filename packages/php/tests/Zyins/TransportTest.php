@@ -2,24 +2,24 @@
 
 declare(strict_types=1);
 
-namespace Sah\Sdk\Tests\Zyins;
+namespace Isa\Sdk\Tests\Zyins;
 
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\TestCase;
-use Sah\Sdk\Tests\Zyins\Support\MockHttpClient;
-use Sah\Sdk\Zyins\Applicant;
-use Sah\Sdk\Zyins\Coverage;
-use Sah\Sdk\Zyins\DecodedResponse;
-use Sah\Sdk\Zyins\Exception\IsaException;
-use Sah\Sdk\Zyins\Height;
-use Sah\Sdk\Zyins\NicotineUsage;
-use Sah\Sdk\Zyins\Prequalify\Input;
-use Sah\Sdk\Zyins\Product;
-use Sah\Sdk\Zyins\ProductType;
-use Sah\Sdk\Zyins\Sex;
-use Sah\Sdk\Zyins\Transport;
-use Sah\Sdk\Zyins\Weight;
-use Sah\Sdk\Zyins\ZyInsClient;
+use Isa\Sdk\Tests\Zyins\Support\MockHttpClient;
+use Isa\Sdk\Zyins\Applicant;
+use Isa\Sdk\Zyins\Coverage;
+use Isa\Sdk\Zyins\DecodedResponse;
+use Isa\Sdk\Zyins\Exception\IsaException;
+use Isa\Sdk\Zyins\Height;
+use Isa\Sdk\Zyins\NicotineUsage;
+use Isa\Sdk\Zyins\Prequalify\Input;
+use Isa\Sdk\Zyins\Product;
+use Isa\Sdk\Zyins\ProductType;
+use Isa\Sdk\Zyins\Sex;
+use Isa\Sdk\Zyins\Transport;
+use Isa\Sdk\Zyins\Weight;
+use Isa\Sdk\Zyins\ZyInsClient;
 
 #[CoversClass(Transport::class)]
 #[CoversClass(DecodedResponse::class)]
@@ -117,8 +117,8 @@ final class TransportTest extends TestCase
                 weight: Weight::fromPounds(195),
                 state: 'NC',
                 nicotineUse: NicotineUsage::None,
-                medications: [new \Sah\Sdk\Zyins\Medication('LOSARTAN', 'HIGH BLOOD PRESSURE', '11 MONTHS AGO', '3 MONTHS AGO')],
-                conditions: [new \Sah\Sdk\Zyins\Condition('COPD', '3 DAYS AGO', '3 DAYS AGO')],
+                medications: [new \Isa\Sdk\Zyins\Medication('LOSARTAN', 'HIGH BLOOD PRESSURE', '11 MONTHS AGO', '3 MONTHS AGO')],
+                conditions: [new \Isa\Sdk\Zyins\Condition('COPD', '3 DAYS AGO', '3 DAYS AGO')],
             ),
             coverage: Coverage::faceValue(25_000),
             products: [new Product('colonial-penn', ProductType::FinalExpense, 'colonial-penn.final-expense', 'CP FE')],

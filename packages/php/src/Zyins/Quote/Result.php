@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Sah\Sdk\Zyins\Quote;
+namespace Isa\Sdk\Zyins\Quote;
 
 /**
  * Output of `quote->run()`. The shape mirrors the engine's

@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace Sah\Sdk\Tests\Proxy\Support;
+namespace Isa\Sdk\Tests\Proxy\Support;
 
-use Sah\Sdk\Proxy\Clock;
+use Isa\Sdk\Proxy\Clock;
 
 /**
  * Deterministic clock for Algosure signature tests.

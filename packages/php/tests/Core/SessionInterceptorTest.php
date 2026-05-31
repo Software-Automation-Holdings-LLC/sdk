@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Sah\Sdk\Tests\Core;
+namespace Isa\Sdk\Tests\Core;
 
 use DateInterval;
 use DateTimeImmutable;
@@ -15,10 +15,10 @@ use PHPUnit\Framework\TestCase;
 use Psr\Http\Client\ClientInterface;
 use Psr\Http\Message\RequestInterface;
 use Psr\Http\Message\ResponseInterface;
-use Sah\Sdk\Core\Clock;
-use Sah\Sdk\Core\SessionInterceptor;
-use Sah\Sdk\Core\SessionStore;
-use Sah\Sdk\Zyins\SignRequest;
+use Isa\Sdk\Core\Clock;
+use Isa\Sdk\Core\SessionInterceptor;
+use Isa\Sdk\Core\SessionStore;
+use Isa\Sdk\Zyins\SignRequest;
 
 final class SessionInterceptorTest extends TestCase
 {

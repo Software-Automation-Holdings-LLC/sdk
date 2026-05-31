@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-namespace Sah\Sdk\RapidSign;
+namespace Isa\Sdk\RapidSign;
 
 use GuzzleHttp\Client as GuzzleClient;
 use Psr\Http\Client\ClientInterface;
-use Sah\Sdk\RapidSign\Documents\Service as DocumentsService;
-use Sah\Sdk\RapidSign\Internal\HttpTransport;
-use Sah\Sdk\RapidSign\Webhooks\Service as WebhooksService;
+use Isa\Sdk\RapidSign\Documents\Service as DocumentsService;
+use Isa\Sdk\RapidSign\Internal\HttpTransport;
+use Isa\Sdk\RapidSign\Webhooks\Service as WebhooksService;
 
 /**
  * Tier-3 RapidSign facade.

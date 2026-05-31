@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace Sah\Sdk\RapidSign\Internal;
+namespace Isa\Sdk\RapidSign\Internal;
 
-use Sah\Sdk\RapidSign\Exception\ValidationException;
+use Isa\Sdk\RapidSign\Exception\ValidationException;
 
 /**
  * Duration parsing. Three accepted input shapes (mirrors the JS SDK):

@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Sah\Sdk\Tests\Core;
+namespace Isa\Sdk\Tests\Core;
 
 use InvalidArgumentException;
 use Nyholm\Psr7\Factory\Psr17Factory;
@@ -11,9 +11,9 @@ use Psr\Http\Client\ClientInterface;
 use Psr\Http\Message\RequestInterface;
 use Psr\Http\Message\ResponseInterface;
 use RuntimeException;
-use Sah\Sdk\Core\BearerClient;
-use Sah\Sdk\Core\StaticToken;
-use Sah\Sdk\Core\TokenSource;
+use Isa\Sdk\Core\BearerClient;
+use Isa\Sdk\Core\StaticToken;
+use Isa\Sdk\Core\TokenSource;
 
 final class BearerClientTest extends TestCase
 {

@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Sah\Sdk\Zyins\Health;
+namespace Isa\Sdk\Zyins\Health;
 
 /**
  * Per-dependency probe outcome carried inside the readiness response.

@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Sah\Sdk\Catalog;
+namespace Isa\Sdk\Catalog;
 
 /**
  * Public metadata for a single medication-use entry. A "use" is a

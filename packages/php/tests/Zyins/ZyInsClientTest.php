@@ -2,16 +2,16 @@
 
 declare(strict_types=1);
 
-namespace Sah\Sdk\Tests\Zyins;
+namespace Isa\Sdk\Tests\Zyins;
 
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\TestCase;
-use Sah\Sdk\Tests\Zyins\Support\FixedKeySource;
-use Sah\Sdk\Tests\Zyins\Support\MockHttpClient;
-use Sah\Sdk\Zyins\Auth;
-use Sah\Sdk\Zyins\ProductCatalog;
-use Sah\Sdk\Zyins\Products\Facade as ProductsFacade;
-use Sah\Sdk\Zyins\ZyInsClient;
+use Isa\Sdk\Tests\Zyins\Support\FixedKeySource;
+use Isa\Sdk\Tests\Zyins\Support\MockHttpClient;
+use Isa\Sdk\Zyins\Auth;
+use Isa\Sdk\Zyins\ProductCatalog;
+use Isa\Sdk\Zyins\Products\Facade as ProductsFacade;
+use Isa\Sdk\Zyins\ZyInsClient;
 
 #[CoversClass(ZyInsClient::class)]
 #[CoversClass(Auth::class)]

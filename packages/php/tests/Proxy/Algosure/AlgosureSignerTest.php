@@ -2,14 +2,14 @@
 
 declare(strict_types=1);
 
-namespace Sah\Sdk\Tests\Proxy\Algosure;
+namespace Isa\Sdk\Tests\Proxy\Algosure;
 
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\TestCase;
-use Sah\Sdk\Proxy\Algosure\AlgosureInput;
-use Sah\Sdk\Proxy\Algosure\AlgosureSigner;
-use Sah\Sdk\Proxy\Exception\AlgosureException;
-use Sah\Sdk\Tests\Proxy\Support\FixedClock;
+use Isa\Sdk\Proxy\Algosure\AlgosureInput;
+use Isa\Sdk\Proxy\Algosure\AlgosureSigner;
+use Isa\Sdk\Proxy\Exception\AlgosureException;
+use Isa\Sdk\Tests\Proxy\Support\FixedClock;
 
 #[CoversClass(AlgosureSigner::class)]
 final class AlgosureSignerTest extends TestCase

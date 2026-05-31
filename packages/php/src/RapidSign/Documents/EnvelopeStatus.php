@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Sah\Sdk\RapidSign\Documents;
+namespace Isa\Sdk\RapidSign\Documents;
 
 /** Lifecycle state of a document on the server. */
 enum EnvelopeStatus: string

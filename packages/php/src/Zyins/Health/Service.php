@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace Sah\Sdk\Zyins\Health;
+namespace Isa\Sdk\Zyins\Health;
 
-use Sah\Sdk\Zyins\RequestOptions;
-use Sah\Sdk\Zyins\Transport;
+use Isa\Sdk\Zyins\RequestOptions;
+use Isa\Sdk\Zyins\Transport;
 
 /**
  * Health sub-service. Exposes the shared platform `/ready` probe per
@@ -26,7 +26,7 @@ final readonly class Service
      * attached bearer token is harmless and lets one client struct
      * serve every operation.
      *
-     * @throws \Sah\Sdk\Zyins\Exception\IsaException on a 5xx response (drain signal).
+     * @throws \Isa\Sdk\Zyins\Exception\IsaException on transport failures or non-2xx responses.
      */
     public function getReadiness(?RequestOptions $options = null): ReadinessResult
     {

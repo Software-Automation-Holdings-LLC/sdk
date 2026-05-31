@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace Sah\Sdk\Tests\RapidSign\Support;
+namespace Isa\Sdk\Tests\RapidSign\Support;
 
-use Sah\Sdk\RapidSign\Sleeper;
+use Isa\Sdk\RapidSign\Sleeper;
 
 /**
  * No-op sleeper. Records every requested delay so tests assert on the

@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Sah\Sdk\Proxy;
+namespace Isa\Sdk\Proxy;
 
 /**
  * Default UUIDv4-shaped idempotency key source.

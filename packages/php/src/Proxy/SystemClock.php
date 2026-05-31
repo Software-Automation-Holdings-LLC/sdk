@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Sah\Sdk\Proxy;
+namespace Isa\Sdk\Proxy;
 
 /**
  * Production clock — reads the system wall clock. The only direct

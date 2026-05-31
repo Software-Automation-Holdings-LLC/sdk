@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Sah\Sdk\Zyins\Health;
+namespace Isa\Sdk\Zyins\Health;
 
 /**
  * Typed response from {@see Service::getReadiness()}. Mirrors the proto

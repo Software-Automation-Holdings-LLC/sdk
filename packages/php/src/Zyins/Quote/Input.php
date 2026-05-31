@@ -2,14 +2,14 @@
 
 declare(strict_types=1);
 
-namespace Sah\Sdk\Zyins\Quote;
+namespace Isa\Sdk\Zyins\Quote;
 
 use InvalidArgumentException;
-use Sah\Sdk\Zyins\Applicant;
-use Sah\Sdk\Zyins\Coverage;
-use Sah\Sdk\Zyins\NicotineDuration;
-use Sah\Sdk\Zyins\NicotineUsageInput;
-use Sah\Sdk\Zyins\Product;
+use Isa\Sdk\Zyins\Applicant;
+use Isa\Sdk\Zyins\Coverage;
+use Isa\Sdk\Zyins\NicotineDuration;
+use Isa\Sdk\Zyins\NicotineUsageInput;
+use Isa\Sdk\Zyins\Product;
 
 /**
  * Inputs accepted by `quote->run()`. A quote pins the applicant to a

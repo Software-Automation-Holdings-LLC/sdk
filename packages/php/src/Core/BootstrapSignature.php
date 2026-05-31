@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Sah\Sdk\Core;
+namespace Isa\Sdk\Core;
 
 /**
  * Output bundle of the embedded HMAC bootstrap signing flow.

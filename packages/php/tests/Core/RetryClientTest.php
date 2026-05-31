@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Sah\Sdk\Tests\Core;
+namespace Isa\Sdk\Tests\Core;
 
 use Nyholm\Psr7\Factory\Psr17Factory;
 use PHPUnit\Framework\TestCase;
@@ -11,9 +11,9 @@ use Psr\Http\Message\RequestInterface;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\StreamInterface;
 use RuntimeException;
-use Sah\Sdk\Core\Clock;
-use Sah\Sdk\Core\RetryClient;
-use Sah\Sdk\Core\Sleeper;
+use Isa\Sdk\Core\Clock;
+use Isa\Sdk\Core\RetryClient;
+use Isa\Sdk\Core\Sleeper;
 
 final class RetryClientTest extends TestCase
 {

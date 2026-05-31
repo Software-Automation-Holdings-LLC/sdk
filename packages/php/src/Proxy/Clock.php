@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Sah\Sdk\Proxy;
+namespace Isa\Sdk\Proxy;
 
 /**
  * Injectable wall-clock facade. Tests substitute a fixed clock so the

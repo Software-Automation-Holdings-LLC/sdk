@@ -2,14 +2,14 @@
 
 declare(strict_types=1);
 
-namespace Sah\Sdk\Zyins\Exception;
+namespace Isa\Sdk\Zyins\Exception;
 
 use Throwable;
 
 /**
  * Thrown when a factory cannot resolve required configuration —
  * typically a missing environment variable when constructing the
- * client via {@see \Sah\Sdk\Zyins\ZyInsClient::withBearer()} or a
+ * client via {@see \Isa\Sdk\Zyins\ZyInsClient::withBearer()} or a
  * sibling factory.
  *
  * Carries a fixed `configuration_error` code so consumers can switch

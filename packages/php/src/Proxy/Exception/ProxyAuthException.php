@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Sah\Sdk\Proxy\Exception;
+namespace Isa\Sdk\Proxy\Exception;
 
 /**
  * 401 / 403 from the proxy: the bearer token was missing, invalid,

@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace Sah\Sdk\Zyins\Usage;
+namespace Isa\Sdk\Zyins\Usage;
 
-use Sah\Sdk\Zyins\RequestOptions;
-use Sah\Sdk\Zyins\Transport;
+use Isa\Sdk\Zyins\RequestOptions;
+use Isa\Sdk\Zyins\Transport;
 
 /**
  * Usage sub-service. Exposes the per-token call-counts and quota
@@ -30,5 +30,15 @@ final readonly class Service
     public function summary(?RequestOptions $options = null): array
     {
         return $this->transport->get(self::SUMMARY_PATH, $options)->data;
+    }
+
+    /**
+     * Return the usage summary as the full JSON body (matches HTTP conformance).
+     *
+     * @return array<string,mixed>
+     */
+    public function summaryEnvelope(?RequestOptions $options = null): array
+    {
+        return $this->transport->getEnvelope(self::SUMMARY_PATH, $options);
     }
 }

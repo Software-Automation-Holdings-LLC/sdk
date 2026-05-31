@@ -37,7 +37,7 @@ parameters:
         # via a dynamic property on the interface alias; PHPStan can't see
         # that an anonymous class implementing Sleeper carries it.
         -
-            message: '#Access to an undefined property Sah\\Sdk\\Core\\Sleeper::\$calls\.#'
+            message: '#Access to an undefined property Isa\\Sdk\\Core\\Sleeper::\$calls\.#'
             path: tests/Core/RetryClientTest.php
         # Account-namespace tests assert envelope `data` shape after a
         # mocked HTTP exchange; the envelope's `data` is intentionally

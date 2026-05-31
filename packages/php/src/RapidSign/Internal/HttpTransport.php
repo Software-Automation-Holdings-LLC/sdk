@@ -2,18 +2,18 @@
 
 declare(strict_types=1);
 
-namespace Sah\Sdk\RapidSign\Internal;
+namespace Isa\Sdk\RapidSign\Internal;
 
 use GuzzleHttp\Psr7\Request;
 use Psr\Http\Client\ClientExceptionInterface;
 use Psr\Http\Client\ClientInterface;
 use Psr\Http\Message\ResponseInterface;
-use Sah\Sdk\RapidSign\Auth;
-use Sah\Sdk\RapidSign\Exception\ErrorFactory;
-use Sah\Sdk\RapidSign\Exception\RapidSignException;
-use Sah\Sdk\RapidSign\Exception\UnknownException;
-use Sah\Sdk\RapidSign\Idempotency;
-use Sah\Sdk\RapidSign\Sleeper;
+use Isa\Sdk\RapidSign\Auth;
+use Isa\Sdk\RapidSign\Exception\ErrorFactory;
+use Isa\Sdk\RapidSign\Exception\RapidSignException;
+use Isa\Sdk\RapidSign\Exception\UnknownException;
+use Isa\Sdk\RapidSign\Idempotency;
+use Isa\Sdk\RapidSign\Sleeper;
 
 /**
  * Thin PSR-18-backed HTTP transport for RapidSign.

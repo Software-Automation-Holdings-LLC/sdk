@@ -2,18 +2,18 @@
 
 declare(strict_types=1);
 
-namespace Sah\Sdk\Tests\Zyins;
+namespace Isa\Sdk\Tests\Zyins;
 
 use InvalidArgumentException;
 use PHPUnit\Framework\TestCase;
-use Sah\Sdk\Tests\Zyins\Support\FixedKeySource;
-use Sah\Sdk\Tests\Zyins\Support\MockHttpClient;
-use Sah\Sdk\Zyins\Branding\BrandingDetail;
-use Sah\Sdk\Zyins\Cases\CreateInput;
-use Sah\Sdk\Zyins\Email\EnqueueInput;
-use Sah\Sdk\Zyins\Exception\IsaException;
-use Sah\Sdk\Zyins\Preferences\SetInput;
-use Sah\Sdk\Zyins\ZyInsClient;
+use Isa\Sdk\Tests\Zyins\Support\FixedKeySource;
+use Isa\Sdk\Tests\Zyins\Support\MockHttpClient;
+use Isa\Sdk\Zyins\Branding\BrandingDetail;
+use Isa\Sdk\Zyins\Cases\CreateInput;
+use Isa\Sdk\Zyins\Email\EnqueueInput;
+use Isa\Sdk\Zyins\Exception\IsaException;
+use Isa\Sdk\Zyins\Preferences\SetInput;
+use Isa\Sdk\Zyins\ZyInsClient;
 
 final class AccountNamespacesTest extends TestCase
 {

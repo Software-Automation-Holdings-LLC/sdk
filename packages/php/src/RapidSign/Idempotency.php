@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Sah\Sdk\RapidSign;
+namespace Isa\Sdk\RapidSign;
 
 /**
  * Produces idempotency keys + correlation UUIDs for the RapidSign client.

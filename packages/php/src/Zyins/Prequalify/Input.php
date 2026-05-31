@@ -2,18 +2,18 @@
 
 declare(strict_types=1);
 
-namespace Sah\Sdk\Zyins\Prequalify;
+namespace Isa\Sdk\Zyins\Prequalify;
 
 use InvalidArgumentException;
-use Sah\Sdk\Zyins\Applicant;
-use Sah\Sdk\Zyins\Condition;
-use Sah\Sdk\Zyins\Coverage;
-use Sah\Sdk\Zyins\Medication;
-use Sah\Sdk\Zyins\NicotineDuration;
-use Sah\Sdk\Zyins\NicotineUsage;
-use Sah\Sdk\Zyins\NicotineUsageInput;
-use Sah\Sdk\Zyins\Product;
-use Sah\Sdk\Zyins\QuoteType;
+use Isa\Sdk\Zyins\Applicant;
+use Isa\Sdk\Zyins\Condition;
+use Isa\Sdk\Zyins\Coverage;
+use Isa\Sdk\Zyins\Medication;
+use Isa\Sdk\Zyins\NicotineDuration;
+use Isa\Sdk\Zyins\NicotineUsage;
+use Isa\Sdk\Zyins\NicotineUsageInput;
+use Isa\Sdk\Zyins\Product;
+use Isa\Sdk\Zyins\QuoteType;
 
 /**
  * Inputs accepted by `prequalify->run()`.

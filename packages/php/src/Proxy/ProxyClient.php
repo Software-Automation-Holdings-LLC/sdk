@@ -2,14 +2,14 @@
 
 declare(strict_types=1);
 
-namespace Sah\Sdk\Proxy;
+namespace Isa\Sdk\Proxy;
 
 use GuzzleHttp\Client as GuzzleClient;
 use Psr\Http\Client\ClientInterface;
-use Sah\Sdk\Proxy\Algosure\AlgosureSigner;
-use Sah\Sdk\Proxy\Call\Service as CallService;
-use Sah\Sdk\Proxy\Call\SessionCallService;
-use Sah\Sdk\Zyins\Auth as IdentityAuth;
+use Isa\Sdk\Proxy\Algosure\AlgosureSigner;
+use Isa\Sdk\Proxy\Call\Service as CallService;
+use Isa\Sdk\Proxy\Call\SessionCallService;
+use Isa\Sdk\Zyins\Auth as IdentityAuth;
 
 /**
  * ISA Platform proxy SDK entry point.

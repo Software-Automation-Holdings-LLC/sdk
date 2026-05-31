@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Sah\Sdk\Proxy\Algosure;
+namespace Isa\Sdk\Proxy\Algosure;
 
 /**
  * Inputs for an Algosure HMAC tag.

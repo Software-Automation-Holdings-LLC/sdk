@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace Sah\Sdk\Zyins\Datasets;
+namespace Isa\Sdk\Zyins\Datasets;
 
-use Sah\Sdk\Zyins\RequestOptions;
-use Sah\Sdk\Zyins\Transport;
+use Isa\Sdk\Zyins\RequestOptions;
+use Isa\Sdk\Zyins\Transport;
 
 /**
  * Datasets sub-service. Exposes the engine's data-pack listing and

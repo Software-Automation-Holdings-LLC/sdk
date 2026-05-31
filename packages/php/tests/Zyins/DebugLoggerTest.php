@@ -2,14 +2,14 @@
 
 declare(strict_types=1);
 
-namespace Sah\Sdk\Tests\Zyins;
+namespace Isa\Sdk\Tests\Zyins;
 
 use Nyholm\Psr7\Request;
 use Nyholm\Psr7\Response;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\TestCase;
 use Psr\Log\AbstractLogger;
-use Sah\Sdk\Zyins\Logging\DebugLogger;
+use Isa\Sdk\Zyins\Logging\DebugLogger;
 
 #[CoversClass(DebugLogger::class)]
 final class DebugLoggerTest extends TestCase
@@ -92,16 +92,21 @@ final class DebugLoggerTest extends TestCase
         $logger = new DebugLogger($captured);
 
         $request = new Request('POST', 'https://api.isaapi.com/v1/sessions');
-        $respBody = json_encode(
-            ['data' => ['ssn' => '123-45-6789', 'phone' => '+15555550100', 'safe' => 'value']],
-            JSON_THROW_ON_ERROR,
-        );
+        $respBody = json_encode([
+            'data' => [
+                'licenseKey' => 'isa_license_SECRET',
+                'phone' => '+15555550100',
+                'safe' => 'value',
+                'ssn' => '123-45-6789',
+            ],
+        ], JSON_THROW_ON_ERROR);
         $response = new Response(200, ['Content-Type' => 'application/json'], $respBody);
 
         $logger->logResponse($response, $request);
 
-        /** @var array{data: array{ssn: string, phone: string, safe: string}} $body */
+        /** @var array{data: array{licenseKey: string, ssn: string, phone: string, safe: string}} $body */
         $body = $captured->records[0]['context']['body'];
+        self::assertSame('[redacted]', $body['data']['licenseKey']);
         self::assertSame('[redacted]', $body['data']['ssn']);
         self::assertSame('[redacted]', $body['data']['phone']);
         self::assertSame('value', $body['data']['safe']);

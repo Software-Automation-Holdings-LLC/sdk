@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Sah\Sdk\RapidSign\Exception;
+namespace Isa\Sdk\RapidSign\Exception;
 
 /** 502 — upstream dependency returned an unusable response. Retryable. */
 final class BadGatewayException extends RapidSignException

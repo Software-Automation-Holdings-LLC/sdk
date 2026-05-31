@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace Sah\Sdk\Proxy\Algosure;
+namespace Isa\Sdk\Proxy\Algosure;
 
-use Sah\Sdk\Proxy\Clock;
-use Sah\Sdk\Proxy\Exception\AlgosureException;
-use Sah\Sdk\Proxy\SystemClock;
+use Isa\Sdk\Proxy\Clock;
+use Isa\Sdk\Proxy\Exception\AlgosureException;
+use Isa\Sdk\Proxy\SystemClock;
 
 /**
  * Algosure HMAC signer — embedded-salt variant (post-PR #512 protocol).

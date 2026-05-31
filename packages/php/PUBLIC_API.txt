@@ -2,36 +2,36 @@
 # Captures the public API surface; CI fails on drift.
 
 === Account/AccountClient.php ===
-namespace Sah\Sdk\Account;
+namespace Isa\Sdk\Account;
 class AccountClient
     public function __construct(?ClientInterface $httpClient = null, ?TokenSource $tokenSource = null, string $baseUrl = Http::DEFAULT_BASE_URL, ?ZyinsReferenceDataService $referenceData = null, string $authorizationScheme = Auth::SCHEME_BEARER,)
 
 === Account/BaseResponse.php ===
-namespace Sah\Sdk\Account;
+namespace Isa\Sdk\Account;
 class BaseResponse
     public function __construct(public string $object, public bool $livemode, public string $requestId, public string $idempotencyKey, public mixed $data,)
 
 === Account/BrandingClient.php ===
-namespace Sah\Sdk\Account;
+namespace Isa\Sdk\Account;
 class BrandingClient
     public function __construct(private Http $http)
     public function lookup(array $request = []) : BaseResponse
     public function set(array $request) : BaseResponse
 
 === Account/BrandingDetail.php ===
-namespace Sah\Sdk\Account;
+namespace Isa\Sdk\Account;
 class BrandingDetail
     public function __construct(public string $imoName, public string $imoLogo, public mixed $productRestrictions, public string $navColor, public string $mainColor, public string $buttonColor, public string $activeButtonColor, public string $bgColor, public string $headerTextColor, public bool $hideAffiliateLeads, public bool $preventProductSelection, public string $defaultSettings,)
     public function fromWire(mixed $raw) : self
 
 === Account/CaseDetail.php ===
-namespace Sah\Sdk\Account;
+namespace Isa\Sdk\Account;
 class CaseDetail
     public function __construct(public string $caseId, public string $url, public bool $readonly, public string $createdAt, public mixed $body,)
     public function fromWire(mixed $raw) : self
 
 === Account/CasesClient.php ===
-namespace Sah\Sdk\Account;
+namespace Isa\Sdk\Account;
 class CasesClient
     public function __construct(private Http $http)
     public function create(mixed $input, mixed $results = null, ?array $products = null) : BaseResponse
@@ -40,36 +40,36 @@ class CasesClient
     public function email(string $caseId, string $to) : BaseResponse
 
 === Account/CasesListEnvelope.php ===
-namespace Sah\Sdk\Account;
+namespace Isa\Sdk\Account;
 class CasesListEnvelope
     public function __construct(public string $object, public bool $livemode, public string $requestId, public string $idempotencyKey, public array $data, public bool $hasMore,)
 
 === Account/EmailAttachment.php ===
-namespace Sah\Sdk\Account;
+namespace Isa\Sdk\Account;
 class EmailAttachment
     public function __construct(public string $filename, public string $content,)
     public function toWire() : array
 
 === Account/EmailCaseAck.php ===
-namespace Sah\Sdk\Account;
+namespace Isa\Sdk\Account;
 class EmailCaseAck
     public function __construct(public string $caseId, public string $to, public string $status,)
     public function fromWire(mixed $raw) : self
 
 === Account/EmailClient.php ===
-namespace Sah\Sdk\Account;
+namespace Isa\Sdk\Account;
 class EmailClient
     public function __construct(private Http $http)
     public function enqueue(array $request) : BaseResponse
 
 === Account/EnqueueEmailAck.php ===
-namespace Sah\Sdk\Account;
+namespace Isa\Sdk\Account;
 class EnqueueEmailAck
     public function __construct(public string $object, public string $status,)
     public function fromWire(mixed $raw, string $envelopeObject) : self
 
 === Account/Http.php ===
-namespace Sah\Sdk\Account;
+namespace Isa\Sdk\Account;
 class Http
     public function __construct(private ClientInterface $http, private string $baseUrl, private ?TokenSource $tokenSource = null, private string $authorizationScheme = Auth::SCHEME_BEARER,)
     public function postEnvelope(string $path, array $payload, bool $allowMissingData = false) : BaseResponse
@@ -77,70 +77,70 @@ class Http
     public const DEFAULT_BASE_URL
 
 === Account/PreferencesClient.php ===
-namespace Sah\Sdk\Account;
+namespace Isa\Sdk\Account;
 class PreferencesClient
     public function __construct(private Http $http)
     public function lookup(string $scope, array $request = []) : BaseResponse
     public function set(string $scope, mixed $prefs, array $request = []) : BaseResponse
 
 === Account/PreferencesDetail.php ===
-namespace Sah\Sdk\Account;
+namespace Isa\Sdk\Account;
 class PreferencesDetail
     public function __construct(public string $scope, public mixed $prefs,)
     public function fromWire(mixed $raw) : self
 
 === Account/ReferenceDataClient.php ===
-namespace Sah\Sdk\Account;
+namespace Isa\Sdk\Account;
 class ReferenceDataClient
     public function __construct(private ZyinsReferenceDataService $underlying)
     public function get(string $scope) : array
 
 === Catalog/CarrierMetadata.php ===
-namespace Sah\Sdk\Catalog;
+namespace Isa\Sdk\Catalog;
 class CarrierMetadata
     public function __construct(public string $slug, public string $displayName, public array $products,)
 
 === Catalog/Carriers.php ===
-namespace Sah\Sdk\Catalog;
+namespace Isa\Sdk\Catalog;
 class Carriers
     public function values() : array
     public function metadata(string $slug) : CarrierMetadata
 
 === Catalog/Conditions.php ===
-namespace Sah\Sdk\Catalog;
+namespace Isa\Sdk\Catalog;
 class Conditions
     public function values() : array
     public function metadata(string $category) : array
 
 === Catalog/ErrorAdviceCodes.php ===
-namespace Sah\Sdk\Catalog;
+namespace Isa\Sdk\Catalog;
 class ErrorAdviceCodes
     public function all() : array
     public function for(ErrorCode $code) : string
 
 === Catalog/ErrorCode.php ===
-namespace Sah\Sdk\Catalog;
+namespace Isa\Sdk\Catalog;
 enum ErrorCode : string
 
 === Catalog/ErrorDocUrls.php ===
-namespace Sah\Sdk\Catalog;
+namespace Isa\Sdk\Catalog;
 class ErrorDocUrls
     public function all() : array
     public function for(ErrorCode $code) : string
 
 === Catalog/MedicationUseMetadata.php ===
-namespace Sah\Sdk\Catalog;
+namespace Isa\Sdk\Catalog;
 class MedicationUseMetadata
     public function __construct(public string $displayName, public array $medications,)
 
 === Catalog/MedicationUses.php ===
-namespace Sah\Sdk\Catalog;
+namespace Isa\Sdk\Catalog;
 class MedicationUses
     public function values() : array
     public function metadata(string $use) : MedicationUseMetadata
 
 === Catalog/Product.php ===
-namespace Sah\Sdk\Catalog;
+namespace Isa\Sdk\Catalog;
 class Product
     public const AETNA_ACCENDO_FEX
     public const AETNA_PROTECTION_SERIES_FEX
@@ -251,12 +251,12 @@ class Product
     public const WILLIAM_PENN_OPTERM_TERM
 
 === Catalog/ProductMetadata.php ===
-namespace Sah\Sdk\Catalog;
+namespace Isa\Sdk\Catalog;
 class ProductMetadata
     public function __construct(public string $slug, public string $displayName, public string $carrier, public string $productClass, public array $stateVariations,)
 
 === Catalog/Products.php ===
-namespace Sah\Sdk\Catalog;
+namespace Isa\Sdk\Catalog;
 class Products
     public function values() : array
     public function metadata(string $slug) : ProductMetadata
@@ -264,83 +264,99 @@ class Products
     public function search(string $query) : array
 
 === Catalog/Scope.php ===
-namespace Sah\Sdk\Catalog;
+namespace Isa\Sdk\Catalog;
 enum Scope : string
 
 === Catalog/ScopeDescriptions.php ===
-namespace Sah\Sdk\Catalog;
+namespace Isa\Sdk\Catalog;
 class ScopeDescriptions
     public function all() : array
     public function for(Scope $scope) : string
 
 === Catalog/SignEvent.php ===
-namespace Sah\Sdk\Catalog;
+namespace Isa\Sdk\Catalog;
 enum SignEvent : string
 
 === Catalog/SignEventLabels.php ===
-namespace Sah\Sdk\Catalog;
+namespace Isa\Sdk\Catalog;
 class SignEventLabels
     public function all() : array
     public function for(SignEvent $event) : string
 
 === Catalog/State.php ===
-namespace Sah\Sdk\Catalog;
+namespace Isa\Sdk\Catalog;
 enum State : string
 
 === Catalog/StateMetadata.php ===
-namespace Sah\Sdk\Catalog;
+namespace Isa\Sdk\Catalog;
 class StateMetadata
     public function __construct(public string $abbreviation, public string $name, public bool $isTerritory,)
 
 === Catalog/States.php ===
-namespace Sah\Sdk\Catalog;
+namespace Isa\Sdk\Catalog;
 class States
     public function values() : array
     public function metadata(State $state) : StateMetadata
     public function byAbbreviation(string $input) : ?State
 
+=== Contract.php ===
+namespace Isa\Sdk\Internal;
+class Contract
+    public function pinFactories() : Isa
+    public function pinNamespaces(Isa $isa) : ZyInsClient
+    public function pinBundledApiVersions() : array
+    public function pinCaseStorage(CaseStorage $storage, CaseRecord $record) : ?CaseRecord
+    public function pinZeroKnowledgeCaseStorage() : string
+    public function pinPutResult(CaseStoragePutResult $r) : string
+    public function pinSort() : string
+    public function pinReferenceAdapters() : array
+    public function pinSuggestionBucket() : string
+    public function pinDatasetRowTypes() : array
+    public function pinErrors() : array
+    public function pinClients() : array
+
 === Core/BearerClient.php ===
-namespace Sah\Sdk\Core;
+namespace Isa\Sdk\Core;
 class BearerClient implements ClientInterface
     public function __construct(private TokenSource $source, private ClientInterface $inner,)
     public function sendRequest(RequestInterface $request) : ResponseInterface
 
 === Core/Bootstrap.php ===
-namespace Sah\Sdk\Core;
+namespace Isa\Sdk\Core;
 class Bootstrap
     public function build(string $keycode, string $email, string $licenseKey, string $deviceId, string $method, string $path, int $timestamp,) : BootstrapSignature
 
 === Core/BootstrapSignature.php ===
-namespace Sah\Sdk\Core;
+namespace Isa\Sdk\Core;
 class BootstrapSignature
     public function __construct(/** JSON body exactly as sent on the wire. Bytes signed verbatim. */ public readonly string $serializedBody, /** `<ts>.<METHOD> <path>.<body>` — the HMAC input. */ public readonly string $canonical, /** Lowercase hex HMAC-SHA256 over canonical, keyed by licenseKey. */ public readonly string $hex, /** `ISA-Signature: t=<ts>,v1=<hex>` — ready-to-set header value. */ public readonly string $header,)
 
 === Core/Clock.php ===
-namespace Sah\Sdk\Core;
+namespace Isa\Sdk\Core;
 interface Clock
     public function nowMilliseconds() : int
 
 === Core/CredentialStore.php ===
-namespace Sah\Sdk\Core;
+namespace Isa\Sdk\Core;
 interface CredentialStore
     public function get(string $key) : ?string
     public function set(string $key, string $value) : void
     public function remove(string $key) : void
 
 === Core/Envelope.php ===
-namespace Sah\Sdk\Core;
+namespace Isa\Sdk\Core;
 class Envelope
     public function __construct(public string $object, public bool $livemode, public string $requestId, public mixed $data,)
 
 === Core/InMemoryCredentialStore.php ===
-namespace Sah\Sdk\Core;
+namespace Isa\Sdk\Core;
 class InMemoryCredentialStore implements CredentialStore
     public function get(string $key) : ?string
     public function set(string $key, string $value) : void
     public function remove(string $key) : void
 
 === Core/ResponseExtractor.php ===
-namespace Sah\Sdk\Core;
+namespace Isa\Sdk\Core;
 class ResponseExtractor
     public function extractPayload(ResponseInterface $response, callable $validator) : mixed
     public function extractEnvelope(ResponseInterface $response) : Envelope
@@ -349,7 +365,7 @@ class ResponseExtractor
     public const ERR_VALIDATOR_REQUIRED
 
 === Core/RetryClient.php ===
-namespace Sah\Sdk\Core;
+namespace Isa\Sdk\Core;
 class RetryClient implements ClientInterface
     public function __construct(private ClientInterface $inner, private Clock $clock, private Sleeper $sleeper, ?int $maxAttempts = null, ?int $baseDelayMs = null, ?int $maxDelayMs = null,)
     public function sendRequest(RequestInterface $request) : ResponseInterface
@@ -359,18 +375,18 @@ class RetryClient implements ClientInterface
     public const DEFAULT_MAX_DELAY_MS
 
 === Core/Session.php ===
-namespace Sah\Sdk\Core;
+namespace Isa\Sdk\Core;
 class Session
     public function __construct(public string $sessionId, public string $sessionSecret, public DateTimeImmutable $expiresAt,)
 
 === Core/SessionInterceptor.php ===
-namespace Sah\Sdk\Core;
+namespace Isa\Sdk\Core;
 class SessionInterceptor implements ClientInterface
     public function __construct(private readonly SessionStore $store, private readonly ClientInterface $inner,)
     public function sendRequest(RequestInterface $request) : ResponseInterface
 
 === Core/SessionStore.php ===
-namespace Sah\Sdk\Core;
+namespace Isa\Sdk\Core;
 class SessionStore
     public function __construct(private readonly ClientInterface $client, private readonly RequestFactoryInterface $requestFactory, private readonly StreamFactoryInterface $streamFactory, private readonly Clock $clock, private readonly string $baseUrl, private readonly string $keycode, private readonly string $email, private readonly string $licenseKey, private readonly string $deviceId,)
     public function bootstrapCount() : int
@@ -380,50 +396,51 @@ class SessionStore
     public function onActivity() : void
 
 === Core/Sleeper.php ===
-namespace Sah\Sdk\Core;
+namespace Isa\Sdk\Core;
 interface Sleeper
     public function sleep(int $milliseconds) : void
 
 === Core/StaticToken.php ===
-namespace Sah\Sdk\Core;
+namespace Isa\Sdk\Core;
 class StaticToken implements TokenSource
     public function __construct(private string $value)
     public function token() : string
 
 === Core/SystemClock.php ===
-namespace Sah\Sdk\Core;
+namespace Isa\Sdk\Core;
 class SystemClock implements Clock
     public function nowMilliseconds() : int
 
 === Core/SystemSleeper.php ===
-namespace Sah\Sdk\Core;
+namespace Isa\Sdk\Core;
 class SystemSleeper implements Sleeper
     public function sleep(int $milliseconds) : void
 
 === Core/TokenSource.php ===
-namespace Sah\Sdk\Core;
+namespace Isa\Sdk\Core;
 interface TokenSource
     public function token() : string
 
 === Isa.php ===
-namespace Sah\Sdk;
+namespace Isa\Sdk;
 class Isa
     public function onLicenseRefreshed(\Closure $listener) : \Closure
-    public function withBearer(?string $token = null, ?LoggerInterface $logger = null) : self
-    public function withLicense(?string $keycode = null, ?string $email = null, ?LoggerInterface $logger = null, ?CredentialStore $store = null, ?string $deviceId = null,) : self
-    public function withKeycode(?string $keycode = null, ?string $email = null, ?LoggerInterface $logger = null, ?CredentialStore $store = null, ?string $deviceId = null,) : self
+    public function withBearer(?string $token = null, ?LoggerInterface $logger = null, ?AutocorrectorInterface $autocorrector = null, ?MatchAlgorithmInterface $matchAlgorithm = null, ?AutocompleteAlgorithmInterface $autocompleteAlgorithm = null,) : self
+    public function autocorrector() : AutocorrectorFactory
+    public function withLicense(?string $keycode = null, ?string $email = null, ?LoggerInterface $logger = null, ?CredentialStore $store = null, ?string $deviceId = null, ?AutocorrectorInterface $autocorrector = null, ?MatchAlgorithmInterface $matchAlgorithm = null, ?AutocompleteAlgorithmInterface $autocompleteAlgorithm = null,) : self
+    public function withKeycode(?string $keycode = null, ?string $email = null, ?LoggerInterface $logger = null, ?CredentialStore $store = null, ?string $deviceId = null, ?AutocorrectorInterface $autocorrector = null, ?MatchAlgorithmInterface $matchAlgorithm = null, ?AutocompleteAlgorithmInterface $autocompleteAlgorithm = null,) : self
     public function forForm(string $formToken, ?LoggerInterface $logger = null) : self
     public function authenticate(?string $token = null, ?string $keycode = null, ?string $email = null, ?string $formToken = null, ?LoggerInterface $logger = null, ?CredentialStore $store = null,) : self
     public function withSession(?string $sessionId = null, ?string $sessionSecret = null, ?LoggerInterface $logger = null,) : self
     public function fromEnv(?LoggerInterface $logger = null) : self
 
 === Proxy/Algosure/AlgosureInput.php ===
-namespace Sah\Sdk\Proxy\Algosure;
+namespace Isa\Sdk\Proxy\Algosure;
 class AlgosureInput
     public function __construct(public string $host, public string $method, public string $path, public string $salt, public int|string $saltId, public string $sessionId, public mixed $body = null, public ?int $timestampMs = null,)
 
 === Proxy/Algosure/AlgosureSigner.php ===
-namespace Sah\Sdk\Proxy\Algosure;
+namespace Isa\Sdk\Proxy\Algosure;
 class AlgosureSigner
     public function __construct(private Clock $clock = new SystemClock(),)
     public function computeHmac(AlgosureInput $input) : array
@@ -434,7 +451,7 @@ class AlgosureSigner
     public const MIN_SIMPLE_KEY_LEN
 
 === Proxy/Auth.php ===
-namespace Sah\Sdk\Proxy;
+namespace Isa\Sdk\Proxy;
 class Auth
     public function __construct(public string $token)
     public function isRecognizedPrefix() : bool
@@ -445,52 +462,52 @@ class Auth
     public const PREFIX_TEST
 
 === Proxy/Call/InvokeInput.php ===
-namespace Sah\Sdk\Proxy\Call;
+namespace Isa\Sdk\Proxy\Call;
 class InvokeInput
     public function __construct(public string $method, public string $path, public array $headers = [], public array|string|null $body = null,)
     public function toEnvelopeParams() : array
 
 === Proxy/Call/InvokeResult.php ===
-namespace Sah\Sdk\Proxy\Call;
+namespace Isa\Sdk\Proxy\Call;
 class InvokeResult
     public function __construct(public int $status, public array $headers, public mixed $body, public ?string $requestId = null,)
     public function fromPayload(array $payload, ?string $requestId = null) : self
 
 === Proxy/Call/Service.php ===
-namespace Sah\Sdk\Proxy\Call;
+namespace Isa\Sdk\Proxy\Call;
 class Service
     public function __construct(private Transport $transport)
     public function invoke(string $integrationUuid, InvokeInput $input, ?RequestOptions $options = null,) : InvokeResult
     public const PATH
 
 === Proxy/Call/SessionCallService.php ===
-namespace Sah\Sdk\Proxy\Call;
+namespace Isa\Sdk\Proxy\Call;
 class SessionCallService
     public function __construct(private readonly ClientInterface $http, private readonly string $baseUrl, private readonly ?IdentityAuth $identityAuth, private readonly IdempotencyKeySource $idempotency, private readonly Clock $clock,)
     public function call(?string $integrationUuid = null, ?int $integrationId = null, ?array $params = null, string $method = 'POST', ?string $idempotencyKey = null,) : ?array
     public const PATH
 
 === Proxy/Clock.php ===
-namespace Sah\Sdk\Proxy;
+namespace Isa\Sdk\Proxy;
 interface Clock
     public function nowMillis() : int
 
 === Proxy/DecodedResponse.php ===
-namespace Sah\Sdk\Proxy;
+namespace Isa\Sdk\Proxy;
 class DecodedResponse
     public function __construct(/** @var array<string,mixed> */ public array $data, public ?string $requestId,)
 
 === Proxy/Exception/AlgosureException.php ===
-namespace Sah\Sdk\Proxy\Exception;
+namespace Isa\Sdk\Proxy\Exception;
 class AlgosureException extends IsaException
     public function __construct(string $message, ?\Throwable $previous = null)
 
 === Proxy/Exception/IntegrationNotFoundException.php ===
-namespace Sah\Sdk\Proxy\Exception;
+namespace Isa\Sdk\Proxy\Exception;
 class IntegrationNotFoundException extends ProxyException
 
 === Proxy/Exception/IsaException.php ===
-namespace Sah\Sdk\Proxy\Exception;
+namespace Isa\Sdk\Proxy\Exception;
 class IsaException extends RuntimeException
     public function __construct(string $message, private readonly string $errorCode, private readonly ?int $httpStatus = null, private readonly ?string $requestId = null, private readonly ?string $adviceCode = null, private readonly ?string $docUrl = null, private readonly ?string $param = null, ?Throwable $previous = null,)
     public function code() : string
@@ -501,54 +518,54 @@ class IsaException extends RuntimeException
     public function param() : ?string
 
 === Proxy/Exception/ProxyAuthException.php ===
-namespace Sah\Sdk\Proxy\Exception;
+namespace Isa\Sdk\Proxy\Exception;
 class ProxyAuthException extends ProxyException
 
 === Proxy/Exception/ProxyException.php ===
-namespace Sah\Sdk\Proxy\Exception;
+namespace Isa\Sdk\Proxy\Exception;
 class ProxyException extends IsaException
 
 === Proxy/Exception/ProxyRateLimitException.php ===
-namespace Sah\Sdk\Proxy\Exception;
+namespace Isa\Sdk\Proxy\Exception;
 class ProxyRateLimitException extends ProxyException
     public function __construct(string $message, ?int $httpStatus = null, ?string $requestId = null, private readonly ?int $retryAfterSeconds = null, ?string $docUrl = null, ?string $adviceCode = null,)
     public function retryAfterSeconds() : ?int
 
 === Proxy/Exception/ProxyValidationException.php ===
-namespace Sah\Sdk\Proxy\Exception;
+namespace Isa\Sdk\Proxy\Exception;
 class ProxyValidationException extends ProxyException
     public function __construct(string $message, ?int $httpStatus = null, ?string $requestId = null, ?string $param = null, private readonly array $details = [], string $errorCode = 'validation_error', ?string $docUrl = null, ?string $adviceCode = null,)
     public function details() : array
 
 === Proxy/IdempotencyKeySource.php ===
-namespace Sah\Sdk\Proxy;
+namespace Isa\Sdk\Proxy;
 interface IdempotencyKeySource
     public function next() : string
 
 === Proxy/ProxyClient.php ===
-namespace Sah\Sdk\Proxy;
+namespace Isa\Sdk\Proxy;
 class ProxyClient
     public function __construct(string $token, ?ClientInterface $httpClient = null, ?IdempotencyKeySource $idempotency = null, string $baseUrl = Transport::DEFAULT_BASE_URL, string $apiVersion = Transport::DEFAULT_API_VERSION, ?string $userAgent = null, ?Clock $clock = null, ?IdentityAuth $identityAuth = null,)
 
 === Proxy/RandomIdempotencyKeySource.php ===
-namespace Sah\Sdk\Proxy;
+namespace Isa\Sdk\Proxy;
 class RandomIdempotencyKeySource implements IdempotencyKeySource
     public function next() : string
 
 === Proxy/RequestOptions.php ===
-namespace Sah\Sdk\Proxy;
+namespace Isa\Sdk\Proxy;
 class RequestOptions
     public function default() : self
     public function withIdempotencyKey(string $key) : self
     public function withVersion(string $version) : self
 
 === Proxy/SystemClock.php ===
-namespace Sah\Sdk\Proxy;
+namespace Isa\Sdk\Proxy;
 class SystemClock implements Clock
     public function nowMillis() : int
 
 === Proxy/Transport.php ===
-namespace Sah\Sdk\Proxy;
+namespace Isa\Sdk\Proxy;
 class Transport
     public function __construct(private ClientInterface $http, private Auth $auth, private IdempotencyKeySource $keys, private string $baseUrl, private string $apiVersion, private string $userAgent,)
     public function post(string $path, array $body, ?RequestOptions $options = null) : DecodedResponse
@@ -558,7 +575,7 @@ class Transport
     public const USER_AGENT_VERSION
 
 === RapidSign/Auth.php ===
-namespace Sah\Sdk\RapidSign;
+namespace Isa\Sdk\RapidSign;
 class Auth
     public function __construct(string $token)
     public function isRecognizedPrefix() : bool
@@ -569,46 +586,46 @@ class Auth
     public const PREFIX_TEST
 
 === RapidSign/Clock.php ===
-namespace Sah\Sdk\RapidSign;
+namespace Isa\Sdk\RapidSign;
 interface Clock
     public function nowMs() : int
 
 === RapidSign/Documents/AwaitOpts.php ===
-namespace Sah\Sdk\RapidSign\Documents;
+namespace Isa\Sdk\RapidSign\Documents;
 class AwaitOpts
     public function __construct(public string|int|null $timeout = null)
 
 === RapidSign/Documents/CancelRequest.php ===
-namespace Sah\Sdk\RapidSign\Documents;
+namespace Isa\Sdk\RapidSign\Documents;
 class CancelRequest
     public function __construct(public string $reason)
 
 === RapidSign/Documents/Envelope.php ===
-namespace Sah\Sdk\RapidSign\Documents;
+namespace Isa\Sdk\RapidSign\Documents;
 class Envelope
     public function __construct(public string $id, public string $signId, public string $signUrl, public string $viewUrl, public EnvelopeStatus $status, public Recipient $recipient, public array $hashes, public DateTimeImmutable $createdAt, public DateTimeImmutable $expiresAt, public array $metadata,)
 
 === RapidSign/Documents/EnvelopeStatus.php ===
-namespace Sah\Sdk\RapidSign\Documents;
+namespace Isa\Sdk\RapidSign\Documents;
 enum EnvelopeStatus : string
 
 === RapidSign/Documents/PdfSource.php ===
-namespace Sah\Sdk\RapidSign\Documents;
+namespace Isa\Sdk\RapidSign\Documents;
 class PdfSource
     public function __construct(public string $url, public ?string $expectedHash = null,)
 
 === RapidSign/Documents/Recipient.php ===
-namespace Sah\Sdk\RapidSign\Documents;
+namespace Isa\Sdk\RapidSign\Documents;
 class Recipient
     public function __construct(public string $email, public ?string $name = null,)
 
 === RapidSign/Documents/SendRequest.php ===
-namespace Sah\Sdk\RapidSign\Documents;
+namespace Isa\Sdk\RapidSign\Documents;
 class SendRequest
     public function __construct(public array $packet, public Recipient $recipient, public ?string $legalText = null, public array $metadata = [], public string|int|null $expiresIn = null, public ?string $notificationKey = null, public ?string $idempotencyKey = null,)
 
 === RapidSign/Documents/Service.php ===
-namespace Sah\Sdk\RapidSign\Documents;
+namespace Isa\Sdk\RapidSign\Documents;
 class Service
     public function __construct(private HttpTransport $transport, private Clock $clock,)
     public function send(SendRequest $request) : Envelope
@@ -618,72 +635,72 @@ class Service
     public function cancel(string $signId, CancelRequest $request) : void
 
 === RapidSign/Documents/Signature.php ===
-namespace Sah\Sdk\RapidSign\Documents;
+namespace Isa\Sdk\RapidSign\Documents;
 class Signature
     public function __construct(public string $signId, public string $signature, public DateTimeImmutable $signedAt, public string $signerIp, public string $userAgent, public array $metadata,)
 
 === RapidSign/Exception/BadGatewayException.php ===
-namespace Sah\Sdk\RapidSign\Exception;
+namespace Isa\Sdk\RapidSign\Exception;
 class BadGatewayException extends RapidSignException
     public function __construct(string $message, ?int $httpStatus = 502, ?string $requestId = null, ?int $retryAfterMs = null,)
 
 === RapidSign/Exception/ConflictException.php ===
-namespace Sah\Sdk\RapidSign\Exception;
+namespace Isa\Sdk\RapidSign\Exception;
 class ConflictException extends RapidSignException
     public function __construct(string $message, ?int $httpStatus = 409, ?string $requestId = null, ?string $docUrl = null)
 
 === RapidSign/Exception/DeadlineExceededException.php ===
-namespace Sah\Sdk\RapidSign\Exception;
+namespace Isa\Sdk\RapidSign\Exception;
 class DeadlineExceededException extends RapidSignException
     public function __construct(string $message, ?int $httpStatus = 408, ?string $requestId = null)
 
 === RapidSign/Exception/ErrorFactory.php ===
-namespace Sah\Sdk\RapidSign\Exception;
+namespace Isa\Sdk\RapidSign\Exception;
 class ErrorFactory
     public function fromHttpResponse(int $status, string $body, array $headers) : RapidSignException
 
 === RapidSign/Exception/ForbiddenException.php ===
-namespace Sah\Sdk\RapidSign\Exception;
+namespace Isa\Sdk\RapidSign\Exception;
 class ForbiddenException extends RapidSignException
     public function __construct(string $message, ?int $httpStatus = 403, ?string $requestId = null, ?string $docUrl = null)
 
 === RapidSign/Exception/GatewayTimeoutException.php ===
-namespace Sah\Sdk\RapidSign\Exception;
+namespace Isa\Sdk\RapidSign\Exception;
 class GatewayTimeoutException extends RapidSignException
     public function __construct(string $message, ?int $httpStatus = 504, ?string $requestId = null, ?int $retryAfterMs = null,)
 
 === RapidSign/Exception/InternalErrorException.php ===
-namespace Sah\Sdk\RapidSign\Exception;
+namespace Isa\Sdk\RapidSign\Exception;
 class InternalErrorException extends RapidSignException
     public function __construct(string $message, ?int $httpStatus = 500, ?string $requestId = null, ?int $retryAfterMs = null,)
 
 === RapidSign/Exception/InvalidTokenException.php ===
-namespace Sah\Sdk\RapidSign\Exception;
+namespace Isa\Sdk\RapidSign\Exception;
 class InvalidTokenException extends RapidSignException
     public function __construct(string $message, ?int $httpStatus = 401, ?string $requestId = null, ?string $docUrl = null)
 
 === RapidSign/Exception/LicenseLockedException.php ===
-namespace Sah\Sdk\RapidSign\Exception;
+namespace Isa\Sdk\RapidSign\Exception;
 class LicenseLockedException extends RapidSignException
     public function __construct(string $message, ?int $httpStatus = 423, ?string $requestId = null, ?string $docUrl = null)
 
 === RapidSign/Exception/MethodNotAllowedException.php ===
-namespace Sah\Sdk\RapidSign\Exception;
+namespace Isa\Sdk\RapidSign\Exception;
 class MethodNotAllowedException extends RapidSignException
     public function __construct(string $message, ?int $httpStatus = 405, ?string $requestId = null)
 
 === RapidSign/Exception/NotFoundException.php ===
-namespace Sah\Sdk\RapidSign\Exception;
+namespace Isa\Sdk\RapidSign\Exception;
 class NotFoundException extends RapidSignException
     public function __construct(string $message, ?int $httpStatus = 404, ?string $requestId = null, ?string $docUrl = null)
 
 === RapidSign/Exception/NotImplementedException.php ===
-namespace Sah\Sdk\RapidSign\Exception;
+namespace Isa\Sdk\RapidSign\Exception;
 class NotImplementedException extends RapidSignException
     public function __construct(string $message, ?int $httpStatus = 501, ?string $requestId = null)
 
 === RapidSign/Exception/RapidSignException.php ===
-namespace Sah\Sdk\RapidSign\Exception;
+namespace Isa\Sdk\RapidSign\Exception;
 class RapidSignException extends RuntimeException
     public function __construct(string $message, private readonly string $errorCode, private readonly ?int $httpStatus = null, private readonly ?string $requestId = null, private readonly bool $retryable = false, private readonly ?int $retryAfterMs = null, private readonly ?string $param = null, private readonly ?string $docUrl = null, ?Throwable $previous = null,)
     public function code() : string
@@ -695,42 +712,42 @@ class RapidSignException extends RuntimeException
     public function docUrl() : ?string
 
 === RapidSign/Exception/RateLimitedException.php ===
-namespace Sah\Sdk\RapidSign\Exception;
+namespace Isa\Sdk\RapidSign\Exception;
 class RateLimitedException extends RapidSignException
     public function __construct(string $message, string $wireCode = 'rate_limit_exceeded', ?int $httpStatus = 429, ?string $requestId = null, ?int $retryAfterMs = null,)
 
 === RapidSign/Exception/ServiceUnavailableException.php ===
-namespace Sah\Sdk\RapidSign\Exception;
+namespace Isa\Sdk\RapidSign\Exception;
 class ServiceUnavailableException extends RapidSignException
     public function __construct(string $message, ?int $httpStatus = 503, ?string $requestId = null, ?int $retryAfterMs = null,)
 
 === RapidSign/Exception/TokenExpiredException.php ===
-namespace Sah\Sdk\RapidSign\Exception;
+namespace Isa\Sdk\RapidSign\Exception;
 class TokenExpiredException extends RapidSignException
     public function __construct(string $message, ?int $httpStatus = 401, ?string $requestId = null, ?string $docUrl = null)
 
 === RapidSign/Exception/UnauthorizedException.php ===
-namespace Sah\Sdk\RapidSign\Exception;
+namespace Isa\Sdk\RapidSign\Exception;
 class UnauthorizedException extends RapidSignException
     public function __construct(string $message, ?int $httpStatus = 401, ?string $requestId = null, ?string $docUrl = null, ?Throwable $previous = null,)
 
 === RapidSign/Exception/UnknownException.php ===
-namespace Sah\Sdk\RapidSign\Exception;
+namespace Isa\Sdk\RapidSign\Exception;
 class UnknownException extends RapidSignException
     public function __construct(string $message, ?int $httpStatus = null, ?string $requestId = null, ?string $wireCode = null, ?Throwable $previous = null,)
 
 === RapidSign/Exception/ValidationException.php ===
-namespace Sah\Sdk\RapidSign\Exception;
+namespace Isa\Sdk\RapidSign\Exception;
 class ValidationException extends RapidSignException
     public function __construct(string $message, ?int $httpStatus = 400, ?string $requestId = null, ?string $param = null, ?string $docUrl = null,)
 
 === RapidSign/Idempotency.php ===
-namespace Sah\Sdk\RapidSign;
+namespace Isa\Sdk\RapidSign;
 interface Idempotency
     public function next() : string
 
 === RapidSign/Internal/Duration.php ===
-namespace Sah\Sdk\RapidSign\Internal;
+namespace Isa\Sdk\RapidSign\Internal;
 class Duration
     public function parse(string|int $spec) : int
     public function isIso8601(string $spec) : bool
@@ -741,7 +758,7 @@ class Duration
     public const MAX_MS
 
 === RapidSign/Internal/HttpTransport.php ===
-namespace Sah\Sdk\RapidSign\Internal;
+namespace Isa\Sdk\RapidSign\Internal;
 class HttpTransport
     public function __construct(private ClientInterface $http, public Auth $auth, public Idempotency $idempotency, public Sleeper $sleeper, public string $baseUrl, public string $userAgent, public int $maxRetries,)
     public function send(string $method, string $url, array $headers, string $body) : ResponseInterface
@@ -749,7 +766,7 @@ class HttpTransport
     public const DEFAULT_BASE_URL
 
 === RapidSign/RapidSignClient.php ===
-namespace Sah\Sdk\RapidSign;
+namespace Isa\Sdk\RapidSign;
 class RapidSignClient
     public function __construct(string $token, ?ClientInterface $httpClient = null, ?Idempotency $idempotency = null, ?Clock $clock = null, ?Sleeper $sleeper = null, string $baseUrl = self::DEFAULT_BASE_URL, ?string $userAgent = null, int $maxRetries = self::DEFAULT_MAX_RETRIES,)
     public function defaultUserAgent() : string
@@ -758,42 +775,42 @@ class RapidSignClient
     public const DEFAULT_MAX_RETRIES
 
 === RapidSign/Sleeper.php ===
-namespace Sah\Sdk\RapidSign;
+namespace Isa\Sdk\RapidSign;
 interface Sleeper
     public function sleepMs(int $ms) : void
 
 === RapidSign/SystemClock.php ===
-namespace Sah\Sdk\RapidSign;
+namespace Isa\Sdk\RapidSign;
 class SystemClock implements Clock
     public function nowMs() : int
 
 === RapidSign/SystemSleeper.php ===
-namespace Sah\Sdk\RapidSign;
+namespace Isa\Sdk\RapidSign;
 class SystemSleeper implements Sleeper
     public function sleepMs(int $ms) : void
 
 === RapidSign/Uuid4Idempotency.php ===
-namespace Sah\Sdk\RapidSign;
+namespace Isa\Sdk\RapidSign;
 class Uuid4Idempotency implements Idempotency
     public function next() : string
 
 === RapidSign/Webhooks/Service.php ===
-namespace Sah\Sdk\RapidSign\Webhooks;
+namespace Isa\Sdk\RapidSign\Webhooks;
 class Service
     public function verify(string $rawBody, array $headers, string $secret) : WebhookEvent
 
 === RapidSign/Webhooks/WebhookEvent.php ===
-namespace Sah\Sdk\RapidSign\Webhooks;
+namespace Isa\Sdk\RapidSign\Webhooks;
 class WebhookEvent
     public function __construct(public string $id, public string $type, public DateTimeImmutable $createdAt, public mixed $data,)
 
 === Zyins/Applicant.php ===
-namespace Sah\Sdk\Zyins;
+namespace Isa\Sdk\Zyins;
 class Applicant
     public function __construct(public string $dob, public Sex $sex, public Height $height, public Weight $weight, string|State $state, public NicotineUsage|NicotineUsageInput $nicotineUse, public ?string $zip = null, public array $medications = [], public array $conditions = [],)
 
 === Zyins/Auth.php ===
-namespace Sah\Sdk\Zyins;
+namespace Isa\Sdk\Zyins;
 class Auth
     public function __construct(public string $token, public string $scheme = self::SCHEME_BEARER, // Session-mode credentials carry the HMAC signing secret here; // null for Bearer / License modes. Previously this field was // dropped at construction — the proxy.call boundary now requires // it so the surgical fix is to preserve it through Auth. public ?string $sessionSecret = null,)
     public function license(string $keycode, string $email) : self
@@ -810,93 +827,121 @@ class Auth
     public const SCHEME_SESSION
 
 === Zyins/Branding/BrandingDetail.php ===
-namespace Sah\Sdk\Zyins\Branding;
+namespace Isa\Sdk\Zyins\Branding;
 class BrandingDetail
     public function __construct(public string $imoName = '', public string $imoLogo = '', public string $navColor = '', public string $mainColor = '', public string $buttonColor = '', public string $activeButtonColor = '', public string $bgColor = '', public string $headerTextColor = '', public bool $hideAffiliateLeads = false, public bool $preventProductSelection = false, public string $defaultSettings = '',)
     public function fromWire(array $data) : self
 
 === Zyins/Branding/Service.php ===
-namespace Sah\Sdk\Zyins\Branding;
+namespace Isa\Sdk\Zyins\Branding;
 class Service
     public function __construct(private Transport $transport)
     public function lookup(?RequestOptions $options = null) : BrandingDetail
 
+=== Zyins/Cases/CaseRecord.php ===
+namespace Isa\Sdk\Zyins\Cases;
+class CaseRecord
+    public function __construct(public string $product, public mixed $payload,)
+
+=== Zyins/Cases/CaseStorage.php ===
+namespace Isa\Sdk\Zyins\Cases;
+interface CaseStorage
+    public function put(CaseRecord $record) : CaseStoragePutResult
+    public function get(string $id, ?string $recallToken = null) : ?CaseRecord
+
+=== Zyins/Cases/CaseStoragePutResult.php ===
+namespace Isa\Sdk\Zyins\Cases;
+class CaseStoragePutResult
+    public function __construct(public string $id, public ?string $recallToken = null,)
+
 === Zyins/Cases/CreateInput.php ===
-namespace Sah\Sdk\Zyins\Cases;
+namespace Isa\Sdk\Zyins\Cases;
 class CreateInput
     public function __construct(public array|string $input, public mixed $results = null, public array $products = [],)
     public function toWireBody() : array
 
 === Zyins/Cases/CreateResult.php ===
-namespace Sah\Sdk\Zyins\Cases;
+namespace Isa\Sdk\Zyins\Cases;
 class CreateResult
     public function __construct(public string $object, public string $hash, public string $url, public bool $readonly, public string $createdAt,)
     public function fromWire(array $data) : self
 
 === Zyins/Cases/Service.php ===
-namespace Sah\Sdk\Zyins\Cases;
+namespace Isa\Sdk\Zyins\Cases;
 class Service
-    public function __construct(private Transport $transport, private EmailService $emailService,)
+    public function __construct(private Transport $transport, private EmailService $emailService, private CaseStorage $caseStorage,)
+    public function save(CaseRecord $record) : CaseStoragePutResult
+    public function recall(string $id, ?string $recallToken = null) : ?CaseRecord
     public function create(CreateInput $input, ?RequestOptions $options = null) : CreateResult
     public function share(CreateInput $input, ?RequestOptions $options = null) : CreateResult
     public function email(EnqueueInput $input, ?RequestOptions $options = null) : EnqueueResult
 
+=== Zyins/Cases/ZeroKnowledgeCaseStorage.php ===
+namespace Isa\Sdk\Zyins\Cases;
+class ZeroKnowledgeCaseStorage implements CaseStorage
+    public function __construct(private readonly Transport $transport)
+    public function put(CaseRecord $record) : CaseStoragePutResult
+    public function get(string $id, ?string $recallToken = null) : ?CaseRecord
+
 === Zyins/Condition.php ===
-namespace Sah\Sdk\Zyins;
+namespace Isa\Sdk\Zyins;
 class Condition
     public function __construct(public string $name, public string $wasDiagnosed, public string $lastTreatment,)
 
 === Zyins/Coverage.php ===
-namespace Sah\Sdk\Zyins;
+namespace Isa\Sdk\Zyins;
 class Coverage
     public function faceValue(int $amount) : self
     public function monthlyBudget(int $amount) : self
+    public function faceValues(array $amounts) : self
+    public function monthlyBudgets(array $amounts) : self
     public function isFaceValue() : bool
     public function isMonthlyBudget() : bool
+    public function isMulti() : bool
     public const TYPE_FACE_VALUE
     public const TYPE_MONTHLY_BUDGET
 
 === Zyins/Datasets/Service.php ===
-namespace Sah\Sdk\Zyins\Datasets;
+namespace Isa\Sdk\Zyins\Datasets;
 class Service
     public function __construct(private Transport $transport)
     public function list(?RequestOptions $options = null) : array
 
 === Zyins/DecodedResponse.php ===
-namespace Sah\Sdk\Zyins;
+namespace Isa\Sdk\Zyins;
 class DecodedResponse
     public function __construct(/** @var array<int|string,mixed> */ public array $data, public ?string $requestId, public string $idempotencyKey = '', public int $retryAttempts = 0,)
 
 === Zyins/Email/EnqueueInput.php ===
-namespace Sah\Sdk\Zyins\Email;
+namespace Isa\Sdk\Zyins\Email;
 class EnqueueInput
     public function __construct(public string $to, public string $subject, public string $bodyHtml, public string $attachmentFilename = '', public string $attachmentContent = '',)
     public function toWireBody() : array
 
 === Zyins/Email/EnqueueResult.php ===
-namespace Sah\Sdk\Zyins\Email;
+namespace Isa\Sdk\Zyins\Email;
 class EnqueueResult
     public function __construct(public string $enqueueId)
     public function fromWire(array $data) : self
 
 === Zyins/Email/Service.php ===
-namespace Sah\Sdk\Zyins\Email;
+namespace Isa\Sdk\Zyins\Email;
 class Service
     public function __construct(private Transport $transport)
     public function enqueue(EnqueueInput $input, ?RequestOptions $options = null) : EnqueueResult
 
 === Zyins/Exception/IsaAuthException.php ===
-namespace Sah\Sdk\Zyins\Exception;
+namespace Isa\Sdk\Zyins\Exception;
 class IsaAuthException extends IsaException
 
 === Zyins/Exception/IsaConfigException.php ===
-namespace Sah\Sdk\Zyins\Exception;
+namespace Isa\Sdk\Zyins\Exception;
 class IsaConfigException extends IsaException
     public function __construct(string $message, ?Throwable $previous = null)
     public const CODE
 
 === Zyins/Exception/IsaException.php ===
-namespace Sah\Sdk\Zyins\Exception;
+namespace Isa\Sdk\Zyins\Exception;
 class IsaException extends RuntimeException
     public function __construct(string $message, private readonly string $errorCode, private readonly ?int $httpStatus = null, private readonly ?string $requestId = null, private readonly ?string $adviceCode = null, private readonly ?string $docUrl = null, private readonly ?string $param = null, ?Throwable $previous = null,)
     public function code() : string
@@ -907,7 +952,7 @@ class IsaException extends RuntimeException
     public function param() : ?string
 
 === Zyins/Exception/IsaIdempotencyConflictException.php ===
-namespace Sah\Sdk\Zyins\Exception;
+namespace Isa\Sdk\Zyins\Exception;
 class IsaIdempotencyConflictException extends IsaException
     public function __construct(string $message, private readonly string $key, private readonly ?DateTimeImmutable $firstSeenAt = null, ?string $requestId = null, ?string $docUrl = null, ?string $adviceCode = null, ?Throwable $previous = null,)
     public function getKey() : string
@@ -916,81 +961,95 @@ class IsaIdempotencyConflictException extends IsaException
     public const STATUS
 
 === Zyins/Exception/IsaLicenseException.php ===
-namespace Sah\Sdk\Zyins\Exception;
+namespace Isa\Sdk\Zyins\Exception;
 class IsaLicenseException extends IsaException
 
 === Zyins/Exception/IsaRateLimitException.php ===
-namespace Sah\Sdk\Zyins\Exception;
+namespace Isa\Sdk\Zyins\Exception;
 class IsaRateLimitException extends IsaException
     public function __construct(string $message, ?int $httpStatus = null, ?string $requestId = null, private readonly ?int $retryAfterSeconds = null,)
     public function retryAfterSeconds() : ?int
 
+=== Zyins/Exception/IsaUnsupportedException.php ===
+namespace Isa\Sdk\Zyins\Exception;
+class IsaUnsupportedException extends IsaException
+    public function __construct(string $message, ?Throwable $previous = null,)
+    public const CODE
+
 === Zyins/Exception/IsaValidationException.php ===
-namespace Sah\Sdk\Zyins\Exception;
+namespace Isa\Sdk\Zyins\Exception;
 class IsaValidationException extends IsaException
     public function __construct(string $message, ?int $httpStatus = null, ?string $requestId = null, ?string $param = null, private readonly array $details = [],)
     public function details() : array
 
 === Zyins/Health/ProbeResult.php ===
-namespace Sah\Sdk\Zyins\Health;
+namespace Isa\Sdk\Zyins\Health;
 class ProbeResult
     public function __construct(public string $status, public int $latencyMs, public string $message, public string $checkedAt,)
     public function fromWire(mixed $data) : self
 
 === Zyins/Health/ReadinessResult.php ===
-namespace Sah\Sdk\Zyins\Health;
+namespace Isa\Sdk\Zyins\Health;
 class ReadinessResult
     public function __construct(public bool $ready, public string $status, public ProbeResult $db, public ProbeResult $cache, public array $downstreamServices, public string $checkedAt,)
     public function fromWire(array $data) : self
 
 === Zyins/Health/Service.php ===
-namespace Sah\Sdk\Zyins\Health;
+namespace Isa\Sdk\Zyins\Health;
 class Service
     public function __construct(private Transport $transport)
     public function getReadiness(?RequestOptions $options = null) : ReadinessResult
 
 === Zyins/Height.php ===
-namespace Sah\Sdk\Zyins;
+namespace Isa\Sdk\Zyins;
 class Height
     public function fromFeetInches(int $feet, int $inches) : self
     public function fromInches(int $totalInches) : self
 
 === Zyins/IdempotencyKeySource.php ===
-namespace Sah\Sdk\Zyins;
+namespace Isa\Sdk\Zyins;
 interface IdempotencyKeySource
     public function next() : string
 
+=== Zyins/LegacyWire.php ===
+namespace Isa\Sdk\Zyins;
+class LegacyWire
+    public function enabled() : bool
+    public function prequalifyBodyFromApplicant(Applicant $applicant, int $faceValue) : array
+    public function quoteBodyFromApplicant(Applicant $applicant, int $faceValue) : array
+    public function faceAmountFromCoverage(Coverage $coverage) : int
+
 === Zyins/Licenses/ActivateAuth.php ===
-namespace Sah\Sdk\Zyins\Licenses;
+namespace Isa\Sdk\Zyins\Licenses;
 class ActivateAuth
     public function __construct(public string $licenseKey)
 
 === Zyins/Licenses/ActivateInput.php ===
-namespace Sah\Sdk\Zyins\Licenses;
+namespace Isa\Sdk\Zyins\Licenses;
 class ActivateInput
     public function __construct(string $email, string $keycode, string $deviceId)
     public function toWireBody() : array
 
 === Zyins/Licenses/ActivateResult.php ===
-namespace Sah\Sdk\Zyins\Licenses;
+namespace Isa\Sdk\Zyins\Licenses;
 class ActivateResult
     public function __construct(public string $status, public ActivateAuth $auth, public int $remainingActivations,)
     public function fromWire(array $data) : self
 
 === Zyins/Licenses/CheckInput.php ===
-namespace Sah\Sdk\Zyins\Licenses;
+namespace Isa\Sdk\Zyins\Licenses;
 class CheckInput
     public function __construct(string $email, string $keycode, string $deviceId = '', string $licenseKey = '',)
     public function toWireBody() : array
 
 === Zyins/Licenses/CheckResult.php ===
-namespace Sah\Sdk\Zyins\Licenses;
+namespace Isa\Sdk\Zyins\Licenses;
 class CheckResult
     public function __construct(public string $status)
     public function fromWire(array $data) : self
 
 === Zyins/Licenses/CredentialState.php ===
-namespace Sah\Sdk\Zyins\Licenses;
+namespace Isa\Sdk\Zyins\Licenses;
 class CredentialState
     public function __construct(public readonly string $email, public readonly string $keycode, public string $deviceId, public string $licenseKey, public string $orderId, private readonly CredentialStore $store,)
     public function onLicenseRefreshed(\Closure $listener) : \Closure
@@ -1000,19 +1059,19 @@ class CredentialState
     public const STORE_KEY_DEVICE_ID
 
 === Zyins/Licenses/DeactivateInput.php ===
-namespace Sah\Sdk\Zyins\Licenses;
+namespace Isa\Sdk\Zyins\Licenses;
 class DeactivateInput
     public function __construct(string $email, string $keycode, string $deviceId = '',)
     public function toWireBody() : array
 
 === Zyins/Licenses/DeactivateResult.php ===
-namespace Sah\Sdk\Zyins\Licenses;
+namespace Isa\Sdk\Zyins\Licenses;
 class DeactivateResult
-    public function __construct(public string $status)
+    public function __construct(public string $status, public ?int $remainingActivations = null,)
     public function fromWire(array $data) : self
 
 === Zyins/Licenses/Facade.php ===
-namespace Sah\Sdk\Zyins\Licenses;
+namespace Isa\Sdk\Zyins\Licenses;
 class Facade
     public function __construct(private Service $service, private CredentialState $state,)
     public function activate(?string $email = null, ?string $keycode = null, ?string $deviceId = null, ?RequestOptions $options = null,) : ActivateResult
@@ -1020,12 +1079,12 @@ class Facade
     public function deactivate(?string $email = null, ?string $keycode = null, ?string $deviceId = null, ?RequestOptions $options = null,) : DeactivateResult
 
 === Zyins/Licenses/LicenseRefreshedEvent.php ===
-namespace Sah\Sdk\Zyins\Licenses;
+namespace Isa\Sdk\Zyins\Licenses;
 class LicenseRefreshedEvent
     public function __construct(public string $licenseKey, public string $deviceId, public string $email, public string $orderId,)
 
 === Zyins/Licenses/Service.php ===
-namespace Sah\Sdk\Zyins\Licenses;
+namespace Isa\Sdk\Zyins\Licenses;
 class Service
     public function __construct(private Transport $transport)
     public function activate(ActivateInput $input, ?RequestOptions $options = null) : ActivateResult
@@ -1033,7 +1092,7 @@ class Service
     public function deactivate(DeactivateInput $input, ?RequestOptions $options = null) : DeactivateResult
 
 === Zyins/Logging/DebugLogger.php ===
-namespace Sah\Sdk\Zyins\Logging;
+namespace Isa\Sdk\Zyins\Logging;
 class DebugLogger
     public function __construct(private readonly ?LoggerInterface $logger = null)
     public function isEnabled() : bool
@@ -1043,111 +1102,217 @@ class DebugLogger
     public const ENV_VALUE
 
 === Zyins/Logos/Service.php ===
-namespace Sah\Sdk\Zyins\Logos;
+namespace Isa\Sdk\Zyins\Logos;
 class Service
     public function __construct(private ClientInterface $http = new GuzzleClient(['http_errors' => false]), private string $baseUrl = self::DEFAULT_BASE_URL,)
     public function get(string $carrier, array $opts = []) : string
     public const DEFAULT_BASE_URL
 
 === Zyins/Medication.php ===
-namespace Sah\Sdk\Zyins;
+namespace Isa\Sdk\Zyins;
 class Medication
     public function __construct(public string $name, public string $use, public string $firstFill, public string $lastFill,)
 
 === Zyins/NicotineDuration.php ===
-namespace Sah\Sdk\Zyins;
+namespace Isa\Sdk\Zyins;
 enum NicotineDuration : string
 
 === Zyins/NicotineProductUsage.php ===
-namespace Sah\Sdk\Zyins;
+namespace Isa\Sdk\Zyins;
 class NicotineProductUsage
     public function __construct(/** * Product type (e.g. 'CIGARETTE', 'CIGAR', 'PIPE', 'CHEWING TOBACCO', * 'NICOTINE PATCH', 'NICOTINE GUM', 'MEDICAL MARIJUANA', * 'RECREATIONAL MARIJUANA'). */ public string $type, /** How often the product is used. */ public string $frequency,)
 
 === Zyins/NicotineUsage.php ===
-namespace Sah\Sdk\Zyins;
+namespace Isa\Sdk\Zyins;
 enum NicotineUsage : string
 
 === Zyins/NicotineUsageInput.php ===
-namespace Sah\Sdk\Zyins;
+namespace Isa\Sdk\Zyins;
 class NicotineUsageInput
     public function __construct(public NicotineDuration $lastUsed, public array $productUsage = [],)
 
+=== Zyins/Options/AuthSupplier.php ===
+namespace Isa\Sdk\Zyins\Options;
+interface AuthSupplier
+    public function kind() : string
+
+=== Zyins/Options/BearerAuth.php ===
+namespace Isa\Sdk\Zyins\Options;
+class BearerAuth implements AuthSupplier
+    public function __construct(public ?string $token = null)
+    public function kind() : string
+    public function fromToken(string $token) : self
+    public function fromEnv() : self
+
+=== Zyins/Options/BundledApiVersions.php ===
+namespace Isa\Sdk\Zyins\Options;
+class BundledApiVersions
+    public function resolve(string $surface, array $override = []) : string
+    public const MAP
+
+=== Zyins/Options/Engine.php ===
+namespace Isa\Sdk\Zyins\Options;
+interface Engine
+    public function kind() : string
+    public function baseUrl() : string
+
+=== Zyins/Options/FormAuth.php ===
+namespace Isa\Sdk\Zyins\Options;
+class FormAuth implements AuthSupplier
+    public function __construct(public string $formToken)
+    public function kind() : string
+    public function fromToken(string $formToken) : self
+
+=== Zyins/Options/InMemoryEngine.php ===
+namespace Isa\Sdk\Zyins\Options;
+class InMemoryEngine implements Engine
+    public function kind() : string
+    public function baseUrl() : string
+
+=== Zyins/Options/IsaCreateOptions.php ===
+namespace Isa\Sdk\Zyins\Options;
+class IsaCreateOptions
+    public function __construct(public AuthSupplier $auth, public ?Engine $engine = null, public float $timeout = self::DEFAULT_TIMEOUT_SECONDS, public array $apiVersion = [], public ?string $clientVersion = null, public ?CaseStorage $caseStorage = null,)
+    public function resolveApiVersion(string $surface) : string
+    public const DEFAULT_TIMEOUT_SECONDS
+
+=== Zyins/Options/LicenseAuth.php ===
+namespace Isa\Sdk\Zyins\Options;
+class LicenseAuth implements AuthSupplier
+    public function __construct(public ?string $keycode = null, public ?string $email = null,)
+    public function kind() : string
+    public function fromKeycode(string $keycode, string $email) : self
+    public function fromEnv() : self
+
+=== Zyins/Options/LocalEngine.php ===
+namespace Isa\Sdk\Zyins\Options;
+class LocalEngine implements Engine
+    public function __construct(public string $baseUrl = 'http://localhost:8080')
+    public function kind() : string
+    public function baseUrl() : string
+    public function at(string $baseUrl) : self
+
+=== Zyins/Options/ProxyEngine.php ===
+namespace Isa\Sdk\Zyins\Options;
+class ProxyEngine implements Engine
+    public function __construct(public string $proxyOrigin = self::PRODUCTION_ORIGIN)
+    public function kind() : string
+    public function baseUrl() : string
+    public function default() : self
+    public function at(string $proxyOrigin) : self
+    public const PRODUCTION_ORIGIN
+
+=== Zyins/Options/RemoteEngine.php ===
+namespace Isa\Sdk\Zyins\Options;
+class RemoteEngine implements Engine
+    public function __construct(public string $baseUrl = self::PRODUCTION_ORIGIN)
+    public function kind() : string
+    public function baseUrl() : string
+    public function default() : self
+    public function at(string $baseUrl) : self
+    public const PRODUCTION_ORIGIN
+
+=== Zyins/Options/ResolvedIsaOptions.php ===
+namespace Isa\Sdk\Zyins\Options;
+class ResolvedIsaOptions
+    public function __construct(public AuthSupplier $auth, public Engine $engine, public float $timeoutSeconds, public array $apiVersion, public ?string $clientVersion, public string $baseUrl, public ?string $proxyOrigin, public ?CaseStorage $caseStorage = null,)
+    public function resolve(IsaCreateOptions $opts) : self
+    public function apiVersionFor(string $surface) : string
+
+=== Zyins/Options/SessionAuth.php ===
+namespace Isa\Sdk\Zyins\Options;
+class SessionAuth implements AuthSupplier
+    public function __construct(public string $sessionId, public string $sessionSecret,)
+    public function kind() : string
+
 === Zyins/Pagination/CursorIterator.php ===
-namespace Sah\Sdk\Zyins\Pagination;
+namespace Isa\Sdk\Zyins\Pagination;
 class CursorIterator implements IteratorAggregate
     public function __construct(callable $fetcher, ?ListOptions $options = null)
     public function cursor() : ?string
     public function getIterator() : Generator
 
 === Zyins/Pagination/CursorPage.php ===
-namespace Sah\Sdk\Zyins\Pagination;
+namespace Isa\Sdk\Zyins\Pagination;
 class CursorPage
     public function __construct(public array $data, public ?string $nextCursor, public bool $hasMore,)
 
 === Zyins/Pagination/FirstPage.php ===
-namespace Sah\Sdk\Zyins\Pagination;
+namespace Isa\Sdk\Zyins\Pagination;
 class FirstPage
     public function fetch(callable $fetcher, ?ListOptions $options = null) : CursorPage
 
 === Zyins/Pagination/ListOptions.php ===
-namespace Sah\Sdk\Zyins\Pagination;
+namespace Isa\Sdk\Zyins\Pagination;
 class ListOptions
     public function __construct(public ?string $cursor = null, public ?int $limit = null,)
     public const DEFAULT_PAGE_SIZE
 
+=== Zyins/PlanInfoItem.php ===
+namespace Isa\Sdk\Zyins;
+class PlanInfoItem
+    public function __construct(public string $key, public string $label, public array $values,)
+
+=== Zyins/PlanInfoLabel.php ===
+namespace Isa\Sdk\Zyins;
+class PlanInfoLabel
+    public function titleCase(string $key) : string
+    public function coerce(mixed $raw) : array
+
 === Zyins/Preferences/PreferencesResult.php ===
-namespace Sah\Sdk\Zyins\Preferences;
+namespace Isa\Sdk\Zyins\Preferences;
 class PreferencesResult
     public function __construct(public array $prefs)
     public function fromWire(array $data, ?array $fallback = null) : self
 
 === Zyins/Preferences/Service.php ===
-namespace Sah\Sdk\Zyins\Preferences;
+namespace Isa\Sdk\Zyins\Preferences;
 class Service
     public function __construct(private Transport $transport)
     public function lookup(?RequestOptions $options = null) : PreferencesResult
     public function set(SetInput $input, ?RequestOptions $options = null) : PreferencesResult
 
 === Zyins/Preferences/SetInput.php ===
-namespace Sah\Sdk\Zyins\Preferences;
+namespace Isa\Sdk\Zyins\Preferences;
 class SetInput
     public function __construct(public array $prefs)
     public function toWireBody() : array
 
 === Zyins/Prequalify/Input.php ===
-namespace Sah\Sdk\Zyins\Prequalify;
+namespace Isa\Sdk\Zyins\Prequalify;
 class Input
     public function __construct(public Applicant $applicant, public Coverage $coverage, public array $products,)
     public function toWireBody() : array
 
 === Zyins/Prequalify/Plan.php ===
-namespace Sah\Sdk\Zyins\Prequalify;
+namespace Isa\Sdk\Zyins\Prequalify;
 class Plan
     public function __construct(public string $brand, public string $tier, public float $monthlyPremium, public int $faceValue, public string $productToken,)
 
 === Zyins/Prequalify/Result.php ===
-namespace Sah\Sdk\Zyins\Prequalify;
+namespace Isa\Sdk\Zyins\Prequalify;
 class Result
     public function __construct(public array $plans, public string $requestId, public string $idempotencyKey = '', public int $retryAttempts = 0,)
     public function fromWire(array $decoded, ?string $requestId = null, string $idempotencyKey = '', int $retryAttempts = 0,) : self
 
 === Zyins/Prequalify/Service.php ===
-namespace Sah\Sdk\Zyins\Prequalify;
+namespace Isa\Sdk\Zyins\Prequalify;
 class Service
     public function __construct(private Transport $transport)
     public function run(Input $input, ?RequestOptions $options = null) : Result
     public function legacyBlob(array $encodedPayload, ?RequestOptions $options = null) : Result
     public function runWithRawResponse(Input $input, ?RequestOptions $options = null) : array
+    public function runEnvelope(Input $input, ?RequestOptions $options = null) : array
 
 === Zyins/Product.php ===
-namespace Sah\Sdk\Zyins;
+namespace Isa\Sdk\Zyins;
 class Product
     public function __construct(public string $brand, public ProductType $type, public string $wireToken, public string $displayName,)
     public function toWireArray(array $products) : array
     public function toWireString(array $products) : string
 
 === Zyins/ProductCatalog.php ===
-namespace Sah\Sdk\Zyins;
+namespace Isa\Sdk\Zyins;
 class ProductCatalog
     public function default() : self
     public function fromDatasets(array $bundle) : self
@@ -1158,46 +1323,449 @@ class ProductCatalog
     public function list() : array
 
 === Zyins/ProductType.php ===
-namespace Sah\Sdk\Zyins;
+namespace Isa\Sdk\Zyins;
 enum ProductType : string
 
 === Zyins/Products/Facade.php ===
-namespace Sah\Sdk\Zyins\Products;
+namespace Isa\Sdk\Zyins\Products;
 class Facade
     public function __construct(private readonly mixed $datasetsGet)
     public function catalog() : ProductCatalog
     public function refresh() : ProductCatalog
 
 === Zyins/Quote/Input.php ===
-namespace Sah\Sdk\Zyins\Quote;
+namespace Isa\Sdk\Zyins\Quote;
 class Input
     public function __construct(public Applicant $applicant, public Coverage $coverage, public Product $product,)
     public function toWireBody() : array
 
 === Zyins/Quote/Result.php ===
-namespace Sah\Sdk\Zyins\Quote;
+namespace Isa\Sdk\Zyins\Quote;
 class Result
     public function __construct(public string $productToken, public string $tier, public float $monthlyPremium, public int $faceValue, public string $requestId,)
     public function fromWire(array $decoded, ?string $requestId = null) : self
 
 === Zyins/Quote/Service.php ===
-namespace Sah\Sdk\Zyins\Quote;
+namespace Isa\Sdk\Zyins\Quote;
 class Service
     public function __construct(private Transport $transport)
     public function run(Input $input, ?RequestOptions $options = null) : Result
+    public function runEnvelope(Input $input, ?RequestOptions $options = null) : array
 
 === Zyins/QuoteType.php ===
-namespace Sah\Sdk\Zyins;
+namespace Isa\Sdk\Zyins;
 enum QuoteType : string
 
 === Zyins/RawResponse.php ===
-namespace Sah\Sdk\Zyins;
+namespace Isa\Sdk\Zyins;
 class RawResponse
-    public function __construct(public int $status, public array $headers, public string $url, public string $body,)
+    public function __construct(public int $status, public array $headers, public string $url, public string $body, public ?string $sentIdempotencyKey = null,)
     public function header(string $name) : ?string
 
+=== Zyins/Reference/AutocompleteAlgorithmInterface.php ===
+namespace Isa\Sdk\Zyins\Reference;
+interface AutocompleteAlgorithmInterface
+    public function rank(string $query, array $candidates, AutocompleteOptions $options) : array
+
+=== Zyins/Reference/AutocompleteOptions.php ===
+namespace Isa\Sdk\Zyins\Reference;
+class AutocompleteOptions
+    public function __construct(public int $limit = 10, public array $kinds = [], public array $frequencies = [], public string $sort = Sort::MOST_COMMON_FIRST,)
+
+=== Zyins/Reference/AutocorrectEvent.php ===
+namespace Isa\Sdk\Zyins\Reference;
+class AutocorrectEvent
+    public function __construct(public string $from, public string $to, public string $mode,)
+
+=== Zyins/Reference/AutocorrectorFactory.php ===
+namespace Isa\Sdk\Zyins\Reference;
+class AutocorrectorFactory
+    public function create(array $typoMap, ?string $versionTag = null, ?\Closure $onApplied = null,) : DefaultAutocorrector
+
+=== Zyins/Reference/AutocorrectorInterface.php ===
+namespace Isa\Sdk\Zyins\Reference;
+interface AutocorrectorInterface
+    public function correct(string $text, string $mode = self::MODE_SUBMIT) : string
+    public const MODE_KEYUP
+    public const MODE_SUBMIT
+
+=== Zyins/Reference/BundleBoundAutocorrector.php ===
+namespace Isa\Sdk\Zyins\Reference;
+class BundleBoundAutocorrector implements AutocorrectorInterface
+    public function __construct(private ReferenceBundleCache $cache)
+    public function correct(string $text, string $mode = AutocorrectorInterface::MODE_SUBMIT) : string
+
+=== Zyins/Reference/ConceptInterface.php ===
+namespace Isa\Sdk\Zyins\Reference;
+interface ConceptInterface
+    public function id() : ?string
+    public function name() : string
+    public function kind() : string
+    public function isKnown() : bool
+    public function inputText() : string
+    public function conditions(string $sort = Sort::MOST_COMMON_FIRST) : array
+    public function medications(string $sort = Sort::MOST_COMMON_FIRST) : array
+    public function equals(ConceptInterface $other) : bool
+
+=== Zyins/Reference/ConceptKind.php ===
+namespace Isa\Sdk\Zyins\Reference;
+class ConceptKind
+    public const MEDICATION
+    public const CONDITION
+    public const UNKNOWN
+
+=== Zyins/Reference/ConceptsMatcher.php ===
+namespace Isa\Sdk\Zyins\Reference;
+class ConceptsMatcher implements Matcher
+    public function __construct(private readonly ?ReferenceBundleCache $cache = null)
+    public function match(string $text, ?DatasetBundleV3 $bundle = null) : ConceptInterface
+    public function matchMany(array $texts, ?DatasetBundleV3 $bundle = null) : array
+
+=== Zyins/Reference/ConditionConceptInterface.php ===
+namespace Isa\Sdk\Zyins\Reference;
+interface ConditionConceptInterface extends ConceptInterface
+
+=== Zyins/Reference/ConditionRow.php ===
+namespace Isa\Sdk\Zyins\Reference;
+class ConditionRow
+    public function __construct(public string $id, public string $name, public array $treatedWith = [],)
+
+=== Zyins/Reference/ConditionsMatcher.php ===
+namespace Isa\Sdk\Zyins\Reference;
+class ConditionsMatcher implements Matcher
+    public function __construct(private readonly ?ReferenceBundleCache $cache = null, private readonly ?MatchAlgorithmInterface $matchAlgorithm = null, private readonly ?AutocompleteAlgorithmInterface $autocompleteAlgorithm = null,)
+    public function match(string $text, ?DatasetBundleV3 $bundle = null) : ConceptInterface
+    public function matchMany(array $texts, ?DatasetBundleV3 $bundle = null) : array
+    public function autocomplete(string $text, ?AutocompleteOptions $options = null, ?DatasetBundleV3 $bundle = null,) : array
+    public function list(?DatasetBundleV3 $bundle = null) : array
+
+=== Zyins/Reference/DatasetBundleV3.php ===
+namespace Isa\Sdk\Zyins\Reference;
+class DatasetBundleV3
+    public function __construct(public string $version, public array $medications, public array $conditions, public array $products, public array $nicotineOptions, public array $spellingCorrections, public array $datasets, /** Response ETag for conditional revalidation. */ public ?string $etag = null, public array $productsByFamily = [], public array $discontinuedProducts = [], public array $stateDerivatives = [],)
+    public function typoMap() : array
+
+=== Zyins/Reference/DatasetCategory.php ===
+namespace Isa\Sdk\Zyins\Reference;
+enum DatasetCategory : string
+
+=== Zyins/Reference/DatasetEntry.php ===
+namespace Isa\Sdk\Zyins\Reference;
+class DatasetEntry
+    public function __construct(public string $version, public int $itemCount, public array $items,)
+
+=== Zyins/Reference/DatasetsV3.php ===
+namespace Isa\Sdk\Zyins\Reference;
+class DatasetsV3
+    public function __construct(private Transport $transport, private ?ReferenceBundleCache $cache = null,)
+    public function get(?DatasetsV3GetOptions $options = null, ?RequestOptions $requestOptions = null,) : DatasetBundleV3|DatasetsV3NotModified
+
+=== Zyins/Reference/DatasetsV3GetOptions.php ===
+namespace Isa\Sdk\Zyins\Reference;
+class DatasetsV3GetOptions
+    public function default() : self
+    public function withInclude(array $categories) : self
+    public function withFieldsMeta() : self
+    public function withFieldsFull() : self
+    public function withIfNoneMatch(string $etag) : self
+    public const FIELDS_FULL
+    public const FIELDS_META
+
+=== Zyins/Reference/DatasetsV3NotModified.php ===
+namespace Isa\Sdk\Zyins\Reference;
+class DatasetsV3NotModified
+    public function __construct(public ?string $etag)
+    public function is(DatasetBundleV3|self $result) : bool
+
+=== Zyins/Reference/DefaultAutocompleteAlgorithm.php ===
+namespace Isa\Sdk\Zyins\Reference;
+class DefaultAutocompleteAlgorithm implements AutocompleteAlgorithmInterface
+    public function __construct(public readonly ?string $versionTag = null)
+    public function rank(string $query, array $candidates, AutocompleteOptions $options) : array
+    public function clone(?string $versionTag = null) : self
+
+=== Zyins/Reference/DefaultAutocorrector.php ===
+namespace Isa\Sdk\Zyins\Reference;
+class DefaultAutocorrector implements AutocorrectorInterface
+    public function __construct(public readonly array $typoMap, public readonly ?string $versionTag = null, ?\Closure $onApplied = null,)
+    public function correct(string $text, string $mode = AutocorrectorInterface::MODE_SUBMIT) : string
+    public function clone(?array $typoMap = null, ?string $versionTag = null, ?\Closure $onApplied = null,) : self
+
+=== Zyins/Reference/DefaultMatchAlgorithm.php ===
+namespace Isa\Sdk\Zyins\Reference;
+class DefaultMatchAlgorithm implements MatchAlgorithmInterface
+    public function __construct(public readonly ?string $versionTag = null)
+    public function match(string $query, array $candidates) : ConceptInterface
+    public function clone(?string $versionTag = null) : self
+
+=== Zyins/Reference/Internal/ConceptHandle.php ===
+namespace Isa\Sdk\Zyins\Reference\Internal;
+class ConceptHandle implements ConceptInterface
+    public function __construct(protected readonly ?string $id, protected readonly string $name, protected readonly string $kind, protected readonly bool $isKnown, protected readonly string $inputText, protected readonly ?ReferenceIndex $index,)
+    public function id() : ?string
+    public function name() : string
+    public function kind() : string
+    public function isKnown() : bool
+    public function inputText() : string
+    public function conditions(string $sort = Sort::MOST_COMMON_FIRST) : array
+    public function medications(string $sort = Sort::MOST_COMMON_FIRST) : array
+    public function equals(ConceptInterface $other) : bool
+    public function knownMedication(ReferenceIndex $index, string $id, string $inputText) : KnownMedicationConcept
+    public function knownCondition(ReferenceIndex $index, string $id, string $inputText) : KnownConditionConcept
+    public function unknown(string $inputText) : UnknownConcept
+
+=== Zyins/Reference/Internal/KnownConditionConcept.php ===
+namespace Isa\Sdk\Zyins\Reference\Internal;
+class KnownConditionConcept extends ConceptHandle implements ConditionConceptInterface
+    public function __construct(string $id, string $name, string $inputText, ReferenceIndex $index)
+    public function medications(string $sort = Sort::MOST_COMMON_FIRST) : array
+
+=== Zyins/Reference/Internal/KnownMedicationConcept.php ===
+namespace Isa\Sdk\Zyins\Reference\Internal;
+class KnownMedicationConcept extends ConceptHandle implements MedicationConceptInterface
+    public function __construct(string $id, string $name, string $inputText, ReferenceIndex $index)
+    public function conditions(string $sort = Sort::MOST_COMMON_FIRST) : array
+
+=== Zyins/Reference/Internal/UnknownConcept.php ===
+namespace Isa\Sdk\Zyins\Reference\Internal;
+class UnknownConcept extends ConceptHandle
+    public function __construct(string $inputText)
+
+=== Zyins/Reference/Internal/V3Coercion.php ===
+namespace Isa\Sdk\Zyins\Reference\Internal;
+class V3Coercion
+    public function asString(mixed $v) : string
+    public function asInt(mixed $v) : int
+    public function asNullableInt(mixed $v) : ?int
+    public function asBool(mixed $v) : bool
+    public function carrier(mixed $raw) : V3OfferCarrier
+    public function product(mixed $raw) : V3OfferProduct
+    public function amount(mixed $raw) : V3Amount
+    public function money(mixed $raw) : V3Money
+    public function eligibility(mixed $raw) : V3Eligibility
+    public function premium(mixed $raw) : ?V3Premium
+    public function encodeRequestBody(array $body, string $operation) : string
+    public function decodeResponseBody(string $body, string $operation) : array
+    public function retryAttempts(RawResponse $raw) : int
+    public function pricingRow(mixed $raw) : V3PricingRow
+    public function offer(mixed $raw) : V3Offer
+
+=== Zyins/Reference/Internal/V3PrequalifyWireBody.php ===
+namespace Isa\Sdk\Zyins\Reference\Internal;
+class V3PrequalifyWireBody
+    public function build(Applicant $applicant, Coverage $coverage, array $products, ?PrequalifyV3Options $options,) : array
+
+=== Zyins/Reference/Internal/V3WireBody.php ===
+namespace Isa\Sdk\Zyins\Reference\Internal;
+class V3WireBody
+    public function build(Applicant $applicant, Coverage $coverage, array $products, ?PrequalifyV3Options $options,) : array
+
+=== Zyins/Reference/MakeKey.php ===
+namespace Isa\Sdk\Zyins\Reference;
+class MakeKey
+    public function normalize(string $text) : string
+
+=== Zyins/Reference/MatchAlgorithmInterface.php ===
+namespace Isa\Sdk\Zyins\Reference;
+interface MatchAlgorithmInterface
+    public function match(string $query, array $candidates) : ConceptInterface
+
+=== Zyins/Reference/Matcher.php ===
+namespace Isa\Sdk\Zyins\Reference;
+interface Matcher
+    public function match(string $text, ?DatasetBundleV3 $bundle = null) : ConceptInterface
+
+=== Zyins/Reference/MedicationConceptInterface.php ===
+namespace Isa\Sdk\Zyins\Reference;
+interface MedicationConceptInterface extends ConceptInterface
+
+=== Zyins/Reference/MedicationRow.php ===
+namespace Isa\Sdk\Zyins\Reference;
+class MedicationRow
+    public function __construct(public string $id, public string $name, public array $usedFor = [],)
+
+=== Zyins/Reference/MedicationsMatcher.php ===
+namespace Isa\Sdk\Zyins\Reference;
+class MedicationsMatcher implements Matcher
+    public function __construct(private readonly ?ReferenceBundleCache $cache = null, private readonly ?MatchAlgorithmInterface $matchAlgorithm = null, private readonly ?AutocompleteAlgorithmInterface $autocompleteAlgorithm = null,)
+    public function match(string $text, ?DatasetBundleV3 $bundle = null) : ConceptInterface
+    public function matchMany(array $texts, ?DatasetBundleV3 $bundle = null) : array
+    public function autocomplete(string $text, ?AutocompleteOptions $options = null, ?DatasetBundleV3 $bundle = null,) : array
+    public function list(?DatasetBundleV3 $bundle = null) : array
+
+=== Zyins/Reference/NicotineOptionRow.php ===
+namespace Isa\Sdk\Zyins\Reference;
+class NicotineOptionRow
+    public function __construct(public string $id, public string $name, public string $type,)
+
+=== Zyins/Reference/PrequalifyV3.php ===
+namespace Isa\Sdk\Zyins\Reference;
+class PrequalifyV3
+    public function __construct(private Transport $transport)
+    public function run(PrequalifyV3Request $request, ?RequestOptions $options = null,) : PrequalifyV3Result
+
+=== Zyins/Reference/PrequalifyV3Options.php ===
+namespace Isa\Sdk\Zyins\Reference;
+class PrequalifyV3Options
+    public function __construct(public ?string $onlyProductClass = null, public ?array $includeProductClass = null, public ?string $minRank = null, public ?bool $showUnreleased = null, public ?bool $skipHealthBasedUnderwriting = null, public ?bool $includeIneligible = null,)
+
+=== Zyins/Reference/PrequalifyV3Request.php ===
+namespace Isa\Sdk\Zyins\Reference;
+class PrequalifyV3Request
+    public function __construct(public Applicant $applicant, public Coverage $coverage, public array $products, public ?PrequalifyV3Options $options = null,)
+
+=== Zyins/Reference/PrequalifyV3Result.php ===
+namespace Isa\Sdk\Zyins\Reference;
+class PrequalifyV3Result
+    public function __construct(public array $plans, public string $requestId, public string $idempotencyKey, public bool $livemode, public int $retryAttempts,)
+    public function byAmount(array $plans) : array
+
+=== Zyins/Reference/QuoteV3.php ===
+namespace Isa\Sdk\Zyins\Reference;
+class QuoteV3
+    public function __construct(private Transport $transport)
+    public function run(QuoteV3Request $request, ?RequestOptions $options = null) : QuoteV3Result
+
+=== Zyins/Reference/QuoteV3Request.php ===
+namespace Isa\Sdk\Zyins\Reference;
+class QuoteV3Request
+    public function __construct(public Applicant $applicant, public Coverage $coverage, public array $products, public ?PrequalifyV3Options $options = null,)
+
+=== Zyins/Reference/QuoteV3Result.php ===
+namespace Isa\Sdk\Zyins\Reference;
+class QuoteV3Result
+    public function __construct(public array $plans, public string $requestId, public string $idempotencyKey, public bool $livemode, public int $retryAttempts,)
+
+=== Zyins/Reference/Reference.php ===
+namespace Isa\Sdk\Zyins\Reference;
+class Reference implements ReferenceService
+    public function __construct(?ReferenceBundleCache $cache = null, ?MatchAlgorithmInterface $matchAlgorithm = null, ?AutocompleteAlgorithmInterface $autocompleteAlgorithm = null,)
+    public function medications() : MedicationsMatcher
+    public function conditions() : ConditionsMatcher
+    public function concepts() : ConceptsMatcher
+
+=== Zyins/Reference/ReferenceBundleCache.php ===
+namespace Isa\Sdk\Zyins\Reference;
+class ReferenceBundleCache
+    public function setBundle(DatasetBundleV3 $bundle) : void
+    public function currentIndex() : ?ReferenceIndex
+    public function currentBundle() : ?DatasetBundleV3
+
+=== Zyins/Reference/ReferenceEntity.php ===
+namespace Isa\Sdk\Zyins\Reference;
+class ReferenceEntity
+    public function __construct(public string $id, public string $name,)
+
+=== Zyins/Reference/ReferenceIndex.php ===
+namespace Isa\Sdk\Zyins\Reference;
+class ReferenceIndex
+    public function forBundle(DatasetBundleV3 $bundle) : self
+    public function datasetVersion() : string
+    public function conditionName(string $id) : ?string
+    public function medicationName(string $id) : ?string
+    public function medicationsForCondition(string $conditionId) : array
+    public function conditionsForMedication(string $medicationId) : array
+    public function allConditionIds() : array
+    public function allMedicationIds() : array
+    public function conditionFrequencyForMedication(string $medicationId, string $conditionId) : int
+    public function entityFrequency(string $id) : int
+
+=== Zyins/Reference/ReferenceService.php ===
+namespace Isa\Sdk\Zyins\Reference;
+interface ReferenceService
+    public function medications() : Matcher
+    public function conditions() : Matcher
+    public function concepts() : Matcher
+
+=== Zyins/Reference/Relation.php ===
+namespace Isa\Sdk\Zyins\Reference;
+class Relation
+    public function __construct(public string $id, public string $name, public int $prescriptionCount,)
+
+=== Zyins/Reference/Sort.php ===
+namespace Isa\Sdk\Zyins\Reference;
+class Sort
+    public const MOST_COMMON_FIRST
+    public const ALPHABETICAL
+
+=== Zyins/Reference/SpellingCorrectionRow.php ===
+namespace Isa\Sdk\Zyins\Reference;
+class SpellingCorrectionRow
+    public function __construct(public string $id, public string $from, public string $to,)
+
+=== Zyins/Reference/Suggestion.php ===
+namespace Isa\Sdk\Zyins\Reference;
+class Suggestion implements ConceptInterface
+    public function __construct(public ConceptInterface $concept, public string $bucket, public int $score,)
+    public function id() : ?string
+    public function name() : string
+    public function kind() : string
+    public function isKnown() : bool
+    public function inputText() : string
+    public function conditions(string $sort = Sort::MOST_COMMON_FIRST) : array
+    public function medications(string $sort = Sort::MOST_COMMON_FIRST) : array
+    public function equals(ConceptInterface $other) : bool
+
+=== Zyins/Reference/SuggestionBucket.php ===
+namespace Isa\Sdk\Zyins\Reference;
+class SuggestionBucket
+    public const STARTS_WITH
+    public const SAME_WORDS
+    public const INDEPENDENT_WORD_INTERSECTION
+    public const WORD_COUNT_NO_TOLERANCE
+    public const SAME_NUM_WITH_TOLERANCE
+    public const WORD_COUNT_WITH_TOLERANCE
+
+=== Zyins/Reference/V3Amount.php ===
+namespace Isa\Sdk\Zyins\Reference;
+class V3Amount
+    public function __construct(public int $cents, public string $display,)
+
+=== Zyins/Reference/V3Eligibility.php ===
+namespace Isa\Sdk\Zyins\Reference;
+class V3Eligibility
+    public function __construct(public ?V3EligibilityCategory $category, public bool $eligible, public array $reasons,)
+
+=== Zyins/Reference/V3EligibilityCategory.php ===
+namespace Isa\Sdk\Zyins\Reference;
+enum V3EligibilityCategory : string
+
+=== Zyins/Reference/V3Money.php ===
+namespace Isa\Sdk\Zyins\Reference;
+class V3Money
+    public function __construct(public V3Amount $amount, public ?V3Period $period,)
+
+=== Zyins/Reference/V3Offer.php ===
+namespace Isa\Sdk\Zyins\Reference;
+class V3Offer
+    public function __construct(public string $object, public string $id, public bool $eligible, public V3OfferCarrier $carrier, public V3OfferProduct $product, public array $planInfo, public V3Money $deathBenefit, public array $pricing, public array $metadata, public ?V3Money $budget = null,)
+
+=== Zyins/Reference/V3OfferCarrier.php ===
+namespace Isa\Sdk\Zyins\Reference;
+class V3OfferCarrier
+    public function __construct(public string $id, public string $name, public string $logoUrl,)
+
+=== Zyins/Reference/V3OfferProduct.php ===
+namespace Isa\Sdk\Zyins\Reference;
+class V3OfferProduct
+    public function __construct(public string $id, public string $slug, public string $name, public string $displayName, public string $type, public string $wireToken,)
+
+=== Zyins/Reference/V3Period.php ===
+namespace Isa\Sdk\Zyins\Reference;
+enum V3Period : string
+
+=== Zyins/Reference/V3Premium.php ===
+namespace Isa\Sdk\Zyins\Reference;
+class V3Premium
+    public function __construct(public int $cents, public string $display, public V3Amount $default, public array $modes,)
+
+=== Zyins/Reference/V3PricingRow.php ===
+namespace Isa\Sdk\Zyins\Reference;
+class V3PricingRow
+    public function __construct(public string $rateClass, public bool $primary, public V3Eligibility $eligibility, public ?int $rank, public ?V3Premium $premium = null,)
+
 === Zyins/ReferenceData/Service.php ===
-namespace Sah\Sdk\Zyins\ReferenceData;
+namespace Isa\Sdk\Zyins\ReferenceData;
 class Service
     public function __construct(private Transport $transport)
     public function conditions(?RequestOptions $options = null) : array
@@ -1205,56 +1773,63 @@ class Service
     public function carriers(?RequestOptions $options = null) : array
 
 === Zyins/RequestOptions.php ===
-namespace Sah\Sdk\Zyins;
+namespace Isa\Sdk\Zyins;
 class RequestOptions
     public function default() : self
     public function withIdempotencyKey(string $key) : self
     public function withVersion(string $version) : self
+    public function withExtraHeaders(array $headers) : self
 
 === Zyins/Sex.php ===
-namespace Sah\Sdk\Zyins;
+namespace Isa\Sdk\Zyins;
 enum Sex : string
     public function wireCode() : string
 
 === Zyins/SignRequest.php ===
-namespace Sah\Sdk\Zyins;
+namespace Isa\Sdk\Zyins;
 class SignRequest
     public function canonicalString(string $method, string $path, string $body, string $timestamp, string $sessionId) : string
     public function formatTimestamp(DateTimeInterface $now) : string
     public function sign(string $method, string $path, string $body, string $sessionId, string $sessionSecret, ?DateTimeInterface $now = null) : array
 
 === Zyins/Transport.php ===
-namespace Sah\Sdk\Zyins;
+namespace Isa\Sdk\Zyins;
 class Transport
     public function __construct(private ClientInterface $http, private Auth $auth, private IdempotencyKeySource $keys, private string $baseUrl, private string $apiVersion, private string $userAgent, private DebugLogger $logger = new DebugLogger(),)
     public function post(string $path, array $body, ?RequestOptions $options = null) : DecodedResponse
     public function postWithRaw(string $path, array $body, ?RequestOptions $options = null) : array
+    public function postEnvelope(string $path, array $body, ?RequestOptions $options = null) : array
+    public function postBootstrap(string $path, array $body, ?string $deviceId = null, ?RequestOptions $options = null,) : DecodedResponse
     public function get(string $path, ?RequestOptions $options = null) : DecodedResponse
+    public function getEnvelope(string $path, ?RequestOptions $options = null) : array
     public function getWithRaw(string $path, ?RequestOptions $options = null) : array
+    public function sendRaw(string $method, string $path, ?string $rawBody, RequestOptions $options,) : RawResponse
+    public function exceptionFromRaw(RawResponse $raw, ?string $sentIdempotencyKey = null) : IsaException
     public const DEFAULT_BASE_URL
 
 === Zyins/Usage/Service.php ===
-namespace Sah\Sdk\Zyins\Usage;
+namespace Isa\Sdk\Zyins\Usage;
 class Service
     public function __construct(private Transport $transport)
     public function summary(?RequestOptions $options = null) : array
+    public function summaryEnvelope(?RequestOptions $options = null) : array
 
 === Zyins/Uuid4IdempotencyKeySource.php ===
-namespace Sah\Sdk\Zyins;
+namespace Isa\Sdk\Zyins;
 class Uuid4IdempotencyKeySource implements IdempotencyKeySource
     public function next() : string
 
 === Zyins/Weight.php ===
-namespace Sah\Sdk\Zyins;
+namespace Isa\Sdk\Zyins;
 class Weight
     public function fromPounds(int $pounds) : self
 
 === Zyins/ZyInsClient.php ===
-namespace Sah\Sdk\Zyins;
+namespace Isa\Sdk\Zyins;
 class ZyInsClient
-    public function __construct(string|Auth $token, ?ClientInterface $httpClient = null, ?IdempotencyKeySource $idempotency = null, string $baseUrl = Transport::DEFAULT_BASE_URL, string $apiVersion = self::DEFAULT_API_VERSION, ?string $userAgent = null, ?LoggerInterface $logger = null,)
-    public function withBearer(?string $token = null, ?LoggerInterface $logger = null) : self
-    public function withLicense(?string $keycode = null, ?string $email = null, ?LoggerInterface $logger = null,) : self
-    public function withSession(?string $sessionId = null, ?string $sessionSecret = null, ?LoggerInterface $logger = null,) : self
+    public function __construct(string|Auth $token, ?ClientInterface $httpClient = null, ?IdempotencyKeySource $idempotency = null, string $baseUrl = Transport::DEFAULT_BASE_URL, string $apiVersion = self::DEFAULT_API_VERSION, ?string $userAgent = null, ?LoggerInterface $logger = null, ?CaseStorage $caseStorage = null, array $apiVersionMap = [], ?AutocorrectorInterface $autocorrector = null, ?MatchAlgorithmInterface $matchAlgorithm = null, ?AutocompleteAlgorithmInterface $autocompleteAlgorithm = null,)
+    public function withBearer(?string $token = null, ?LoggerInterface $logger = null, ?CaseStorage $caseStorage = null, array $apiVersionMap = [],) : self
+    public function withLicense(?string $keycode = null, ?string $email = null, ?LoggerInterface $logger = null, ?CaseStorage $caseStorage = null, array $apiVersionMap = [],) : self
+    public function withSession(?string $sessionId = null, ?string $sessionSecret = null, ?LoggerInterface $logger = null, ?CaseStorage $caseStorage = null, array $apiVersionMap = [],) : self
     public const DEFAULT_API_VERSION
 

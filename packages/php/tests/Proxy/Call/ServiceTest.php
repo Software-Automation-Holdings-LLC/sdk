@@ -2,24 +2,24 @@
 
 declare(strict_types=1);
 
-namespace Sah\Sdk\Tests\Proxy\Call;
+namespace Isa\Sdk\Tests\Proxy\Call;
 
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\TestCase;
-use Sah\Sdk\Proxy\Auth;
-use Sah\Sdk\Proxy\Call\InvokeInput;
-use Sah\Sdk\Proxy\Call\InvokeResult;
-use Sah\Sdk\Proxy\Call\Service as CallService;
-use Sah\Sdk\Proxy\DecodedResponse;
-use Sah\Sdk\Proxy\Exception\IntegrationNotFoundException;
-use Sah\Sdk\Proxy\Exception\ProxyAuthException;
-use Sah\Sdk\Proxy\Exception\ProxyException;
-use Sah\Sdk\Proxy\Exception\ProxyRateLimitException;
-use Sah\Sdk\Proxy\Exception\ProxyValidationException;
-use Sah\Sdk\Proxy\RequestOptions;
-use Sah\Sdk\Proxy\Transport;
-use Sah\Sdk\Tests\Proxy\Support\FixedKeySource;
-use Sah\Sdk\Tests\Proxy\Support\MockHttpClient;
+use Isa\Sdk\Proxy\Auth;
+use Isa\Sdk\Proxy\Call\InvokeInput;
+use Isa\Sdk\Proxy\Call\InvokeResult;
+use Isa\Sdk\Proxy\Call\Service as CallService;
+use Isa\Sdk\Proxy\DecodedResponse;
+use Isa\Sdk\Proxy\Exception\IntegrationNotFoundException;
+use Isa\Sdk\Proxy\Exception\ProxyAuthException;
+use Isa\Sdk\Proxy\Exception\ProxyException;
+use Isa\Sdk\Proxy\Exception\ProxyRateLimitException;
+use Isa\Sdk\Proxy\Exception\ProxyValidationException;
+use Isa\Sdk\Proxy\RequestOptions;
+use Isa\Sdk\Proxy\Transport;
+use Isa\Sdk\Tests\Proxy\Support\FixedKeySource;
+use Isa\Sdk\Tests\Proxy\Support\MockHttpClient;
 
 #[CoversClass(CallService::class)]
 #[CoversClass(InvokeInput::class)]

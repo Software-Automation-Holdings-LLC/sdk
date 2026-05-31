@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace Sah\Sdk\RapidSign\Webhooks;
+namespace Isa\Sdk\RapidSign\Webhooks;
 
-use Sah\Sdk\RapidSign\Exception\NotImplementedException;
+use Isa\Sdk\RapidSign\Exception\NotImplementedException;
 
 /**
  * Webhook service exposed as `$client->webhooks`. Today every method

@@ -2,16 +2,16 @@
 
 declare(strict_types=1);
 
-namespace Sah\Sdk\Account;
+namespace Isa\Sdk\Account;
 
 use InvalidArgumentException;
-use Sah\Sdk\Zyins\ReferenceData\Service as ZyinsReferenceDataService;
+use Isa\Sdk\Zyins\ReferenceData\Service as ZyinsReferenceDataService;
 
 /**
  * `$isa->account->referenceData` — typeahead reference datasets.
  *
  * A thin facade over the existing
- * {@see \Sah\Sdk\Zyins\ReferenceData\Service}; the account namespace
+ * {@see \Isa\Sdk\Zyins\ReferenceData\Service}; the account namespace
  * exposes the same data under a scope-keyed surface so callers don't
  * have to remember the per-resource method names.
  *

@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-namespace Sah\Sdk\Account;
+namespace Isa\Sdk\Account;
 
 use GuzzleHttp\Client as GuzzleClient;
 use Psr\Http\Client\ClientInterface;
-use Sah\Sdk\Core\TokenSource;
-use Sah\Sdk\Zyins\Auth;
-use Sah\Sdk\Zyins\ReferenceData\Service as ZyinsReferenceDataService;
+use Isa\Sdk\Core\TokenSource;
+use Isa\Sdk\Zyins\Auth;
+use Isa\Sdk\Zyins\ReferenceData\Service as ZyinsReferenceDataService;
 
 /**
  * `$isa->account->*` — the elevated account API surface.
@@ -25,7 +25,7 @@ use Sah\Sdk\Zyins\ReferenceData\Service as ZyinsReferenceDataService;
  *
  * Facade discipline: takes a PSR-18 HTTP client and an optional
  * {@see TokenSource}; never references global state. The reference-data
- * sub-client is wired by the parent {@see \Sah\Sdk\Isa} so it shares
+ * sub-client is wired by the parent {@see \Isa\Sdk\Isa} so it shares
  * the same credential — when this class is constructed standalone the
  * `referenceData` property remains null and access throws a clear
  * `LogicException` describing the wiring requirement.

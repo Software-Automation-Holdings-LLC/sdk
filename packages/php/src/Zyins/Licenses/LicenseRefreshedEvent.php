@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace Sah\Sdk\Zyins\Licenses;
+namespace Isa\Sdk\Zyins\Licenses;
 
 /**
  * Event payload fired when the SDK observes a fresh license key —
  * typically the return value of `licenses->activate()`. Subscribe via
- * {@see \Sah\Sdk\Isa::onLicenseRefreshed()} to wire React-Query
+ * {@see \Isa\Sdk\Isa::onLicenseRefreshed()} to wire React-Query
  * invalidation, analytics, or UI banners.
  */
 final readonly class LicenseRefreshedEvent

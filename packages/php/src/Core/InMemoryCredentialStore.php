@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Sah\Sdk\Core;
+namespace Isa\Sdk\Core;
 
 /**
  * Process-local {@see CredentialStore}. Loses its contents on

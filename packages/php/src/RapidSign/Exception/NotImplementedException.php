@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Sah\Sdk\RapidSign\Exception;
+namespace Isa\Sdk\RapidSign\Exception;
 
 /**
  * 501 — capability not yet implemented (e.g. `cancel`, webhooks).

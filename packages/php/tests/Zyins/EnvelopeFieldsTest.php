@@ -2,29 +2,29 @@
 
 declare(strict_types=1);
 
-namespace Sah\Sdk\Tests\Zyins;
+namespace Isa\Sdk\Tests\Zyins;
 
+use Isa\Sdk\Tests\Zyins\Support\FixedKeySource;
+use Isa\Sdk\Tests\Zyins\Support\MockHttpClient;
+use Isa\Sdk\Zyins\Applicant;
+use Isa\Sdk\Zyins\Coverage;
+use Isa\Sdk\Zyins\Height;
+use Isa\Sdk\Zyins\NicotineUsage;
+use Isa\Sdk\Zyins\Prequalify\Input;
+use Isa\Sdk\Zyins\Prequalify\Result;
+use Isa\Sdk\Zyins\Product;
+use Isa\Sdk\Zyins\ProductType;
+use Isa\Sdk\Zyins\RawResponse;
+use Isa\Sdk\Zyins\RequestOptions;
+use Isa\Sdk\Zyins\Sex;
+use Isa\Sdk\Zyins\Weight;
+use Isa\Sdk\Zyins\ZyInsClient;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\TestCase;
-use Sah\Sdk\Tests\Zyins\Support\FixedKeySource;
-use Sah\Sdk\Tests\Zyins\Support\MockHttpClient;
-use Sah\Sdk\Zyins\Applicant;
-use Sah\Sdk\Zyins\Coverage;
-use Sah\Sdk\Zyins\Height;
-use Sah\Sdk\Zyins\NicotineUsage;
-use Sah\Sdk\Zyins\Prequalify\Input;
-use Sah\Sdk\Zyins\Prequalify\Result;
-use Sah\Sdk\Zyins\Product;
-use Sah\Sdk\Zyins\ProductType;
-use Sah\Sdk\Zyins\RawResponse;
-use Sah\Sdk\Zyins\RequestOptions;
-use Sah\Sdk\Zyins\Sex;
-use Sah\Sdk\Zyins\Weight;
-use Sah\Sdk\Zyins\ZyInsClient;
 
 #[CoversClass(Result::class)]
 #[CoversClass(RawResponse::class)]
-#[CoversClass(\Sah\Sdk\Zyins\Prequalify\Service::class)]
+#[CoversClass(\Isa\Sdk\Zyins\Prequalify\Service::class)]
 final class EnvelopeFieldsTest extends TestCase
 {
     private const TOKEN = 'isa_test_' . 'EXAMPLE000000000000000';
@@ -87,6 +87,9 @@ final class EnvelopeFieldsTest extends TestCase
         );
 
         $client = new ZyInsClient(token: self::TOKEN, httpClient: $http);
+        // Narrow the v1/v3 facade-routing union — this assertion covers the
+        // v1 service shape.
+        self::assertInstanceOf(\Isa\Sdk\Zyins\Prequalify\Service::class, $client->prequalify);
         [$result, $raw] = $client->prequalify->runWithRawResponse(self::sampleInput());
 
         self::assertInstanceOf(Result::class, $result);
@@ -103,8 +106,9 @@ final class EnvelopeFieldsTest extends TestCase
         $http = new MockHttpClient();
         $http->queue(500, json_encode(['code' => 'internal_error', 'message' => 'boom'], JSON_THROW_ON_ERROR));
         $client = new ZyInsClient(token: self::TOKEN, httpClient: $http);
+        self::assertInstanceOf(\Isa\Sdk\Zyins\Prequalify\Service::class, $client->prequalify);
 
-        $this->expectException(\Sah\Sdk\Zyins\Exception\IsaException::class);
+        $this->expectException(\Isa\Sdk\Zyins\Exception\IsaException::class);
         $client->prequalify->runWithRawResponse(
             self::sampleInput(),
             RequestOptions::default()->withIdempotencyKey('k'),

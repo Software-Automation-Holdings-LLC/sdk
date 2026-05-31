@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Sah\Sdk\Account;
+namespace Isa\Sdk\Account;
 
 /**
  * Attachment carried with a transactional email. Filename plus base64-

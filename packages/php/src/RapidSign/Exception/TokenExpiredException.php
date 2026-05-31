@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Sah\Sdk\RapidSign\Exception;
+namespace Isa\Sdk\RapidSign\Exception;
 
 /** 401 specifically signalled with TOKEN_EXPIRED — caller should refresh. */
 final class TokenExpiredException extends RapidSignException

@@ -2,26 +2,40 @@
 
 declare(strict_types=1);
 
-namespace Sah\Sdk\Zyins;
+namespace Isa\Sdk\Zyins;
 
 use GuzzleHttp\Client as GuzzleClient;
+use Isa\Sdk\Zyins\Branding\Service as BrandingService;
+use Isa\Sdk\Zyins\Cases\CaseStorage;
+use Isa\Sdk\Zyins\Cases\Service as CasesService;
+use Isa\Sdk\Zyins\Cases\ZeroKnowledgeCaseStorage;
+use Isa\Sdk\Zyins\Datasets\Service as DatasetsService;
+use Isa\Sdk\Zyins\Email\Service as EmailService;
+use Isa\Sdk\Zyins\Exception\IsaConfigException;
+use Isa\Sdk\Zyins\Health\Service as HealthService;
+use Isa\Sdk\Zyins\Licenses\Service as LicensesService;
+use Isa\Sdk\Zyins\Logging\DebugLogger;
+use Isa\Sdk\Zyins\Logos\Service as LogosService;
+use Isa\Sdk\Zyins\Options\BundledApiVersions;
+use Isa\Sdk\Zyins\Preferences\Service as PreferencesService;
+use Isa\Sdk\Zyins\Prequalify\Service as PrequalifyService;
+use Isa\Sdk\Zyins\Products\Facade as ProductsFacade;
+use Isa\Sdk\Zyins\Quote\Service as QuoteService;
+use Isa\Sdk\Zyins\Reference\AutocompleteAlgorithmInterface;
+use Isa\Sdk\Zyins\Reference\AutocorrectorInterface;
+use Isa\Sdk\Zyins\Reference\BundleBoundAutocorrector;
+use Isa\Sdk\Zyins\Reference\ConditionsMatcher;
+use Isa\Sdk\Zyins\Reference\DatasetsV3;
+use Isa\Sdk\Zyins\Reference\MatchAlgorithmInterface;
+use Isa\Sdk\Zyins\Reference\MedicationsMatcher;
+use Isa\Sdk\Zyins\Reference\PrequalifyV3;
+use Isa\Sdk\Zyins\Reference\QuoteV3;
+use Isa\Sdk\Zyins\Reference\Reference as ReferenceFacade;
+use Isa\Sdk\Zyins\Reference\ReferenceBundleCache;
+use Isa\Sdk\Zyins\ReferenceData\Service as ReferenceDataService;
+use Isa\Sdk\Zyins\Usage\Service as UsageService;
 use Psr\Http\Client\ClientInterface;
 use Psr\Log\LoggerInterface;
-use Sah\Sdk\Zyins\Branding\Service as BrandingService;
-use Sah\Sdk\Zyins\Cases\Service as CasesService;
-use Sah\Sdk\Zyins\Datasets\Service as DatasetsService;
-use Sah\Sdk\Zyins\Email\Service as EmailService;
-use Sah\Sdk\Zyins\Exception\IsaConfigException;
-use Sah\Sdk\Zyins\Health\Service as HealthService;
-use Sah\Sdk\Zyins\Licenses\Service as LicensesService;
-use Sah\Sdk\Zyins\Logos\Service as LogosService;
-use Sah\Sdk\Zyins\Preferences\Service as PreferencesService;
-use Sah\Sdk\Zyins\Logging\DebugLogger;
-use Sah\Sdk\Zyins\Prequalify\Service as PrequalifyService;
-use Sah\Sdk\Zyins\Products\Facade as ProductsFacade;
-use Sah\Sdk\Zyins\Quote\Service as QuoteService;
-use Sah\Sdk\Zyins\ReferenceData\Service as ReferenceDataService;
-use Sah\Sdk\Zyins\Usage\Service as UsageService;
 
 /**
  * Tier-3 ZyINS facade.
@@ -54,9 +68,79 @@ final readonly class ZyInsClient
 
     private const REFERENCE_DATA_PATH = '/v1/reference-data';
 
-    public PrequalifyService $prequalify;
-    public QuoteService $quote;
+    /**
+     * `isa->zyins->prequalify` — runs the prequalify decision against the
+     * version pinned on the parent {@see ZyInsClient}.
+     *
+     * With the default (`BundledApiVersions::MAP['prequalify']`) this is
+     * an alias of {@see $prequalify} (the v1 service hitting
+     * `POST /v1/prequalify`). With `apiVersion: ['prequalify' => 'v3']`
+     * it routes to {@see $prequalifyV3} so the namespace-level call site
+     * remains stable across surface upgrades. Narrow on the property's
+     * concrete type to disambiguate the typed return shape — `Result` for
+     * v1, `PrequalifyV3Result` for v3.
+     *
+     * Mirrors the TS facade routing on `ZyInsNamespace.prequalify`.
+     */
+    public PrequalifyService|PrequalifyV3 $prequalify;
+    /**
+     * `isa->zyins->quote` — runs the quote operation against the version
+     * pinned on the parent {@see ZyInsClient}.
+     *
+     * With the default this is an alias of the v1 {@see QuoteService}
+     * (`POST /v1/quote`). With `apiVersion: ['quote' => 'v3']` it routes
+     * to {@see $quoteV3} (`POST /v3/quote`). Narrow on the property's
+     * concrete type to disambiguate the typed return shape.
+     */
+    public QuoteService|QuoteV3 $quote;
     public DatasetsService $datasets;
+    /** `isa->zyins->datasetsV3` — typed, id-keyed reference catalog (`GET /v3/datasets`). */
+    public DatasetsV3 $datasetsV3;
+    /**
+     * `isa->zyins->prequalifyV3` — callable for the typed v3 prequalify
+     * decision (`POST /v3/prequalify`). Returns one offer per product
+     * with a uniform `pricing[]` table — each row is a rate class
+     * carrying its own eligibility, premium, and rank. Array order of
+     * `pricing` is authoritative for display. Pin via
+     * `apiVersion: ['prequalify' => 'v3']` to make
+     * `isa->zyins->prequalify` route here.
+     */
+    public PrequalifyV3 $prequalifyV3;
+    /**
+     * `isa->zyins->quoteV3` — callable for the typed v3 quote call
+     * (`POST /v3/quote`). Returns qualifying products grouped by
+     * requested amount with the same uniform `pricing[]` table as v3
+     * prequalify. Pin via `apiVersion: ['quote' => 'v3']` to make
+     * `isa->zyins->quote` route here.
+     */
+    public QuoteV3 $quoteV3;
+    /**
+     * `isa->zyins->reference` — typed catalog access via `match()`
+     * returning `Concept` handles. Pair with `$datasetsV3->get()` to
+     * obtain the bundle the matchers walk.
+     */
+    public ReferenceFacade $reference;
+    /**
+     * `isa->zyins->medications` — shortcut to `$reference->medications`.
+     * Identical instance; `match()`, `matchMany()`, and `list()` behave
+     * the same way regardless of which path the caller picks.
+     */
+    public MedicationsMatcher $medications;
+    /**
+     * `isa->zyins->conditions` — shortcut to `$reference->conditions`.
+     * Identical instance; `match()`, `matchMany()`, and `list()` behave
+     * the same way regardless of which path the caller picks.
+     */
+    public ConditionsMatcher $conditions;
+    /**
+     * `isa->zyins->autocorrector` — domain-bound autocorrector wired to
+     * the v3 spelling_corrections dataset. After
+     * `$isa->zyins->datasetsV3->get()` warms the cache, this corrects
+     * free-text input using the catalog typo map. Replace via the
+     * `autocorrector` constructor parameter on {@see \Isa\Sdk\Isa} for
+     * custom autocorrection (e.g. language models).
+     */
+    public AutocorrectorInterface $autocorrector;
     public ProductsFacade $products;
     public ReferenceDataService $referenceData;
     public UsageService $usage;
@@ -75,6 +159,15 @@ final readonly class ZyInsClient
     public Auth $auth;
     private Transport $transport;
 
+    /**
+     * @param array<string, string> $apiVersionMap Per-surface API version overrides;
+     *                                             keys are surface names (e.g. `prequalify`,
+     *                                             `quote`). Surfaces absent from the map
+     *                                             fall back to {@see BundledApiVersions::MAP}.
+     *                                             When `prequalify` resolves to `v3` the
+     *                                             {@see $prequalify} property routes to
+     *                                             {@see $prequalifyV3}; same for `quote`.
+     */
     public function __construct(
         string|Auth $token,
         ?ClientInterface $httpClient = null,
@@ -83,6 +176,11 @@ final readonly class ZyInsClient
         string $apiVersion = self::DEFAULT_API_VERSION,
         ?string $userAgent = null,
         ?LoggerInterface $logger = null,
+        ?CaseStorage $caseStorage = null,
+        array $apiVersionMap = [],
+        ?AutocorrectorInterface $autocorrector = null,
+        ?MatchAlgorithmInterface $matchAlgorithm = null,
+        ?AutocompleteAlgorithmInterface $autocompleteAlgorithm = null,
     ) {
         $this->auth = $token instanceof Auth ? $token : new Auth($token);
         $this->transport = new Transport(
@@ -94,9 +192,31 @@ final readonly class ZyInsClient
             userAgent: $userAgent ?? self::defaultUserAgent(),
             logger: new DebugLogger($logger),
         );
-        $this->prequalify = new PrequalifyService($this->transport);
-        $this->quote = new QuoteService($this->transport);
         $this->datasets = new DatasetsService($this->transport);
+        // Shared reference-bundle cache: warmed by `datasetsV3->get()`
+        // on every successful fetch, read by the bundleless `match()`
+        // path on the matchers below. One instance per client so the
+        // matchers and the dataset service stay in lock-step without
+        // consumer-side plumbing.
+        $referenceCache = new ReferenceBundleCache();
+        $this->datasetsV3 = new DatasetsV3($this->transport, $referenceCache);
+        $this->prequalifyV3 = new PrequalifyV3($this->transport);
+        $this->quoteV3 = new QuoteV3($this->transport);
+
+        // Per-surface facade routing — narrow which concrete service the
+        // namespace-level `prequalify` / `quote` properties point at, based
+        // on the resolved per-surface API version. Mirrors the TS selector
+        // in `ZyInsNamespace` (packages/ts/src/zyins/isa.ts).
+        $this->prequalify = BundledApiVersions::resolve('prequalify', $apiVersionMap) === 'v3'
+            ? $this->prequalifyV3
+            : new PrequalifyService($this->transport);
+        $this->quote = BundledApiVersions::resolve('quote', $apiVersionMap) === 'v3'
+            ? $this->quoteV3
+            : new QuoteService($this->transport);
+        $this->reference = new ReferenceFacade($referenceCache, $matchAlgorithm, $autocompleteAlgorithm);
+        $this->medications = $this->reference->medications;
+        $this->conditions = $this->reference->conditions;
+        $this->autocorrector = $autocorrector ?? new BundleBoundAutocorrector($referenceCache);
         $this->products = new ProductsFacade(
             fn (array $query): array => $this->fetchReferenceData($query)
         );
@@ -111,7 +231,11 @@ final readonly class ZyInsClient
         $this->branding = new BrandingService($this->transport);
         $this->preferences = new PreferencesService($this->transport);
         $this->email = new EmailService($this->transport);
-        $this->cases = new CasesService($this->transport, $this->email);
+        $this->cases = new CasesService(
+            $this->transport,
+            $this->email,
+            $caseStorage ?? new ZeroKnowledgeCaseStorage($this->transport),
+        );
     }
 
     /**
@@ -129,17 +253,28 @@ final readonly class ZyInsClient
      * // Reads ISA_TOKEN from the environment:
      * $isa = ZyInsClient::withBearer();
      *
+     * @param array<string, string> $apiVersionMap per-surface API version overrides.
+     *
      * @see https://docs.isaapi.com/sdk/factories
      */
-    public static function withBearer(?string $token = null, ?LoggerInterface $logger = null): self
-    {
+    public static function withBearer(
+        ?string $token = null,
+        ?LoggerInterface $logger = null,
+        ?CaseStorage $caseStorage = null,
+        array $apiVersionMap = [],
+    ): self {
         $resolved = $token ?? self::env('ISA_TOKEN');
         if ($resolved === null) {
             throw new IsaConfigException(
                 'ZyInsClient::withBearer(): missing token. Pass it explicitly or set ISA_TOKEN in the environment.'
             );
         }
-        return new self(token: $resolved, logger: $logger);
+        return new self(
+            token: $resolved,
+            logger: $logger,
+            caseStorage: $caseStorage,
+            apiVersionMap: $apiVersionMap,
+        );
     }
 
     /**
@@ -158,12 +293,16 @@ final readonly class ZyInsClient
      * @example
      * $isa = ZyInsClient::withLicense('ABC-123-XYZ', 'agent@example.com');
      *
+     * @param array<string, string> $apiVersionMap per-surface API version overrides.
+     *
      * @see https://docs.isaapi.com/sdk/factories
      */
     public static function withLicense(
         ?string $keycode = null,
         ?string $email = null,
         ?LoggerInterface $logger = null,
+        ?CaseStorage $caseStorage = null,
+        array $apiVersionMap = [],
     ): self {
         $resolvedKey = $keycode ?? self::env('ISA_LICENSE_KEYCODE');
         $resolvedEmail = $email ?? self::env('ISA_LICENSE_EMAIL');
@@ -177,7 +316,12 @@ final readonly class ZyInsClient
                 'ZyInsClient::withLicense(): missing email. Pass it explicitly or set ISA_LICENSE_EMAIL in the environment.'
             );
         }
-        return new self(token: Auth::license($resolvedKey, $resolvedEmail), logger: $logger);
+        return new self(
+            token: Auth::license($resolvedKey, $resolvedEmail),
+            logger: $logger,
+            caseStorage: $caseStorage,
+            apiVersionMap: $apiVersionMap,
+        );
     }
 
     /**
@@ -197,12 +341,16 @@ final readonly class ZyInsClient
      * // Reads ISA_SESSION_ID and ISA_SESSION_SECRET from the environment:
      * $isa = ZyInsClient::withSession();
      *
+     * @param array<string, string> $apiVersionMap per-surface API version overrides.
+     *
      * @see https://docs.isaapi.com/sdk/factories
      */
     public static function withSession(
         ?string $sessionId = null,
         ?string $sessionSecret = null,
         ?LoggerInterface $logger = null,
+        ?CaseStorage $caseStorage = null,
+        array $apiVersionMap = [],
     ): self {
         $resolvedId = $sessionId ?? self::env('ISA_SESSION_ID');
         $resolvedSecret = $sessionSecret ?? self::env('ISA_SESSION_SECRET');
@@ -216,7 +364,12 @@ final readonly class ZyInsClient
                 'ZyInsClient::withSession(): missing session secret. Pass it explicitly or set ISA_SESSION_SECRET in the environment.'
             );
         }
-        return new self(token: Auth::session($resolvedId, $resolvedSecret), logger: $logger);
+        return new self(
+            token: Auth::session($resolvedId, $resolvedSecret),
+            logger: $logger,
+            caseStorage: $caseStorage,
+            apiVersionMap: $apiVersionMap,
+        );
     }
 
     private static function env(string $name): ?string

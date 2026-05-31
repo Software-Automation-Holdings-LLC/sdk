@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Sah\Sdk\Core;
+namespace Isa\Sdk\Core;
 
 use InvalidArgumentException;
 use Psr\Http\Client\ClientInterface;
@@ -43,7 +43,7 @@ final readonly class RetryClient implements ClientInterface
         $this->baseDelayMs = $baseDelayMs ?? self::DEFAULT_BASE_DELAY_MS;
         $this->maxDelayMs = $maxDelayMs ?? self::DEFAULT_MAX_DELAY_MS;
         if ($this->maxAttempts <= 0 || $this->baseDelayMs <= 0 || $this->maxDelayMs <= 0) {
-            throw new InvalidArgumentException('Sah\\Sdk\\Core\\RetryClient requires positive maxAttempts, baseDelayMs, and maxDelayMs');
+            throw new InvalidArgumentException('Isa\\Sdk\\Core\\RetryClient requires positive maxAttempts, baseDelayMs, and maxDelayMs');
         }
     }
 
@@ -78,7 +78,7 @@ final readonly class RetryClient implements ClientInterface
         // or sets $lastException — and we just confirmed $lastException
         // is null. The runtime check satisfies PHPStan's null-narrowing.
         if ($lastResponse === null) {
-            throw new \LogicException('Sah\\Sdk\\Core\\RetryClient: retry loop exited without capturing a response or exception');
+            throw new \LogicException('Isa\\Sdk\\Core\\RetryClient: retry loop exited without capturing a response or exception');
         }
         return $lastResponse;
     }
@@ -139,7 +139,7 @@ final readonly class RetryClient implements ClientInterface
         $body = $request->getBody();
         if (! $body->isSeekable()) {
             throw new RuntimeException(
-                'Sah\\Sdk\\Core\\Transport\\RetryClient cannot retry this request: the body stream is not rewindable'
+                'Isa\\Sdk\\Core\\RetryClient cannot retry this request: the body stream is not rewindable'
             );
         }
         $body->rewind();

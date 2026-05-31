@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Sah\Sdk\RapidSign\Documents;
+namespace Isa\Sdk\RapidSign\Documents;
 
 /** One PDF source the server fetches and merges into the packet. */
 final readonly class PdfSource

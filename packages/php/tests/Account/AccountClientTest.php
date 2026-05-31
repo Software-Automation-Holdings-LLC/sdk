@@ -2,22 +2,22 @@
 
 declare(strict_types=1);
 
-namespace Sah\Sdk\Tests\Account;
+namespace Isa\Sdk\Tests\Account;
 
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\TestCase;
-use Sah\Sdk\Account\AccountClient;
-use Sah\Sdk\Account\BrandingClient;
-use Sah\Sdk\Account\CasesClient;
-use Sah\Sdk\Account\EmailAttachment;
-use Sah\Sdk\Account\EmailClient;
-use Sah\Sdk\Account\Http;
-use Sah\Sdk\Account\PreferencesClient;
-use Sah\Sdk\Core\StaticToken;
-use Sah\Sdk\Tests\Zyins\Support\MockHttpClient;
-use Sah\Sdk\Zyins\Auth;
-use Sah\Sdk\Zyins\Exception\IsaException;
-use Sah\Sdk\Zyins\Exception\IsaRateLimitException;
+use Isa\Sdk\Account\AccountClient;
+use Isa\Sdk\Account\BrandingClient;
+use Isa\Sdk\Account\CasesClient;
+use Isa\Sdk\Account\EmailAttachment;
+use Isa\Sdk\Account\EmailClient;
+use Isa\Sdk\Account\Http;
+use Isa\Sdk\Account\PreferencesClient;
+use Isa\Sdk\Core\StaticToken;
+use Isa\Sdk\Tests\Zyins\Support\MockHttpClient;
+use Isa\Sdk\Zyins\Auth;
+use Isa\Sdk\Zyins\Exception\IsaException;
+use Isa\Sdk\Zyins\Exception\IsaRateLimitException;
 
 #[CoversClass(AccountClient::class)]
 #[CoversClass(Http::class)]

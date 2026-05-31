@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace Sah\Sdk\Tests\Core;
+namespace Isa\Sdk\Tests\Core;
 
 use Nyholm\Psr7\Factory\Psr17Factory;
 use PHPUnit\Framework\TestCase;
 use RuntimeException;
-use Sah\Sdk\Core\ResponseExtractor;
+use Isa\Sdk\Core\ResponseExtractor;
 
 final class ResponseExtractorTest extends TestCase
 {

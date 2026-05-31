@@ -37,12 +37,12 @@
   },
   "autoload": {
     "psr-4": {
-      "Sah\\Sdk\\": "src/"
+      "Isa\\Sdk\\": "src/"
     }
   },
   "autoload-dev": {
     "psr-4": {
-      "Sah\\Sdk\\Tests\\": "tests/"
+      "Isa\\Sdk\\Tests\\": "tests/"
     }
   },
   "extra": {
@@ -58,6 +58,6 @@
     "lint": "phpstan analyse --memory-limit=2G --no-progress",
     "gen:catalog": "php -d memory_limit=2G scripts/gen-catalog.php"
   },
-  "minimum-stability": "stable",
-  "version": "0.5.5"
+  "minimum-stability": "RC",
+  "version": "1.0.0-rc.3"
 }

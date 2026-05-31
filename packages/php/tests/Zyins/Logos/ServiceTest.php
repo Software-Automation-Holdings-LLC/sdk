@@ -2,14 +2,14 @@
 
 declare(strict_types=1);
 
-namespace Sah\Sdk\Tests\Zyins\Logos;
+namespace Isa\Sdk\Tests\Zyins\Logos;
 
 use InvalidArgumentException;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\TestCase;
-use Sah\Sdk\Tests\Zyins\Support\MockHttpClient;
-use Sah\Sdk\Zyins\Exception\IsaException;
-use Sah\Sdk\Zyins\Logos\Service;
+use Isa\Sdk\Tests\Zyins\Support\MockHttpClient;
+use Isa\Sdk\Zyins\Exception\IsaException;
+use Isa\Sdk\Zyins\Logos\Service;
 
 #[CoversClass(Service::class)]
 final class ServiceTest extends TestCase

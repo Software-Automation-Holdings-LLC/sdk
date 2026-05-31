@@ -16,7 +16,7 @@
 
 declare(strict_types=1);
 
-namespace Sah\Sdk\Tests;
+namespace Isa\Sdk\Tests;
 
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;

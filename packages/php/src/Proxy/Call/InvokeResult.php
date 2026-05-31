@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace Sah\Sdk\Proxy\Call;
+namespace Isa\Sdk\Proxy\Call;
 
-use Sah\Sdk\Proxy\Exception\ProxyException;
+use Isa\Sdk\Proxy\Exception\ProxyException;
 
 /**
  * The downstream response, surfaced verbatim through the proxy.

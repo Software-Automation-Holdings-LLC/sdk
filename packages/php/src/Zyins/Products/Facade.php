@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace Sah\Sdk\Zyins\Products;
+namespace Isa\Sdk\Zyins\Products;
 
-use Sah\Sdk\Zyins\ProductCatalog;
+use Isa\Sdk\Zyins\ProductCatalog;
 
 /**
  * `$client->products` — live product catalog with memoization.

@@ -2,19 +2,19 @@
 
 declare(strict_types=1);
 
-namespace Sah\Sdk\RapidSign\Documents;
+namespace Isa\Sdk\RapidSign\Documents;
 
 use DateTimeImmutable;
 use Psr\Http\Message\ResponseInterface;
-use Sah\Sdk\RapidSign\Clock;
-use Sah\Sdk\RapidSign\Exception\DeadlineExceededException;
-use Sah\Sdk\RapidSign\Exception\NotFoundException;
-use Sah\Sdk\RapidSign\Exception\NotImplementedException;
-use Sah\Sdk\RapidSign\Exception\RapidSignException;
-use Sah\Sdk\RapidSign\Exception\UnknownException;
-use Sah\Sdk\RapidSign\Exception\ValidationException;
-use Sah\Sdk\RapidSign\Internal\Duration;
-use Sah\Sdk\RapidSign\Internal\HttpTransport;
+use Isa\Sdk\RapidSign\Clock;
+use Isa\Sdk\RapidSign\Exception\DeadlineExceededException;
+use Isa\Sdk\RapidSign\Exception\NotFoundException;
+use Isa\Sdk\RapidSign\Exception\NotImplementedException;
+use Isa\Sdk\RapidSign\Exception\RapidSignException;
+use Isa\Sdk\RapidSign\Exception\UnknownException;
+use Isa\Sdk\RapidSign\Exception\ValidationException;
+use Isa\Sdk\RapidSign\Internal\Duration;
+use Isa\Sdk\RapidSign\Internal\HttpTransport;
 
 /**
  * RapidSign documents service.

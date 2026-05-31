@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Sah\Sdk\Zyins\Pagination;
+namespace Isa\Sdk\Zyins\Pagination;
 
 /**
  * Common options accepted by every `*.list(...)` call.

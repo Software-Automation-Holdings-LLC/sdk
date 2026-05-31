@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Sah\Sdk\Core;
+namespace Isa\Sdk\Core;
 
 use Psr\Http\Message\ResponseInterface;
 use RuntimeException;

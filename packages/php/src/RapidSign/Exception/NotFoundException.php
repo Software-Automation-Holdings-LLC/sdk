@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Sah\Sdk\RapidSign\Exception;
+namespace Isa\Sdk\RapidSign\Exception;
 
 /** 404 — document or sign id does not exist. */
 final class NotFoundException extends RapidSignException

@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Sah\Sdk\Zyins\Email;
+namespace Isa\Sdk\Zyins\Email;
 
 /**
  * Typed response for {@see Service::enqueue()}.

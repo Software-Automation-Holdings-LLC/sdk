@@ -2,14 +2,14 @@
 
 declare(strict_types=1);
 
-namespace Sah\Sdk\Zyins\Logos;
+namespace Isa\Sdk\Zyins\Logos;
 
 use GuzzleHttp\Client as GuzzleClient;
 use GuzzleHttp\Psr7\Request;
 use InvalidArgumentException;
 use Psr\Http\Client\ClientExceptionInterface;
 use Psr\Http\Client\ClientInterface;
-use Sah\Sdk\Zyins\Exception\IsaException;
+use Isa\Sdk\Zyins\Exception\IsaException;
 
 /**
  * `$isa->zyins->logos` — `GET /v1/logo/{carrier}` (synonym

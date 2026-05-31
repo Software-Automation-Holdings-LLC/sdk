@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Sah\Sdk\Catalog;
+namespace Isa\Sdk\Catalog;
 
 /**
  * Generated catalog module — do not hand-edit; rerun the generator.

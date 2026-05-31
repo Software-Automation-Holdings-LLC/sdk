@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-namespace Sah\Sdk\Tests\Core;
+namespace Isa\Sdk\Tests\Core;
 
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
-use Sah\Sdk\Core\Bootstrap;
-use Sah\Sdk\Core\BootstrapSignature;
+use Isa\Sdk\Core\Bootstrap;
+use Isa\Sdk\Core\BootstrapSignature;
 
 /**
  * Bytewise conformance gate for the embedded HMAC bootstrap signature.
@@ -119,7 +119,7 @@ final class BootstrapConformanceTest extends TestCase
         );
     }
 
-    private static function buildFromFixture(): \Sah\Sdk\Core\BootstrapSignature
+    private static function buildFromFixture(): \Isa\Sdk\Core\BootstrapSignature
     {
         $inputs = self::$fixture['inputs'];
         return Bootstrap::build(

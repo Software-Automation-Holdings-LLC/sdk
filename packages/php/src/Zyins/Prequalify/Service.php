@@ -2,11 +2,12 @@
 
 declare(strict_types=1);
 
-namespace Sah\Sdk\Zyins\Prequalify;
+namespace Isa\Sdk\Zyins\Prequalify;
 
-use Sah\Sdk\Zyins\RawResponse;
-use Sah\Sdk\Zyins\RequestOptions;
-use Sah\Sdk\Zyins\Transport;
+use Isa\Sdk\Zyins\LegacyWire;
+use Isa\Sdk\Zyins\RawResponse;
+use Isa\Sdk\Zyins\RequestOptions;
+use Isa\Sdk\Zyins\Transport;
 
 /**
  * Prequalify sub-service. The `run` method is the single common entry
@@ -32,9 +33,9 @@ final readonly class Service
      *
      * @return Result Qualifying plans with the engine request id and idempotency key.
      *
-     * @throws \Sah\Sdk\Zyins\Exception\IsaException                       on 4xx/5xx wire responses.
-     * @throws \Sah\Sdk\Zyins\Exception\IsaIdempotencyConflictException     on idempotency-key reuse.
-     * @throws \Sah\Sdk\Zyins\Exception\IsaRateLimitException               on rate limiting.
+     * @throws \Isa\Sdk\Zyins\Exception\IsaException                       on 4xx/5xx wire responses.
+     * @throws \Isa\Sdk\Zyins\Exception\IsaIdempotencyConflictException     on idempotency-key reuse.
+     * @throws \Isa\Sdk\Zyins\Exception\IsaRateLimitException               on rate limiting.
      *
      * @example
      * $result = $isa->prequalify->run(new Input(
@@ -107,5 +108,21 @@ final readonly class Service
             ),
             $raw,
         ];
+    }
+
+    /**
+     * Run prequalify and return the full JSON envelope for conformance.
+     *
+     * @return array<string,mixed>
+     */
+    public function runEnvelope(Input $input, ?RequestOptions $options = null): array
+    {
+        $body = LegacyWire::enabled()
+            ? LegacyWire::prequalifyBodyFromApplicant(
+                $input->applicant,
+                LegacyWire::faceAmountFromCoverage($input->coverage),
+            )
+            : $input->toWireBody();
+        return $this->transport->postEnvelope(self::PATH, $body, $options);
     }
 }

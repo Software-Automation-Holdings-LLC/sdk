@@ -2,18 +2,18 @@
 
 declare(strict_types=1);
 
-namespace Sah\Sdk\Proxy;
+namespace Isa\Sdk\Proxy;
 
 use GuzzleHttp\Psr7\Request;
 use Psr\Http\Client\ClientExceptionInterface;
 use Psr\Http\Client\ClientInterface;
 use Psr\Http\Message\ResponseInterface;
-use Sah\Sdk\Proxy\Exception\IntegrationNotFoundException;
-use Sah\Sdk\Proxy\Exception\IsaException;
-use Sah\Sdk\Proxy\Exception\ProxyAuthException;
-use Sah\Sdk\Proxy\Exception\ProxyException;
-use Sah\Sdk\Proxy\Exception\ProxyRateLimitException;
-use Sah\Sdk\Proxy\Exception\ProxyValidationException;
+use Isa\Sdk\Proxy\Exception\IntegrationNotFoundException;
+use Isa\Sdk\Proxy\Exception\IsaException;
+use Isa\Sdk\Proxy\Exception\ProxyAuthException;
+use Isa\Sdk\Proxy\Exception\ProxyException;
+use Isa\Sdk\Proxy\Exception\ProxyRateLimitException;
+use Isa\Sdk\Proxy\Exception\ProxyValidationException;
 
 /**
  * Thin protocol layer over a PSR-18 client for the proxy API.

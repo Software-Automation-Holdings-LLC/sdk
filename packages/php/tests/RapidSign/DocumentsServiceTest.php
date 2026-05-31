@@ -2,32 +2,32 @@
 
 declare(strict_types=1);
 
-namespace Sah\Sdk\Tests\RapidSign;
+namespace Isa\Sdk\Tests\RapidSign;
 
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\TestCase;
-use Sah\Sdk\RapidSign\Documents\AwaitOpts;
-use Sah\Sdk\RapidSign\Documents\CancelRequest;
-use Sah\Sdk\RapidSign\Documents\EnvelopeStatus;
-use Sah\Sdk\RapidSign\Documents\PdfSource;
-use Sah\Sdk\RapidSign\Documents\Recipient;
-use Sah\Sdk\RapidSign\Documents\SendRequest;
-use Sah\Sdk\RapidSign\Documents\Service as DocumentsService;
-use Sah\Sdk\RapidSign\Exception\DeadlineExceededException;
-use Sah\Sdk\RapidSign\Exception\NotFoundException;
-use Sah\Sdk\RapidSign\Exception\NotImplementedException;
-use Sah\Sdk\RapidSign\Exception\RapidSignException;
-use Sah\Sdk\RapidSign\Exception\ValidationException;
-use Sah\Sdk\RapidSign\RapidSignClient;
-use Sah\Sdk\Tests\RapidSign\Support\FixedClock;
-use Sah\Sdk\Tests\RapidSign\Support\FixedIdempotency;
-use Sah\Sdk\Tests\RapidSign\Support\InstantSleeper;
-use Sah\Sdk\Tests\RapidSign\Support\MockHttpClient;
+use Isa\Sdk\RapidSign\Documents\AwaitOpts;
+use Isa\Sdk\RapidSign\Documents\CancelRequest;
+use Isa\Sdk\RapidSign\Documents\EnvelopeStatus;
+use Isa\Sdk\RapidSign\Documents\PdfSource;
+use Isa\Sdk\RapidSign\Documents\Recipient;
+use Isa\Sdk\RapidSign\Documents\SendRequest;
+use Isa\Sdk\RapidSign\Documents\Service as DocumentsService;
+use Isa\Sdk\RapidSign\Exception\DeadlineExceededException;
+use Isa\Sdk\RapidSign\Exception\NotFoundException;
+use Isa\Sdk\RapidSign\Exception\NotImplementedException;
+use Isa\Sdk\RapidSign\Exception\RapidSignException;
+use Isa\Sdk\RapidSign\Exception\ValidationException;
+use Isa\Sdk\RapidSign\RapidSignClient;
+use Isa\Sdk\Tests\RapidSign\Support\FixedClock;
+use Isa\Sdk\Tests\RapidSign\Support\FixedIdempotency;
+use Isa\Sdk\Tests\RapidSign\Support\InstantSleeper;
+use Isa\Sdk\Tests\RapidSign\Support\MockHttpClient;
 
 #[CoversClass(DocumentsService::class)]
-#[CoversClass(\Sah\Sdk\RapidSign\Internal\HttpTransport::class)]
-#[CoversClass(\Sah\Sdk\RapidSign\Internal\Duration::class)]
-#[CoversClass(\Sah\Sdk\RapidSign\Exception\ErrorFactory::class)]
+#[CoversClass(\Isa\Sdk\RapidSign\Internal\HttpTransport::class)]
+#[CoversClass(\Isa\Sdk\RapidSign\Internal\Duration::class)]
+#[CoversClass(\Isa\Sdk\RapidSign\Exception\ErrorFactory::class)]
 final class DocumentsServiceTest extends TestCase
 {
     private const FIXTURE_TOKEN = 'isa_test_' . 'EXAMPLE000000000000000';
@@ -276,7 +276,7 @@ final class DocumentsServiceTest extends TestCase
         // Wrap sleep behavior: every "sleep" advances the clock so the
         // loop exits via DeadlineExceededException in bounded iterations
         // without burning real wall time.
-        $advancing = new class ($clock) implements \Sah\Sdk\RapidSign\Sleeper {
+        $advancing = new class ($clock) implements \Isa\Sdk\RapidSign\Sleeper {
             public function __construct(private readonly FixedClock $clock)
             {
             }
@@ -337,7 +337,7 @@ final class DocumentsServiceTest extends TestCase
         }
 
         $clock = new FixedClock(0);
-        $advancing = new class ($clock) implements \Sah\Sdk\RapidSign\Sleeper {
+        $advancing = new class ($clock) implements \Isa\Sdk\RapidSign\Sleeper {
             public function __construct(private readonly FixedClock $clock)
             {
             }

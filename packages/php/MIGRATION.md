@@ -1,4 +1,55 @@
-# Migration — per-product packages → `sah/sdk` v0.3.0
+# Migration — 0.x → 1.0.0-rc.1 (PHP)
+
+The cross-language guide at [`../../MIGRATION.md`](../../MIGRATION.md)
+covers the full cut (constructor rename, per-surface `apiVersion`,
+v3 wire-shape, `CaseStorage` adapter, bundleless `reference->match`).
+PHP-specific notes:
+
+- **Install (rc.1, internal channel):**
+
+  Add the GitHub Packages Composer repository to your project's
+  `composer.json`:
+
+  ```jsonc
+  {
+    "repositories": [
+      {
+        "type": "composer",
+        "url": "https://composer.pkg.github.com/Software-Automation-Holdings-LLC"
+      }
+    ],
+    "minimum-stability": "rc",
+    "prefer-stable": true
+  }
+  ```
+
+  Authenticate via `auth.json`:
+
+  ```bash
+  composer config --global --auth \
+      http-basic.composer.pkg.github.com \
+      <gh-user> <gh-pat-with-read:packages>
+  ```
+
+  Then:
+
+  ```bash
+  composer require sah/sdk:1.0.0-rc.1
+  ```
+
+- **Constructor:** `Isa::create([...])` → `Isa::withKeycode([...])`.
+  The `deviceId` option is removed (internal SDK detail).
+- **apiVersion:** string → `array<string, string>` (per-surface).
+  Use `BundledApiVersions` for defaults.
+- **Cases:** `$isa->case->save([...])` → `$isa->zyins->cases->save(
+  ['product' => ..., 'payload' => ...])`. Default storage is
+  `ZeroKnowledgeCaseStorage`.
+- **Reference:** new `ReferenceBundleCache` primes on first
+  `$isa->zyins->reference->match($text)` call.
+
+---
+
+# Historical: per-product packages → `sah/sdk` v0.3.0
 
 The PHP SDK ships as **one Composer package per process**, not four. This
 document explains how to migrate.
@@ -35,18 +86,18 @@ composer require sah/sdk:^0.3.0
 
 | Before | After |
 |---|---|
-| `Sah\IsaSdk\ZyINS\…` | `Sah\Sdk\Zyins\…` |
-| `Sah\IsaSdk\RapidSign\…` | `Sah\Sdk\RapidSign\…` |
-| `Sah\IsaSdk\Proxy\…` | `Sah\Sdk\Proxy\…` |
-| `Sah\Sdk\Core\Transport\…` | `Sah\Sdk\Core\…` |
-| `Sah\IsaSdk\ZyINS\Tests\…` | `Sah\Sdk\Tests\Zyins\…` |
-| `Sah\IsaSdk\Proxy\Tests\…` | `Sah\Sdk\Tests\Proxy\…` |
-| `Sah\IsaSdk\RapidSign\Tests\…` | `Sah\Sdk\Tests\RapidSign\…` |
-| `Sah\Sdk\Core\Transport\Tests\…` | `Sah\Sdk\Tests\Core\…` |
+| `Sah\IsaSdk\ZyINS\…` | `Isa\Sdk\Zyins\…` |
+| `Sah\IsaSdk\RapidSign\…` | `Isa\Sdk\RapidSign\…` |
+| `Sah\IsaSdk\Proxy\…` | `Isa\Sdk\Proxy\…` |
+| `Isa\Sdk\Core\Transport\…` | `Isa\Sdk\Core\…` |
+| `Sah\IsaSdk\ZyINS\Tests\…` | `Isa\Sdk\Tests\Zyins\…` |
+| `Sah\IsaSdk\Proxy\Tests\…` | `Isa\Sdk\Tests\Proxy\…` |
+| `Sah\IsaSdk\RapidSign\Tests\…` | `Isa\Sdk\Tests\RapidSign\…` |
+| `Isa\Sdk\Core\Transport\Tests\…` | `Isa\Sdk\Tests\Core\…` |
 
 ## Entry-point change
 
-The new unified entry point is `Sah\Sdk\Isa`. Per-product clients
+The new unified entry point is `Isa\Sdk\Isa`. Per-product clients
 (`ZyInsClient`, `RapidSignClient`, `ProxyClient`) remain available for
 advanced callers — `Isa` composes them.
 
@@ -59,12 +110,12 @@ $zyins = ZyInsClient::withBearer();
 $rapidsign = new RapidSignClient($token);
 
 // After
-use Sah\Sdk\Isa;
+use Isa\Sdk\Isa;
 
 $isa = Isa::withBearer();
-$zyins = $isa->zyins;          // Sah\Sdk\Zyins\ZyInsClient
-$rapidsign = $isa->rapidsign;   // Sah\Sdk\RapidSign\RapidSignClient
-$proxy = $isa->proxy;           // Sah\Sdk\Proxy\ProxyClient
+$zyins = $isa->zyins;          // Isa\Sdk\Zyins\ZyInsClient
+$rapidsign = $isa->rapidsign;   // Isa\Sdk\RapidSign\RapidSignClient
+$proxy = $isa->proxy;           // Isa\Sdk\Proxy\ProxyClient
 ```
 
 ## Automated migration with Rector

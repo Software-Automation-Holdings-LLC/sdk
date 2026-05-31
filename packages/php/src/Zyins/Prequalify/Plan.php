@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Sah\Sdk\Zyins\Prequalify;
+namespace Isa\Sdk\Zyins\Prequalify;
 
 /**
  * One plan the prequalify engine returned. Field names match the JS

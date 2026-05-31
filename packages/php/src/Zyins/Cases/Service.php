@@ -2,25 +2,32 @@
 
 declare(strict_types=1);
 
-namespace Sah\Sdk\Zyins\Cases;
+namespace Isa\Sdk\Zyins\Cases;
 
-use Sah\Sdk\Zyins\Email\EnqueueInput;
-use Sah\Sdk\Zyins\Email\EnqueueResult;
-use Sah\Sdk\Zyins\Email\Service as EmailService;
-use Sah\Sdk\Zyins\RequestOptions;
-use Sah\Sdk\Zyins\Transport;
+use Isa\Sdk\Zyins\Email\EnqueueInput;
+use Isa\Sdk\Zyins\Email\EnqueueResult;
+use Isa\Sdk\Zyins\Email\Service as EmailService;
+use Isa\Sdk\Zyins\RequestOptions;
+use Isa\Sdk\Zyins\Transport;
 
 /**
- * Cases sub-service. Today exposes:
- *   - create  → POST /v1/case (content-addressed shareable artifact)
- *   - email   → POST /v1/email/enqueue (case-share convenience)
+ * Cases sub-service. Surfaces:
+ *
+ *   - save    → `CaseStorage->put()`  (canonical, adapter-routed)
+ *   - recall  → `CaseStorage->get()`  (canonical, adapter-routed)
+ *   - share   → `POST /v1/case`       (legacy shareable artifact)
+ *   - create  → alias of `share`      (deprecated)
+ *   - email   → `POST /v1/email/enqueue` (case-share convenience)
+ *
+ * The `save` / `recall` pair is the locked SDK surface per the syntax
+ * proposal (TS canon: `isa.zyins.cases.save / recall`). Both delegate
+ * to the configured {@see CaseStorage} adapter — by default
+ * {@see ZeroKnowledgeCaseStorage}; carrier overrides plug in via
+ * {@see \Isa\Sdk\Zyins\ZyInsClient}'s `caseStorage` constructor arg.
  *
  * The email helper delegates to {@see EmailService::enqueue()} so both
  * namespaces share one wire client; callers can pick whichever entry
  * point matches their mental model.
- *
- * Future list / get / delete RPCs require new server work; see the
- * design doc at docs/design/cases-email-branding-surface.md.
  */
 final readonly class Service
 {
@@ -29,7 +36,35 @@ final readonly class Service
     public function __construct(
         private Transport $transport,
         private EmailService $emailService,
+        private CaseStorage $caseStorage,
     ) {
+    }
+
+    /**
+     * Persist a case via the configured {@see CaseStorage} adapter.
+     *
+     * Canonical save verb per the locked SDK syntax (TS canon:
+     * `isa.zyins.cases.save`). Returns the adapter-assigned id and an
+     * optional opaque `recallToken` the consumer threads back into
+     * {@see recall()}.
+     */
+    public function save(CaseRecord $record): CaseStoragePutResult
+    {
+        return $this->caseStorage->put($record);
+    }
+
+    /**
+     * Resolve a previously-saved case via the configured
+     * {@see CaseStorage} adapter. Returns `null` when the record is
+     * absent (expired, deleted, or never existed — adapters do not
+     * distinguish these by design).
+     *
+     * Canonical recall verb per the locked SDK syntax (TS canon:
+     * `isa.zyins.cases.recall`).
+     */
+    public function recall(string $id, ?string $recallToken = null): ?CaseRecord
+    {
+        return $this->caseStorage->get($id, $recallToken);
     }
 
     /**

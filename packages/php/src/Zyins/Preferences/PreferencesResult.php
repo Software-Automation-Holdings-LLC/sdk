@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Sah\Sdk\Zyins\Preferences;
+namespace Isa\Sdk\Zyins\Preferences;
 
 /**
  * Typed response for {@see Service::lookup()} and {@see Service::set()}.

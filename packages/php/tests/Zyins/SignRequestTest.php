@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-namespace Sah\Sdk\Tests\Zyins;
+namespace Isa\Sdk\Tests\Zyins;
 
 use DateTimeImmutable;
 use DateTimeZone;
 use InvalidArgumentException;
 use PHPUnit\Framework\TestCase;
-use Sah\Sdk\Zyins\SignRequest;
+use Isa\Sdk\Zyins\SignRequest;
 
 /**
  * Tests for the canonical session-signing helper.

@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Sah\Sdk\Zyins\Licenses;
+namespace Isa\Sdk\Zyins\Licenses;
 
 use InvalidArgumentException;
 
@@ -40,7 +40,7 @@ final readonly class ActivateInput
         return [
             'email' => $this->email,
             'keycode' => $this->keycode,
-            'device_id' => $this->deviceId,
+            'deviceId' => $this->deviceId,
         ];
     }
 }

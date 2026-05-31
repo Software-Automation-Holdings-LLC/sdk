@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace Sah\Sdk\Zyins;
+namespace Isa\Sdk\Zyins;
 
 use InvalidArgumentException;
-use Sah\Sdk\Catalog\State;
+use Isa\Sdk\Catalog\State;
 
 /**
  * Applicant profile prequalify operates on.

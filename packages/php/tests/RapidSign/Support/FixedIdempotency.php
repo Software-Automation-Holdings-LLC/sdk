@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace Sah\Sdk\Tests\RapidSign\Support;
+namespace Isa\Sdk\Tests\RapidSign\Support;
 
-use Sah\Sdk\RapidSign\Idempotency;
+use Isa\Sdk\RapidSign\Idempotency;
 
 /** Deterministic idempotency source for outbound-header assertions. */
 final class FixedIdempotency implements Idempotency

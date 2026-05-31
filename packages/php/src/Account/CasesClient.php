@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Sah\Sdk\Account;
+namespace Isa\Sdk\Account;
 
 use InvalidArgumentException;
 

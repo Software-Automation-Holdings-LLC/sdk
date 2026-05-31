@@ -2,25 +2,25 @@
 
 declare(strict_types=1);
 
-namespace Sah\Sdk\Tests\Zyins;
+namespace Isa\Sdk\Tests\Zyins;
 
 use PHPUnit\Framework\TestCase;
-use Sah\Sdk\Zyins\Applicant;
-use Sah\Sdk\Zyins\Condition;
-use Sah\Sdk\Zyins\Coverage;
-use Sah\Sdk\Zyins\Height;
-use Sah\Sdk\Zyins\Medication;
-use Sah\Sdk\Zyins\NicotineDuration;
-use Sah\Sdk\Zyins\NicotineProductUsage;
-use Sah\Sdk\Zyins\NicotineUsage;
-use Sah\Sdk\Zyins\NicotineUsageInput;
-use Sah\Sdk\Zyins\Prequalify\Input;
-use Sah\Sdk\Zyins\Product;
-use Sah\Sdk\Zyins\ProductCatalog;
-use Sah\Sdk\Zyins\ProductType;
-use Sah\Sdk\Zyins\QuoteType;
-use Sah\Sdk\Zyins\Sex;
-use Sah\Sdk\Zyins\Weight;
+use Isa\Sdk\Zyins\Applicant;
+use Isa\Sdk\Zyins\Condition;
+use Isa\Sdk\Zyins\Coverage;
+use Isa\Sdk\Zyins\Height;
+use Isa\Sdk\Zyins\Medication;
+use Isa\Sdk\Zyins\NicotineDuration;
+use Isa\Sdk\Zyins\NicotineProductUsage;
+use Isa\Sdk\Zyins\NicotineUsage;
+use Isa\Sdk\Zyins\NicotineUsageInput;
+use Isa\Sdk\Zyins\Prequalify\Input;
+use Isa\Sdk\Zyins\Product;
+use Isa\Sdk\Zyins\ProductCatalog;
+use Isa\Sdk\Zyins\ProductType;
+use Isa\Sdk\Zyins\QuoteType;
+use Isa\Sdk\Zyins\Sex;
+use Isa\Sdk\Zyins\Weight;
 
 /**
  * 0.5.1 flat wire body and new type tests.

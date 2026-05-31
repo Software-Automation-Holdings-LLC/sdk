@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Sah\Sdk\RapidSign\Documents;
+namespace Isa\Sdk\RapidSign\Documents;
 
 /**
  * Inputs accepted by {@see Service::send()}.

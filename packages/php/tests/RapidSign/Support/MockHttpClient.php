@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Sah\Sdk\Tests\RapidSign\Support;
+namespace Isa\Sdk\Tests\RapidSign\Support;
 
 use Nyholm\Psr7\Response;
 use Psr\Http\Client\ClientInterface;
