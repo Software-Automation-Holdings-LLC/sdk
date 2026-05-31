@@ -85,6 +85,18 @@ func (e *Error) Error() string {
 	return fmt.Sprintf("zyins: HTTP %d", e.HTTPStatus)
 }
 
+// StatusCode returns the underlying HTTP status code. Consumers that
+// must branch on status (e.g. mapping a 404 to a not-found sentinel)
+// match this via an interface{ StatusCode() int } across the error
+// chain rather than substring-scanning the message — a case id or body
+// containing "404" must never be mistaken for a 404 response.
+func (e *Error) StatusCode() int {
+	if e == nil {
+		return 0
+	}
+	return e.HTTPStatus
+}
+
 // AuthError signals an authentication or authorization failure. The
 // caller should rotate or reactivate the token rather than retry. Base
 // carries the shared fields (code, message, request id).

@@ -30,7 +30,105 @@ Example:
     if err != nil { return err }
     resp, err := isa.Zyins.Prequalify.Run(ctx, &zyins.PrequalifyInput{...})
 
+CONSTANTS
+
+const (
+	ProductionRemoteOrigin = "https://zyins.isaapi.com"
+	ProductionProxyOrigin  = "https://proxy.isaapi.com"
+)
+    Production endpoint origins.
+
+const DefaultTimeout = 30 * time.Second
+    DefaultTimeout matches the TS 30_000 ms default.
+
+
+VARIABLES
+
+var BundledAPIVersions = zyins.BundledAPIVersions
+    BundledAPIVersions re-exports zyins.BundledAPIVersions at the parent SDK
+    entry point. Callers reading the bundled pin without importing the zyins
+    sub-package go through this alias.
+
+
+FUNCTIONS
+
+func ResolveAPIVersion(overrides map[string]string, surface string) string
+    ResolveAPIVersion re-exports zyins.ResolveAPIVersion for callers that need
+    per-surface resolution without importing the zyins sub-package directly.
+
+
 TYPES
+
+type AuthSupplier interface {
+	// Has unexported methods.
+}
+    AuthSupplier is the auth-supplier discriminated value type accepted
+    by IsaOptions. Implementations are: BearerAuth, LicenseAuth, FormAuth,
+    SessionAuth. Each carries the credential material the matching factory
+    requires; New dispatches by concrete type.
+
+type AutocompleteAlgorithmFactory struct{}
+    AutocompleteAlgorithmFactory mirrors the TS `isa.autocompleteAlgorithm`
+    namespace.
+
+func (AutocompleteAlgorithmFactory) Create(opts ...reference.AutocompleteAlgorithmOption) reference.AutocompleteAlgorithm
+    Create returns a reference.DefaultAutocompleteAlgorithm.
+
+type AutocorrectorFactory struct{}
+    AutocorrectorFactory mirrors the TS `isa.autocorrector` namespace: a tiny
+    builder whose Create method returns a fresh reference.Autocorrector keyed on
+    a caller-supplied typo map.
+
+    Construct via [(*Isa).Autocorrector].
+
+func (AutocorrectorFactory) Create(typoMap map[string]string, opts ...reference.AutocorrectorOption) reference.Autocorrector
+    Create returns a reference.DefaultAutocorrector bound to typoMap. Subsequent
+    calls return independent instances; mutate typoMap before or after at the
+    caller's discretion (the constructor copies it).
+
+type BearerAuth struct {
+	Token string
+}
+    BearerAuth is the bearer-token auth supplier.
+
+    An empty Token resolves from ISA_TOKEN at factory time (matching the TS
+    BearerAuth.fromEnv() shape).
+
+func BearerAuthFromEnv() BearerAuth
+    BearerAuthFromEnv constructs a BearerAuth that reads ISA_TOKEN at factory
+    time. Mirrors the TS BearerAuth.fromEnv() factory.
+
+func NewBearerAuth(token string) BearerAuth
+    NewBearerAuth constructs a BearerAuth from an explicit token. Mirrors the TS
+    BearerAuth.fromToken(token) factory.
+
+type BearerOptions struct {
+	Token       string
+	APIVersion  map[string]string
+	CaseStorage zcases.CaseStorage
+}
+    BearerOptions configures the Bearer auth mode. Token follows the same env
+    fallback as WithBearer (ISA_TOKEN). APIVersion and CaseStorage mirror the
+    per-instance overrides on LicenseOptions.
+
+type Engine interface {
+	// Has unexported methods.
+}
+    Engine is the engine-selector discriminated value type accepted by
+    IsaOptions. Implementations are: RemoteEngine, LocalEngine, ProxyEngine,
+    InMemoryEngine.
+
+type FormAuth struct {
+	FormToken string
+}
+    FormAuth is the embedded-form-token auth supplier.
+
+func NewFormAuth(formToken string) FormAuth
+    NewFormAuth constructs a FormAuth from a non-empty form token.
+
+type InMemoryEngine struct{}
+    InMemoryEngine is reserved for the in-process test engine once the Go SDK
+    exposes a transport override on IsaOptions.
 
 type Isa struct {
 	Zyins     *zyins.Client
@@ -46,6 +144,15 @@ type Isa struct {
     functions below; the namespaces share underlying transport resources and are
     safe for concurrent use.
 
+func New(opts IsaOptions) (*Isa, error)
+    New constructs an Isa from the typed IsaOptions options bag. Recommended
+    over WithBearer / WithLicense / WithSession going forward; matches the
+    cross-language SDK shape.
+
+    New dispatches to the matching legacy factory based on the auth supplier
+    concrete type. An empty credential field on the supplier (e.g. BearerAuth{}
+    with no Token) defers resolution to the legacy factory's env-var fallback.
+
 func WithBearer(token string) (*Isa, error)
     WithBearer constructs an Isa client authenticated by a long-lived bearer
     token. When the token argument is empty, ISA_TOKEN is read from the
@@ -56,6 +163,11 @@ func WithBearer(token string) (*Isa, error)
     isa, err := sdk.WithBearer("")
     if err != nil { return err }
     resp, err := isa.Zyins.Prequalify.Run(ctx, req)
+
+func WithBearerOptions(opts BearerOptions) (*Isa, error)
+    WithBearerOptions is the options-bag form of WithBearer. The embedded
+    APIVersion + CaseStorage fields propagate into the underlying zyins client
+    via zyins.WithAPIVersionOverrides and zyins.WithCaseStorage.
 
 func WithLicense(opts LicenseOptions) (*Isa, error)
     WithLicense constructs an Isa client authenticated by the License auth mode.
@@ -83,12 +195,112 @@ func WithSession(opts SessionOptions) (*Isa, error)
     isa, err := sdk.WithSession(sdk.SessionOptions{})  // reads env
     if err != nil { return err }
 
-type LicenseOptions struct {
+func (i *Isa) AutocompleteAlgorithm() AutocompleteAlgorithmFactory
+    AutocompleteAlgorithm returns the kernel-level autocomplete factory.
+
+func (i *Isa) Autocorrector() AutocorrectorFactory
+    Autocorrector returns the kernel-level autocorrector factory. Equivalent to
+    TS `isa.autocorrector` (per /tmp/v3-datasets-adapter- cutover-spec.md §2).
+    The domain-bound autocorrector that consumes the v3 spelling_corrections
+    dataset lives on [(*Isa).Zyins.Autocorrector].
+
+func (i *Isa) MatchAlgorithm() MatchAlgorithmFactory
+    MatchAlgorithm returns the kernel-level match algorithm factory.
+
+func (i *Isa) WithAutocompleteAlgorithm(a reference.AutocompleteAlgorithm) *Isa
+    WithAutocompleteAlgorithm installs a caller-supplied
+    reference.AutocompleteAlgorithm. Pass nil to restore the bucketed default.
+
+func (i *Isa) WithAutocorrector(a reference.Autocorrector) *Isa
+    WithAutocorrector installs a caller-supplied reference.Autocorrector on the
+    underlying zyins client. Pass nil to clear any prior override and restore
+    the dataset-derived default (built lazily from the v3 spelling_corrections
+    rows).
+
+    Returns the receiver so calls chain.
+
+func (i *Isa) WithMatchAlgorithm(m reference.MatchAlgorithm) *Isa
+    WithMatchAlgorithm installs a caller-supplied reference.MatchAlgorithm.
+    Pass nil to restore the key-equality default.
+
+type IsaAPIVersion string
+    IsaAPIVersion is the pinned API major version per Isa instance.
+
+const (
+	// APIVersionV1 pins to the legacy /v1/ contract.
+	APIVersionV1 IsaAPIVersion = "v1"
+	// APIVersionV2 pins to the typed-offer /v2/ contract (default).
+	APIVersionV2 IsaAPIVersion = "v2"
+)
+type IsaOptions struct {
+	// Auth is the auth supplier. Required.
+	Auth AuthSupplier
+	// Engine selects the deployment target. Default: [RemoteEngine]{}.
+	Engine Engine
+	// Timeout caps each request. Default: [DefaultTimeout].
+	Timeout time.Duration
+	// APIVersion pins the API major version. Default: [APIVersionV2].
+	APIVersion IsaAPIVersion
+	// ClientVersion is reserved for the client-version negotiation
+	// surface. Non-empty values are rejected until that surface is wired.
+	ClientVersion string
+}
+    IsaOptions is the typed options bag accepted by New. Every field is optional
+    except Auth; defaults match the production posture (RemoteEngine{} →
+    production, DefaultTimeout, APIVersionV2).
+
+type LicenseAuth struct {
 	Keycode string
 	Email   string
 }
+    LicenseAuth is the license-credential auth supplier.
+
+    Empty Keycode/Email resolve from ISA_LICENSE_KEYCODE / ISA_LICENSE_EMAIL at
+    factory time.
+
+func LicenseAuthFromEnv() LicenseAuth
+    LicenseAuthFromEnv constructs a LicenseAuth that reads env vars at factory
+    time.
+
+func NewLicenseAuth(keycode, email string) LicenseAuth
+    NewLicenseAuth constructs a LicenseAuth from explicit credentials.
+
+type LicenseOptions struct {
+	Keycode     string
+	Email       string
+	APIVersion  map[string]string
+	CaseStorage zcases.CaseStorage
+}
     LicenseOptions configures the License auth mode. Empty fields are filled
     from the environment (ISA_LICENSE_KEYCODE, ISA_LICENSE_EMAIL).
+
+    APIVersion overrides the bundled per-surface pins (zyins.BundledAPIVersions)
+    for this client instance only. Keys are surface names ("prequalify",
+    "quote", ...); values are the version prefix ("v1", "v2", ...). A surface
+    absent from the map falls back to BundledAPIVersions.
+
+    CaseStorage swaps the default zero-knowledge store. nil resolves to
+    zcases.NewZeroKnowledgeCaseStorage wrapping the underlying zyins client.
+
+type LocalEngine struct {
+	BaseURL string
+}
+    LocalEngine routes to a developer or test endpoint.
+
+type MatchAlgorithmFactory struct{}
+    MatchAlgorithmFactory mirrors the TS `isa.matchAlgorithm` namespace:
+    returns the default key-equality matcher (or a clone with options).
+
+func (MatchAlgorithmFactory) Create(opts ...reference.MatchAlgorithmOption) reference.MatchAlgorithm
+    Create returns a reference.DefaultMatchAlgorithm.
+
+type ProxyEngine struct {
+	ProxyOrigin string
+}
+    ProxyEngine routes through the platform proxy.
+
+    The underlying ZyINS request still targets ProductionRemoteOrigin;
+    ProxyOrigin is consumed by the proxy namespace.
 
 type ProxyNamespace struct {
 	// Has unexported fields.
@@ -101,12 +313,47 @@ func (n *ProxyNamespace) Call(ctx context.Context, opts proxy.CallOptions) ([]by
     Call invokes a registered integration through the platform proxy. See
     proxy.Call for the full semantic contract.
 
-type SessionOptions struct {
+type RemoteEngine struct {
+	BaseURL string
+}
+    RemoteEngine routes to the production (or staging) ZyINS endpoint.
+
+    An empty BaseURL defaults to ProductionRemoteOrigin.
+
+type ResolvedIsaOptions struct {
+	Auth          AuthSupplier
+	Engine        Engine
+	Timeout       time.Duration
+	APIVersion    IsaAPIVersion
+	ClientVersion string
+	BaseURL       string
+	ProxyOrigin   string
+}
+    ResolvedIsaOptions is the fully-defaulted view of IsaOptions produced by
+    ResolveIsaOptions. Pure value type — safe to pass through constructors and
+    tests.
+
+func ResolveIsaOptions(opts IsaOptions) (ResolvedIsaOptions, error)
+    ResolveIsaOptions applies defaults and returns the resolved view. Pure — no
+    side effects, safe to call from constructors and tests.
+
+type SessionAuth struct {
 	SessionID     string
 	SessionSecret string //nolint:gosec // documented credential field
 }
+    SessionAuth is the session-credential auth supplier.
+
+type SessionOptions struct {
+	SessionID     string
+	SessionSecret string //nolint:gosec // documented credential field
+	APIVersion    map[string]string
+	CaseStorage   zcases.CaseStorage
+}
     SessionOptions configures the Session auth mode. Empty fields are filled
     from the environment (ISA_SESSION_ID, ISA_SESSION_SECRET).
+
+    APIVersion and CaseStorage mirror the per-instance overrides on
+    LicenseOptions.
 
 type WebhooksNamespace struct{}
     WebhooksNamespace is the placeholder for cross-product webhook helpers;
@@ -591,6 +838,27 @@ var (
     The fully-typed variants above expose richer fields; these are convenience
     handles for code that only needs to branch on class.
 
+var BundledAPIVersions = map[string]string{
+	"prequalify": "v2",
+	"quote":      "v2",
+	"datasets":   "v2",
+	"reference":  "v2",
+	"sessions":   "v1",
+	"branding":   "v1",
+	"cases":      "v1",
+}
+    BundledAPIVersions records which /vN each surface targets in this SDK
+    release. The map is the SDK's declared intent: per-instance overrides
+    flow through [LicenseOptions.APIVersion] / [BearerOptions.APIVersion] /
+    [SessionOptions.APIVersion] on the parent sdk package and supersede the
+    bundled value for that surface alone.
+
+    Surface keys are stable strings shared across language SDKs (matching the TS
+    and Python BUNDLED_API_VERSIONS sets) so a per-surface override carries the
+    same meaning regardless of which SDK the caller uses. Surfaces NOT present
+    here cannot be overridden — adding a new surface requires a deliberate SDK
+    release.
+
 
 FUNCTIONS
 
@@ -610,6 +878,17 @@ func AllSexValues() []string
     reflection path to enumerate them. This helper is the single source of truth
     for the full Sex value set, consumed by the conformance enum-parity harness
     to verify cross-language consistency.
+
+func ByAmount(plans []V3Offer) map[int64][]V3Offer
+    ByAmount groups a flat plans slice by the requested coverage dimension.
+    When any offer carries a Budget (a monthly-budget response) the offers
+    key off Budget.Amount.Cents; otherwise off DeathBenefit.Amount.Cents (a
+    face-amount response). The returned map's grouping keys are integer cents;
+    iterate the original plans for display order.
+
+    In budget mode, an offer missing Budget is skipped (contract violation)
+    rather than falling back to DeathBenefit, which would mis-bucket mixed
+    offers.
 
 func LicensesFromEnv() (CredentialSnapshot, error)
     LicensesFromEnv reads ISA_LICENSE_KEYCODE and ISA_LICENSE_EMAIL from the
@@ -633,6 +912,10 @@ func NewFaceValueCoverage(amount int) (Coverage, error)
     NewFaceValueCoverage requests coverage by the dollar amount of death
     benefit. The amount must be a positive integer.
 
+func NewFaceValuesCoverage(amounts []int) (Coverage, error)
+    NewFaceValuesCoverage probes several face-value (death-benefit) amounts in
+    one call. Each amount must be a positive integer; at least one is required.
+
 func NewHeight(feet, inches int) (Height, error)
     NewHeight constructs a Height from feet+inches. Both arguments must be
     non-negative.
@@ -644,6 +927,10 @@ func NewHeightInches(total int) (Height, error)
 func NewMonthlyBudgetCoverage(amount int) (Coverage, error)
     NewMonthlyBudgetCoverage requests coverage by the monthly premium the
     applicant can afford. The amount must be a positive integer.
+
+func NewMonthlyBudgetsCoverage(amounts []int) (Coverage, error)
+    NewMonthlyBudgetsCoverage probes several monthly-premium ceilings in one
+    call. Each amount must be a positive integer; at least one is required.
 
 func NewProductSelection(tokens ...string) (ProductSelection, error)
     NewProductSelection constructs a selection from one or more wire tokens.
@@ -662,11 +949,32 @@ func NewProductSelectionFromProducts(products ...Product) (ProductSelection, err
 func NewWeight(pounds int) (Weight, error)
     NewWeight constructs a Weight from a positive pound count.
 
+func ResolveAPIVersion(overrides map[string]string, surface string) string
+    ResolveAPIVersion returns the version pinned for surface, applying
+    per-instance overrides on top of BundledAPIVersions. A surface absent from
+    both the override map and BundledAPIVersions returns an empty string —
+    callers MUST treat the empty value as a configuration error rather than a
+    default.
+
+    The function takes no default: there is no global "/v1" fallback. Every
+    surface that ships an override must be declared in BundledAPIVersions at
+    release time.
+
 func SexWireCode(s Sex) (string, error)
     SexWireCode returns the canonical wire string for s.
 
     Deprecated: Use string(sex) directly. Sex values are already the canonical
     wire tokens ("male"/"female") as of v0.5.1. Will be removed in v0.7.0.
+
+func TitleCaseLabel(key string) string
+    TitleCaseLabel converts a snake_case / kebab-case plan-info key to its Title
+    Case display form. Special-cases the canonical acronyms (eApp, URL, PDF,
+    FAQ, API, ID, EFT, ACH, SSN); all other tokens follow the generic "split on
+    _ / -, capitalize each word" rule.
+
+    Empty string in → empty string out. The server emits non-empty keys in
+    practice; the empty-string guard exists so this function is safe to call on
+    adversarial input from a malformed wire body.
 
 func WithBearer() (Option, error)
     WithBearer reads ISA_TOKEN from the environment and returns an Option that
@@ -815,9 +1123,34 @@ func (s *CasesService) Create(ctx context.Context, input *CaseCreateInput, opts 
 
     Deprecated: use Share.
 
+func (s *CasesService) Delete(ctx context.Context, id string) error
+    Delete removes a stored case via the configured storage. Returns
+    cases.ErrUnsupported when the configured storage does not implement
+    cases.DeleteableCaseStorage. Stores that DO support delete (the
+    zero-knowledge default does NOT today) honor the call directly.
+
 func (s *CasesService) Email(ctx context.Context, input *EmailEnqueueInput, opts ...RunOption) (*EmailEnqueueResult, error)
     Email is the case-share convenience for emailing a case PDF. It targets POST
     /v1/email/enqueue (same as EmailService.Enqueue).
+
+func (s *CasesService) Open(ctx context.Context, id, recallToken string) (cases.CaseRecord, error)
+    Open fetches and decrypts a previously-stored case.
+
+    Deprecated: Use Recall instead. Will be removed in v1.0.
+
+func (s *CasesService) Recall(ctx context.Context, id, recallToken string) (cases.CaseRecord, error)
+    Recall fetches and decrypts a previously-stored case via the configured
+    cases.CaseStorage. The recall token is the value returned by Save; callers
+    MUST persist it alongside the case id.
+
+    Recall is the canonical verb per the locked SDK syntax (TS canon:
+    isa.zyins.cases.recall).
+
+func (s *CasesService) Save(ctx context.Context, record cases.CaseRecord) (cases.PutResult, error)
+    Save persists a cases.CaseRecord via the configured cases.CaseStorage.
+    The default storage is the zero-knowledge AES-256-GCM envelope; swap it via
+    WithCaseStorage for callers that need a non-default backing store (in-memory
+    test fake, integration test recorder, alternative wire endpoint).
 
 func (s *CasesService) Share(ctx context.Context, input *CaseCreateInput, opts ...RunOption) (*CaseCreateResult, error)
     Share creates a new shareable case. Canonical verb per the locked SDK syntax
@@ -863,12 +1196,158 @@ type Client struct {
 	// Logos serves the public carrier-logo asset endpoint. Non-credentialed
 	// per api-standards.md (GET allowlist); no bearer/HMAC headers attached.
 	Logos *LogosService
+
+	// PrequalifyV3 runs the v3 prequalify engine with the uniform
+	// pricing[] table shape. See packages/ts/src/zyins/prequalify-v3.ts
+	// for the binding reference; the wire contract is in ADR-035.
+	PrequalifyV3 *PrequalifyV3Service
+	// QuoteV3 runs the v3 quote engine, grouping qualifying products
+	// by requested amount.
+	QuoteV3 *QuoteV3Service
+	// DatasetsV3 reads the typed id-keyed reference catalog at
+	// GET /v3/datasets. Use with Reference to resolve free text into
+	// typed Concept handles.
+	DatasetsV3 *DatasetsV3Service
+	// Reference resolves free text into typed Concept handles
+	// (medications, conditions, unknown). Stateless; consumers pass a
+	// *DatasetBundleV3 explicitly to every Match call.
+	Reference *ReferenceService
 	// Has unexported fields.
 }
     Client is the top-level ZyINS API client. Construct one with NewClient
     and reuse it across requests; it is safe for concurrent use (see README
     "Concurrency"). Operations are grouped under typed sub-services as exported
     fields.
+
+func (c *Client) APIVersionFor(surface string) string
+    APIVersionFor returns the per-surface API version pinned on this client.
+    Per-instance overrides supplied via WithAPIVersionOverrides take precedence;
+    otherwise the value falls through to BundledAPIVersions. Unknown
+    surfaces return an empty string — callers MUST treat the empty value as a
+    configuration error.
+
+    Per-surface request paths consume this value at construction time.
+    Integration code that builds custom paths reads it directly.
+
+func (c *Client) AutocompleteAlgorithm() reference.AutocompleteAlgorithm
+    AutocompleteAlgorithm returns the configured
+    reference.AutocompleteAlgorithm. The default is the bucketed algorithm;
+    override via Client.SetAutocompleteAlgorithm.
+
+func (c *Client) Autocorrector(ctx context.Context) (reference.Autocorrector, error)
+    Autocorrector returns the pre-bound autocorrector for this client. The first
+    call fetches the v3 datasets bundle (memoized via the same cache used by the
+    top-level matchers) and constructs a reference.DefaultAutocorrector keyed on
+    the bundle's spelling_corrections rows. Subsequent calls return the cached
+    instance until Client.RefreshReferenceIndex invalidates the cache.
+
+    Override the default via Client.SetAutocorrector or the top-level
+    constructor option [sdk.WithAutocorrector].
+
+func (c *Client) Concepts() *ConceptsMatcher
+    Concepts returns the cache-backed top-level kind-agnostic matcher.
+
+func (c *Client) Conditions() *ConditionsMatcher
+    Conditions returns the cache-backed top-level condition matcher.
+
+func (c *Client) MatchAlgorithm() reference.MatchAlgorithm
+    MatchAlgorithm returns the configured reference.MatchAlgorithm.
+    The default is reference.NewDefaultMatchAlgorithm; override via
+    Client.SetMatchAlgorithm.
+
+func (c *Client) Medications() *MedicationsMatcher
+    Medications returns the cache-backed top-level medication matcher. First
+    call (or first call after RefreshReferenceIndex) fetches the v3 dataset
+    bundle; subsequent calls reuse the memoized *reference.Index.
+
+func (c *Client) NewReferenceIndex(bundle *DatasetBundleV3) *reference.Index
+    NewReferenceIndex builds a typed reference.Index from a v3 datasets
+    envelope. The returned Index owns immutable copies of the inputs and
+    exposes `idx.Medications.Match(text)`, `idx.Conditions.Match(text)`,
+    and `idx.Concepts.Match(text)` — the locked Concept-handle surface.
+
+    Typical use:
+
+    res, err := client.DatasetsV3.Get(ctx, zyins.DatasetsV3Options{})
+    if err != nil { return err }
+    idx := client.NewReferenceIndex(res.Bundle)
+    hbp := idx.Conditions.Match("hbp")
+    meds := hbp.Medications(reference.SortMostCommonFirst)
+
+    nil-safe: a nil bundle yields an empty Index whose every Match call returns
+    an unknown handle. Rebuild on dataset version change; the Index is bound to
+    one immutable snapshot.
+
+func (c *Client) RefreshReferenceIndex()
+    RefreshReferenceIndex invalidates the cached *reference.Index and the
+    bundle-derived reference adapters (the default autocorrector). The next
+    Match or Autocorrector call re-fetches the v3 dataset bundle and rebuilds
+    from it. Use after the caller knows the upstream catalog version has
+    changed.
+
+    A fetch already in flight when Refresh runs is detached: bumping the
+    generation makes that fetch discard its result, so a stale index never
+    repopulates the cache after a refresh.
+
+func (c *Client) SetAutocompleteAlgorithm(a reference.AutocompleteAlgorithm)
+    SetAutocompleteAlgorithm installs a caller-supplied
+    reference.AutocompleteAlgorithm. Pass nil to clear and fall back to the
+    default bucketed algorithm.
+
+func (c *Client) SetAutocorrector(a reference.Autocorrector)
+    SetAutocorrector installs a caller-supplied reference.Autocorrector as the
+    value returned by Autocorrector(). Pass nil to clear the override and fall
+    back to the default (built from the v3 spelling_corrections dataset).
+
+    Concurrency: SetAutocorrector takes the same lock as the lazy initializer;
+    reading via Autocorrector() after this returns observes the new value.
+
+func (c *Client) SetMatchAlgorithm(m reference.MatchAlgorithm)
+    SetMatchAlgorithm installs a caller-supplied reference.MatchAlgorithm.
+    Pass nil to clear and fall back to the default key-equality algorithm.
+
+type Concept interface {
+	// ID is the opaque entity identifier. Empty when IsKnown() is false.
+	ID() string
+	// Name is the display name from the catalog; falls back to
+	// InputText() when IsKnown() is false.
+	Name() string
+	// Kind discriminates this handle.
+	Kind() ConceptKind
+	// IsKnown reports whether the input text matched a known entity.
+	IsKnown() bool
+	// InputText is the verbatim text passed to Match.
+	InputText() string
+	// Conditions are the conditions a medication is used to treat.
+	// Defined on medication handles; empty otherwise.
+	Conditions(sort ReferenceSort) []Concept
+	// Medications are the medications used to treat a condition.
+	// Defined on condition handles; empty otherwise.
+	Medications(sort ReferenceSort) []Concept
+}
+    Concept is the read-only handle returned by Match.
+
+type ConceptKind string
+    ConceptKind discriminates Concept handles.
+
+const (
+	// ConceptKindMedication identifies a medication concept handle.
+	ConceptKindMedication ConceptKind = "medication"
+	// ConceptKindCondition identifies a condition concept handle.
+	ConceptKindCondition ConceptKind = "condition"
+	// ConceptKindUnknown identifies an unmatched free-text term.
+	ConceptKindUnknown ConceptKind = "unknown"
+)
+type ConceptsMatcher struct {
+	// Has unexported fields.
+}
+    ConceptsMatcher is the cache-backed bundleless matcher returned by
+    Client.Concepts.
+
+func (m *ConceptsMatcher) Match(ctx context.Context, text string) (reference.Concept, error)
+    Match resolves text without a kind constraint. Unlike the per-kind matchers,
+    the returned reference.Concept handle preserves the unknown case: callers
+    always receive a non-nil handle and branch on IsKnown().
 
 type Condition struct {
 	// Name as the applicant reports it (e.g., "COPD", "HBP").
@@ -879,6 +1358,16 @@ type Condition struct {
 	LastTreatment string `json:"last_treatment"`
 }
     Condition is a single medical condition on the applicant profile.
+
+type ConditionsMatcher struct {
+	// Has unexported fields.
+}
+    ConditionsMatcher is the cache-backed bundleless matcher returned by
+    Client.Conditions.
+
+func (m *ConditionsMatcher) Match(ctx context.Context, text string) (reference.ConditionConcept, error)
+    Match resolves text against the condition catalog. Returns nil on a miss
+    (see MedicationsMatcher.Match for rationale).
 
 type ConfigError struct {
 	// Factory names the constructor that failed (e.g., "WithBearer").
@@ -903,19 +1392,29 @@ func (e *ConfigError) IsaCode() ErrorCode
 type Coverage struct {
 	// Type is the discriminator. Set by the constructors.
 	Type CoverageType `json:"type"`
-	// Amount is the whole-dollar amount. Face value (death benefit) for
-	// type=face_value; monthly premium ceiling for type=monthly_budget.
+	// Amount is the whole-dollar amount for a single-amount coverage.
+	// Face value (death benefit) for type=face_value; monthly premium
+	// ceiling for type=monthly_budget. Zero for a multi-amount coverage.
 	Amount int `json:"amount"`
+	// Amounts holds the whole-dollar amounts for a multi-amount coverage
+	// (a single /v3/prequalify call probing several coverage levels).
+	// Empty for a single-amount coverage; the multi constructors set it.
+	Amounts []int `json:"amounts,omitempty"`
 }
-    Coverage represents the desired coverage in either face-value
-    or monthly-budget form. Construct via NewFaceValueCoverage or
-    NewMonthlyBudgetCoverage so the type and amount are paired correctly.
+    Coverage represents the desired coverage in either face-value or
+    monthly-budget form, for either a single amount or several amounts probed
+    in one call. Construct via NewFaceValueCoverage / NewMonthlyBudgetCoverage
+    (single) or NewFaceValuesCoverage / NewMonthlyBudgetsCoverage (multi) so the
+    type and amount(s) are paired correctly.
 
 func (c Coverage) IsFaceValue() bool
     IsFaceValue reports whether the coverage requests a death-benefit amount.
 
 func (c Coverage) IsMonthlyBudget() bool
     IsMonthlyBudget reports whether the coverage requests a premium ceiling.
+
+func (c Coverage) IsMulti() bool
+    IsMulti reports whether the coverage probes several amounts in one call.
 
 type CoverageType string
     CoverageType is the discriminator for the Coverage union.
@@ -978,6 +1477,79 @@ type DatasetBrand struct {
 }
     DatasetBrand is one carrier row in the brands dataset.
 
+type DatasetBundleV3 struct {
+	// ETag for conditional revalidation; empty when no header present.
+	ETag string `json:"-"`
+	// Version is the bundle's catalog_version (or the legacy `version`
+	// root field if that's all the server emitted).
+	Version string `json:"version"`
+	// Medications is the medications dataset rows.
+	Medications []ReferenceEntity `json:"-"`
+	// Conditions is the conditions dataset rows.
+	Conditions []ReferenceEntity `json:"-"`
+	// Products is the products dataset rows (reserved; not used by the
+	// reference matcher today).
+	Products []ReferenceEntity `json:"-"`
+	// NicotineOptions is the nicotine_options dataset.
+	NicotineOptions []NicotineOption `json:"-"`
+	// SpellingCorrections is the spelling_corrections dataset.
+	// Consumers either pass it to NewDefaultAutocorrector to build a
+	// typo map, or get the pre-bound corrector via the SDK facade.
+	SpellingCorrections []SpellingCorrection `json:"-"`
+	// ConditionRelations is the inline-derived condition →
+	// medication edges (one RelationEdge per `treated_with` entry).
+	ConditionRelations []RelationEdge `json:"-"`
+	// MedicationRelations is the inline-derived medication →
+	// condition edges (one RelationEdge per `used_for` entry).
+	MedicationRelations []RelationEdge `json:"-"`
+	// Datasets is the per-category metadata map (version + item_count
+	// + items) preserved from the wire response.
+	Datasets map[DatasetCategory]*DatasetEntry `json:"datasets"`
+	// ProductsByFamily is the product slice keyed by family slug — the
+	// products available within each marketing family. Empty when the
+	// server omits the slice. Consumers read this directly rather than
+	// re-deriving family membership from flat product rows.
+	ProductsByFamily map[string][]ReferenceEntity `json:"-"`
+	// DiscontinuedProducts maps a product slug → the unix epoch second at
+	// which the product was discontinued. Empty when none / omitted.
+	//
+	// The value is int64 (not int) because unix epoch seconds overflow a
+	// 32-bit int after 2038-01-19, and Go's int is 32-bit on 32-bit
+	// targets; the C#/TS/Python/PHP mirrors all hold 64-bit values here.
+	DiscontinuedProducts map[string]int64 `json:"-"`
+	// StateDerivatives lists state slugs whose product availability
+	// derives from another state's ruleset. Empty when omitted.
+	StateDerivatives []string `json:"-"`
+
+	// Has unexported fields.
+}
+    DatasetBundleV3 is the standalone-licensable v3 catalog. Every relationship
+    lives inline on the entity row; the SDK derives the id-keyed lookup indexes
+    once at first use.
+
+func (b *DatasetBundleV3) SpellingTypoMap() map[string]string
+    SpellingTypoMap returns the From → To map suitable for
+    NewDefaultAutocorrector. Keys are uppercased; values are passed through
+    verbatim.
+
+type DatasetCategory string
+    DatasetCategory is the closed enum of dataset categories the server returns.
+    Mirrors the wire enum.
+
+const (
+	// DatasetCategoryMedications is the medications dataset.
+	DatasetCategoryMedications DatasetCategory = "medications"
+	// DatasetCategoryConditions is the conditions dataset.
+	DatasetCategoryConditions DatasetCategory = "conditions"
+	// DatasetCategoryProducts is the products dataset.
+	DatasetCategoryProducts DatasetCategory = "products"
+	// DatasetCategoryCorrections is the legacy alias for spelling
+	// corrections. The canonical category is spelling_corrections; the
+	// SDK accepts both during the rc.1 → 1.0 cutover.
+	DatasetCategoryCorrections DatasetCategory = "corrections"
+	// DatasetCategoryNicotineOptions is the nicotine_options dataset.
+	DatasetCategoryNicotineOptions DatasetCategory = "nicotine_options"
+)
 type DatasetCondition struct {
 	Name        string   `json:"name"`
 	Aliases     []string `json:"aliases,omitempty"`
@@ -985,6 +1557,13 @@ type DatasetCondition struct {
 	Description string   `json:"description,omitempty"`
 }
     DatasetCondition is one condition row in the conditions dataset.
+
+type DatasetEntry struct {
+	Version   string            `json:"version"`
+	ItemCount int               `json:"item_count"`
+	Items     []ReferenceEntity `json:"items,omitempty"`
+}
+    DatasetEntry is one named dataset within the catalog.
 
 type DatasetListOptions struct {
 	// Limit caps the number of returned rows. Zero requests the
@@ -1037,6 +1616,42 @@ func (s *DatasetsService) Medications(ctx context.Context, opts DatasetListOptio
 
 func (s *DatasetsService) Plans(ctx context.Context, opts DatasetListOptions) (*DatasetPage[DatasetPlan], error)
     Plans returns one page of plan rows.
+
+type DatasetsV3Options struct {
+	// Include narrows the response to specific categories. nil requests
+	// all categories. An explicit empty slice sends include= for the
+	// server's meta-only shortcut.
+	Include []DatasetCategory
+	// Fields selects payload depth. "" (default) returns full rows;
+	// "meta" returns per-category versions + item counts only.
+	Fields string
+	// IfNoneMatch forwards the caller's cached ETag as If-None-Match.
+	// When the server returns 304, Get reports NotModified=true and
+	// echoes the cached ETag.
+	IfNoneMatch string
+}
+    DatasetsV3Options narrows the dataset request and supports conditional
+    revalidation.
+
+type DatasetsV3Result struct {
+	// NotModified is true when the server returned 304 and the caller
+	// should keep its prior bundle.
+	NotModified bool
+	// Bundle is the fresh catalog; nil when NotModified is true.
+	Bundle *DatasetBundleV3
+	// ETag is the response's ETag header, empty if not present.
+	ETag string
+}
+    DatasetsV3Result is the outcome of a GET /v3/datasets call. Exactly one of
+    NotModified or Bundle is populated.
+
+type DatasetsV3Service struct {
+	// Has unexported fields.
+}
+    DatasetsV3Service implements GET /v3/datasets.
+
+func (s *DatasetsV3Service) Get(ctx context.Context, opts DatasetsV3Options) (*DatasetsV3Result, error)
+    Get fetches the typed v3 catalog.
 
 type DebugLogger interface {
 	Debug(msg string, args ...any)
@@ -1138,6 +1753,13 @@ func (e *Error) Error() string
 func (e *Error) IsaCode() ErrorCode
     IsaCode returns e.Code so *Error satisfies IsaError directly.
 
+func (e *Error) StatusCode() int
+    StatusCode returns the underlying HTTP status code. Consumers that must
+    branch on status (e.g. mapping a 404 to a not-found sentinel) match this
+    via an interface{ StatusCode() int } across the error chain rather than
+    substring-scanning the message — a case id or body containing "404" must
+    never be mistaken for a 404 response.
+
 type ErrorCode string
     ErrorCode is the stable wire enum returned by the ZyINS API. Callers switch
     on these values rather than HTTP status because status mapping is server
@@ -1230,6 +1852,12 @@ type IsaError interface {
     on this interface when they want code/request-id without committing to a
     specific concrete type.
 
+type LicenseActivateAuth struct {
+	LicenseKey string `json:"license_key"`
+}
+    LicenseActivateAuth mirrors the TS shape so consumers can read the minted
+    credential as `result.Auth.LicenseKey`.
+
 type LicenseActivateInput struct {
 	Email    string
 	Keycode  string
@@ -1240,13 +1868,19 @@ type LicenseActivateInput struct {
     supplied device fingerprint.
 
 type LicenseActivateResult struct {
-	Status               string `json:"status"`
-	LicenseKey           string `json:"license_key"`
-	RemainingActivations int    `json:"remaining_activations"`
+	Status               string              `json:"status"`
+	LicenseKey           string              `json:"license_key"`
+	Auth                 LicenseActivateAuth `json:"auth"`
+	RemainingActivations int                 `json:"remaining_activations"`
 }
     LicenseActivateResult is the response shape from License.Activate.
+
     LicenseKey is auto-stashed into the attached CredentialState (when present)
     so subsequent calls authenticate without a re-bootstrap.
+
+    The nested Auth block is preserved for consumers that already read
+    `result.Auth.LicenseKey` (TS bpp2.0 useSoftwareActivator parity). LicenseKey
+    at the top level is the canonical field; Auth.LicenseKey is a mirror.
 
 type LicenseCheckInput struct {
 	// Email associated with the license. Required.
@@ -1288,8 +1922,14 @@ type LicenseDeactivateInput struct {
     LicenseDeactivateInput is the typed request shape for License.Deactivate.
 
 type LicenseDeactivateResult struct {
-	// Status is always "deactivated" on success.
+	// Status is "inactive" on success against the v2 surface; the
+	// legacy v1 wire word "deactivated" is preserved verbatim when the
+	// server still serves it.
 	Status string `json:"status"`
+	// RemainingActivations reflects the order's activation slots after
+	// the deactivate. A nil value means the server did not return the
+	// field, as with legacy v1 success bodies.
+	RemainingActivations *int `json:"remaining_activations,omitempty"`
 }
     LicenseDeactivateResult is the typed response from License.Deactivate.
 
@@ -1332,15 +1972,20 @@ func (s *LicenseService) Activate(ctx context.Context, input *LicenseActivateInp
     posts the supplied values; with nil input the SDK fills email, keycode, and
     deviceId from the attached CredentialState (see LicenseService.WithState).
 
+    Mounted outside AuthMiddleware on the server: activate is the call that
+    mints the licenseKey, so the SDK strips the Authorization header for this
+    request — the client cannot sign with a credential it does not yet have.
+
 func (s *LicenseService) Check(ctx context.Context, input *LicenseCheckInput, opts ...RunOption) (*LicenseCheckResult, error)
-    Check performs a lightweight phone-home validation. The server does not
-    require authentication for this call; an attached bearer token is harmless
-    and lets one client struct serve every operation.
+    Check performs a lightweight phone-home validation. Mounted outside
+    AuthMiddleware on the server; the SDK strips the Authorization header for
+    this call so the client struct can be reused for every operation without
+    leaking a stale or pre-bootstrap credential into the request.
 
 func (s *LicenseService) Deactivate(ctx context.Context, input *LicenseDeactivateInput, opts ...RunOption) (*LicenseDeactivateResult, error)
     Deactivate revokes an activation, resets the anti-piracy device record,
-    and marks the order inactive. The server does not require authentication for
-    this call.
+    and marks the order inactive. Mounted outside AuthMiddleware; the SDK strips
+    the Authorization header for the same reason as Check.
 
 func (s *LicenseService) State() *CredentialState
     State returns the attached CredentialState, or nil when none is set.
@@ -1410,6 +2055,27 @@ type Medication struct {
     as the engine accepts them — relative dates ("3 MONTHS AGO") rather than ISO
     dates for first/last fill.
 
+type MedicationsMatcher struct {
+	// Has unexported fields.
+}
+    MedicationsMatcher is the cache-backed bundleless matcher returned by
+    Client.Medications. Match resolves free text against the current v3
+    medication catalog and returns a typed reference.MedicationConcept on a hit,
+    or an unknown handle (cast through reference.MedicationConcept's type
+    assertion is not possible — see Match docs) on a miss.
+
+func (m *MedicationsMatcher) Match(ctx context.Context, text string) (reference.MedicationConcept, error)
+    Match resolves text against the medication catalog. On a hit, returns a
+    reference.MedicationConcept. On a miss, returns nil with a nil error —
+    callers MUST nil-check the returned MedicationConcept. The error channel is
+    reserved for transport failures fetching the v3 bundle on the first call.
+
+    Rationale for nil-on-miss (vs. an unknown handle): the static return type
+    is reference.MedicationConcept (a marker interface); an unknown handle
+    cannot satisfy it without lying about Kind(). Callers who want the unknown
+    handle surface should use Client.Concepts().Match which returns the wider
+    reference.Concept interface.
+
 type MemoryCredentialStore struct {
 	// Has unexported fields.
 }
@@ -1442,6 +2108,14 @@ const (
 	Nicotine48To60Months   NicotineDuration = "48_to_60_months"
 	NicotineOver60Months   NicotineDuration = "over_60_months"
 )
+type NicotineOption struct {
+	ID   string `json:"id"`
+	Name string `json:"name"`
+	// Type discriminates nicotine usage modes (smoked, smokeless, etc).
+	Type string `json:"type"`
+}
+    NicotineOption is one row in the v3 nicotine_options dataset.
+
 type NicotineProductUsage struct {
 	// Type is the product name (e.g., "cigarettes", "cigars").
 	Type string `json:"type"`
@@ -1476,9 +2150,35 @@ type Option func(*options) error
     pattern keeps the public constructor signature compact while allowing
     additive evolution (new options never break call sites).
 
+func WithAPIVersionOverrides(overrides map[string]string) Option
+    WithAPIVersionOverrides supplies per-surface version pins layered on top
+    of BundledAPIVersions. Keys are surface names ("prequalify", "quote", ...);
+    values are version prefixes ("v1", "v2", ...). The SDK reads the resolved
+    value via Client.APIVersionFor when building per-surface request paths.
+
+    Passing nil resets to the bundled defaults. Empty-string values are rejected
+    — a surface that should fall through to the bundled value must be omitted
+    from the map entirely.
+
+func WithAutocompleteAlgorithm(a reference.AutocompleteAlgorithm) Option
+    WithAutocompleteAlgorithm installs a caller-supplied
+    reference.AutocompleteAlgorithm. Passing nil clears the override; the
+    default is the bucketed algorithm.
+
+func WithAutocorrector(a reference.Autocorrector) Option
+    WithAutocorrector installs a caller-supplied reference.Autocorrector
+    as the value returned by Client.Autocorrector. Passing nil clears
+    any prior override and falls back to the default (built from the v3
+    spelling_corrections dataset on first use).
+
 func WithBaseURL(url string) Option
     WithBaseURL overrides DefaultBaseURL. Use for staging, sandbox, or fixture
     servers. Trailing slashes are trimmed.
+
+func WithCaseStorage(storage cases.CaseStorage) Option
+    WithCaseStorage swaps the default zero-knowledge case store. Passing nil
+    resets to the default (cases.NewZeroKnowledgeCaseStorage wrapping the
+    underlying client).
 
 func WithHTTPClient(c *http.Client) Option
     WithHTTPClient overrides the SDK's default *http.Client. The supplied
@@ -1501,6 +2201,10 @@ func WithLogger(l DebugLogger) Option
     WithLogger overrides the default stderr debug logger. Any implementation of
     DebugLogger is accepted (slog, custom adapter, etc.). Passing nil resets to
     the default.
+
+func WithMatchAlgorithm(m reference.MatchAlgorithm) Option
+    WithMatchAlgorithm installs a caller-supplied reference.MatchAlgorithm.
+    Passing nil clears the override; the default is the key-equality algorithm.
 
 func WithMaxRetryAttempts(n int) Option
     WithMaxRetryAttempts caps the total request attempts including the first.
@@ -1539,6 +2243,29 @@ func WithTokenSource(src TokenSource) Option
 func WithUserAgent(ua string) Option
     WithUserAgent overrides the default User-Agent header. Useful for callers
     that want their app name surfaced in the server logs.
+
+type PlanInfoItem struct {
+	// Key is the stable wire identifier (snake_case).
+	Key string
+	// Label is the Title Case display string (server-emitted post-#349,
+	// synthesized via [TitleCaseLabel] on legacy bodies).
+	Label string
+	// Values are the URL-decoded value strings in display order.
+	Values []string
+}
+    PlanInfoItem is one server-canonical entry in a plan's plan_info. Iteration
+    is stable — wire array order is preserved exactly.
+
+func CoercePlanInfo(raw any) []PlanInfoItem
+    CoercePlanInfo coerces a wire plan_info field into the typed array surface.
+    Accepts both wire shapes:
+
+    - Post-zyins#349: []map[string]any with key/label/values — used verbatim.
+    - Pre-zyins#349: map[string]any with []string values — upconverted;
+    labels are Title Cased from each key so consumers see one shape only.
+
+    Returns nil on any unrecognized shape — lenient by design so a
+    forward-compatible field addition cannot break parsing.
 
 type PreferencesDocument map[string]any
     PreferencesDocument is the opaque preferences payload. The SDK preserves
@@ -1614,6 +2341,11 @@ func (s *PrequalifyService) Run(ctx context.Context, input *PrequalifyInput, opt
     runs locally before the request hits the wire; missing required fields yield
     a *ValidationError without a server round-trip.
 
+func (s *PrequalifyService) RunEnvelope(ctx context.Context, input *PrequalifyInput, opts ...RunOption) (map[string]any, error)
+    RunEnvelope executes prequalify and returns the full JSON response tree.
+    When ZYINS_LEGACY_WIRE=1 the request uses the engine's legacy flat-body
+    shape so the live API response matches the HTTP conformance reference.
+
 func (s *PrequalifyService) RunWithRawResponse(
 	ctx context.Context, input *PrequalifyInput, opts ...RunOption,
 ) (*Envelope[*PrequalifyResult], *RawResponse, error)
@@ -1625,6 +2357,50 @@ func (s *PrequalifyService) RunWithRawResponse(
 
     Both inputs and validation rules are identical to Run; the only difference
     is the return signature.
+
+type PrequalifyV3Options struct {
+	OnlyProductClass            string   `json:"only_product_class,omitempty"`
+	IncludeProductClass         []string `json:"include_product_class,omitempty"`
+	MinRank                     string   `json:"min_rank,omitempty"`
+	ShowUnreleased              *bool    `json:"show_unreleased,omitempty"`
+	SkipHealthBasedUnderwriting *bool    `json:"skip_health_based_underwriting,omitempty"`
+	IncludeIneligible           *bool    `json:"include_ineligible,omitempty"`
+}
+    PrequalifyV3Options carries request controls unique to the v3 API.
+
+type PrequalifyV3Request struct {
+	Applicant Applicant            `json:"applicant"`
+	Coverage  Coverage             `json:"coverage"`
+	Products  ProductSelection     `json:"products"`
+	Options   *PrequalifyV3Options `json:"options,omitempty"`
+}
+    PrequalifyV3Request is the typed request shape for POST /v3/prequalify.
+
+type PrequalifyV3Result struct {
+	Plans          []V3Offer `json:"plans"`
+	RequestID      string    `json:"-"`
+	IdempotencyKey string    `json:"-"`
+	Livemode       bool      `json:"-"`
+	RetryAttempts  int       `json:"-"`
+}
+    PrequalifyV3Result is the payload of the v3 prequalify envelope's data
+    field. Always a flat Plans slice — single amount and multi-amount alike.
+    Group client-side by the requested dimension with ByAmount (DeathBenefit for
+    face-amount requests, Budget for monthly-budget requests); the shape never
+    changes with the amount count.
+
+type PrequalifyV3Service struct {
+	// Has unexported fields.
+}
+    PrequalifyV3Service implements POST /v3/prequalify. Construct via NewClient;
+    the public surface is Run.
+
+func (s *PrequalifyV3Service) Run(ctx context.Context, req *PrequalifyV3Request, opts ...V3RunOption) (*PrequalifyV3Result, error)
+    Run executes a v3 prequalify request.
+
+    Returns *ValidationError before hitting the wire when applicant or coverage
+    validation fails; mirrors the v1 Run contract so callers branch on the same
+    typed error across surfaces.
 
 type ProbeResult struct {
 	// Status is the current serving state of this dependency.
@@ -1782,12 +2558,46 @@ type QuoteService struct {
 func (s *QuoteService) Run(ctx context.Context, input *QuoteInput, opts ...RunOption) (*QuoteResult, error)
     Run executes a quote request and returns the typed result.
 
+func (s *QuoteService) RunEnvelope(ctx context.Context, input *QuoteInput, opts ...RunOption) (map[string]any, error)
+    RunEnvelope executes quote and returns the full JSON response tree. When
+    ZYINS_LEGACY_WIRE=1 the request uses the engine's legacy flat-body shape so
+    the live API response matches the HTTP conformance reference.
+
 func (s *QuoteService) RunWithRawResponse(
 	ctx context.Context, input *QuoteInput, opts ...RunOption,
 ) (*Envelope[*QuoteResult], *RawResponse, error)
     RunWithRawResponse executes a quote request and returns the typed result
     alongside a RawResponse exposing the underlying HTTP status, headers,
     and URL. Mirrors PrequalifyService.RunWithRawResponse.
+
+type QuoteV3Options = PrequalifyV3Options
+    QuoteV3Options carries request controls unique to the v3 quote API.
+
+type QuoteV3Request struct {
+	Applicant Applicant        `json:"applicant"`
+	Coverage  Coverage         `json:"coverage"`
+	Products  ProductSelection `json:"products"`
+	Options   *QuoteV3Options  `json:"options,omitempty"`
+}
+    QuoteV3Request is the typed request shape for POST /v3/quote.
+
+type QuoteV3Result struct {
+	Plans          []V3Offer `json:"plans"`
+	RequestID      string    `json:"-"`
+	IdempotencyKey string    `json:"-"`
+	Livemode       bool      `json:"-"`
+	RetryAttempts  int       `json:"-"`
+}
+    QuoteV3Result is the payload of the v3 quote envelope's data field — the
+    identical flat Plans shape as PrequalifyV3Result.
+
+type QuoteV3Service struct {
+	// Has unexported fields.
+}
+    QuoteV3Service implements POST /v3/quote. Construct via NewClient.
+
+func (s *QuoteV3Service) Run(ctx context.Context, req *QuoteV3Request, opts ...V3RunOption) (*QuoteV3Result, error)
+    Run executes a v3 quote request.
 
 type RateLimitError struct {
 	Base *Error
@@ -1857,6 +2667,19 @@ func (s *ReferenceDataService) ProductTypes(ctx context.Context) ([]ReferencePro
 func (s *ReferenceDataService) States(ctx context.Context) ([]ReferenceState, error)
     States returns the supported-states table.
 
+type ReferenceEntity struct {
+	ID   string `json:"id"`
+	Name string `json:"name"`
+}
+    ReferenceEntity is one typed entity row in the v3 catalog.
+
+type ReferenceMatcher interface {
+	Match(text string, bundle *DatasetBundleV3) Concept
+}
+    ReferenceMatcher resolves free text into a Concept against an explicit
+    *DatasetBundleV3. The Client.Medications / Conditions / Concepts top-level
+    surface is the cache-backed sugar over this.
+
 type ReferenceNicotineMode struct {
 	Code        NicotineUsage `json:"code"`
 	DisplayName string        `json:"display_name"`
@@ -1870,6 +2693,32 @@ type ReferenceProductType struct {
 }
     ReferenceProductType is one product category the engine supports.
 
+type ReferenceService struct {
+	// Has unexported fields.
+}
+    ReferenceService is the stateless bundle-required matcher surface.
+
+func (s *ReferenceService) Concepts() ReferenceMatcher
+    Concepts returns the kind-agnostic matcher.
+
+func (s *ReferenceService) Conditions() ReferenceMatcher
+    Conditions returns the matcher that resolves free text against the condition
+    catalog.
+
+func (s *ReferenceService) Medications() ReferenceMatcher
+    Medications returns the matcher that resolves free text against the
+    medication catalog.
+
+type ReferenceSort string
+    ReferenceSort is the namespaced sort enum for Concept accessors.
+
+const (
+	// SortMostCommonFirst orders by descending prescription frequency
+	// derived from the inline `treated_with` / `used_for` rows.
+	SortMostCommonFirst ReferenceSort = "most_common_first"
+	// SortAlphabetical orders by display name.
+	SortAlphabetical ReferenceSort = "alphabetical"
+)
 type ReferenceState struct {
 	// Code is the two-letter postal abbreviation (e.g., "NC").
 	Code string `json:"code"`
@@ -1881,6 +2730,19 @@ type ReferenceState struct {
 	Supported bool `json:"supported"`
 }
     ReferenceState is one US state in the supported-states table.
+
+type RelationEdge struct {
+	FromID            string
+	ToID              string
+	ToName            string
+	PrescriptionCount int
+}
+    RelationEdge is one inline row→row relationship in the v3 catalog.
+    FromID points at the row's own ID (the parent condition or medication);
+    ToID points at the related entity. ToName is the related entity's display
+    name as it appears in the parent's inline list. PrescriptionCount is the
+    inline observation count used to drive SortMostCommonFirst — equal to 0 when
+    the wire row did not carry one.
 
 type RunOption func(*runOptions)
     RunOption customizes a single Prequalify.Run call without affecting the
@@ -1916,6 +2778,14 @@ const (
 	SexMale   Sex = "male"
 	SexFemale Sex = "female"
 )
+type SpellingCorrection struct {
+	ID   string `json:"id"`
+	From string `json:"from"`
+	To   string `json:"to"`
+}
+    SpellingCorrection is one row in the v3 spelling_corrections dataset.
+    The From → To mapping is what feeds the autocorrector typoMap.
+
 type State = catalog.State
     State is a re-export of catalog.State so callers can write
     `zyins.State("NC")` or use the typed catalog constants
@@ -1977,6 +2847,119 @@ type UsageSnapshot struct {
 	RequestID string `json:"request_id"`
 }
     UsageSnapshot is the typed response shape for Usage.Current.
+
+type V3Amount struct {
+	Cents   int64  `json:"cents"`
+	Display string `json:"display"`
+}
+    V3Amount is an integer-cents value paired with the carrier display string
+    (the OpenAPI AmountResponse). Cents is canonical for arithmetic; Display
+    renders verbatim and is never parsed.
+
+type V3Eligibility struct {
+	Category *V3EligibilityCategory `json:"category"`
+	Eligible bool                   `json:"eligible"`
+	Reasons  []string               `json:"reasons"`
+}
+    V3Eligibility describes whether one pricing row qualifies, and the generic
+    carrier-confidential reasons populated when it does not.
+
+type V3EligibilityCategory string
+    V3EligibilityCategory is the underwriting rank bucket — the axis min_rank
+    filters on. NOT the carrier rate-class label.
+
+const (
+	V3EligibilityCategoryImmediate V3EligibilityCategory = "immediate"
+	V3EligibilityCategoryGraded    V3EligibilityCategory = "graded"
+	V3EligibilityCategoryROP       V3EligibilityCategory = "rop"
+	V3EligibilityCategoryOther     V3EligibilityCategory = "other"
+)
+type V3Money struct {
+	Amount V3Amount  `json:"amount"`
+	Period *V3Period `json:"period"`
+}
+    V3Money is a monetary value with a recurrence period (the OpenAPI Money).
+    Used for DeathBenefit (Period "" / null, a one-time lump sum) and Budget
+    (Period "monthly", the requested monthly budget). Amount is the canonical
+    V3Amount; Period disambiguates one-time vs recurring.
+
+type V3Offer struct {
+	Object       string         `json:"object"`
+	ID           string         `json:"id"`
+	Eligible     bool           `json:"eligible"`
+	Carrier      V3OfferCarrier `json:"carrier"`
+	Product      V3OfferProduct `json:"product"`
+	PlanInfo     []PlanInfoItem `json:"plan_info"`
+	DeathBenefit V3Money        `json:"death_benefit"`
+	Budget       *V3Money       `json:"budget,omitempty"`
+	Pricing      []V3PricingRow `json:"pricing"`
+	Metadata     map[string]any `json:"metadata"`
+}
+    V3Offer is one product's offer, returned identically by /v3/prequalify and
+    /v3/quote. DeathBenefit is always present (Period nil — a one-time lump
+    sum). Budget is present only on monthly-budget quotes (Period "monthly",
+    the requested budget — the stable grouping key for budget responses).
+    Array order of Pricing is authoritative for display.
+
+type V3OfferCarrier struct {
+	ID      string `json:"id"`
+	Name    string `json:"name"`
+	LogoURL string `json:"logo_url"`
+}
+    V3OfferCarrier is the carrier underwriting an offer. Declared here
+    because the existing Go SDK predates the typed offer surface; once the v2
+    transformer migration lands the type moves to its own file.
+
+type V3OfferProduct struct {
+	ID          string `json:"id"`
+	Slug        string `json:"slug"`
+	Name        string `json:"name"`
+	DisplayName string `json:"display_name"`
+	Type        string `json:"type"`
+	WireToken   string `json:"wire_token"`
+}
+    V3OfferProduct is the carrier product an offer represents.
+
+type V3Period string
+    V3Period is the recurrence period for a V3Money. The empty string ("",
+    serialized as JSON null) is a one-time / lump-sum amount (a death benefit);
+    the named values are premium billing cycles.
+
+const (
+	V3PeriodMonthly    V3Period = "monthly"
+	V3PeriodQuarterly  V3Period = "quarterly"
+	V3PeriodSemiannual V3Period = "semiannual"
+	V3PeriodAnnual     V3Period = "annual"
+)
+type V3Premium struct {
+	Cents   int64               `json:"cents"`
+	Display string              `json:"display"`
+	Default V3Amount            `json:"default"`
+	Modes   map[string]V3Amount `json:"modes"`
+}
+    V3Premium is the premium for one pricing row. Premium carries no period this
+    release — the per-mode recurrence is a documented future addition.
+
+type V3PricingRow struct {
+	RateClass   string        `json:"rate_class"`
+	Primary     bool          `json:"primary"`
+	Eligibility V3Eligibility `json:"eligibility"`
+	Premium     *V3Premium    `json:"premium,omitempty"`
+	Rank        *int          `json:"rank"`
+}
+    V3PricingRow is one row of the uniform pricing[] table — a single rate class
+    for one product.
+
+type V3RunOption func(*v3RunOptions)
+    V3RunOption customizes a single Run call without affecting the surrounding
+    Client. Mirrors RunOption on the v1 surface; kept separate because the v3
+    idempotency contract requires UUID v4, while the v1 surface accepts opaque
+    keys.
+
+func WithV3IdempotencyKey(key string) V3RunOption
+    WithV3IdempotencyKey overrides the SDK-generated key for one call.
+    The caller is responsible for supplying a UUID v4 — the v3 contract rejects
+    anything else with idempotency_conflict.
 
 type ValidationError struct{ Base *Error }
     ValidationError signals a 4xx request-shape problem. Base.Param names the

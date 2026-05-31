@@ -7,7 +7,6 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
-	"strings"
 	"testing"
 )
 
@@ -18,6 +17,7 @@ type captureLicensesRequest struct {
 	path   string
 	auth   string
 	idem   string
+	device string
 	body   []byte
 }
 
@@ -28,6 +28,7 @@ func TestLicenses_Check_HappyPath(t *testing.T) {
 		captured.path = r.URL.Path
 		captured.auth = r.Header.Get("Authorization")
 		captured.idem = r.Header.Get("Idempotency-Key")
+		captured.device = r.Header.Get("X-Device-ID")
 		captured.body, _ = io.ReadAll(r.Body)
 		w.Header().Set("Content-Type", "application/json")
 		_, _ = w.Write([]byte(`{"status":"valid"}`))
@@ -37,7 +38,7 @@ func TestLicenses_Check_HappyPath(t *testing.T) {
 	result, err := c.License.Check(context.Background(), &LicenseCheckInput{
 		Email:      "john.doe@acme-agency.com",
 		Keycode:    "ABC-123-XYZ",
-		DeviceID:   "device-1",
+		DeviceID:   " device-1 ",
 		LicenseKey: "abc123",
 	})
 	if err != nil {
@@ -49,11 +50,17 @@ func TestLicenses_Check_HappyPath(t *testing.T) {
 	if captured.method != http.MethodPost || captured.path != licensesCheckPath {
 		t.Errorf("captured %s %s, want POST %s", captured.method, captured.path, licensesCheckPath)
 	}
-	if !strings.HasPrefix(captured.auth, "Bearer ") {
-		t.Errorf("expected Bearer auth, got %q", captured.auth)
+	// /v2/licenses/* is mounted outside AuthMiddleware on the server;
+	// the SDK MUST NOT send an Authorization header for these calls
+	// (the chicken-and-egg: activate is what mints the credential).
+	if captured.auth != "" {
+		t.Errorf("expected no Authorization header on /v2/licenses/check, got %q", captured.auth)
 	}
 	if captured.idem == "" {
 		t.Errorf("expected Idempotency-Key header on POST")
+	}
+	if captured.device != "device-1" {
+		t.Errorf("X-Device-ID = %q, want device-1", captured.device)
 	}
 	var bodyParsed licensesCheckWireBody
 	if err := json.Unmarshal(captured.body, &bodyParsed); err != nil {
@@ -61,6 +68,112 @@ func TestLicenses_Check_HappyPath(t *testing.T) {
 	}
 	if bodyParsed.Email != "john.doe@acme-agency.com" || bodyParsed.Keycode != "ABC-123-XYZ" {
 		t.Errorf("body fields not propagated: %+v", bodyParsed)
+	}
+	if bodyParsed.DeviceID != "device-1" {
+		t.Errorf("body deviceId = %q, want device-1", bodyParsed.DeviceID)
+	}
+	var rawBody map[string]any
+	if err := json.Unmarshal(captured.body, &rawBody); err != nil {
+		t.Fatalf("raw body unmarshal: %v", err)
+	}
+	if _, ok := rawBody["deviceId"]; !ok {
+		t.Errorf("expected camelCase deviceId in request body: %s", captured.body)
+	}
+	if _, ok := rawBody["licenseKey"]; !ok {
+		t.Errorf("expected camelCase licenseKey in request body: %s", captured.body)
+	}
+	if _, ok := rawBody["device_id"]; ok {
+		t.Errorf("unexpected legacy device_id in request body: %s", captured.body)
+	}
+	if _, ok := rawBody["license_key"]; ok {
+		t.Errorf("unexpected legacy license_key in request body: %s", captured.body)
+	}
+}
+
+func TestLicenses_Activate_HappyPath(t *testing.T) {
+	var captured captureLicensesRequest
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		captured.method = r.Method
+		captured.path = r.URL.Path
+		captured.auth = r.Header.Get("Authorization")
+		captured.device = r.Header.Get("X-Device-ID")
+		captured.body, _ = io.ReadAll(r.Body)
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"data":{"status":"active","licenseKey":"lk-v2","remainingActivations":0}}`))
+	}))
+	defer srv.Close()
+	c := newTestClient(t, srv)
+	result, err := c.License.Activate(context.Background(), &LicenseActivateInput{
+		Email:    "john.doe@acme-agency.com",
+		Keycode:  "ABC-123-XYZ",
+		DeviceID: " device-1 ",
+	})
+	if err != nil {
+		t.Fatalf("Activate: %v", err)
+	}
+	if captured.method != http.MethodPost || captured.path != licensesActivatePath {
+		t.Errorf("captured %s %s, want POST %s", captured.method, captured.path, licensesActivatePath)
+	}
+	if captured.auth != "" {
+		t.Errorf("expected no Authorization header on /v2/licenses/activate, got %q", captured.auth)
+	}
+	if captured.device != "device-1" {
+		t.Errorf("X-Device-ID = %q, want device-1", captured.device)
+	}
+	var rawBody map[string]any
+	if err := json.Unmarshal(captured.body, &rawBody); err != nil {
+		t.Fatalf("raw body unmarshal: %v", err)
+	}
+	if _, ok := rawBody["deviceId"]; !ok {
+		t.Errorf("expected camelCase deviceId in request body: %s", captured.body)
+	}
+	if rawBody["deviceId"] != "device-1" {
+		t.Errorf("body deviceId = %q, want device-1", rawBody["deviceId"])
+	}
+	if _, ok := rawBody["device_id"]; ok {
+		t.Errorf("unexpected legacy device_id in request body: %s", captured.body)
+	}
+	if result.LicenseKey != "lk-v2" || result.Auth.LicenseKey != "lk-v2" {
+		t.Errorf("license key mirror mismatch: %+v", result)
+	}
+	if result.RemainingActivations != 0 {
+		t.Errorf("remaining activations = %d, want 0", result.RemainingActivations)
+	}
+}
+
+func TestLicenses_Activate_AcceptsLegacyNestedAuth(t *testing.T) {
+	result, err := decodeLicenseActivateResponse([]byte(`{"status":"active","auth":{"license_key":"lk-v1"},"remaining_activations":2}`))
+	if err != nil {
+		t.Fatalf("decodeLicenseActivateResponse: %v", err)
+	}
+	if result.LicenseKey != "lk-v1" || result.Auth.LicenseKey != "lk-v1" {
+		t.Errorf("legacy license key mismatch: %+v", result)
+	}
+	if result.RemainingActivations != 2 {
+		t.Errorf("remaining activations = %d, want 2", result.RemainingActivations)
+	}
+}
+
+func TestLicenses_Deactivate_PrefersPresentV2ZeroRemaining(t *testing.T) {
+	result, err := decodeLicenseDeactivateResponse([]byte(`{"data":{"status":"inactive","remainingActivations":0,"remaining_activations":3}}`))
+	if err != nil {
+		t.Fatalf("decodeLicenseDeactivateResponse: %v", err)
+	}
+	if result.RemainingActivations == nil {
+		t.Fatalf("remaining activations = nil, want 0")
+	}
+	if *result.RemainingActivations != 0 {
+		t.Errorf("remaining activations = %d, want 0", *result.RemainingActivations)
+	}
+}
+
+func TestLicenses_Deactivate_PreservesMissingLegacyRemaining(t *testing.T) {
+	result, err := decodeLicenseDeactivateResponse([]byte(`{"status":"deactivated"}`))
+	if err != nil {
+		t.Fatalf("decodeLicenseDeactivateResponse: %v", err)
+	}
+	if result.RemainingActivations != nil {
+		t.Errorf("remaining activations = %d, want nil", *result.RemainingActivations)
 	}
 }
 

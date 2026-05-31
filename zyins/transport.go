@@ -20,7 +20,7 @@ type httpDoer = coretransport.HTTPDoer
 
 // userAgentHeader is the canonical SDK User-Agent string. The version
 // suffix is fixed at build time; bump it on each release.
-const userAgentHeader = "isa-sdk-zyins-go/0.5.1"
+const userAgentHeader = "isa-sdk-zyins-go/0.5.5"
 
 // jsonContentType is the wire media type for ZyINS requests and
 // responses. The server accepts application/problem+json on errors
@@ -40,6 +40,15 @@ type requestArgs struct {
 	// originating in shared helpers still identify the caller.
 	op             string
 	idempotencyKey string
+	// bootstrap routes the request through the unwrapped HTTP doer so no
+	// Authorization header is attached. Used by the /v2/licenses/*
+	// surface, which sits outside AuthMiddleware on the server.
+	bootstrap bool
+	// extraHeaders are merged onto the outbound request after the SDK's
+	// canonical headers (Content-Type, Accept, Idempotency-Key, User-Agent).
+	// Reserved for the bootstrap surface, which adds X-Device-ID without
+	// otherwise touching auth.
+	extraHeaders map[string]string
 }
 
 // doJSON serializes body, executes the request, and returns the
@@ -67,7 +76,11 @@ func (c *Client) doJSONRaw(ctx context.Context, args requestArgs) ([]byte, *http
 	if err != nil {
 		return nil, nil, fmt.Errorf("zyins: %s %s [op=%s] build request: %w", args.method, args.path, args.op, err)
 	}
-	resp, err := c.doer.Do(req)
+	doer := c.doer
+	if args.bootstrap && c.bootstrapDoer != nil {
+		doer = c.bootstrapDoer
+	}
+	resp, err := doer.Do(req)
 	if err != nil {
 		return nil, nil, fmt.Errorf("zyins: %s %s [op=%s]: %w", args.method, args.path, args.op, err)
 	}
@@ -109,6 +122,12 @@ func (c *Client) buildRequest(ctx context.Context, args requestArgs, body []byte
 			}
 		}
 		req.Header.Set("Idempotency-Key", key)
+	}
+	for k, v := range args.extraHeaders {
+		if v == "" {
+			continue
+		}
+		req.Header.Set(k, v)
 	}
 	return req, nil
 }

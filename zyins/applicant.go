@@ -228,7 +228,19 @@ func (a *Applicant) validate() error {
 	if a.NicotineUse.LastUsed == "" && a.NicotineUsageLegacy == "" {
 		return errors.New("zyins: applicant.NicotineUse or NicotineUsageLegacy is required")
 	}
-	if a.NicotineUse.LastUsed == "" {
+	if a.NicotineUse.LastUsed != "" {
+		switch a.NicotineUse.LastUsed {
+		case NicotineNever,
+			NicotineWithin12Months,
+			Nicotine12To24Months,
+			Nicotine24To36Months,
+			Nicotine36To48Months,
+			Nicotine48To60Months,
+			NicotineOver60Months:
+		default:
+			return fmt.Errorf("zyins: applicant.NicotineUse.LastUsed %q is not a valid NicotineDuration constant", a.NicotineUse.LastUsed)
+		}
+	} else {
 		switch a.NicotineUsageLegacy {
 		case NicotineNone, NicotineCurrent, NicotineFormer:
 		default:

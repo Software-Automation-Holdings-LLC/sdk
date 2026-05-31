@@ -1,4 +1,37 @@
-# Migrating from per-product Go SDKs to the unified `sdk` module
+# Migration — 0.x → 1.0.0-rc.1 (Go)
+
+The cross-language guide at [`../../MIGRATION.md`](../../MIGRATION.md)
+covers the full cut (constructor rename, per-surface `ApiVersion`,
+v3 wire-shape, `CaseStorage` adapter, bundleless `Match`).
+Go-specific notes:
+
+- **Install (rc.1, internal channel):**
+
+  ```bash
+  # The Go SDK ships as a single private module; consumers go-get the tag.
+  go get github.com/Software-Automation-Holdings-LLC/sdk@sdk/v1.0.0-rc.1
+  ```
+
+  For private-repo access, `GOPRIVATE=github.com/Software-Automation-Holdings-LLC/*`
+  and a configured Git credential helper (or a Personal Access Token in
+  the URL) are required.
+
+- **Constructor:** `isa.New(...)` → `isa.WithKeycode(...)`. The
+  `DeviceID` field on `Options{}` is removed (internal SDK detail).
+- **ApiVersion:** `string` → `map[string]string` (per-surface). Use
+  `BundledApiVersions` for defaults.
+- **Cases:** `Cases.Save(...)` accepts `{Product, Payload}` only;
+  default storage is `ZeroKnowledgeCaseStorage`. `Cases.Open` is
+  kept as a deprecated alias for `Cases.Recall`.
+- **Reference:** bundleless `isa.Zyins.Medications().Match(ctx,
+  text)` (plus `Conditions()`, `Concepts()`) fetches and caches the
+  v3 datasets index. `RefreshReferenceIndex` invalidates.
+- **VERSION anchor:** `packages/go/VERSION` now exists and is asserted
+  against the tag at publish time.
+
+---
+
+# Historical: per-product Go SDKs → unified `sdk` module
 
 The ISA Go SDK is now published as a single Go module instead of four.
 Sub-package import paths are unchanged; only the consumer `go.mod`

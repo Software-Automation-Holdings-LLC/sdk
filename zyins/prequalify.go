@@ -73,6 +73,9 @@ func WithIdempotencyKey(key string) RunOption {
 // Validation runs locally before the request hits the wire; missing
 // required fields yield a *ValidationError without a server round-trip.
 func (s *PrequalifyService) Run(ctx context.Context, input *PrequalifyInput, opts ...RunOption) (*PrequalifyResult, error) {
+	if err := assertPrequalifyNotV3(s.client, "Prequalify.Run"); err != nil {
+		return nil, err
+	}
 	if input == nil {
 		return nil, &ValidationError{Base: &Error{
 			Code:    ErrorCodeValidationError,
@@ -125,6 +128,74 @@ func (s *PrequalifyService) Run(ctx context.Context, input *PrequalifyInput, opt
 	return decodePrequalifyResponse(raw)
 }
 
+// RunEnvelope executes prequalify and returns the full JSON response tree.
+// When ZYINS_LEGACY_WIRE=1 the request uses the engine's legacy flat-body
+// shape so the live API response matches the HTTP conformance reference.
+func (s *PrequalifyService) RunEnvelope(ctx context.Context, input *PrequalifyInput, opts ...RunOption) (map[string]any, error) {
+	if err := assertPrequalifyNotV3(s.client, "Prequalify.RunEnvelope"); err != nil {
+		return nil, err
+	}
+	if input == nil {
+		return nil, &ValidationError{Base: &Error{
+			Code:    ErrorCodeValidationError,
+			Message: "zyins: PrequalifyInput is nil",
+		}}
+	}
+	if err := input.Applicant.validate(); err != nil {
+		return nil, &ValidationError{Base: &Error{
+			Code:    ErrorCodeValidationError,
+			Message: err.Error(),
+		}}
+	}
+	if err := input.Coverage.validate(); err != nil {
+		return nil, &ValidationError{Base: &Error{
+			Code:    ErrorCodeValidationError,
+			Message: err.Error(),
+		}}
+	}
+	legacy := legacyWireEnabled()
+	if !legacy && input.Products.Len() == 0 {
+		return nil, &ValidationError{Base: &Error{
+			Code:    ErrorCodeValidationError,
+			Message: "zyins: Products must contain at least one entry",
+		}}
+	}
+
+	var wireBody any
+	if legacy {
+		amount := defaultLegacyFaceAmount(input.Coverage)
+		wireBody = legacyPrequalifyBodyFromApplicant(input.Applicant, amount)
+	} else {
+		body, err := buildPrequalifyBody(input)
+		if err != nil {
+			return nil, &ValidationError{Base: &Error{
+				Code:    ErrorCodeValidationError,
+				Message: err.Error(),
+			}}
+		}
+		wireBody = body
+	}
+
+	ro := runOptions{}
+	for _, o := range opts {
+		if o != nil {
+			o(&ro)
+		}
+	}
+
+	raw, err := s.client.doJSON(ctx, requestArgs{
+		method:         http.MethodPost,
+		path:           prequalifyPath,
+		body:           wireBody,
+		op:             "prequalify",
+		idempotencyKey: ro.idempotencyKey,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("zyins: Prequalify.RunEnvelope: %w", err)
+	}
+	return decodeJSONEnvelope(raw, "prequalify")
+}
+
 // RunWithRawResponse executes a prequalify request and returns the
 // typed result alongside a RawResponse exposing the underlying HTTP
 // status, headers, and URL. Mirrors the Stainless SDK convention so
@@ -136,6 +207,9 @@ func (s *PrequalifyService) Run(ctx context.Context, input *PrequalifyInput, opt
 func (s *PrequalifyService) RunWithRawResponse(
 	ctx context.Context, input *PrequalifyInput, opts ...RunOption,
 ) (*Envelope[*PrequalifyResult], *RawResponse, error) {
+	if err := assertPrequalifyNotV3(s.client, "Prequalify.RunWithRawResponse"); err != nil {
+		return nil, nil, err
+	}
 	if input == nil {
 		return nil, nil, &ValidationError{Base: &Error{
 			Code: ErrorCodeValidationError, Message: "zyins: PrequalifyInput is nil",

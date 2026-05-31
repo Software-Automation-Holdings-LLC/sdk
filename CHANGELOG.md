@@ -4,6 +4,102 @@ All notable changes to the unified Go SDK. The module has not yet been
 tagged for general release; until v1.0.0 ships, every release is
 implicitly a pre-release and the API may change in incompatible ways.
 
+## v1.0.0-rc.2 — 2026-05-30
+
+Reference-facade consumer-gap fixes so bpp2.0 can drop its bypasses.
+
+### Fixed
+
+- **v3 datasets product slices parse defensively per-element.**
+  `products_by_family`, `discontinued_products`, and `state_derivatives`
+  are decoded element-by-element; one malformed entry (a non-integer
+  epoch, a non-string derivative, an empty-id row) now skips only itself
+  instead of aborting the whole bundle decode.
+- **Cross-language parity: blank product names and blank state
+  derivatives are no longer dropped.** A `products_by_family` row is kept
+  when its `id` is non-empty (a blank display name keeps the row); a
+  `state_derivatives` entry is kept for every JSON string, including the
+  empty string. The Go parser previously dropped both, so the same wire
+  payload produced fewer rows on Go clients than on the TS/Python/PHP/C#
+  SDKs. The keep predicate now matches all four mirrors exactly.
+
+### Changed
+
+- **BREAKING:** `DatasetBundleV3.DiscontinuedProducts` is now
+  `map[string]int64` (was `map[string]int`) — unix epoch seconds are
+  2038-safe and 32-bit-target-safe, matching the other-language mirrors.
+  Epoch values are kept only when integer-valued (any JSON notation);
+  genuine fractionals are skipped.
+
+## v1.0.0-rc.1 — 2026-05-29
+
+First release candidate for the public 1.0 SDK. **Internal channels only.**
+Consumers install via the git tag `sdk/v1.0.0-rc.1`; no public registry
+push happens until 1.0.0 ships.
+
+### Highlights
+
+- **Per-surface `apiVersion` map (no global default).** `isa.Options{}`
+  now carries an `ApiVersion map[string]string` per surface
+  (`"prequalify"`, `"quote"`, `"datasets"`, ...). Construction without
+  a value resolves to the surface default from `BundledApiVersions`.
+- **`BundledApiVersions` exported.** The full per-surface default
+  table is a public symbol; downstream tooling and conformance
+  scenarios pin against it byte-identically across all 5 languages.
+- **Bundleless top-level `Match` / `Conditions` / `Concepts`.**
+  `isa.Zyins.Medications().Match(ctx, text)` (and Conditions/Concepts
+  peers) fetch and cache the v3 datasets index transparently. No
+  prior `Datasets.GetV3()` call required. `RefreshReferenceIndex`
+  invalidates.
+- **`Cases.Save` / `Cases.Recall` via injectable `CaseStorage`.**
+  Default `ZeroKnowledgeCaseStorage` writes through `/v1/case` with
+  the E2EE envelope. Carrier adapters implement the same interface
+  to redirect persistence.
+- **v3 wire-shape end-to-end.** `Prequalify` / `Quote` accept the
+  nested `applicant` + `coverage` + `products` envelope; pricing[]
+  table iteration on offers; ULID-aware conditions/medications;
+  `face_amount_cents` singular.
+- **Idempotency: strict UUID v4** on `/v3/*` mutations.
+  `core/idempotency.NewKey()` auto-mints v4; consumer overrides
+  validated at the transport layer.
+
+### Migration
+
+See [`MIGRATION.md`](./MIGRATION.md) for the 0.x → 1.0 cut and
+[../../MIGRATION.md](../../MIGRATION.md) for the cross-language guide.
+
+### Known drift (conformance gate YELLOW — non-blocking)
+
+The TypeScript conformance runner is canonical at rc.1; the other four
+language runners are PENDING. Nine known drift items surfaced on first
+end-to-end execution (sourced verbatim from PR #387):
+
+1. Bearer auth doesn't reach product methods on the locked surface;
+   `isa.zyins.prequalify` requires `Isa.withKeycode()`.
+2. `applicant.height_inches` (number) vs `applicant.height` (Height
+   object): v3 serializer crashes on scenarios 01,02,03,04,05,12.
+3. Scenario 12 routes through v2, not v3 (no `apiVersion` map).
+4. `reference.concepts.match` returns `isKnown:false` when the v3
+   datasets bundle hasn't been primed (scenarios 03, 07, 09).
+5. `cases.save({applicant, state, note})` rejected; locked
+   `ZeroKnowledgeCaseStorage` requires `{product, payload}`.
+6. `cases.recall(id)` without `recallToken` throws by design;
+   scenario 10 assumes token-optional recall.
+7. `prequalify(req, {idempotencyKey})` not supported on locked
+   signature (scenario 12).
+8. `reference.match` (scenario) vs `reference.concepts.match` (locked).
+9. `reference.conditionsFor({id, sort})` does not exist; traversal is
+   on the concept handle.
+
+Each is either an SDK fix, a scenario rewrite, or "by design" — the
+gate is YELLOW pending triage.
+
+### Links
+
+- Docs: <https://docs.isaapi.com>
+- Guides: [`api/guides/`](../../api/guides/)
+- Migration: [`MIGRATION.md`](./MIGRATION.md)
+
 ## v0.5.0 — 2026-05-21
 
 ### Added

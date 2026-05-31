@@ -35,7 +35,20 @@ import (
 	"github.com/Software-Automation-Holdings-LLC/sdk/proxy"
 	"github.com/Software-Automation-Holdings-LLC/sdk/rapidsign"
 	"github.com/Software-Automation-Holdings-LLC/sdk/zyins"
+	zcases "github.com/Software-Automation-Holdings-LLC/sdk/zyins/cases"
 )
+
+// BundledAPIVersions re-exports [zyins.BundledAPIVersions] at the
+// parent SDK entry point. Callers reading the bundled pin without
+// importing the zyins sub-package go through this alias.
+var BundledAPIVersions = zyins.BundledAPIVersions
+
+// ResolveAPIVersion re-exports [zyins.ResolveAPIVersion] for callers
+// that need per-surface resolution without importing the zyins
+// sub-package directly.
+func ResolveAPIVersion(overrides map[string]string, surface string) string {
+	return zyins.ResolveAPIVersion(overrides, surface)
+}
 
 // Isa is the unified entry point. Construct one per process via the
 // factory functions below; the namespaces share underlying transport
@@ -71,16 +84,42 @@ type WebhooksNamespace struct{}
 
 // LicenseOptions configures the License auth mode. Empty fields are
 // filled from the environment (ISA_LICENSE_KEYCODE, ISA_LICENSE_EMAIL).
+//
+// APIVersion overrides the bundled per-surface pins
+// ([zyins.BundledAPIVersions]) for this client instance only. Keys are
+// surface names ("prequalify", "quote", ...); values are the
+// version prefix ("v1", "v2", ...). A surface absent from the map
+// falls back to BundledAPIVersions.
+//
+// CaseStorage swaps the default zero-knowledge store. nil resolves to
+// [zcases.NewZeroKnowledgeCaseStorage] wrapping the underlying zyins
+// client.
 type LicenseOptions struct {
-	Keycode string
-	Email   string
+	Keycode     string
+	Email       string
+	APIVersion  map[string]string
+	CaseStorage zcases.CaseStorage
+}
+
+// BearerOptions configures the Bearer auth mode. Token follows the
+// same env fallback as [WithBearer] (ISA_TOKEN). APIVersion and
+// CaseStorage mirror the per-instance overrides on [LicenseOptions].
+type BearerOptions struct {
+	Token       string
+	APIVersion  map[string]string
+	CaseStorage zcases.CaseStorage
 }
 
 // SessionOptions configures the Session auth mode. Empty fields are
 // filled from the environment (ISA_SESSION_ID, ISA_SESSION_SECRET).
+//
+// APIVersion and CaseStorage mirror the per-instance overrides on
+// [LicenseOptions].
 type SessionOptions struct {
 	SessionID     string
 	SessionSecret string //nolint:gosec // documented credential field
+	APIVersion    map[string]string
+	CaseStorage   zcases.CaseStorage
 }
 
 // WithBearer constructs an Isa client authenticated by a long-lived
@@ -93,17 +132,20 @@ type SessionOptions struct {
 //	if err != nil { return err }
 //	resp, err := isa.Zyins.Prequalify.Run(ctx, req)
 func WithBearer(token string) (*Isa, error) {
-	if len(token) == 0 {
-		envToken, ok := os.LookupEnv(zyins.EnvTokenVar)
-		if !ok || len(envToken) == 0 {
-			return nil, &zyins.ConfigError{
-				Factory:    "WithBearer",
-				MissingEnv: []string{zyins.EnvTokenVar},
-			}
-		}
-		token = envToken
+	return WithBearerOptions(BearerOptions{Token: token})
+}
+
+// WithBearerOptions is the options-bag form of [WithBearer]. The
+// embedded APIVersion + CaseStorage fields propagate into the
+// underlying zyins client via [zyins.WithAPIVersionOverrides] and
+// [zyins.WithCaseStorage].
+func WithBearerOptions(opts BearerOptions) (*Isa, error) {
+	token, err := resolveBearerToken(opts.Token)
+	if err != nil {
+		return nil, err
 	}
-	zc, err := zyins.NewClient(zyins.WithToken(token))
+	zyinsOpts := append([]zyins.Option{zyins.WithToken(token)}, optionalZyinsOptions(opts.APIVersion, opts.CaseStorage)...)
+	zc, err := zyins.NewClient(zyinsOpts...)
 	if err != nil {
 		return nil, fmt.Errorf("sdk: WithBearer: zyins.NewClient: %w", err)
 	}
@@ -111,12 +153,22 @@ func WithBearer(token string) (*Isa, error) {
 	if err != nil {
 		return nil, fmt.Errorf("sdk: WithBearer: rapidsign.New: %w", err)
 	}
-	return &Isa{
-		Zyins:     zc,
-		RapidSign: rc,
-		Webhooks:  &WebhooksNamespace{},
-		Proxy:     &ProxyNamespace{binding: proxy.SessionBinding{ProxyOrigin: proxy.DefaultProxyOrigin}},
-	}, nil
+	return newIsa(zc, rc, proxy.SessionBinding{ProxyOrigin: proxy.DefaultProxyOrigin}), nil
+}
+
+// optionalZyinsOptions translates the per-instance APIVersion +
+// CaseStorage fields shared across [BearerOptions], [LicenseOptions],
+// and [SessionOptions] into the matching [zyins.Option] values. Empty
+// inputs produce no options.
+func optionalZyinsOptions(apiVersion map[string]string, storage zcases.CaseStorage) []zyins.Option {
+	out := make([]zyins.Option, 0, 2)
+	if len(apiVersion) > 0 {
+		out = append(out, zyins.WithAPIVersionOverrides(apiVersion))
+	}
+	if storage != nil {
+		out = append(out, zyins.WithCaseStorage(storage))
+	}
+	return out
 }
 
 // WithLicense constructs an Isa client authenticated by the License
@@ -135,16 +187,12 @@ func WithLicense(opts LicenseOptions) (*Isa, error) {
 	if err != nil {
 		return nil, err
 	}
-	zc, err := zyins.NewClient(zyinsAuthOpt)
+	zyinsOpts := append([]zyins.Option{zyinsAuthOpt}, optionalZyinsOptions(opts.APIVersion, opts.CaseStorage)...)
+	zc, err := zyins.NewClient(zyinsOpts...)
 	if err != nil {
 		return nil, fmt.Errorf("sdk: WithLicense: zyins.NewClient: %w", err)
 	}
-	return &Isa{
-		Zyins:     zc,
-		RapidSign: nil,
-		Webhooks:  &WebhooksNamespace{},
-		Proxy:     &ProxyNamespace{binding: proxy.SessionBinding{ProxyOrigin: proxy.DefaultProxyOrigin}},
-	}, nil
+	return newIsa(zc, nil, proxy.SessionBinding{ProxyOrigin: proxy.DefaultProxyOrigin}), nil
 }
 
 // WithSession constructs an Isa client authenticated by the Session
@@ -163,21 +211,26 @@ func WithSession(opts SessionOptions) (*Isa, error) {
 	if err != nil {
 		return nil, err
 	}
-	zc, err := zyins.NewClient(zyinsAuthOpt)
+	zyinsOpts := append([]zyins.Option{zyinsAuthOpt}, optionalZyinsOptions(opts.APIVersion, opts.CaseStorage)...)
+	zc, err := zyins.NewClient(zyinsOpts...)
 	if err != nil {
 		return nil, fmt.Errorf("sdk: WithSession: zyins.NewClient: %w", err)
 	}
 	sessionID, sessionSecret := resolveSessionCredentials(opts)
+	return newIsa(zc, nil, proxy.SessionBinding{
+		SessionID:     sessionID,
+		SessionSecret: sessionSecret,
+		ProxyOrigin:   proxy.DefaultProxyOrigin,
+	}), nil
+}
+
+func newIsa(zc *zyins.Client, rc *rapidsign.Client, binding proxy.SessionBinding) *Isa {
 	return &Isa{
 		Zyins:     zc,
-		RapidSign: nil,
+		RapidSign: rc,
 		Webhooks:  &WebhooksNamespace{},
-		Proxy: &ProxyNamespace{binding: proxy.SessionBinding{
-			SessionID:     sessionID,
-			SessionSecret: sessionSecret,
-			ProxyOrigin:   proxy.DefaultProxyOrigin,
-		}},
-	}, nil
+		Proxy:     &ProxyNamespace{binding: binding},
+	}
 }
 
 // resolveSessionCredentials extracts the session id + secret from opts,

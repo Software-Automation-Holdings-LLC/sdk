@@ -8,8 +8,13 @@ import (
 	"sync"
 )
 
-// productsPath is the canonical path for the unified datasets endpoint.
-const productsPath = "/v1/datasets"
+const (
+	productDatasetKey = "products"
+	datasetDataKey    = "data"
+)
+
+// productsPath is the GET endpoint for the products dataset.
+const productsPath = "/v2/datasets/products"
 
 // ProductsService provides a memoized product catalog fetched once from
 // the server and reused across calls. Access via Client.Products.
@@ -95,9 +100,8 @@ func (s *ProductsService) completeFetch(f *productCatalogFetch, catalog *Product
 // fetch performs the actual network request and caches the result.
 func (s *ProductsService) fetch(ctx context.Context) (*ProductCatalog, error) {
 	raw, err := s.client.doJSON(ctx, requestArgs{
-		method: http.MethodPost,
+		method: http.MethodGet,
 		path:   productsPath,
-		body:   map[string]any{"datasets": []string{"products"}},
 		op:     "products_catalog",
 	})
 	if err != nil {
@@ -120,6 +124,12 @@ func (s *ProductsService) fetch(ctx context.Context) (*ProductCatalog, error) {
 		return nil, fmt.Errorf("zyins: Products.Catalog: failed to decode datasets bundle: %w", err)
 	}
 
+	if data, ok := bundle[datasetDataKey].(map[string]any); ok {
+		bundle = data
+	}
+	if _, ok := bundle[productDatasetKey]; !ok {
+		bundle = map[string]any{productDatasetKey: bundle}
+	}
 	catalog := ProductCatalogFromDatasets(bundle)
 	return catalog, nil
 }

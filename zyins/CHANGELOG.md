@@ -6,8 +6,32 @@ pre-release and the API may change in incompatible ways.
 
 ## Unreleased
 
+### Changed
+
+- `LicenseService.Activate`, `LicenseService.Check`, and
+  `LicenseService.Deactivate` now target the v2 bootstrap surface at
+  `/v2/licenses/{activate,check,deactivate}`. These three operations
+  sit outside `AuthMiddleware` on the server (activate is what mints
+  the licenseKey, so the client cannot sign with a credential it does
+  not yet have); the SDK strips the `Authorization` header for these
+  calls and routes them through an unwrapped HTTP doer. Wire body keys
+  are now camelCase (`deviceId`, `licenseKey`) to match the v2
+  contract. The activate response surfaces `licenseKey` at the top
+  level of `data` (legacy snake_case + nested `auth.license_key`
+  spellings still parse). `result.LicenseKey` remains the canonical
+  credential field, and `result.Auth.LicenseKey` mirrors it for TS SDK
+  parity. `LicenseDeactivateResult.RemainingActivations` is a pointer
+  so legacy responses that omit the field stay distinguishable from v2
+  responses that explicitly report zero.
+  Mirrors TS SDK PR #302 (`@isa-platform/sdk-ts` v0.5.5).
+- `userAgentHeader` bumped to `isa-sdk-zyins-go/0.5.5`.
+
 ### Breaking
 
+- `LicenseActivateResult` adds `Auth` and
+  `LicenseDeactivateResult.RemainingActivations` is now `*int` instead
+  of `int`. This is safe for the current pre-release package, which has
+  not been published to a registry yet.
 - `SexWireCode(s Sex)` now returns `(string, error)` instead of `string`.
   Unknown values previously silently mapped to `"F"`, which masked
   caller bugs. Callers must now propagate the error. This ripples

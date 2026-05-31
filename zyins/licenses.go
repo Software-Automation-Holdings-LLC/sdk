@@ -10,9 +10,15 @@ import (
 )
 
 // Paths for the ZyINS public license-lifecycle surface (see ADR-013).
+//
+// These three operations sit OUTSIDE AuthMiddleware on the server: activate
+// is the call that MINTS the licenseKey, so the SDK cannot sign requests
+// with a credential it does not yet have. The wire body uses camelCase
+// (`deviceId`) and the response is wrapped in the platform envelope.
 const (
-	licensesCheckPath      = "/v1/licenses/check"
-	licensesDeactivatePath = "/v1/licenses/deactivate"
+	licensesActivatePath   = "/v2/licenses/activate"
+	licensesCheckPath      = "/v2/licenses/check"
+	licensesDeactivatePath = "/v2/licenses/deactivate"
 )
 
 // LicenseValidationStatus mirrors the proto `LicenseStatus` enum
@@ -86,29 +92,37 @@ type LicenseDeactivateInput struct {
 // LicenseDeactivateResult is the typed response from
 // License.Deactivate.
 type LicenseDeactivateResult struct {
-	// Status is always "deactivated" on success.
+	// Status is "inactive" on success against the v2 surface; the
+	// legacy v1 wire word "deactivated" is preserved verbatim when the
+	// server still serves it.
 	Status string `json:"status"`
+	// RemainingActivations reflects the order's activation slots after
+	// the deactivate. A nil value means the server did not return the
+	// field, as with legacy v1 success bodies.
+	RemainingActivations *int `json:"remaining_activations,omitempty"`
 }
 
-// licensesCheckWireBody is the on-wire JSON body for /v1/licenses/check.
+// licensesCheckWireBody is the on-wire JSON body for /v2/licenses/check.
+// The v2 surface uses camelCase keys; mirror the TS SDK exactly.
 type licensesCheckWireBody struct {
 	Email      string `json:"email"`
 	Keycode    string `json:"keycode"`
-	DeviceID   string `json:"device_id,omitempty"`
-	LicenseKey string `json:"license_key,omitempty"`
+	DeviceID   string `json:"deviceId,omitempty"`
+	LicenseKey string `json:"licenseKey,omitempty"`
 }
 
 // licensesDeactivateWireBody is the on-wire JSON body for
-// /v1/licenses/deactivate.
+// /v2/licenses/deactivate.
 type licensesDeactivateWireBody struct {
 	Email    string `json:"email"`
 	Keycode  string `json:"keycode"`
-	DeviceID string `json:"device_id,omitempty"`
+	DeviceID string `json:"deviceId,omitempty"`
 }
 
-// Check performs a lightweight phone-home validation. The server does
-// not require authentication for this call; an attached bearer token
-// is harmless and lets one client struct serve every operation.
+// Check performs a lightweight phone-home validation. Mounted outside
+// AuthMiddleware on the server; the SDK strips the Authorization header
+// for this call so the client struct can be reused for every operation
+// without leaking a stale or pre-bootstrap credential into the request.
 func (s *LicenseService) Check(ctx context.Context, input *LicenseCheckInput, opts ...RunOption) (*LicenseCheckResult, error) {
 	filled := s.fillCheck(input)
 	if strings.TrimSpace(filled.Email) == "" {
@@ -117,10 +131,11 @@ func (s *LicenseService) Check(ctx context.Context, input *LicenseCheckInput, op
 	if strings.TrimSpace(filled.Keycode) == "" {
 		return nil, validationFailure("zyins: LicenseCheckInput.Keycode is required")
 	}
+	deviceID := strings.TrimSpace(filled.DeviceID)
 	body := licensesCheckWireBody{
 		Email:      filled.Email,
 		Keycode:    filled.Keycode,
-		DeviceID:   filled.DeviceID,
+		DeviceID:   deviceID,
 		LicenseKey: filled.LicenseKey,
 	}
 	ro := collectRunOptions(opts)
@@ -130,6 +145,8 @@ func (s *LicenseService) Check(ctx context.Context, input *LicenseCheckInput, op
 		body:           body,
 		op:             "licenses_check",
 		idempotencyKey: ro.idempotencyKey,
+		bootstrap:      true,
+		extraHeaders:   bootstrapHeaders(deviceID),
 	})
 	if err != nil {
 		return nil, fmt.Errorf("zyins: License.Check: %w", err)
@@ -138,8 +155,8 @@ func (s *LicenseService) Check(ctx context.Context, input *LicenseCheckInput, op
 }
 
 // Deactivate revokes an activation, resets the anti-piracy device
-// record, and marks the order inactive. The server does not require
-// authentication for this call.
+// record, and marks the order inactive. Mounted outside AuthMiddleware;
+// the SDK strips the Authorization header for the same reason as Check.
 func (s *LicenseService) Deactivate(ctx context.Context, input *LicenseDeactivateInput, opts ...RunOption) (*LicenseDeactivateResult, error) {
 	filled := s.fillDeactivate(input)
 	if strings.TrimSpace(filled.Email) == "" {
@@ -148,10 +165,11 @@ func (s *LicenseService) Deactivate(ctx context.Context, input *LicenseDeactivat
 	if strings.TrimSpace(filled.Keycode) == "" {
 		return nil, validationFailure("zyins: LicenseDeactivateInput.Keycode is required")
 	}
+	deviceID := strings.TrimSpace(filled.DeviceID)
 	body := licensesDeactivateWireBody{
 		Email:    filled.Email,
 		Keycode:  filled.Keycode,
-		DeviceID: filled.DeviceID,
+		DeviceID: deviceID,
 	}
 	ro := collectRunOptions(opts)
 	raw, err := s.client.doJSON(ctx, requestArgs{
@@ -160,6 +178,8 @@ func (s *LicenseService) Deactivate(ctx context.Context, input *LicenseDeactivat
 		body:           body,
 		op:             "licenses_deactivate",
 		idempotencyKey: ro.idempotencyKey,
+		bootstrap:      true,
+		extraHeaders:   bootstrapHeaders(deviceID),
 	})
 	if err != nil {
 		return nil, fmt.Errorf("zyins: License.Deactivate: %w", err)
@@ -223,6 +243,17 @@ func (s *LicenseService) fillDeactivate(input *LicenseDeactivateInput) LicenseDe
 	return out
 }
 
+// bootstrapHeaders returns the only non-canonical header the v2 license
+// surface accepts: X-Device-ID. Empty deviceId yields a nil map so the
+// transport skips the header entirely.
+func bootstrapHeaders(deviceID string) map[string]string {
+	trimmed := strings.TrimSpace(deviceID)
+	if trimmed == "" {
+		return nil
+	}
+	return map[string]string{"X-Device-ID": trimmed}
+}
+
 // collectRunOptions folds opts into a single runOptions value. Defined
 // here so future per-call options can be added without touching every
 // sub-service.
@@ -246,7 +277,7 @@ func validationFailure(msg string) error {
 	}}
 }
 
-// decodeLicenseCheckResponse parses the /v1/licenses/check 200 body.
+// decodeLicenseCheckResponse parses the /v2/licenses/check 200 body.
 // Tolerates both the bare proto shape and the platform ADR-012
 // envelope `{ data: { ... } }` so a future server-side wrap does not
 // break clients.
@@ -262,18 +293,36 @@ func decodeLicenseCheckResponse(body []byte) (*LicenseCheckResult, error) {
 	return &result, nil
 }
 
-// decodeLicenseDeactivateResponse parses the /v1/licenses/deactivate
-// 200 body, applying the same envelope tolerance as Check.
+// decodeLicenseDeactivateResponse parses the /v2/licenses/deactivate
+// 200 body, applying the same envelope tolerance as Check. The v2
+// server returns `{status:"inactive", remainingActivations}`; legacy
+// `{status:"deactivated"}` is preserved verbatim for callers still
+// targeting the v1 wire.
 func decodeLicenseDeactivateResponse(body []byte) (*LicenseDeactivateResult, error) {
 	data, err := unwrapEnvelope(body, "licenses_deactivate")
 	if err != nil {
 		return nil, err
 	}
-	var result LicenseDeactivateResult
-	if err := json.Unmarshal(data, &result); err != nil {
+	var wire struct {
+		Status               string `json:"status"`
+		RemainingActivations *int   `json:"remainingActivations"`
+		// LegacyRemaining accepts the snake_case spelling so a server
+		// still serving the v1 wire word does not drop the counter.
+		LegacyRemaining *int `json:"remaining_activations"`
+	}
+	if err := json.Unmarshal(data, &wire); err != nil {
 		return nil, fmt.Errorf("zyins: failed to decode licenses_deactivate response: %w", err)
 	}
-	return &result, nil
+	var remaining *int
+	if wire.RemainingActivations != nil {
+		remaining = wire.RemainingActivations
+	} else if wire.LegacyRemaining != nil {
+		remaining = wire.LegacyRemaining
+	}
+	return &LicenseDeactivateResult{
+		Status:               wire.Status,
+		RemainingActivations: remaining,
+	}, nil
 }
 
 // unwrapEnvelope returns the inner data bytes for an ADR-012 response,

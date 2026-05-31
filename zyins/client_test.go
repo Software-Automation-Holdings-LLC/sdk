@@ -358,6 +358,42 @@ func TestPrequalify_WireBody_CarriesFlattenedApplicant(t *testing.T) {
 	}
 }
 
+func TestProductsService_CatalogDecodesProductsEndpoint(t *testing.T) {
+	responses := map[string]string{
+		"direct": `{"data":{"fex":[{"identifier":"colonial-penn.final-expense","carrier":"colonial-penn","name":"Colonial Penn","product":"fex"}]}}`,
+		"nested": `{"data":{"products":{"fex":[{"identifier":"colonial-penn.final-expense","carrier":"colonial-penn","name":"Colonial Penn","product":"fex"}]}}}`,
+		"v2":     `{"data":{"count":1,"data":{"fex":[{"identifier":"colonial-penn.final-expense","carrier":"colonial-penn","name":"Colonial Penn","product":"fex"}]}}}`,
+	}
+	for name, response := range responses {
+		t.Run(name, func(t *testing.T) {
+			srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				if r.Method != http.MethodGet {
+					t.Errorf("method = %s, want GET", r.Method)
+				}
+				if r.URL.Path != productsPath {
+					t.Errorf("path = %s, want %s", r.URL.Path, productsPath)
+				}
+				w.Header().Set("Content-Type", "application/json")
+				_, _ = w.Write([]byte(response))
+			}))
+			defer srv.Close()
+
+			c := newTestClient(t, srv)
+			catalog, err := c.Products.Catalog(context.Background())
+			if err != nil {
+				t.Fatalf("Catalog: %v", err)
+			}
+			got, err := catalog.FindBySlug("colonial-penn.final-expense")
+			if err != nil {
+				t.Fatalf("FindBySlug: %v", err)
+			}
+			if got.Brand != "colonial-penn" || got.Type != ProductFinalExpense {
+				t.Fatalf("product = %+v, want colonial-penn final expense", got)
+			}
+		})
+	}
+}
+
 func TestProductsService_CatalogDedupesConcurrentFetch(t *testing.T) {
 	const callers = 5
 	var (

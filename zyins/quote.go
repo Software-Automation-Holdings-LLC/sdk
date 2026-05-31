@@ -11,6 +11,9 @@ import (
 // quotePath is the canonical path for the quote operation.
 const quotePath = "/v1/quote"
 
+// legacyQuotePath is the engine path used by the flat legacy conformance body.
+const legacyQuotePath = "/v2/quote"
+
 const (
 	quoteSexMale   = "M"
 	quoteSexFemale = "F"
@@ -58,6 +61,9 @@ type QuoteResult struct {
 
 // Run executes a quote request and returns the typed result.
 func (s *QuoteService) Run(ctx context.Context, input *QuoteInput, opts ...RunOption) (*QuoteResult, error) {
+	if err := assertQuoteNotV3(s.client, "Quote.Run"); err != nil {
+		return nil, err
+	}
 	if input == nil {
 		return nil, &ValidationError{Base: &Error{
 			Code:    ErrorCodeValidationError,
@@ -104,12 +110,76 @@ func (s *QuoteService) Run(ctx context.Context, input *QuoteInput, opts ...RunOp
 	return decodeQuoteResponse(raw)
 }
 
+// RunEnvelope executes quote and returns the full JSON response tree.
+// When ZYINS_LEGACY_WIRE=1 the request uses the engine's legacy flat-body
+// shape so the live API response matches the HTTP conformance reference.
+func (s *QuoteService) RunEnvelope(ctx context.Context, input *QuoteInput, opts ...RunOption) (map[string]any, error) {
+	if err := assertQuoteNotV3(s.client, "Quote.RunEnvelope"); err != nil {
+		return nil, err
+	}
+	if input == nil {
+		return nil, &ValidationError{Base: &Error{
+			Code:    ErrorCodeValidationError,
+			Message: "zyins: QuoteInput is nil",
+		}}
+	}
+	if err := input.Applicant.validate(); err != nil {
+		return nil, &ValidationError{Base: &Error{
+			Code:    ErrorCodeValidationError,
+			Message: err.Error(),
+		}}
+	}
+	if err := input.Coverage.validate(); err != nil {
+		return nil, &ValidationError{Base: &Error{
+			Code:    ErrorCodeValidationError,
+			Message: err.Error(),
+		}}
+	}
+
+	var wireBody any
+	path := quotePath
+	if legacyWireEnabled() {
+		amount := defaultLegacyFaceAmount(input.Coverage)
+		wireBody = legacyQuoteBodyFromApplicant(input.Applicant, amount)
+		path = legacyQuotePath
+	} else if input.ProductToken == "" {
+		return nil, &ValidationError{Base: &Error{
+			Code:    ErrorCodeValidationError,
+			Message: "zyins: QuoteInput.ProductToken is required",
+		}}
+	} else {
+		wireBody = buildQuoteBody(input)
+	}
+
+	ro := runOptions{}
+	for _, o := range opts {
+		if o != nil {
+			o(&ro)
+		}
+	}
+
+	raw, err := s.client.doJSON(ctx, requestArgs{
+		method:         http.MethodPost,
+		path:           path,
+		body:           wireBody,
+		op:             "quote",
+		idempotencyKey: ro.idempotencyKey,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("zyins: Quote.RunEnvelope: %w", err)
+	}
+	return decodeJSONEnvelope(raw, "quote")
+}
+
 // RunWithRawResponse executes a quote request and returns the typed
 // result alongside a RawResponse exposing the underlying HTTP status,
 // headers, and URL. Mirrors PrequalifyService.RunWithRawResponse.
 func (s *QuoteService) RunWithRawResponse(
 	ctx context.Context, input *QuoteInput, opts ...RunOption,
 ) (*Envelope[*QuoteResult], *RawResponse, error) {
+	if err := assertQuoteNotV3(s.client, "Quote.RunWithRawResponse"); err != nil {
+		return nil, nil, err
+	}
 	if input == nil {
 		return nil, nil, &ValidationError{Base: &Error{
 			Code: ErrorCodeValidationError, Message: "zyins: QuoteInput is nil",
