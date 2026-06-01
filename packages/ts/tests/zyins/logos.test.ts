@@ -6,7 +6,7 @@
 import { describe, expect, it } from 'vitest';
 import { Isa } from '../../src/zyins/isa';
 import type { LogosFetch, LogosGetOptions, LogosResponse } from '../../src/zyins/logos';
-import { ZyInsError } from '../../src/zyins/errors';
+import { IsaApiError } from '../../src/zyins/apiError';
 
 // Fake bearer token used only in tests; not a real credential.
 const FAKE_BEARER = ['isa', 'test', 'fixture-token-value'].join('_');
@@ -94,7 +94,7 @@ describe('isa.zyins.logos.get', () => {
     expect(calls[0]!.url).toBe(`${TEST_BASE_URL}/v1/logos/acme%20insurance%2Fco`);
   });
 
-  it('throws a typed ZyInsError on 404', async () => {
+  it('throws a typed IsaApiError on 404', async () => {
     const problem = JSON.stringify({
       type: 'about:blank',
       title: 'not found',
@@ -106,18 +106,18 @@ describe('isa.zyins.logos.get', () => {
       text: async () => problem,
     });
     await expect((await buildIsa(fetchImpl)).zyins.logos.get('does-not-exist')).rejects.toBeInstanceOf(
-      ZyInsError,
+      IsaApiError,
     );
   });
 
   it('throws when carrier is empty', async () => {
     const { fetchImpl } = stubFetch({ status: 200, text: async () => '' });
-    await expect((await buildIsa(fetchImpl)).zyins.logos.get('')).rejects.toBeInstanceOf(ZyInsError);
+    await expect((await buildIsa(fetchImpl)).zyins.logos.get('')).rejects.toBeInstanceOf(IsaApiError);
   });
 
   it('throws when carrier is blank after trimming', async () => {
     const { fetchImpl, calls } = stubFetch({ status: 200, text: async () => '' });
-    await expect((await buildIsa(fetchImpl)).zyins.logos.get('   ')).rejects.toBeInstanceOf(ZyInsError);
+    await expect((await buildIsa(fetchImpl)).zyins.logos.get('   ')).rejects.toBeInstanceOf(IsaApiError);
     expect(calls).toHaveLength(0);
   });
 
@@ -128,6 +128,6 @@ describe('isa.zyins.logos.get', () => {
     });
     await expect(
       (await buildIsa(fetchImpl)).zyins.logos.get('mountain-life', { dataUri: true }),
-    ).rejects.toBeInstanceOf(ZyInsError);
+    ).rejects.toBeInstanceOf(IsaApiError);
   });
 });

@@ -57,7 +57,23 @@ export {
 export { type IsaIdentity, type BearerIdentity, type LicenseIdentity, resolveBearerIdentity, resolveLicenseIdentity, ENV_VAR_NAMES } from './zyins/envFactory.js';
 
 // --- Errors -------------------------------------------------------------
-export { IsaError, IsaApiError, IsaConfigError, IsaCaseExpiredError, IsaIdempotencyConflictError, IsaNotActivatedError, IsaTimeoutError, type IsaNotActivatedCode } from './zyins/apiError.js';
+// One hierarchy: every error descends from `IsaError`; the product and failure
+// kind live in `code`, not in a parallel class tree (Stripe/AWS convention).
+export {
+    IsaError,
+    IsaApiError,
+    IsaConfigError,
+    IsaCaseExpiredError,
+    IsaIdempotencyConflictError,
+    IsaLicenseError,
+    IsaNotActivatedError,
+    IsaRateLimitError,
+    IsaTimeoutError,
+    IsaUnauthorizedError,
+    IsaValidationError,
+    type IsaLicenseErrorCode,
+    type IsaNotActivatedCode,
+} from './zyins/apiError.js';
 
 // --- Case crypto (zero-knowledge envelope) ------------------------------
 export { encryptCase, decryptCase, IsaCaseDecryptError, type TCaseEnvelope, type TEncryptedCase, type TCaseCryptoOptions } from './account/caseCrypto.js';
@@ -121,6 +137,25 @@ export {
     type OfferPremium,
     type OfferMoney,
 } from './zyins/prequalify-v2.js';
+
+// --- Prequalify v3 (request + pricing surface) -------------------------
+// The v3 surface integrators import from the package root: the request type
+// they construct and the result/pricing types they read.
+export {
+    byAmount,
+    offerPremium,
+    type PrequalifyV3Request,
+    type PrequalifyV3Result,
+    type PrequalifyV3Options,
+    type V3Offer,
+    type V3Eligibility,
+    type V3EligibilityCategory,
+    type V3Amount,
+    type V3Money,
+    type V3Period,
+    type V3Premium,
+    type V3PricingRow,
+} from './zyins/prequalify-v3.js';
 
 // --- IsaOptions sugar constructor -------------------------------------
 export {

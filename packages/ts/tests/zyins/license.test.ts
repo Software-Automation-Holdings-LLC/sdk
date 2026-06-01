@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { ZyInsError } from '../../src/zyins';
+import { IsaApiError } from '../../src/zyins';
 import { client, recordingTransport } from './client-test-helpers';
 
 // jsonObject parses a JSON object body for assertion. Defensive: returns
@@ -91,8 +91,8 @@ describe('ZyInsClient.license.activate', () => {
     );
     const c = client(transport);
     const promise = c.license.activate({ email: 'x@x', keycode: 'ABC-123-XYZ', deviceId: 'd' });
-    await expect(promise).rejects.toBeInstanceOf(ZyInsError);
-    await expect(promise).rejects.toMatchObject({ code: 'validation_error', httpStatus: 400 });
+    await expect(promise).rejects.toBeInstanceOf(IsaApiError);
+    await expect(promise).rejects.toMatchObject({ code: 'validation_error', status: 400 });
   });
 
   it('surfaces 500 as a typed error', async () => {
@@ -102,8 +102,8 @@ describe('ZyInsClient.license.activate', () => {
     );
     const c = client(transport);
     const promise = c.license.activate({ email: 'x@x', keycode: 'ABC-123-XYZ', deviceId: 'd' });
-    await expect(promise).rejects.toBeInstanceOf(ZyInsError);
-    await expect(promise).rejects.toMatchObject({ code: 'unknown', httpStatus: 500 });
+    await expect(promise).rejects.toBeInstanceOf(IsaApiError);
+    await expect(promise).rejects.toMatchObject({ code: 'unknown', status: 500 });
   });
 });
 

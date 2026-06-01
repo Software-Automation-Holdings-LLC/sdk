@@ -1,15 +1,16 @@
 /**
  * SDK-wide typed error classes (SDK_DESIGN.md §6).
  *
- * `ZyInsError` (in ./errors) is the legacy Tier 3 base for product-specific
- * errors. This module adds the cross-product `IsaError` hierarchy described
- * in the SDK design: an SDK-base `IsaError`, an `IsaApiError` for any HTTP
- * response carrying a code, and `IsaIdempotencyConflictError` for 409 body
- * mismatches.
+ * Every error the SDK throws descends from one base, `IsaError`. The product
+ * (ZyINS, RapidSign, …) is carried as the `code` field, never as a parallel
+ * class tree — so a consumer catches `IsaError` once and dispatches on `code`,
+ * exactly like Stripe's `StripeError`/`code` or AWS's `ServiceException`/`code`.
  *
- * The two hierarchies coexist during the Tier 3 → unified-SDK migration.
- * New typed errors land here; legacy ones remain in ./errors until the
- * surface is unified in Phase 3.
+ * `IsaApiError` covers any HTTP response carrying a stable `code`; the typed
+ * subclasses below add status-specific fields (`IsaLicenseError.code`,
+ * `IsaRateLimitError.retryAfterSeconds`, `IsaIdempotencyConflictError.key`).
+ * The error funnel in `./errors` (`fromHttpResponse`/`fromProblemDetails`)
+ * resolves a raw response into the right subclass.
  */
 /** Base error for every SDK failure mode. */
 export declare class IsaError extends Error {
@@ -120,6 +121,41 @@ export declare class IsaIdempotencyConflictError extends IsaApiError {
         firstSeenAt: string;
         requestId?: string;
         docUrl?: string;
+        raw?: unknown;
+    });
+}
+/**
+ * Stable license-state codes surfaced by {@link IsaLicenseError}. Drawn from
+ * the licensing server's `ERR_*` set; the string values never change across
+ * SDK releases, so consumers switch on `error.code` rather than the message.
+ */
+export type IsaLicenseErrorCode = 'max_activations' | 'inactive' | 'active_elsewhere' | 'locked' | 'invalid_credentials' | 'no_email' | 'unknown';
+/**
+ * License activation / deactivation failure (the licensing server's `ERR_*`
+ * responses, absorbed into the typed funnel). `code` is the contract;
+ * `httpStatus` reflects the originating response when one was present.
+ */
+export declare class IsaLicenseError extends IsaApiError {
+    readonly code: IsaLicenseErrorCode;
+    constructor(code: IsaLicenseErrorCode, message: string, opts?: {
+        status?: number;
+        requestId?: string;
+        raw?: unknown;
+    });
+}
+/**
+ * 429 Too Many Requests. `retryAfterSeconds` carries the server's
+ * `Retry-After` hint when present so callers can back off precisely rather
+ * than guessing.
+ */
+export declare class IsaRateLimitError extends IsaApiError {
+    /** Seconds the caller should wait before retrying, when the server said so. */
+    readonly retryAfterSeconds: number | undefined;
+    constructor(opts: {
+        message: string;
+        code?: string;
+        retryAfterSeconds?: number;
+        requestId?: string;
         raw?: unknown;
     });
 }

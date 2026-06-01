@@ -47,16 +47,7 @@ export {
 
 export { ProductsFacade } from './products.js';
 
-export {
-  ZyInsError,
-  LicenseError,
-  PrequalifyError,
-  RateLimitedError,
-  fromHttpResponse,
-  fromProblemDetails,
-  type LicenseErrorCode,
-  type PrequalifyErrorCode,
-} from './errors.js';
+export { fromHttpResponse, fromProblemDetails } from './errors.js';
 
 export {
   type PrequalifyRequest,
@@ -257,8 +248,13 @@ export {
   IsaConfigError,
   IsaCaseExpiredError,
   IsaIdempotencyConflictError,
+  IsaLicenseError,
   IsaNotActivatedError,
+  IsaRateLimitError,
   IsaTimeoutError,
+  IsaUnauthorizedError,
+  IsaValidationError,
+  type IsaLicenseErrorCode,
   type IsaNotActivatedCode,
 } from './apiError.js';
 export {

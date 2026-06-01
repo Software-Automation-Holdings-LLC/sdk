@@ -47,7 +47,7 @@ export interface HealthContext {
 }
 /**
  * Query the platform `/ready` endpoint and return the typed result. A
- * 503 response surfaces as a `ZyInsError` from `fromHttpResponse`.
+ * 503 response surfaces as an `IsaApiError` from `fromHttpResponse`.
  */
 export declare function getReadiness(ctx: HealthContext): Promise<ReadinessResult>;
 //# sourceMappingURL=health.d.ts.map

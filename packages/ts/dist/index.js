@@ -31,7 +31,9 @@ export { AccountNamespace, AccountBranding, AccountPreferences, AccountCases, Ac
 // mode (sdk-syntax-proposal.md §4 + §6).
 export { resolveBearerIdentity, resolveLicenseIdentity, ENV_VAR_NAMES } from './zyins/envFactory.js';
 // --- Errors -------------------------------------------------------------
-export { IsaError, IsaApiError, IsaConfigError, IsaCaseExpiredError, IsaIdempotencyConflictError, IsaNotActivatedError, IsaTimeoutError } from './zyins/apiError.js';
+// One hierarchy: every error descends from `IsaError`; the product and failure
+// kind live in `code`, not in a parallel class tree (Stripe/AWS convention).
+export { IsaError, IsaApiError, IsaConfigError, IsaCaseExpiredError, IsaIdempotencyConflictError, IsaLicenseError, IsaNotActivatedError, IsaRateLimitError, IsaTimeoutError, IsaUnauthorizedError, IsaValidationError, } from './zyins/apiError.js';
 // --- Case crypto (zero-knowledge envelope) ------------------------------
 export { encryptCase, decryptCase, IsaCaseDecryptError } from './account/caseCrypto.js';
 export { canonicalString, formatTimestamp, signRequest } from './core/auth/signRequest.js';
@@ -46,6 +48,10 @@ export { ProductSelection, ProductClass, ProductType, Products } from './zyins/p
 // resolves without a per-consumer shim; the `./zyins` subpath in
 // `package.json#exports` exposes the same names under a namespaced path.
 export { ReferenceSort, } from './zyins/index.js';
+// --- Prequalify v3 (request + pricing surface) -------------------------
+// The v3 surface integrators import from the package root: the request type
+// they construct and the result/pricing types they read.
+export { byAmount, offerPremium, } from './zyins/prequalify-v3.js';
 // --- IsaOptions sugar constructor -------------------------------------
 export { BearerAuth, LicenseAuth, FormAuth, RemoteEngine, LocalEngine, ProxyEngine, InMemoryEngine, inMemoryEngineWith, resolveIsaOptions, DEFAULT_TIMEOUT_MS, BundledApiVersions, resolveApiVersions, } from './zyins/isaOptions.js';
 export { ZeroKnowledgeCaseStorage } from './zyins/cases/ZeroKnowledgeCaseStorage.js';

@@ -1,150 +1,60 @@
 /**
- * Tier 3 typed error funnel.
+ * Typed error funnel.
  *
  * The ZyINS API speaks two error dialects in flight today:
  *
  * 1. Modern ProblemDetails (RFC 7807) — the future. Returned by the new
  *    Connect-RPC v1 endpoints.
  * 2. Legacy ERR_* magic strings — returned by the licensing CGI as raw
- *    text/plain. bpp2.0's `useSoftwareActivator.js` today switches on each
- *    string with a 7-branch if-chain.
+ *    text/plain. bpp2.0's `useSoftwareActivator.js` switches on each code
+ *    rather than the raw string.
  *
- * Tier 3 absorbs both into one typed funnel: `fromHttpResponse` parses the
- * status + body and returns a `ZyInsError` subclass. The caller switches on
- * `error.code` — never on HTTP status, never on message text. This is the
- * "legacy error formats are absorbed" invariant from ADR-035.
+ * `fromHttpResponse` parses the status + body and returns the right
+ * `IsaApiError` subclass; the caller switches on `error.code` — never on HTTP
+ * status, never on message text. Every error descends from the single
+ * `IsaError` base (apiError.ts), so a consumer catches once and dispatches on
+ * `code`. This is the "legacy error formats are absorbed" invariant from
+ * ADR-035.
  */
 
 import { isProblemDetails, type ProblemDetails } from '../core/index.js';
-import { IsaIdempotencyConflictError } from './apiError.js';
+import {
+  IsaApiError,
+  IsaIdempotencyConflictError,
+  IsaLicenseError,
+  IsaRateLimitError,
+  IsaUnauthorizedError,
+  IsaValidationError,
+  type IsaLicenseErrorCode,
+} from './apiError.js';
 
 /**
- * License-specific error codes. Drawn from the legacy CGI's ERR_* set;
- * additions ship with API minor versions. The string values are stable
- * across SDK releases (consumers switch on them).
- */
-export type LicenseErrorCode =
-  | 'max_activations'
-  | 'inactive'
-  | 'active_elsewhere'
-  | 'locked'
-  | 'invalid_credentials'
-  | 'no_email'
-  | 'unknown';
-
-/**
- * Prequalify-specific error codes. The validation_error case carries a
- * `param` field naming which input failed.
- */
-export type PrequalifyErrorCode = 'validation_error' | 'engine_error' | 'unknown';
-
-/**
- * Base class for every error the Tier 3 facade emits. Mirrors the
- * ProblemDetails shape so callers get the same field set whether the
- * underlying response was JSON or a legacy ERR_* string.
- */
-export class ZyInsError extends Error {
-  public readonly code: string;
-  public readonly httpStatus?: number;
-  public readonly requestId?: string;
-  public readonly adviceCode?: string;
-  public readonly docUrl?: string;
-  public readonly param?: string;
-
-  constructor(
-    message: string,
-    opts: {
-      code: string;
-      httpStatus?: number;
-      requestId?: string;
-      adviceCode?: string;
-      docUrl?: string;
-      param?: string;
-    },
-  ) {
-    super(message);
-    this.name = 'ZyInsError';
-    this.code = opts.code;
-    if (opts.httpStatus !== undefined) this.httpStatus = opts.httpStatus;
-    if (opts.requestId !== undefined) this.requestId = opts.requestId;
-    if (opts.adviceCode !== undefined) this.adviceCode = opts.adviceCode;
-    if (opts.docUrl !== undefined) this.docUrl = opts.docUrl;
-    if (opts.param !== undefined) this.param = opts.param;
-  }
-}
-
-/** License activation / deactivation errors. */
-export class LicenseError extends ZyInsError {
-  public override readonly code: LicenseErrorCode;
-  constructor(code: LicenseErrorCode, message: string, httpStatus?: number) {
-    const opts: ConstructorParameters<typeof ZyInsError>[1] = { code };
-    if (httpStatus !== undefined) opts.httpStatus = httpStatus;
-    super(message, opts);
-    this.name = 'LicenseError';
-    this.code = code;
-  }
-}
-
-/** Prequalify validation / engine errors. */
-export class PrequalifyError extends ZyInsError {
-  public override readonly code: PrequalifyErrorCode;
-  constructor(code: PrequalifyErrorCode, message: string, opts: { httpStatus?: number; param?: string } = {}) {
-    const baseOpts: ConstructorParameters<typeof ZyInsError>[1] = { code };
-    if (opts.httpStatus !== undefined) baseOpts.httpStatus = opts.httpStatus;
-    if (opts.param !== undefined) baseOpts.param = opts.param;
-    super(message, baseOpts);
-    this.name = 'PrequalifyError';
-    this.code = code;
-  }
-}
-
-/** 429 with optional Retry-After hint. */
-export class RateLimitedError extends ZyInsError {
-  /** Seconds the caller should wait before retrying, when known. */
-  public readonly retryAfterSeconds?: number;
-  constructor(
-    message: string,
-    opts: { code?: 'rate_limit_exceeded' | 'rate_limited'; httpStatus: number; retryAfterSeconds?: number } = {
-      httpStatus: 429,
-    },
-  ) {
-    super(message, { code: opts.code ?? 'rate_limit_exceeded', httpStatus: opts.httpStatus });
-    this.name = 'RateLimitedError';
-    if (opts.retryAfterSeconds !== undefined) this.retryAfterSeconds = opts.retryAfterSeconds;
-  }
-}
-
-/**
- * Parse a raw HTTP response (status + body) into a typed `ZyInsError`.
+ * Parse a raw HTTP response (status + body) into a typed `IsaApiError`.
  *
  * Resolution order:
- * 1. Body is a ProblemDetails JSON → map by `code`.
- * 2. Body is a legacy ERR_* string → map by token table.
- * 3. Body is `NO_EMAIL` (the licensing CGI's special case) → LicenseError.
- * 4. Fallback → `ZyInsError` with code `unknown`.
+ * 1. status 429 → `IsaRateLimitError`.
+ * 2. Body is a ProblemDetails JSON → map by `code`.
+ * 3. Body is a legacy ERR_* string → `IsaLicenseError`.
+ * 4. Fallback → `IsaApiError` with code `unknown`.
  *
  * The caller always gets a typed value; `null` or `undefined` is never
  * returned even for malformed responses. This is the absorption boundary.
  */
-export function fromHttpResponse(status: number, body: string): ZyInsError {
+export function fromHttpResponse(status: number, body: string): IsaApiError {
   const trimmed = body.trim();
   if (status === 429) {
-    return new RateLimitedError(trimmed || 'rate limited', { httpStatus: 429 });
+    return new IsaRateLimitError({ message: trimmed || 'rate limited' });
   }
   const asProblem = tryParseProblemDetails(trimmed);
   if (asProblem) return fromProblemDetails(asProblem);
   const asLegacy = tryParseLegacyErr(status, trimmed);
   if (asLegacy) return asLegacy;
-  return new ZyInsError(trimmed || `HTTP ${status}`, { code: 'unknown', httpStatus: status });
+  return new IsaApiError({ message: trimmed || `HTTP ${status}`, code: 'unknown', status });
 }
 
-/** Map a parsed ProblemDetails into the right Tier 3 subclass. */
-export function fromProblemDetails(problem: ProblemDetails): ZyInsError {
-  const opts = {
-    httpStatus: problem.status,
-    ...(problem.param !== undefined && { param: problem.param }),
-    ...(problem.doc_url !== undefined && { docUrl: problem.doc_url }),
-  };
+/** Map a parsed ProblemDetails into the right `IsaApiError` subclass. */
+export function fromProblemDetails(problem: ProblemDetails): IsaApiError {
+  const message = problem.detail ?? problem.title;
   if ((problem.code as string) === 'idempotency_conflict') {
     const raw = problem as ProblemDetails & {
       key?: unknown;
@@ -152,7 +62,7 @@ export function fromProblemDetails(problem: ProblemDetails): ZyInsError {
       request_id?: unknown;
     };
     const ctorOpts: ConstructorParameters<typeof IsaIdempotencyConflictError>[0] = {
-      message: problem.detail ?? problem.title,
+      message,
       key: typeof raw.key === 'string' ? raw.key : '',
       firstSeenAt: typeof raw.first_seen_at === 'string' ? raw.first_seen_at : '',
       raw: problem,
@@ -162,25 +72,38 @@ export function fromProblemDetails(problem: ProblemDetails): ZyInsError {
     return new IsaIdempotencyConflictError(ctorOpts);
   }
   if (problem.code === 'license_locked') {
-    return new LicenseError('locked', problem.detail ?? problem.title, problem.status);
+    return new IsaLicenseError('locked', message, { status: problem.status, raw: problem });
+  }
+  if (problem.code === 'unauthorized') {
+    return new IsaUnauthorizedError({ message, code: problem.code, raw: problem });
   }
   if (problem.code === 'validation_error') {
-    const peOpts: { httpStatus?: number; param?: string } = { httpStatus: problem.status };
-    if (problem.param !== undefined) peOpts.param = problem.param;
-    return new PrequalifyError('validation_error', problem.detail ?? problem.title, peOpts);
+    const opts: ConstructorParameters<typeof IsaValidationError>[0] = { message, raw: problem };
+    if (problem.param !== undefined) opts.param = problem.param;
+    return new IsaValidationError(opts);
   }
   if (problem.code === 'rate_limit_exceeded' || problem.code === 'rate_limited') {
-    return new RateLimitedError(problem.detail ?? problem.title, { code: problem.code, httpStatus: problem.status });
+    return new IsaRateLimitError({ message, code: problem.code, raw: problem });
   }
-  return new ZyInsError(problem.detail ?? problem.title, { code: problem.code, ...opts });
+  const opts: ConstructorParameters<typeof IsaApiError>[0] = {
+    message,
+    code: problem.code,
+    status: problem.status,
+    raw: problem,
+  };
+  if (problem.param !== undefined) opts.param = problem.param;
+  if (problem.doc_url !== undefined) opts.docUrl = problem.doc_url;
+  return new IsaApiError(opts);
 }
 
-const LEGACY_ERR_MAP: Readonly<Record<string, LicenseErrorCode>> = {
+const INVALID_CREDENTIALS_CODE: IsaLicenseErrorCode = 'invalid_credentials';
+
+const LEGACY_ERR_MAP: Readonly<Record<string, IsaLicenseErrorCode>> = {
   ERR_MAX_ACTIVATIONS: 'max_activations',
   ERR_INACTIVE: 'inactive',
   ERR_ACTIVE_ELSEWHERE: 'active_elsewhere',
   ERR_LOCKED: 'locked',
-  ERR_INVALID_CREDENTIALS: 'invalid_credentials',
+  ERR_INVALID_CREDENTIALS: INVALID_CREDENTIALS_CODE,
   NO_EMAIL: 'no_email',
 };
 
@@ -196,13 +119,13 @@ function tryParseProblemDetails(body: string): ProblemDetails | undefined {
 }
 
 /**
- * Map a known legacy token to a LicenseError. Unknown `ERR_*` strings
+ * Map a known legacy token to an `IsaLicenseError`. Unknown `ERR_*` strings
  * collapse to `unknown` so consumers never have to mirror the exhaustive
  * token list themselves.
  */
-function tryParseLegacyErr(status: number, body: string): LicenseError | undefined {
+function tryParseLegacyErr(status: number, body: string): IsaLicenseError | undefined {
   const mapped = LEGACY_ERR_MAP[body];
-  if (mapped) return new LicenseError(mapped, body, status);
-  if (body.startsWith('ERR_')) return new LicenseError('unknown', body, status);
+  if (mapped) return new IsaLicenseError(mapped, body, { status });
+  if (body.startsWith('ERR_')) return new IsaLicenseError('unknown', body, { status });
   return undefined;
 }

@@ -12,7 +12,7 @@ export { Sex, NicotineUsage, NicotineDuration, Height, Weight, } from './applica
 export { Coverage, QuoteType, isMulti, } from './coverage.js';
 export { ProductSelection, ProductClass, ProductType, Products, } from './product.js';
 export { ProductsFacade } from './products.js';
-export { ZyInsError, LicenseError, PrequalifyError, RateLimitedError, fromHttpResponse, fromProblemDetails, } from './errors.js';
+export { fromHttpResponse, fromProblemDetails } from './errors.js';
 export { prequalifyV2, } from './prequalify-v2.js';
 // --- v3 reference + pricing surface (Phase 3) -----------------------------
 export { prequalifyV3, byAmount, offerPremium, } from './prequalify-v3.js';
@@ -29,6 +29,6 @@ export { Isa, ZyInsNamespace } from './isa.js';
 export { ReferenceFacade, ReferenceMedicationsFacade, ReferenceConditionsFacade, ReferenceConceptsFacade, } from './isaNamespaces.js';
 export { IsaCredentialState, } from './credentialState.js';
 export { resolveBearerIdentity, resolveLicenseIdentity, resolveSessionIdentity, ENV_VAR_NAMES, } from './envFactory.js';
-export { IsaError, IsaApiError, IsaConfigError, IsaCaseExpiredError, IsaIdempotencyConflictError, IsaNotActivatedError, IsaTimeoutError, } from './apiError.js';
+export { IsaError, IsaApiError, IsaConfigError, IsaCaseExpiredError, IsaIdempotencyConflictError, IsaLicenseError, IsaNotActivatedError, IsaRateLimitError, IsaTimeoutError, IsaUnauthorizedError, IsaValidationError, } from './apiError.js';
 export { debugLoggerFromEnv, makeLogger, redactHeaders, redactBody, redactBodyString, processEnv, stderrSink, } from './logger.js';
 //# sourceMappingURL=index.js.map

@@ -18,7 +18,7 @@
  * via an overload so TypeScript narrows the return type at the call.
  *
  * 404 — when the carrier has no logo asset — surfaces as a typed
- * `ZyInsError` with code `not_found`, matching the rest of the Tier 3 funnel.
+ * `IsaApiError` with code `not_found`, matching the rest of the error funnel.
  */
 /** Options accepted by {@link get}. */
 export interface LogosGetOptions {

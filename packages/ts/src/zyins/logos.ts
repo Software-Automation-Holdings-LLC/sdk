@@ -18,11 +18,12 @@
  * via an overload so TypeScript narrows the return type at the call.
  *
  * 404 — when the carrier has no logo asset — surfaces as a typed
- * `ZyInsError` with code `not_found`, matching the rest of the Tier 3 funnel.
+ * `IsaApiError` with code `not_found`, matching the rest of the error funnel.
  */
 
 import { resolveFetch } from '../core/index.js';
-import { fromHttpResponse, ZyInsError } from './errors.js';
+import { fromHttpResponse } from './errors.js';
+import { IsaApiError, IsaValidationError } from './apiError.js';
 
 /** Path prefix for the carrier-logo endpoint (canonical per api-standards.md). */
 const LOGOS_PATH = '/v1/logos';
@@ -124,9 +125,7 @@ export class LogosSubClient {
 function buildLogosUrl(baseUrl: string, carrier: string, dataUri: boolean): string {
   const normalizedCarrier = carrier.trim();
   if (!normalizedCarrier) {
-    throw new ZyInsError('zyins.logos.get: carrier is required', {
-      code: 'validation_error',
-    });
+    throw new IsaValidationError({ message: 'zyins.logos.get: carrier is required' });
   }
   const path = `${LOGOS_PATH}/${encodeURIComponent(normalizedCarrier)}`;
   const suffix = dataUri ? '?ds=true' : '';
@@ -171,10 +170,11 @@ async function safeReadText(response: LogosResponse): Promise<string> {
  */
 function assertDataUri(body: string): string {
   if (!body.startsWith('data:image/')) {
-    throw new ZyInsError(
-      `zyins.logos.get: expected a data:image/... URI but got: ${body.slice(0, 32)}`,
-      { code: 'unknown' },
-    );
+    throw new IsaApiError({
+      message: `zyins.logos.get: expected a data:image/... URI but got: ${body.slice(0, 32)}`,
+      code: 'unknown',
+      status: 0,
+    });
   }
   return body;
 }

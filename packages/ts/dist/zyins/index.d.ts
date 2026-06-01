@@ -12,7 +12,7 @@ export { Sex, NicotineUsage, NicotineDuration, Height, Weight, type Applicant, t
 export { Coverage, QuoteType, isMulti, type CoverageInput, type CoverageType, type SingleCoverage, type MultiCoverage, type FaceValueCoverage, type MonthlyBudgetCoverage, } from './coverage.js';
 export { ProductSelection, ProductClass, ProductType, Products, type Product, type ProductClassValue, } from './product.js';
 export { ProductsFacade } from './products.js';
-export { ZyInsError, LicenseError, PrequalifyError, RateLimitedError, fromHttpResponse, fromProblemDetails, type LicenseErrorCode, type PrequalifyErrorCode, } from './errors.js';
+export { fromHttpResponse, fromProblemDetails } from './errors.js';
 export { type PrequalifyRequest, type PrequalifyResult, type PrequalifyPlan, type Plan, type PrequalifyOptions, type PrequalifyResultMeta, type SinglePrequalifyResult, type MultiPrequalifyResult, } from './prequalify.js';
 export { prequalifyV2, type PrequalifyV2Request, type PrequalifyV2Result, type PrequalifyV2Options, type PrequalifyV2Context, type PlanOffer, type OtherOffer, type OfferEligibility, type OfferCategory, type OfferCarrier, type OfferProduct, type OfferPlanInfo, type OfferPlanInfoItem, type OfferPlanInfoLegacy, type OfferDeathBenefit, type OfferPremium, type OfferMoney, } from './prequalify-v2.js';
 export { prequalifyV3, byAmount, offerPremium, type PrequalifyV3Request, type PrequalifyV3Result, type PrequalifyV3Options, type PrequalifyV3Context, type V3Offer, type V3Eligibility, type V3EligibilityCategory, type V3Amount, type V3Money, type V3Period, type V3Premium, type V3PricingRow, } from './prequalify-v3.js';
@@ -32,7 +32,7 @@ export { Isa, ZyInsNamespace, type IsaOptions } from './isa.js';
 export { ReferenceFacade, ReferenceMedicationsFacade, ReferenceConditionsFacade, ReferenceConceptsFacade, } from './isaNamespaces.js';
 export { IsaCredentialState, type LicenseCredentialSnapshot, type LicenseRefreshedEvent, type LicenseRefreshedListener, } from './credentialState.js';
 export { type IsaIdentity, type BearerIdentity, type LicenseIdentity, type SessionIdentity, resolveBearerIdentity, resolveLicenseIdentity, resolveSessionIdentity, ENV_VAR_NAMES, } from './envFactory.js';
-export { IsaError, IsaApiError, IsaConfigError, IsaCaseExpiredError, IsaIdempotencyConflictError, IsaNotActivatedError, IsaTimeoutError, type IsaNotActivatedCode, } from './apiError.js';
+export { IsaError, IsaApiError, IsaConfigError, IsaCaseExpiredError, IsaIdempotencyConflictError, IsaLicenseError, IsaNotActivatedError, IsaRateLimitError, IsaTimeoutError, IsaUnauthorizedError, IsaValidationError, type IsaLicenseErrorCode, type IsaNotActivatedCode, } from './apiError.js';
 export { type Envelope, type RawResponse, type RawResponseResult, } from './envelope.js';
 export { type DebugLogger, type EnvReader, type LogSink, debugLoggerFromEnv, makeLogger, redactHeaders, redactBody, redactBodyString, processEnv, stderrSink, } from './logger.js';
 //# sourceMappingURL=index.d.ts.map

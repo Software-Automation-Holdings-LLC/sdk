@@ -14,7 +14,7 @@ import { fromHttpResponse } from './errors.js';
 const READINESS_PATH = '/ready';
 /**
  * Query the platform `/ready` endpoint and return the typed result. A
- * 503 response surfaces as a `ZyInsError` from `fromHttpResponse`.
+ * 503 response surfaces as an `IsaApiError` from `fromHttpResponse`.
  */
 export async function getReadiness(ctx) {
     const response = await ctx.transport({

@@ -1959,7 +1959,7 @@ export declare function parseRetryAfter(raw: string | null, nowMs: number): numb
 export { Isa, ZyInsNamespace, RapidSignNamespace, ProxyNamespace, SESSIONS_REISSUE_PATH, type IsaOptions, type IsaFactoryOptions, type IsaAuthArgs } from './zyins/isa.js';
 export { AccountNamespace, AccountBranding, AccountPreferences, AccountCases, AccountEmail, type AccountNamespaceOptions, type BrandingDetail as AccountBrandingDetail, type BrandingLookupRequest as AccountBrandingLookupRequest, type PreferencesLookupRequest as AccountPreferencesLookupRequest, type PreferencesLookupResult as AccountPreferencesLookupResult, type PreferencesSetRequest as AccountPreferencesSetRequest, type PreferencesSetResult as AccountPreferencesSetResult, type CaseCreateRequest as AccountCaseCreateRequest, type CaseCreateResult as AccountCaseCreateResult, type CaseOpenResult as AccountCaseOpenResult, type CaseEmailRequest as AccountCaseEmailRequest, type CaseEmailResult as AccountCaseEmailResult, type CaseSummary as AccountCaseSummary, type TCaseProduct, type EmailEnqueueRequest as AccountEmailEnqueueRequest, type EmailEnqueueResult as AccountEmailEnqueueResult, } from './account/index.js';
 export { type IsaIdentity, type BearerIdentity, type LicenseIdentity, resolveBearerIdentity, resolveLicenseIdentity, ENV_VAR_NAMES } from './zyins/envFactory.js';
-export { IsaError, IsaApiError, IsaConfigError, IsaCaseExpiredError, IsaIdempotencyConflictError, IsaNotActivatedError, IsaTimeoutError, type IsaNotActivatedCode } from './zyins/apiError.js';
+export { IsaError, IsaApiError, IsaConfigError, IsaCaseExpiredError, IsaIdempotencyConflictError, IsaLicenseError, IsaNotActivatedError, IsaRateLimitError, IsaTimeoutError, IsaUnauthorizedError, IsaValidationError, type IsaLicenseErrorCode, type IsaNotActivatedCode, } from './zyins/apiError.js';
 export { encryptCase, decryptCase, IsaCaseDecryptError, type TCaseEnvelope, type TEncryptedCase, type TCaseCryptoOptions } from './account/caseCrypto.js';
 export { type Envelope, type RawResponse, type RawResponseResult } from './zyins/envelope.js';
 export { canonicalString, formatTimestamp, signRequest, type SignClock, type SignRequestHeaders, type SignRequestInput, type SignRequestResult } from './core/auth/signRequest.js';
@@ -1968,6 +1968,7 @@ export { Coverage, QuoteType, isMulti, type CoverageInput, type CoverageType, ty
 export { ProductSelection, ProductClass, ProductType, Products, type Product, type ProductClassValue } from './zyins/product.js';
 export { ReferenceSort, type DatasetBundleV3, type DatasetCategory, type DatasetEntry, type ReferenceEntity, type ConditionEntity, type ConditionTreatedWith, type MedicationEntity, type MedicationUsedFor, type NicotineOptionEntity, type SpellingCorrectionEntity, type Concept, type ConceptKind, type ConditionConcept, type MedicationConcept, type UnknownConcept, type Suggestion, type Autocorrector, type AutocorrectOptions, type MatchAlgorithm, type AutocompleteAlgorithm, type AutocompleteOptions, type ReferenceAdapters, } from './zyins/index.js';
 export { type PrequalifyV2Request, type PrequalifyV2Result, type PrequalifyV2Options, type PlanOffer, type OtherOffer, type OfferEligibility, type OfferCategory, type OfferCarrier, type OfferProduct, type OfferPlanInfo, type OfferPlanInfoItem, type OfferPlanInfoLegacy, type OfferDeathBenefit, type OfferPremium, type OfferMoney, } from './zyins/prequalify-v2.js';
+export { byAmount, offerPremium, type PrequalifyV3Request, type PrequalifyV3Result, type PrequalifyV3Options, type V3Offer, type V3Eligibility, type V3EligibilityCategory, type V3Amount, type V3Money, type V3Period, type V3Premium, type V3PricingRow, } from './zyins/prequalify-v3.js';
 export { BearerAuth, LicenseAuth, FormAuth, RemoteEngine, LocalEngine, ProxyEngine, InMemoryEngine, inMemoryEngineWith, resolveIsaOptions, DEFAULT_TIMEOUT_MS, BundledApiVersions, resolveApiVersions, type IsaApiVersion, type IsaApiVersionOverride, type IsaApiSurface, type IsaAuthSupplier, type IsaEngine, type IsaCreateOptions, type ResolvedIsaOptions, } from './zyins/isaOptions.js';
 export type { CaseStorage, CaseRecord, CaseStoragePutResult } from './zyins/cases/CaseStorage.js';
 export { ZeroKnowledgeCaseStorage } from './zyins/cases/ZeroKnowledgeCaseStorage.js';
@@ -2801,15 +2802,16 @@ export declare class WebhooksService {
 /**
  * SDK-wide typed error classes (SDK_DESIGN.md §6).
  *
- * `ZyInsError` (in ./errors) is the legacy Tier 3 base for product-specific
- * errors. This module adds the cross-product `IsaError` hierarchy described
- * in the SDK design: an SDK-base `IsaError`, an `IsaApiError` for any HTTP
- * response carrying a code, and `IsaIdempotencyConflictError` for 409 body
- * mismatches.
+ * Every error the SDK throws descends from one base, `IsaError`. The product
+ * (ZyINS, RapidSign, …) is carried as the `code` field, never as a parallel
+ * class tree — so a consumer catches `IsaError` once and dispatches on `code`,
+ * exactly like Stripe's `StripeError`/`code` or AWS's `ServiceException`/`code`.
  *
- * The two hierarchies coexist during the Tier 3 → unified-SDK migration.
- * New typed errors land here; legacy ones remain in ./errors until the
- * surface is unified in Phase 3.
+ * `IsaApiError` covers any HTTP response carrying a stable `code`; the typed
+ * subclasses below add status-specific fields (`IsaLicenseError.code`,
+ * `IsaRateLimitError.retryAfterSeconds`, `IsaIdempotencyConflictError.key`).
+ * The error funnel in `./errors` (`fromHttpResponse`/`fromProblemDetails`)
+ * resolves a raw response into the right subclass.
  */
 /** Base error for every SDK failure mode. */
 export declare class IsaError extends Error {
@@ -2920,6 +2922,41 @@ export declare class IsaIdempotencyConflictError extends IsaApiError {
         firstSeenAt: string;
         requestId?: string;
         docUrl?: string;
+        raw?: unknown;
+    });
+}
+/**
+ * Stable license-state codes surfaced by {@link IsaLicenseError}. Drawn from
+ * the licensing server's `ERR_*` set; the string values never change across
+ * SDK releases, so consumers switch on `error.code` rather than the message.
+ */
+export type IsaLicenseErrorCode = 'max_activations' | 'inactive' | 'active_elsewhere' | 'locked' | 'invalid_credentials' | 'no_email' | 'unknown';
+/**
+ * License activation / deactivation failure (the licensing server's `ERR_*`
+ * responses, absorbed into the typed funnel). `code` is the contract;
+ * `httpStatus` reflects the originating response when one was present.
+ */
+export declare class IsaLicenseError extends IsaApiError {
+    readonly code: IsaLicenseErrorCode;
+    constructor(code: IsaLicenseErrorCode, message: string, opts?: {
+        status?: number;
+        requestId?: string;
+        raw?: unknown;
+    });
+}
+/**
+ * 429 Too Many Requests. `retryAfterSeconds` carries the server's
+ * `Retry-After` hint when present so callers can back off precisely rather
+ * than guessing.
+ */
+export declare class IsaRateLimitError extends IsaApiError {
+    /** Seconds the caller should wait before retrying, when the server said so. */
+    readonly retryAfterSeconds: number | undefined;
+    constructor(opts: {
+        message: string;
+        code?: string;
+        retryAfterSeconds?: number;
+        requestId?: string;
         raw?: unknown;
     });
 }
@@ -4219,92 +4256,40 @@ export declare function resolveSessionIdentity(args: {
 //# sourceMappingURL=envFactory.d.ts.map
 === dist/zyins/errors.d.ts ===
 /**
- * Tier 3 typed error funnel.
+ * Typed error funnel.
  *
  * The ZyINS API speaks two error dialects in flight today:
  *
  * 1. Modern ProblemDetails (RFC 7807) — the future. Returned by the new
  *    Connect-RPC v1 endpoints.
  * 2. Legacy ERR_* magic strings — returned by the licensing CGI as raw
- *    text/plain. bpp2.0's `useSoftwareActivator.js` today switches on each
- *    string with a 7-branch if-chain.
+ *    text/plain. bpp2.0's `useSoftwareActivator.js` switches on each code
+ *    rather than the raw string.
  *
- * Tier 3 absorbs both into one typed funnel: `fromHttpResponse` parses the
- * status + body and returns a `ZyInsError` subclass. The caller switches on
- * `error.code` — never on HTTP status, never on message text. This is the
- * "legacy error formats are absorbed" invariant from ADR-035.
+ * `fromHttpResponse` parses the status + body and returns the right
+ * `IsaApiError` subclass; the caller switches on `error.code` — never on HTTP
+ * status, never on message text. Every error descends from the single
+ * `IsaError` base (apiError.ts), so a consumer catches once and dispatches on
+ * `code`. This is the "legacy error formats are absorbed" invariant from
+ * ADR-035.
  */
 import { type ProblemDetails } from '../core/index.js';
+import { IsaApiError } from './apiError.js';
 /**
- * License-specific error codes. Drawn from the legacy CGI's ERR_* set;
- * additions ship with API minor versions. The string values are stable
- * across SDK releases (consumers switch on them).
- */
-export type LicenseErrorCode = 'max_activations' | 'inactive' | 'active_elsewhere' | 'locked' | 'invalid_credentials' | 'no_email' | 'unknown';
-/**
- * Prequalify-specific error codes. The validation_error case carries a
- * `param` field naming which input failed.
- */
-export type PrequalifyErrorCode = 'validation_error' | 'engine_error' | 'unknown';
-/**
- * Base class for every error the Tier 3 facade emits. Mirrors the
- * ProblemDetails shape so callers get the same field set whether the
- * underlying response was JSON or a legacy ERR_* string.
- */
-export declare class ZyInsError extends Error {
-    readonly code: string;
-    readonly httpStatus?: number;
-    readonly requestId?: string;
-    readonly adviceCode?: string;
-    readonly docUrl?: string;
-    readonly param?: string;
-    constructor(message: string, opts: {
-        code: string;
-        httpStatus?: number;
-        requestId?: string;
-        adviceCode?: string;
-        docUrl?: string;
-        param?: string;
-    });
-}
-/** License activation / deactivation errors. */
-export declare class LicenseError extends ZyInsError {
-    readonly code: LicenseErrorCode;
-    constructor(code: LicenseErrorCode, message: string, httpStatus?: number);
-}
-/** Prequalify validation / engine errors. */
-export declare class PrequalifyError extends ZyInsError {
-    readonly code: PrequalifyErrorCode;
-    constructor(code: PrequalifyErrorCode, message: string, opts?: {
-        httpStatus?: number;
-        param?: string;
-    });
-}
-/** 429 with optional Retry-After hint. */
-export declare class RateLimitedError extends ZyInsError {
-    /** Seconds the caller should wait before retrying, when known. */
-    readonly retryAfterSeconds?: number;
-    constructor(message: string, opts?: {
-        code?: 'rate_limit_exceeded' | 'rate_limited';
-        httpStatus: number;
-        retryAfterSeconds?: number;
-    });
-}
-/**
- * Parse a raw HTTP response (status + body) into a typed `ZyInsError`.
+ * Parse a raw HTTP response (status + body) into a typed `IsaApiError`.
  *
  * Resolution order:
- * 1. Body is a ProblemDetails JSON → map by `code`.
- * 2. Body is a legacy ERR_* string → map by token table.
- * 3. Body is `NO_EMAIL` (the licensing CGI's special case) → LicenseError.
- * 4. Fallback → `ZyInsError` with code `unknown`.
+ * 1. status 429 → `IsaRateLimitError`.
+ * 2. Body is a ProblemDetails JSON → map by `code`.
+ * 3. Body is a legacy ERR_* string → `IsaLicenseError`.
+ * 4. Fallback → `IsaApiError` with code `unknown`.
  *
  * The caller always gets a typed value; `null` or `undefined` is never
  * returned even for malformed responses. This is the absorption boundary.
  */
-export declare function fromHttpResponse(status: number, body: string): ZyInsError;
-/** Map a parsed ProblemDetails into the right Tier 3 subclass. */
-export declare function fromProblemDetails(problem: ProblemDetails): ZyInsError;
+export declare function fromHttpResponse(status: number, body: string): IsaApiError;
+/** Map a parsed ProblemDetails into the right `IsaApiError` subclass. */
+export declare function fromProblemDetails(problem: ProblemDetails): IsaApiError;
 //# sourceMappingURL=errors.d.ts.map
 === dist/zyins/health.d.ts ===
 /**
@@ -4356,7 +4341,7 @@ export interface HealthContext {
 }
 /**
  * Query the platform `/ready` endpoint and return the typed result. A
- * 503 response surfaces as a `ZyInsError` from `fromHttpResponse`.
+ * 503 response surfaces as an `IsaApiError` from `fromHttpResponse`.
  */
 export declare function getReadiness(ctx: HealthContext): Promise<ReadinessResult>;
 //# sourceMappingURL=health.d.ts.map
@@ -4397,7 +4382,7 @@ export { Sex, NicotineUsage, NicotineDuration, Height, Weight, type Applicant, t
 export { Coverage, QuoteType, isMulti, type CoverageInput, type CoverageType, type SingleCoverage, type MultiCoverage, type FaceValueCoverage, type MonthlyBudgetCoverage, } from './coverage.js';
 export { ProductSelection, ProductClass, ProductType, Products, type Product, type ProductClassValue, } from './product.js';
 export { ProductsFacade } from './products.js';
-export { ZyInsError, LicenseError, PrequalifyError, RateLimitedError, fromHttpResponse, fromProblemDetails, type LicenseErrorCode, type PrequalifyErrorCode, } from './errors.js';
+export { fromHttpResponse, fromProblemDetails } from './errors.js';
 export { type PrequalifyRequest, type PrequalifyResult, type PrequalifyPlan, type Plan, type PrequalifyOptions, type PrequalifyResultMeta, type SinglePrequalifyResult, type MultiPrequalifyResult, } from './prequalify.js';
 export { prequalifyV2, type PrequalifyV2Request, type PrequalifyV2Result, type PrequalifyV2Options, type PrequalifyV2Context, type PlanOffer, type OtherOffer, type OfferEligibility, type OfferCategory, type OfferCarrier, type OfferProduct, type OfferPlanInfo, type OfferPlanInfoItem, type OfferPlanInfoLegacy, type OfferDeathBenefit, type OfferPremium, type OfferMoney, } from './prequalify-v2.js';
 export { prequalifyV3, byAmount, offerPremium, type PrequalifyV3Request, type PrequalifyV3Result, type PrequalifyV3Options, type PrequalifyV3Context, type V3Offer, type V3Eligibility, type V3EligibilityCategory, type V3Amount, type V3Money, type V3Period, type V3Premium, type V3PricingRow, } from './prequalify-v3.js';
@@ -4417,7 +4402,7 @@ export { Isa, ZyInsNamespace, type IsaOptions } from './isa.js';
 export { ReferenceFacade, ReferenceMedicationsFacade, ReferenceConditionsFacade, ReferenceConceptsFacade, } from './isaNamespaces.js';
 export { IsaCredentialState, type LicenseCredentialSnapshot, type LicenseRefreshedEvent, type LicenseRefreshedListener, } from './credentialState.js';
 export { type IsaIdentity, type BearerIdentity, type LicenseIdentity, type SessionIdentity, resolveBearerIdentity, resolveLicenseIdentity, resolveSessionIdentity, ENV_VAR_NAMES, } from './envFactory.js';
-export { IsaError, IsaApiError, IsaConfigError, IsaCaseExpiredError, IsaIdempotencyConflictError, IsaNotActivatedError, IsaTimeoutError, type IsaNotActivatedCode, } from './apiError.js';
+export { IsaError, IsaApiError, IsaConfigError, IsaCaseExpiredError, IsaIdempotencyConflictError, IsaLicenseError, IsaNotActivatedError, IsaRateLimitError, IsaTimeoutError, IsaUnauthorizedError, IsaValidationError, type IsaLicenseErrorCode, type IsaNotActivatedCode, } from './apiError.js';
 export { type Envelope, type RawResponse, type RawResponseResult, } from './envelope.js';
 export { type DebugLogger, type EnvReader, type LogSink, debugLoggerFromEnv, makeLogger, redactHeaders, redactBody, redactBodyString, processEnv, stderrSink, } from './logger.js';
 //# sourceMappingURL=index.d.ts.map
@@ -5661,7 +5646,7 @@ export declare function makeLogger(sink: LogSink): DebugLogger;
  * via an overload so TypeScript narrows the return type at the call.
  *
  * 404 — when the carrier has no logo asset — surfaces as a typed
- * `ZyInsError` with code `not_found`, matching the rest of the Tier 3 funnel.
+ * `IsaApiError` with code `not_found`, matching the rest of the error funnel.
  */
 /** Options accepted by {@link get}. */
 export interface LogosGetOptions {

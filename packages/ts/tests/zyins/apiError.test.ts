@@ -6,7 +6,7 @@ import { describe, it, expect } from 'vitest';
 import {
   IsaIdempotencyConflictError,
   IsaApiError,
-  RateLimitedError,
+  IsaRateLimitError,
   fromHttpResponse,
   fromProblemDetails,
 } from '../../src/zyins';
@@ -54,14 +54,14 @@ describe('IsaIdempotencyConflictError', () => {
   });
 });
 
-describe('RateLimitedError', () => {
+describe('IsaRateLimitError', () => {
   it('uses the server rate_limit_exceeded code for raw 429 responses', () => {
     const err = fromHttpResponse(429, 'slow down');
-    expect(err).toBeInstanceOf(RateLimitedError);
+    expect(err).toBeInstanceOf(IsaRateLimitError);
     expect(err.code).toBe('rate_limit_exceeded');
   });
 
-  it('maps rate_limit_exceeded ProblemDetails to RateLimitedError', () => {
+  it('maps rate_limit_exceeded ProblemDetails to IsaRateLimitError', () => {
     const err = fromProblemDetails({
       type: 'https://docs.isaapi.com/errors/rate_limit_exceeded',
       title: 'Too Many Requests',
@@ -69,7 +69,7 @@ describe('RateLimitedError', () => {
       code: 'rate_limit_exceeded',
       detail: 'slow down',
     });
-    expect(err).toBeInstanceOf(RateLimitedError);
+    expect(err).toBeInstanceOf(IsaRateLimitError);
     expect(err.code).toBe('rate_limit_exceeded');
   });
 
@@ -81,7 +81,7 @@ describe('RateLimitedError', () => {
       code: 'rate_limited',
       detail: 'slow down',
     });
-    expect(err).toBeInstanceOf(RateLimitedError);
+    expect(err).toBeInstanceOf(IsaRateLimitError);
     expect(err.code).toBe('rate_limited');
   });
 });

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { ZyInsClient } from '../../src/zyins/client';
 import type { Transport, TransportRequest } from '../../src/zyins/transport';
-import { PrequalifyError, RateLimitedError } from '../../src/zyins/errors';
+import { IsaValidationError, IsaRateLimitError } from '../../src/zyins/apiError';
 import { NicotineDuration, Height, Weight, Sex } from '../../src/zyins/applicant';
 import { Coverage } from '../../src/zyins/coverage';
 import { ProductCatalog, ProductSelection, ProductType } from '../../src/zyins/product';
@@ -147,7 +147,7 @@ describe('ZyInsClient.prequalify', () => {
     expect(result.forAmount(100_000)).toHaveLength(1);
   });
 
-  it('maps ProblemDetails 400 to PrequalifyError(validation_error)', async () => {
+  it('maps ProblemDetails 400 to IsaValidationError(validation_error)', async () => {
     const { transport } = recordingTransport({
       status: 400,
       body: JSON.stringify({
@@ -171,10 +171,10 @@ describe('ZyInsClient.prequalify', () => {
         coverage: TEST_COVERAGE,
         products: TEST_PRODUCTS,
       }),
-    ).rejects.toBeInstanceOf(PrequalifyError);
+    ).rejects.toBeInstanceOf(IsaValidationError);
   });
 
-  it('maps 429 to RateLimitedError', async () => {
+  it('maps 429 to IsaRateLimitError', async () => {
     const { transport } = recordingTransport({ status: 429, body: 'slow down' });
     const client = new ZyInsClient({
       auth: TEST_AUTH,
@@ -188,7 +188,7 @@ describe('ZyInsClient.prequalify', () => {
         coverage: TEST_COVERAGE,
         products: TEST_PRODUCTS,
       }),
-    ).rejects.toBeInstanceOf(RateLimitedError);
+    ).rejects.toBeInstanceOf(IsaRateLimitError);
   });
 });
 
