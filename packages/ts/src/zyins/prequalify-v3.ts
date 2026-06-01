@@ -247,10 +247,13 @@ function serializeV3Coverage(
   zip: string | null | undefined,
 ): Record<string, unknown> {
   const locale: Record<string, unknown> = { state };
-  // `!= null` excludes both null and undefined; the empty-string check keeps a
-  // blank zip off the wire (server pattern `^\d{5}(-\d{4})?$` rejects "").
-  if (zip != null && zip !== '') {
-    locale['zip'] = zip;
+  // `!= null` excludes null/undefined; trimming keeps a blank zip off the wire.
+  // A whitespace-only value (e.g. a UI placeholder of " ") is treated as absent
+  // — it is not a valid ZIP under the server pattern `^\d{5}(-\d{4})?$`, and
+  // sending it triggers a 400. Only a non-empty trimmed zip rides the wire.
+  const trimmedZip = typeof zip === 'string' ? zip.trim() : zip;
+  if (trimmedZip != null && trimmedZip !== '') {
+    locale['zip'] = trimmedZip;
   }
   if (isMulti(coverage)) {
     return {

@@ -147,6 +147,31 @@ describe('prequalifyV3 wire shape', () => {
     expect(coverage['zip']).toBe('75001');
   });
 
+  it('omits a whitespace-only zip from the wire (prod 400 regression)', async () => {
+    // A consumer (bpp2.0) injected a placeholder zip of " " (a single space)
+    // for an unentered ZIP. The space is not empty-string, so the old guard
+    // let it ride → server rejected the request 400 ("unknown field zip" /
+    // pattern mismatch) on EVERY quote. A whitespace-only zip must be treated
+    // as absent and omitted entirely.
+    const { transport, captured } = captureTransport();
+    const client = new ZyInsClient({
+      auth: TEST_AUTH,
+      baseUrl: 'https://test.example',
+      transport,
+      clock: FIXED_CLOCK,
+    });
+    await client.prequalifyV3({
+      applicant: { ...TEST_APPLICANT, zip: '   ' },
+      coverage: TEST_COVERAGE,
+      products: TEST_PRODUCTS,
+    });
+
+    const body = parseBody(captured.req?.body);
+    const coverage = body['coverage'];
+    if (!isRecord(coverage)) throw new Error('coverage must be an object');
+    expect(coverage).not.toHaveProperty('zip');
+  });
+
   it('serializes conditions, medications, and nicotine specificity per the v3 schemas', async () => {
     const { transport, captured } = captureTransport();
     const applicant: Applicant = {
