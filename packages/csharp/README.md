@@ -1,11 +1,13 @@
-# Isa.Sdk
+# IsaSdk
 
 Official C# SDK for the [Best Plan Pro API](https://docs.isaapi.com) — powered by the ZyINS engine.
+
+The NuGet package is `IsaSdk`; the C# namespace you import is `Isa.Sdk`. The two differ because the bare `Isa.Sdk` nuget id is reserved on nuget.org.
 
 ## Install
 
 ```bash
-dotnet add package Isa.Sdk
+dotnet add package IsaSdk
 ```
 
 ## Hello world

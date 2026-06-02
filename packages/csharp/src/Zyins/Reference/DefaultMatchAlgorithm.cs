@@ -42,11 +42,27 @@ public sealed class DefaultMatchAlgorithm : IMatchAlgorithm
         if (candidates is null) throw new ArgumentNullException(nameof(candidates));
         var key = MakeKey.Normalize(query);
         if (key.Length == 0) return Concept.Unknown(query);
+        // First pass: exact id key. Identity-preserving — the sorted
+        // fallback never reroutes a query that already matched here.
         foreach (var candidate in candidates)
         {
             if (candidate.Id is { } id && string.Equals(id, key, StringComparison.Ordinal))
             {
                 return candidate;
+            }
+        }
+        // Second pass: word-order-invariant name match via the engine sorted
+        // check-key. A strict superset; first candidate wins. Severity
+        // qualifiers stay distinct (different letter multisets).
+        var checkKey = CheckKey.Normalize(query);
+        if (checkKey.Length != 0)
+        {
+            foreach (var candidate in candidates)
+            {
+                if (string.Equals(CheckKey.Normalize(candidate.Name), checkKey, StringComparison.Ordinal))
+                {
+                    return candidate;
+                }
             }
         }
         return Concept.Unknown(query);

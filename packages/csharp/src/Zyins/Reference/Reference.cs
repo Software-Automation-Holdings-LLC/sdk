@@ -113,10 +113,9 @@ internal sealed class MedicationsMatcher : IMedicationMatcher
         if (text is null) throw new ArgumentNullException(nameof(text));
         if (bundle is null) throw new ArgumentNullException(nameof(bundle));
         var index = ReferenceIndex.ForBundle(bundle);
-        var key = MakeKey.Normalize(text);
-        if (key.Length > 0 && index.HasMedication(key))
+        if (index.ResolveMedication(text) is { } id)
         {
-            return Concept.Medication(index, key, text);
+            return Concept.Medication(index, id, text);
         }
         return Concept.Unknown(text);
     }
@@ -142,10 +141,9 @@ internal sealed class ConditionsMatcher : IConditionMatcher
         if (text is null) throw new ArgumentNullException(nameof(text));
         if (bundle is null) throw new ArgumentNullException(nameof(bundle));
         var index = ReferenceIndex.ForBundle(bundle);
-        var key = MakeKey.Normalize(text);
-        if (key.Length > 0 && index.HasCondition(key))
+        if (index.ResolveCondition(text) is { } id)
         {
-            return Concept.Condition(index, key, text);
+            return Concept.Condition(index, id, text);
         }
         return Concept.Unknown(text);
     }
@@ -171,10 +169,8 @@ internal sealed class AnyConceptMatcher : IAnyConceptMatcher
         if (text is null) throw new ArgumentNullException(nameof(text));
         if (bundle is null) throw new ArgumentNullException(nameof(bundle));
         var index = ReferenceIndex.ForBundle(bundle);
-        var key = MakeKey.Normalize(text);
-        if (key.Length == 0) return Concept.Unknown(text);
-        if (index.HasCondition(key)) return Concept.Condition(index, key, text);
-        if (index.HasMedication(key)) return Concept.Medication(index, key, text);
+        if (index.ResolveCondition(text) is { } condId) return Concept.Condition(index, condId, text);
+        if (index.ResolveMedication(text) is { } medId) return Concept.Medication(index, medId, text);
         return Concept.Unknown(text);
     }
 

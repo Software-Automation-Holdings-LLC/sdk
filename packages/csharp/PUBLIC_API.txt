@@ -919,6 +919,10 @@ public class ConceptsNamespace : IAnyConceptMatcher
     public IConcept Match(...)
     public IReadOnlyList<IConcept> MatchMany(...)
 
+=== Zyins/Reference/CheckKey.cs ===
+namespace Isa.Sdk.Zyins.Reference;
+    public string Normalize(...)
+
 === Zyins/Reference/DefaultAutocompleteAlgorithm.Buckets.cs ===
 namespace Isa.Sdk.Zyins.Reference;
     public List<IConcept> Filter(...)
@@ -1031,6 +1035,8 @@ namespace Isa.Sdk.Zyins.Reference;
     public string? MedicationName(...)
     public bool HasCondition(...)
     public bool HasMedication(...)
+    public string? ResolveCondition(...)
+    public string? ResolveMedication(...)
     public IReadOnlyList<string> MedicationsForCondition(...)
     public IReadOnlyList<string> ConditionsForMedication(...)
     public int ConditionFrequencyForMedication(...)

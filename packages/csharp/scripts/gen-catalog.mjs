@@ -210,24 +210,24 @@ ${byAbbr}
   writeFile('States.cs', content);
 }
 
-// When v2_products.json is absent (CI runners check out only the platform
-// repo, not the sibling engine repo that holds it), the committed Products.cs /
-// Carriers.cs are the source of truth — they carry the real prod_<uuid> ids.
-// Preserve them rather than overwriting with an empty catalog (shipping an empty
-// catalog is the isa-sdk@1.0.1 launch-blocker). With nothing committed to
-// preserve, fail loud rather than let an empty catalog reach a registry.
-function preserveOrFail(names, label) {
+// When the source JSON is absent (CI runners check out only the platform repo,
+// not the sibling engine repo that holds it), the committed catalog file is the
+// source of truth — it carries the real published rows. Preserve it rather than
+// overwriting with an empty catalog (shipping an empty catalog is the
+// isa-sdk@1.0.1 launch-blocker). With nothing committed to preserve, fail loud
+// rather than let an empty catalog reach a registry.
+function preserveOrFail(names, label, source) {
   const missing = names.filter((n) => !existsSync(join(CATALOG_DIR, n)));
   if (missing.length > 0) {
     process.stderr.write(
-      `gen-catalog (cs): FATAL: ${label}: v2_products.json not found AND no committed ` +
-        `catalog to preserve (${missing.join(', ')}). Refusing to emit an empty product ` +
-        `catalog. Run where ${join(INSURANCE_REPO, 'v2_products.json')} exists, or commit ` +
+      `gen-catalog (cs): FATAL: ${label}: ${source} not found AND no committed ` +
+        `catalog to preserve (${missing.join(', ')}). Refusing to emit an empty ` +
+        `catalog. Run where ${join(INSURANCE_REPO, source)} exists, or commit ` +
         `a populated catalog first.\n`,
     );
     process.exit(1);
   }
-  gaps.push(`${label}: v2_products.json not found — preserving committed catalog.`);
+  gaps.push(`${label}: ${source} not found — preserving committed catalog.`);
   for (const name of names) {
     process.stderr.write(`gen-catalog (cs): preserved committed ${join(CATALOG_DIR, name)}\n`);
   }
@@ -239,7 +239,7 @@ function genProducts() {
   const sources = ['insurance/v2_products.json'];
 
   if (!raw) {
-    preserveOrFail(['Products.cs', 'Carriers.cs'], 'Products');
+    preserveOrFail(['Products.cs', 'Carriers.cs'], 'Products', 'v2_products.json');
     return;
   }
 
@@ -500,23 +500,28 @@ public static class ConditionCategories
 `;
   writeFile('Conditions.cs', condContent);
 
+  if (!Array.isArray(meds)) {
+    // Same contract as Products: the committed Medications.cs is the published
+    // source of truth (~1865 uses) and CI does not check out the engine repo,
+    // so preserve it instead of clobbering it with an empty catalog. Fail loud
+    // only when there is nothing committed to preserve.
+    preserveOrFail(['Medications.cs'], 'MedicationUses', 'v2_medications.json');
+    return;
+  }
+
   const useToMeds = new Map();
-  if (Array.isArray(meds)) {
-    for (const m of meds) {
-      if (!m || typeof m !== 'object') continue;
-      const name = String(m.name || '');
-      const uses = Array.isArray(m.uses) ? m.uses : [];
-      for (const u of uses) {
-        if (!u || typeof u !== 'object') continue;
-        const cond = String(u.condition || '');
-        if (!cond || !name) continue;
-        let set = useToMeds.get(cond);
-        if (!set) { set = new Set(); useToMeds.set(cond, set); }
-        set.add(name);
-      }
+  for (const m of meds) {
+    if (!m || typeof m !== 'object') continue;
+    const name = String(m.name || '');
+    const uses = Array.isArray(m.uses) ? m.uses : [];
+    for (const u of uses) {
+      if (!u || typeof u !== 'object') continue;
+      const cond = String(u.condition || '');
+      if (!cond || !name) continue;
+      let set = useToMeds.get(cond);
+      if (!set) { set = new Set(); useToMeds.set(cond, set); }
+      set.add(name);
     }
-  } else {
-    gaps.push('MedicationUses: v2_medications.json missing or malformed.');
   }
 
   const useNames = [...useToMeds.keys()].sort();
