@@ -12,18 +12,30 @@
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
     <RootNamespace>Isa.Sdk</RootNamespace>
     <!-- Version is rewritten at publish time by sdk-pin-csharp-deps.py. -->
-    <Version>1.0.1</Version>
+    <Version>1.0.2-rc.1</Version>
     <PackageId>Sah.Sdk</PackageId>
     <Authors>Software Automation Holdings, LLC</Authors>
     <Company>Software Automation Holdings, LLC</Company>
     <Description>Unified C# SDK for ISA APIs (zyins underwriting, rapidsign document workflow, proxy transport-signing, webhooks). One package, sub-namespaces per product per SDK_DESIGN.md §0 consolidation.</Description>
-    <PackageProjectUrl>https://github.com/Software-Automation-Holdings-LLC/isa-platform</PackageProjectUrl>
-    <RepositoryUrl>https://github.com/Software-Automation-Holdings-LLC/isa-platform</RepositoryUrl>
+    <!-- The canonical public home of the published SDK is the isa-sdk mirror;
+         nuget.org renders RepositoryUrl/PackageProjectUrl as the "Project" and
+         "Repository" links and weighs their presence in package-quality
+         validation. -->
+    <PackageProjectUrl>https://github.com/isa-sdk/sdk</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/isa-sdk/sdk</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
     <PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
     <PackageTags>isa;sah;zyins;rapidsign;insurance;sdk;underwriting</PackageTags>
+    <!-- Pack the package README so nuget.org renders a landing page. A missing
+         readme is the common nuget.org validation/quality blocker. -->
+    <PackageReadmeFile>README.md</PackageReadmeFile>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <NoWarn>$(NoWarn);1591</NoWarn>
   </PropertyGroup>
+  <!-- README is packed at the package root so PackageReadmeFile resolves. -->
+  <ItemGroup>
+    <None Include="README.md" Pack="true" PackagePath="\" />
+  </ItemGroup>
   <!-- Tests live under tests/ but the default glob would compile them
        into the library assembly. Exclude. -->
   <ItemGroup>

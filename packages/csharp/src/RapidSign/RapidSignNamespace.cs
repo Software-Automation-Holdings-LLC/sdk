@@ -5,7 +5,7 @@
 namespace Isa.Sdk.RapidSign;
 
 /// <summary>
-/// Accessor for RapidSign product methods, reached via <see cref="global::Isa.Sdk.Isa.RapidSign"/>.
+/// Accessor for RapidSign product methods, reached via <see cref="global::Isa.Sdk.IsaClient.RapidSign"/>.
 /// </summary>
 /// <example>
 /// <code>
@@ -15,7 +15,7 @@ namespace Isa.Sdk.RapidSign;
 /// </example>
 public sealed class RapidSignNamespace
 {
-    /// <summary>Internal: bound by <see cref="global::Isa.Sdk.Isa"/> at construction.</summary>
+    /// <summary>Internal: bound by <see cref="global::Isa.Sdk.IsaClient"/> at construction.</summary>
     public RapidSignNamespace()
     {
     }

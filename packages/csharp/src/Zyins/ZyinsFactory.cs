@@ -1,10 +1,11 @@
-// Top-level `Isa` static facade. Mirrors `Isa.withBearer()` /
-// `Isa.withLicense()` / `Isa.withSession()` across every language
-// binding (SDK_DESIGN.md §3.2 / §3.3). The factories read sensible
-// defaults from environment variables so the hello-world is two lines:
+// Top-level `IsaClient` static facade — the C# entry point. The factories
+// (`IsaClient.WithBearer()` / `IsaClient.WithLicense()` / `IsaClient.WithSession()`)
+// read sensible defaults from environment variables so the hello-world is two
+// lines. Other language bindings expose the same factories under their own
+// idiomatic entry symbol (SDK_DESIGN.md §3.2 / §3.3).
 //
-//     var isa = Isa.WithBearer();                       // reads ISA_TOKEN
-//     var result = await isa.Prequalify.RunAsync(...);
+//     var isa = IsaClient.WithBearer();                 // reads ISA_TOKEN
+//     var result = await isa.Zyins.PrequalifyAsync(request);
 //
 // Missing env vars produce IsaConfigException synchronously; the
 // client never silently misbehaves with empty credentials.
@@ -89,7 +90,7 @@ internal static class ZyinsFactory
     /// <example>
     /// <code>
     /// // Reads ISA_TOKEN from the environment:
-    /// var isa = Isa.WithBearer();
+    /// var isa = IsaClient.WithBearer();
     /// </code>
     /// </example>
     /// <seealso href="https://docs.isaapi.com/sdk/factories"/>
@@ -105,7 +106,7 @@ internal static class ZyinsFactory
         if (string.IsNullOrWhiteSpace(resolved))
         {
             throw new IsaConfigException(
-                $"Isa.WithBearer requires a token: pass one explicitly or set {TokenEnvVar}.");
+                $"IsaClient.WithBearer requires a token: pass one explicitly or set {TokenEnvVar}.");
         }
 
         var opts = options ?? new ZyInsClientOptions();
@@ -129,7 +130,7 @@ internal static class ZyinsFactory
     /// </exception>
     /// <example>
     /// <code>
-    /// var isa = Isa.WithLicense(new LicenseCredentials
+    /// var isa = IsaClient.WithLicense(new LicenseCredentials
     /// {
     ///     Keycode = "ABC-123-XYZ",
     ///     Email   = "agent@example.com",
@@ -160,7 +161,7 @@ internal static class ZyinsFactory
         if (string.IsNullOrWhiteSpace(keycode) || string.IsNullOrWhiteSpace(email))
         {
             throw new IsaConfigException(
-                $"Isa.WithLicense requires keycode + email: pass them explicitly or set {LicenseKeycodeEnvVar} and {LicenseEmailEnvVar}.");
+                $"IsaClient.WithLicense requires keycode + email: pass them explicitly or set {LicenseKeycodeEnvVar} and {LicenseEmailEnvVar}.");
         }
 
         // Device-id is minted for first-run callers if neither code nor env supplies one.
@@ -189,7 +190,7 @@ internal static class ZyinsFactory
         }
         catch (Exception ex)
         {
-            throw new IsaConfigException("Isa.WithLicense failed to restore the stashed license key.", ex);
+            throw new IsaConfigException("IsaClient.WithLicense failed to restore the stashed license key.", ex);
         }
     }
 
@@ -207,7 +208,7 @@ internal static class ZyinsFactory
     /// <example>
     /// <code>
     /// // Reads ISA_SESSION_ID and ISA_SESSION_SECRET from the environment:
-    /// var isa = Isa.WithSession();
+    /// var isa = IsaClient.WithSession();
     /// </code>
     /// </example>
     /// <seealso href="https://docs.isaapi.com/sdk/factories"/>
@@ -225,7 +226,7 @@ internal static class ZyinsFactory
         if (string.IsNullOrWhiteSpace(sessionId) || string.IsNullOrWhiteSpace(sessionSecret))
         {
             throw new IsaConfigException(
-                $"Isa.WithSession requires sessionId + sessionSecret: pass them explicitly or set {SessionIdEnvVar} and {SessionSecretEnvVar}.");
+                $"IsaClient.WithSession requires sessionId + sessionSecret: pass them explicitly or set {SessionIdEnvVar} and {SessionSecretEnvVar}.");
         }
 
         var opts = options ?? new ZyInsClientOptions();

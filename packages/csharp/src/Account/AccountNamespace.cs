@@ -9,9 +9,12 @@
 // resource. Each method is a thin wrapper around an `HttpDispatcher` call
 // so call sites never assemble headers.
 //
-// The namespace targets the License-HMAC auth path the rest of the
-// ZyINS client already uses; bearer / session identities receive a stub
-// namespace whose first method call throws at the boundary.
+// The namespace dispatches through the underlying client's shared
+// `OperationContext`, so it works under every auth identity the client
+// supports — bearer, license, and session alike. The context's signer
+// (bearer token, license HMAC, or session HMAC) attaches the right
+// `Authorization` header to each request; the Account surface never
+// inspects the credential mode.
 using System;
 using System.Collections.Generic;
 using System.Text.Json;
@@ -50,56 +53,48 @@ public sealed class AccountNamespace
         ReferenceData = new AccountReferenceData(ctx);
     }
 
-    /// <summary>Bridge between <see cref="global::Isa.Sdk.Isa"/> and the per-license
-    /// Account surface. License-mode clients return a live namespace; other
-    /// identities return a stub whose first method throws
-    /// <see cref="IsaConfigException"/>.</summary>
+    /// <summary>Bridge between <see cref="global::Isa.Sdk.IsaClient"/> and the
+    /// Account surface. Every constructed <see cref="ZyInsClient"/> carries a
+    /// signed <see cref="OperationContext"/> regardless of identity, so the
+    /// returned namespace dispatches live under bearer, license, and session
+    /// alike. License-mode clients additionally pass their
+    /// <see cref="IsaCredentialState"/> so sub-clients can surface
+    /// scope/email/order; bearer and session clients pass none.</summary>
     public static AccountNamespace FromZyInsClient(ZyInsClient client)
     {
         if (client is null) throw new ArgumentNullException(nameof(client));
-        if (client.CredentialState is null)
-        {
-            return new AccountNamespace(AccountContext.Throwing(
-                "isa.Account.* methods currently require Isa.WithLicense() — bearer/session transport wiring lands in Phase 3 of SDK_DESIGN.md"));
-        }
         return new AccountNamespace(AccountContext.FromClient(client, client.CredentialState));
     }
 }
 
 /// <summary>Per-operation context shared by every Account sub-client. Wraps
-/// the underlying <see cref="ZyInsClient"/> dispatcher and the shared
-/// credential state.</summary>
+/// the underlying <see cref="ZyInsClient"/> dispatcher and, on license-mode
+/// clients, the shared credential state.</summary>
 internal sealed class AccountContext
 {
     /// <summary>Operation context handed to <see cref="HttpDispatcher"/>.</summary>
-    internal OperationContext? Op { get; }
+    internal OperationContext Op { get; }
 
-    /// <summary>Shared credential state — needed for snapshot when the
-    /// sub-client wants to surface scope/email/order.</summary>
+    /// <summary>Share-link viewer origin for <c>cases.Share</c>.</summary>
+    internal string CaseViewerBaseUrl { get; } = CaseLink.DefaultViewerBaseUrl;
+
+    /// <summary>Case AES-GCM envelope helper for <c>cases.Share</c> / <c>cases.Open</c>.</summary>
+    internal CaseCrypto CaseCrypto { get; } = new CaseCrypto();
+
+    /// <summary>Shared credential state — present on license-mode clients so
+    /// the sub-client can surface scope/email/order. Null under bearer and
+    /// session identities, which carry no per-license credential.</summary>
     internal IsaCredentialState? State { get; }
 
-    /// <summary>Error message to surface when the namespace was constructed
-    /// without a valid identity (bearer / session). Null on live contexts.</summary>
-    internal string? StubMessage { get; }
-
-    private AccountContext(OperationContext? op, IsaCredentialState? state, string? stubMessage)
+    private AccountContext(OperationContext op, IsaCredentialState? state)
     {
         Op = op;
         State = state;
-        StubMessage = stubMessage;
     }
 
-    internal static AccountContext FromClient(ZyInsClient client, IsaCredentialState state) =>
-        new(client.Context, state, stubMessage: null);
+    internal static AccountContext FromClient(ZyInsClient client, IsaCredentialState? state) =>
+        new(client.Context, state);
 
-    internal static AccountContext Throwing(string message) =>
-        new(op: null, state: null, stubMessage: message);
-
-    internal OperationContext RequireOp()
-    {
-        if (Op is null)
-            throw new IsaConfigException(StubMessage ?? "Account namespace is not configured for the current identity.");
-        return Op;
-    }
+    internal OperationContext RequireOp() => Op;
 }
 

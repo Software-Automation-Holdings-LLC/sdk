@@ -40,8 +40,10 @@ public static class EnumWireValues
             "over_60_months",
         };
 
-    /// <summary>Returns every wire string the server accepts for
-    /// <see cref="ProductType"/>.</summary>
+    /// <summary>Returns every wire string the server accepts as a product type
+    /// (e.g. <c>final_expense</c>, <c>term</c>, <c>medicare_supplement</c>,
+    /// <c>whole_life</c>). These are the full wire values, not the short class
+    /// shorthands like <c>fex</c> or <c>medsup</c>.</summary>
     public static IReadOnlyList<string> AllProductTypeValues() =>
         new[]
         {
@@ -57,4 +59,22 @@ public static class EnumWireValues
     /// <see cref="Coverage"/>.</summary>
     public static IReadOnlyList<string> AllCoverageTypeValues() =>
         new[] { "face_value", "monthly_budget" };
+
+    /// <summary>Returns the wire string for a <see cref="V3EligibilityCategory"/>
+    /// value — the exact JSON string the server emits and the test fixture records.
+    /// Mirrors the switch in <c>V3Internal.CoerceEligibility</c> so the mapping
+    /// is a single source of truth across parse and format.
+    /// <para><b>internal</b>: consumed only by the cross-SDK equivalence test via
+    /// <c>InternalsVisibleTo("Isa.Sdk.Tests")</c> — deliberately kept off the public
+    /// surface (this PR adds no public API).</para></summary>
+    internal static string EligibilityCategoryWireValue(V3EligibilityCategory category) =>
+        category switch
+        {
+            V3EligibilityCategory.Immediate => "immediate",
+            V3EligibilityCategory.Graded    => "graded",
+            V3EligibilityCategory.Rop       => "rop",
+            V3EligibilityCategory.Other     => "other",
+            _                               => throw new ArgumentOutOfRangeException(
+                nameof(category), category, "Unknown V3EligibilityCategory"),
+        };
 }

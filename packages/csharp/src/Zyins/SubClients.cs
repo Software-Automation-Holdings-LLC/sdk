@@ -3,6 +3,7 @@
 // owns request building, signing, and error mapping.
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using Product = global::Isa.Sdk.Catalog.Product;
 
 namespace Isa.Sdk.Zyins;
 
@@ -69,7 +70,7 @@ internal static class PrequalifyWireBuilder
             Weight:         applicant.WeightPounds,
             State:          applicant.State,
             NicotineUsage:  nicotine,
-            Products:       input.Products.Select(p => p.Token).ToArray(),
+            Products:       input.Products.Select(p => p.Id).ToArray(),
             Conditions:     applicant.Conditions.Select(c => new ConditionWire(c.Name, c.WasDiagnosed, c.LastTreatment)).ToArray(),
             Medications:    applicant.Medications.Select(m => new MedicationWire(m.Name, m.Use, m.FirstFill, m.LastFill)).ToArray(),
             QuoteOptions:   new QuoteOptionsWire([amount], quoteType),
@@ -250,58 +251,6 @@ public sealed class ReferenceDataSubClient
         if (string.IsNullOrWhiteSpace(kind))
             throw new ArgumentException("kind must be non-empty", nameof(kind));
         return HttpDispatcher.GetAsync<ReferenceDataResponse>(_ctx, $"{PathBase}/{Uri.EscapeDataString(kind)}", ct: ct);
-    }
-}
-
-/// <summary>Sub-client providing a memoized product catalog fetched from the server once
-/// and cached for subsequent calls.</summary>
-public sealed class ProductsSubClient
-{
-    private const string Path = "/v1/datasets";
-    private readonly OperationContext _ctx;
-    private readonly SemaphoreSlim _lock = new(1, 1);
-    private ProductCatalog? _catalog;
-
-    internal ProductsSubClient(OperationContext ctx) => _ctx = ctx;
-
-    /// <summary>Return the cached product catalog, fetching it on the first call.</summary>
-    public async Task<ProductCatalog> CatalogAsync(CancellationToken ct = default)
-    {
-        if (_catalog is { } cached) return cached;
-        await _lock.WaitAsync(ct).ConfigureAwait(false);
-        try
-        {
-            if (_catalog is { } c) return c;
-            _catalog = await FetchCatalogAsync(ct).ConfigureAwait(false);
-            return _catalog;
-        }
-        finally { _lock.Release(); }
-    }
-
-    /// <summary>Discard the cached catalog and fetch a fresh copy.</summary>
-    public async Task<ProductCatalog> RefreshAsync(CancellationToken ct = default)
-    {
-        await _lock.WaitAsync(ct).ConfigureAwait(false);
-        try
-        {
-            _catalog = null;
-            _catalog = await FetchCatalogAsync(ct).ConfigureAwait(false);
-            return _catalog;
-        }
-        finally { _lock.Release(); }
-    }
-
-    private async Task<ProductCatalog> FetchCatalogAsync(CancellationToken ct)
-    {
-        var raw = await HttpDispatcher.PostJsonAsync<object, JsonElement>(
-            _ctx, Path, new { datasets = new[] { "products" } }, ct).ConfigureAwait(false);
-        var dict = new Dictionary<string, object?>();
-        if (raw.ValueKind == JsonValueKind.Object)
-        {
-            foreach (var prop in raw.EnumerateObject())
-                dict[prop.Name] = prop.Value;
-        }
-        return ProductCatalog.FromDatasets(dict);
     }
 }
 

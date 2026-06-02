@@ -179,8 +179,9 @@ public sealed partial class ZyInsClient
     /// <summary>Dataset listing and retrieval.</summary>
     public DatasetsSubClient Datasets { get; }
 
-    /// <summary>Memoized product catalog fetched from the server once per client lifetime.</summary>
-    public ProductsSubClient Products { get; }
+    // ProductsSubClient removed — use Products.Fex.* / Products.Medsup.*
+    // catalog constants (Isa.Sdk.Catalog.Products) instead. The catalog
+    // is embedded and requires no network fetch.
 
     /// <summary>Reference data lookup.</summary>
     public ReferenceDataSubClient ReferenceData { get; }
@@ -315,7 +316,6 @@ public sealed partial class ZyInsClient
         Prequalify = new PrequalifySubClient(_ctx);
         Quote = new QuoteSubClient(_ctx);
         Datasets = new DatasetsSubClient(_ctx);
-        Products = new ProductsSubClient(_ctx);
         ReferenceData = new ReferenceDataSubClient(_ctx);
         Usage = new UsageSubClient(_ctx);
         License = new LicenseSubClient(_ctx);
@@ -361,7 +361,6 @@ public sealed partial class ZyInsClient
         Prequalify = new PrequalifySubClient(_ctx);
         Quote = new QuoteSubClient(_ctx);
         Datasets = new DatasetsSubClient(_ctx);
-        Products = new ProductsSubClient(_ctx);
         ReferenceData = new ReferenceDataSubClient(_ctx);
         Usage = new UsageSubClient(_ctx);
         License = new LicenseSubClient(_ctx, state);

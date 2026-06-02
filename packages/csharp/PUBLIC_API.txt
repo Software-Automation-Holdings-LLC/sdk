@@ -18,6 +18,35 @@ public class AccountBranding
     public Task<BrandingDetail> LookupAsync(...)
     public Task<BrandingDetail> LookupAsync(...)
 
+=== Account/CaseCrypto.cs ===
+namespace Isa.Sdk.Account;
+public record CaseEnvelope
+public record EncryptedCase
+public class CaseDecryptException : Exception
+public interface IRandomBytes
+public class SystemRandomBytes : IRandomBytes
+public class CaseCrypto
+    public string Ciphertext { ... }
+    public string Iv { ... }
+    public string Tag { ... }
+    public CaseEnvelope Envelope { ... }
+    public string KeyFragment { ... }
+    public byte[] Next(...)
+    public EncryptedCase Encrypt(...)
+    public JsonElement Decrypt(...)
+    public EncryptedCase Encrypt(...)
+    public JsonElement Decrypt(...)
+
+=== Account/CaseLink.cs ===
+namespace Isa.Sdk.Account;
+public record ParsedLink
+public class CaseLink
+    public string Code { ... }
+    public string KeyFragment { ... }
+    public string DefaultViewerBaseUrl
+    public string Assemble(...)
+    public ParsedLink Parse(...)
+
 === Account/Cases.cs ===
 namespace Isa.Sdk.Account;
 public record CaseCreateRequest
@@ -25,16 +54,27 @@ public record CaseCreateResult
 public record CaseSummary
 public record CaseEmailRequest
 public record CaseEmailResult
+public record CaseShareRequest
+public record CaseShareResult
+public record CaseOpenResult
 public class AccountCases
     public object? Results { ... }
     public IReadOnlyList<string>? Products { ... }
     public object? Input { ... }
     public object? Results { ... }
     public IReadOnlyList<string>? Products { ... }
+    public string Product { ... }
+    public object? Payload { ... }
+    public string Id { ... }
+    public string Link { ... }
+    public string Product { ... }
+    public JsonElement Payload { ... }
     public Task<CaseCreateResult> CreateAsync(...)
     public Task<CaseSummary> GetAsync(...)
     public Task<IReadOnlyList<CaseSummary>> ListAsync(...)
     public Task<CaseEmailResult> EmailAsync(...)
+    public Task<CaseShareResult> ShareAsync(...)
+    public Task<CaseOpenResult> OpenAsync(...)
 
 === Account/Email.cs ===
 namespace Isa.Sdk.Account;
@@ -103,14 +143,125 @@ public class MedicationUses
 
 === Catalog/Products.cs ===
 namespace Isa.Sdk.Catalog;
-public enum Product
-public record ProductMetadata
+public record Product
 public class Products
+public class Fex
+public class Medsup
+public class Preneed
+public class Term
+    public Product AetnaAccendo
+    public Product AetnaProtectionSeries
+    public Product AflacFinalExpense
+    public Product AmericanAmicableClearChoice
+    public Product AmericanAmicableDignitySolutions
+    public Product AmericanAmicableGoldenSolution
+    public Product AmericanAmicableInnovativeSolutions
+    public Product AmericanAmicablePlatinumSolutionLegacyPlan
+    public Product AmericanAmicableSeniorChoice
+    public Product AmericanAmicableTribute
+    public Product AmericanHomeLifeGuidestar
+    public Product AmericanHomeLifePatriotSeries
+    public Product AmericoEaglePremier
+    public Product BaltimoreLifeIprovide
+    public Product BaltimoreLifeSilverGuard
+    public Product BetterlifeFinalExpense
+    public Product CentrianLivingLegacy
+    public Product CicaLifeSuperiorChoice
+    public Product CignaIndividualWholeLife
+    public Product CombinedGenerationalLife
+    public Product CorebridgeGiwl
+    public Product CorebridgeSimplinowLegacy
+    public Product EmcEasylife
+    public Product EverestIaAmericanAdvantage50Plus
+    public Product FamilyBenefitLifeGoldenEagle
+    public Product FidelityLifeRapidecision
+    public Product FidelityLifeRapidecisionSeniorLife
+    public Product FirstGuarantyInsuranceSecurityCare
+    public Product ForestersPlanRight
+    public Product GerberLife
+    public Product GpmLifeSecureMark
+    public Product GtlHeritagePlan
+    public Product IllinoisMutualPathProtectorPlus
+    public Product KskjFinalExpense
+    public Product LibertyBankersSimpl
+    public Product LifeShieldSurvivor
+    public Product ManhattanLifeSecureAdvantage
+    public Product MutualOfOmahaLivingPromise
+    public Product NewbridgeFinalExpense
+    public Product OccidentalLifeClearChoice
+    public Product OccidentalLifeDignitySolutions
+    public Product OccidentalLifeGoldenSolution
+    public Product OccidentalLifeInnovativeSolutions
+    public Product OccidentalLifePlatinumSolutionLegacyPlan
+    public Product OccidentalLifeSeniorChoice
+    public Product OccidentalLifeTribute
+    public Product OxfordLifeSimplifiedIssue
+    public Product PekinWholeLife
+    public Product PioneerAmericanIndependentAmerican
+    public Product PioneerAmericanNorthstarLegacy
+    public Product RoyalArcanumGraded
+    public Product RoyalArcanumSimplifiedIssue
+    public Product RoyalNeighborsEnsuredLegacy
+    public Product SUsaGoldenPromise
+    public Product SbliLivingLegacy
+    public Product SecuricoLifeFinalExpense
+    public Product SecurityNationalSimpleSecurity
+    public Product SeniorLifeWholeLife
+    public Product SentinelSecurityNewVantage
+    public Product SonsOfNorwayLegacySure
+    public Product SonsOfNorwayWholeLife
+    public Product TransamericaFeExpressSolution
+    public Product TransamericaSolution
+    public Product TrinityGoldenEagle
+    public Product UnitedFarmAndFamilyWholeLife
+    public Product UnitedHomeLifeWholeLife
+    public Product AetnaAccendoMedsup
+    public Product AetnaMedsup
+    public Product ManhattanLifeMedsup
+    public Product MutualOfOmahaMedsup
+    public Product BetterlifeSinglePremium
+    public Product GlobalAtlanticSimpleProtectionPlan
+    public Product AmericanAmicableEasyTerm
+    public Product AmericanAmicableHomeProtector
+    public Product AmericanAmicableTermMadeSimple
+    public Product AmericoHmsPlus
+    public Product AmeritasFlxLivingBenefitsTerm
+    public Product AmeritasValuePlusTerm
+    public Product BannerOpterm
+    public Product CorebridgeSelectATerm
+    public Product FidelityLifeInstabrainPureTerm
+    public Product FidelityLifeInstabrainTerm
+    public Product FidelityLifeInstaterm
+    public Product ForestersStrongFoundation
+    public Product ForestersYourTerm
+    public Product ForestersYourTermNonMedical
+    public Product GpmQMark
+    public Product GtlTurboTerm
+    public Product HeroLifeTerm
+    public Product JohnHancockSimpleTermWithVitality
+    public Product KansasCityLifeSignatureTermExpress
+    public Product LincolnLifeelements
+    public Product LincolnTermaccel
+    public Product MutualOfOmahaTermLifeAnswers
+    public Product MutualOfOmahaTermLifeExpress
+    public Product NationwideYourlife
+    public Product NorthAmericanAddvantage
+    public Product ProsperityFamilyFreedomTerm
+    public Product ProtectiveLifeClassicChoiceTerm
+    public Product ProtectiveLifeCustomChoiceTerm
+    public Product PrudentialEssentialTermPlus
+    public Product PrudentialEssentialTermValue
+    public Product SagicorSageTerm
+    public Product SbliTTerm
+    public Product SeniorLifeTermLife
+    public Product TransamericaTrendsetterLb
+    public Product TransamericaTrendsetterSuper
+    public Product WilliamPennOpterm
+    public Product? ById(...)
+    public bool TryById(...)
     public IReadOnlyList<Product> Values(...)
     public IReadOnlyList<Product> ByCarrier(...)
     public IReadOnlyList<Product> Search(...)
-    public ProductMetadata Metadata(...)
-    public string WireValue(...)
 
 === Catalog/Scopes.cs ===
 namespace Isa.Sdk.Catalog;
@@ -264,18 +415,18 @@ public class HttpClientTransport : ITransport
     public HttpClientTransport Default(...)
     public Task<TransportResponse> SendAsync(...)
 
-=== Isa.Autocorrector.cs ===
+=== IsaClient.Autocorrector.cs ===
 namespace Isa.Sdk;
-public class Isa
+public class IsaClient
 public class Autocorrector
-    public partial class Isa { ... }
+    public partial class IsaClient { ... }
     public IAutocorrector Create(...)
 
-=== Isa.Builder.cs ===
+=== IsaClient.Builder.cs ===
 namespace Isa.Sdk;
-public class Isa
+public class IsaClient
 public class IsaBuilder
-    public partial class Isa { ... }
+    public partial class IsaClient { ... }
     public IsaBuilder Builder(...)
     public IsaBuilder WithKeycode(...)
     public IsaBuilder WithBearer(...)
@@ -285,14 +436,14 @@ public class IsaBuilder
     public IsaBuilder WithMatchAlgorithm(...)
     public IsaBuilder WithAutocompleteAlgorithm(...)
     public IsaBuilder WithEnvironment(...)
-    public Isa Build(...)
+    public IsaClient Build(...)
 
-=== Isa.cs ===
+=== IsaClient.cs ===
 namespace Isa.Sdk;
 public record LicenseOptions
 public record SessionOptions
 public record FormOptions
-public class Isa
+public class IsaClient
     public required string Keycode { ... }
     public required string Email { ... }
     public string? DeviceId { ... }
@@ -301,26 +452,26 @@ public class Isa
     public required string SessionId { ... }
     public required string SessionSecret { ... }
     public required string FormToken { ... }
-    public partial class Isa { ... }
+    public partial class IsaClient { ... }
     public ZyInsClient Zyins { ... }
     public event Action<LicenseRefreshedEvent>? OnLicenseRefreshed { ... }
-    public Isa WithBearer(...)
-    public Isa WithBearer(...)
-    public Task<Isa> WithLicenseAsync(...)
-    public Task<Isa> WithLicenseAsync(...)
-    public Isa WithLicense(...)
-    public Isa WithKeycode(...)
-    public Isa WithKeycode(...)
-    public Task<Isa> WithKeycodeAsync(...)
-    public Isa ForForm(...)
-    public Isa ForForm(...)
-    public Isa Authenticate(...)
-    public Isa Authenticate(...)
-    public Isa WithLicense(...)
-    public Isa FromEnv(...)
-    public Isa FromEnv(...)
-    public Isa WithSession(...)
-    public Isa WithSession(...)
+    public IsaClient WithBearer(...)
+    public IsaClient WithBearer(...)
+    public Task<IsaClient> WithLicenseAsync(...)
+    public Task<IsaClient> WithLicenseAsync(...)
+    public IsaClient WithLicense(...)
+    public IsaClient WithKeycode(...)
+    public IsaClient WithKeycode(...)
+    public Task<IsaClient> WithKeycodeAsync(...)
+    public IsaClient ForForm(...)
+    public IsaClient ForForm(...)
+    public IsaClient Authenticate(...)
+    public IsaClient Authenticate(...)
+    public IsaClient WithLicense(...)
+    public IsaClient FromEnv(...)
+    public IsaClient FromEnv(...)
+    public IsaClient WithSession(...)
+    public IsaClient WithSession(...)
 
 === Proxy/BearerTokenSigner.cs ===
 namespace Isa.Sdk.Proxy;
@@ -583,10 +734,6 @@ public record Condition
 public record Applicant
 public class ApplicantExtensions
 public record Coverage
-public record Product
-public enum ProductType
-public record ProductEntry
-public class ProductCatalog
 public record PrequalifyInput
 public record PrequalifyPlan
 public record PrequalifyResult
@@ -619,13 +766,6 @@ public record UsageSummary
     public Coverage ByMonthlyBudget(...)
     public Coverage ByFaceValues(...)
     public Coverage ByMonthlyBudgets(...)
-    public ProductCatalog DefaultCatalog(...)
-    public ProductCatalog FromDatasets(...)
-    public ProductEntry Find(...)
-    public ProductEntry? TryFind(...)
-    public ProductEntry FindBySlug(...)
-    public ProductEntry? TryFindBySlug(...)
-    public IReadOnlyList<ProductEntry> List(...)
     public required Applicant Applicant { ... }
     public required Coverage Coverage { ... }
     public IReadOnlyList<Product> Products { ... }
@@ -914,7 +1054,6 @@ public class PrequalifySubClient
 public class QuoteSubClient
 public class DatasetsSubClient
 public class ReferenceDataSubClient
-public class ProductsSubClient
 public class UsageSubClient
     public Task<PrequalifyResult> RunAsync(...)
     public Task<JsonObject> RunEnvelopeAsync(...)
@@ -923,8 +1062,6 @@ public class UsageSubClient
     public Task<IReadOnlyList<DatasetSummary>> ListAsync(...)
     public Task<Dataset> GetAsync(...)
     public Task<ReferenceDataResponse> GetAsync(...)
-    public Task<ProductCatalog> CatalogAsync(...)
-    public Task<ProductCatalog> RefreshAsync(...)
     public Task<UsageSummary> SummaryAsync(...)
 
 === Zyins/V3Internal.cs ===
@@ -962,7 +1099,6 @@ public class ZyInsClientBuilder
     public PrequalifySubClient Prequalify { ... }
     public QuoteSubClient Quote { ... }
     public DatasetsSubClient Datasets { ... }
-    public ProductsSubClient Products { ... }
     public ReferenceDataSubClient ReferenceData { ... }
     public UsageSubClient Usage { ... }
     public LicenseSubClient License { ... }

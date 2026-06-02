@@ -12,7 +12,7 @@ using Isa.Sdk.Zyins.Cases;
 namespace Isa.Sdk.Zyins.Options;
 
 /// <summary>
-/// Pinned API major version per <see cref="global::Isa.Sdk.Isa"/> instance.
+/// Pinned API major version per <see cref="global::Isa.Sdk.IsaClient"/> instance.
 /// </summary>
 public enum IsaApiVersion
 {

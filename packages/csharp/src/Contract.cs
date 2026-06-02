@@ -28,13 +28,13 @@ using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 
-// Alias the top-level ``Isa`` entry type. The name must not be a single
+// Alias the top-level ``IsaClient`` entry type. The name must not be a single
 // namespace-root token (e.g. ``IsaSdk``): the generated wire stubs live under
 // the ``IsaSdk.*`` root namespace (csharp_namespace in
 // shared/schemas/buf.gen.sdk.yaml), and in the mirror publish layout those
 // stubs compile alongside this file. A ``using IsaSdk = ...`` alias would then
 // collide with that namespace root (CS0576). ``IsaRoot`` cannot collide.
-using IsaRoot = global::Isa.Sdk.Isa;
+using IsaRoot = global::Isa.Sdk.IsaClient;
 using Isa.Sdk.Account;
 using Isa.Sdk.Core;
 using Isa.Sdk.Proxy;
@@ -201,9 +201,9 @@ internal static class Contract
     private static readonly Type _autocorrectOptions = typeof(AutocorrectOptions);
     private static readonly Type _autocompleteOptions = typeof(AutocompleteOptions);
 
-    // Top-level factory: Isa.Autocorrector.Create(typoMap).
+    // Top-level factory: IsaClient.Autocorrector.Create(typoMap).
     private static readonly Func<IReadOnlyDictionary<string, string>, string?, Action<AutocorrectorAppliedEvent>?, IAutocorrector>
-        _autocorrectorCreate = global::Isa.Sdk.Isa.Autocorrector.Create;
+        _autocorrectorCreate = global::Isa.Sdk.IsaClient.Autocorrector.Create;
 
     // Domain-bound accessors on isa.Zyins.
     private static IAutocorrector PinAutocorrector(ZyInsClient c) => c.Autocorrector;
@@ -211,7 +211,7 @@ internal static class Contract
     private static IAutocompleteAlgorithm PinAutocompleteAlgorithm(ZyInsClient c) => c.AutocompleteAlgorithm;
 
     // IsaBuilder fluent injection — locked SDK syntax.
-    private static readonly Func<IsaBuilder> _isaBuilder = global::Isa.Sdk.Isa.Builder;
+    private static readonly Func<IsaBuilder> _isaBuilder = global::Isa.Sdk.IsaClient.Builder;
 
     // =====================================================================
     // Tier 1 — Inline-row v3 datasets (rc.1 §1 cutover).

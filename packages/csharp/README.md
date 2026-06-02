@@ -1,32 +1,23 @@
-# Sah.Sdk
+# Isa.Sdk
 
 Official C# SDK for the [Best Plan Pro API](https://docs.isaapi.com) — powered by the ZyINS engine.
 
 ## Install
 
 ```bash
-dotnet add package Sah.Sdk
+dotnet add package Isa.Sdk
 ```
-
-> **GitHub Packages fallback.** Until `Sah.Sdk` is fully published on NuGet.org, add the GitHub Packages feed and install from there:
->
-> ```bash
-> dotnet nuget add source https://nuget.pkg.github.com/Software-Automation-Holdings-LLC/index.json \
->   --name github-sah --username <GH_USER> --password <GH_PAT> --store-password-in-clear-text
-> dotnet add package Sah.Sdk --source github-sah
-> ```
->
-> The wire surface is identical either way; only the feed changes.
 
 ## Hello world
 
-```csharp
+```csharp @no-compile
 using Isa.Sdk;
 using Isa.Sdk.Zyins;
 
-// Reads ISA_TOKEN from the environment.
-var isa = Isa.WithBearer();
-var result = await isa.Zyins.Prequalify.RunAsync(input);
+// Reads ISA_TOKEN from the environment. PrequalifyAsync routes to v3 by
+// default and returns the flat plans[] result with the uniform pricing table.
+var isa = IsaClient.WithBearer();
+var result = await isa.Zyins.PrequalifyAsync(request);
 ```
 
 ## Authentication
@@ -35,9 +26,9 @@ Three factories cover the three audiences described in [SDK_DESIGN.md §3](https
 
 | Factory | Audience | Env vars read |
 |---|---|---|
-| `Isa.WithBearer(token?)` | Server-to-server | `ISA_TOKEN` |
-| `Isa.WithLicense(credentials?)` | Agent tools (BPP web/desktop) | `ISA_LICENSE_KEYCODE`, `ISA_LICENSE_EMAIL` |
-| `Isa.WithSession(credentials?)` | Embedded forms | `ISA_SESSION_ID`, `ISA_SESSION_SECRET` |
+| `IsaClient.WithBearer(token?)` | Server-to-server | `ISA_TOKEN` |
+| `IsaClient.WithLicense(credentials?)` | Agent tools (BPP web/desktop) | `ISA_LICENSE_KEYCODE`, `ISA_LICENSE_EMAIL` |
+| `IsaClient.WithSession(credentials?)` | Embedded forms | `ISA_SESSION_ID`, `ISA_SESSION_SECRET` |
 
 Missing required env vars throw `IsaConfigException` synchronously at construction; the client never silently misbehaves.
 
@@ -45,20 +36,29 @@ Missing required env vars throw `IsaConfigException` synchronously at constructi
 
 ```csharp
 using Isa.Sdk;
+using Isa.Sdk.Catalog;
 using Isa.Sdk.Zyins;
 
-var isa = await Isa.WithKeycodeAsync(new KeycodeOptions
+var isa = await IsaClient.WithKeycodeAsync(new LicenseOptions
 {
-    Keycode = "SDV-HWH-WDD",
+    Keycode = "ABC-123-XYZ",
     Email   = "john.doe@acme-agency.com",
 });
 
-var result = await isa.Zyins.Prequalify.RunAsync(new PrequalifyInput
+var result = await isa.Zyins.PrequalifyAsync(new PrequalifyV3Request(
+    Applicant: new Applicant
+    {
+        Dob = "1962-04-18", Sex = Sex.Male, State = "NC",
+        HeightInches = 70, WeightPounds = 195,
+    },
+    Coverage: Coverage.ByFaceValue(25_000),
+    Products: new[] { Products.Fex.AetnaAccendo }));
+
+foreach (var offer in result.Plans)
 {
-    Applicant = new Applicant { Dob = "1962-04-18", Sex = Sex.Male, State = "NC" },
-    Coverage  = Coverage.FaceValue(25_000),
-});
-Console.WriteLine(result.Data.Plans[0].MonthlyPremium);
+    var headline = V3Grouping.OfferPremium(offer);
+    Console.WriteLine($"{offer.Carrier.Name} {offer.Product.Name}: {headline?.Amount.Display}");
+}
 ```
 
 ## Per-surface API versions
@@ -74,10 +74,10 @@ foreach (var (surface, version) in BundledApiVersions.Map)
 {
     Console.WriteLine($"{surface} => {version}");
 }
-// prequalify => v2
-// quote      => v2
-// datasets   => v2
-// reference  => v2
+// prequalify => v3
+// quote      => v3
+// datasets   => v3
+// reference  => v3
 // sessions   => v1
 // branding   => v1
 // cases      => v1
@@ -87,11 +87,15 @@ Pin individual surfaces with an `ApiVersion` override dictionary. There is
 **no** `default` key and **no** string shorthand — resolution is
 `ApiVersion.TryGetValue(surface, …) ?? BundledApiVersions.Map[surface]`:
 
+The per-surface `ApiVersion` override map lives on `ZyInsClientOptions`:
+
 ```csharp
-var isa = await Isa.WithKeycodeAsync(new KeycodeOptions
+using Isa.Sdk.Zyins;
+using Isa.Sdk.Zyins.Options;
+
+var zyins = new ZyInsClient(new ZyInsClientOptions
 {
-    Keycode = "SDV-HWH-WDD",
-    Email   = "john.doe@acme-agency.com",
+    Token = Environment.GetEnvironmentVariable("ISA_TOKEN")!,
     ApiVersion = new Dictionary<string, IsaApiVersion>
     {
         ["quote"] = IsaApiVersion.V2,   // pin only quote; everything else bundled
@@ -99,38 +103,38 @@ var isa = await Isa.WithKeycodeAsync(new KeycodeOptions
 });
 ```
 
-The release that retargets `prequalify` / `quote` / `datasets` / `reference`
-to `v3` will bump those entries. See [SDK syntax proposal §2.7][syntax-27].
+`prequalify` / `quote` / `datasets` / `reference` default to `v3` — call
+`PrequalifyAsync` / `QuoteAsync` for the flat `plans[]` shape and the Money
+primitive. Pin `["prequalify"] = IsaApiVersion.V2` only when a consumer still
+needs the legacy v2 shape. See [SDK syntax proposal §2.7][syntax-27].
 
 [syntax-27]: ../../docs/sdk-syntax-proposal.md#27-versioning--per-surface-not-global
 
-## Reference data — `.Match()`
+## Reference data — `.MatchAsync()`
 
 The unversioned `isa.Zyins.Reference` namespace canonicalizes free-text
 medication and condition input. Unknown text never rejects — it returns a
 structured `Concept` with `IsKnown=false`, so the final canonicalization
 fires server-side at `/vN/prequalify`:
 
-```csharp
-var ds = await isa.Zyins.Datasets.GetAsync(new DatasetsGetInput
-{
-    Include = new[] { "conditions", "medications" },
-});
+The bundleless `MatchAsync` lazily fetches and caches the reference
+catalog on its first call — no explicit dataset fetch is required.
 
-var insulin = isa.Zyins.Medications.Match("insulin");
+```csharp
+var insulin = await isa.Zyins.Medications.MatchAsync("insulin");
 Console.WriteLine($"{insulin.Id}  {insulin.Name}  {insulin.IsKnown}");
 // med_01KSR2WVAGC05ZGR6FA4QYEB12  INSULIN  True
 
 // Symmetric traversal — which conditions is insulin used for?
-var usedFor = insulin.Conditions(ReferenceSort.MostCommonFirst);
+var usedFor = insulin.Conditions(Sort.MostCommonFirst);
 // frequency-ordered list; cond_01KSR2WVAGC05ZGR6FA4QYEA8X first
 
-var novel = isa.Zyins.Medications.Match("NewExperimental XR 2026");
+var novel = await isa.Zyins.Medications.MatchAsync("NewExperimental XR 2026");
 // novel.IsKnown == false; novel.InputText == "NewExperimental XR 2026"
 ```
 
-`ReferenceSort.MostCommonFirst` and `ReferenceSort.Alphabetical` are the two
-supported orderings.
+`Sort.MostCommonFirst` and `Sort.Alphabetical` (from
+`Isa.Sdk.Zyins.Reference`) are the two supported orderings.
 
 ## Case storage — bring your own
 
@@ -138,10 +142,12 @@ supported orderings.
 the zero-knowledge store — ISA's servers only hold ciphertext and an opaque
 ID. To plug a carrier-controlled store, pass your adapter at construction:
 
-```csharp
-var isa = await Isa.WithKeycodeAsync(new KeycodeOptions
+```csharp @no-compile
+using Isa.Sdk.Zyins;
+
+var zyins = new ZyInsClient(new ZyInsClientOptions
 {
-    Keycode = keycode, Email = email,
+    Token = Environment.GetEnvironmentVariable("ISA_TOKEN")!,
     CaseStorage = new CarrierCaseStorage(),  // optional; default = ZeroKnowledgeCaseStorage
 });
 ```
@@ -151,11 +157,11 @@ bring-your-own pattern.
 
 ## Thread safety
 
-`Isa` is thread-safe and supports `Task.WhenAll` for parallel calls. Construct once per token / process; share the same instance across requests. Sub-clients (`Zyins.Prequalify`, `Zyins.Quote`, `Zyins.Datasets`, ...) hold no per-call state.
+`IsaClient` is thread-safe and supports `Task.WhenAll` for parallel calls. Construct once per token / process; share the same instance across requests. Sub-clients (`Zyins.Prequalify`, `Zyins.Quote`, `Zyins.Datasets`, ...) hold no per-call state.
 
 ```csharp
-var isa = Isa.WithBearer();
-var tasks = applicants.Select(a => isa.Zyins.Prequalify.RunAsync(BuildInput(a)));
+var isa = IsaClient.WithBearer();
+var tasks = applicants.Select(a => isa.Zyins.PrequalifyAsync(BuildRequest(a)));
 var results = await Task.WhenAll(tasks);
 ```
 
@@ -203,7 +209,7 @@ The SDK exposes the BPP license-lifecycle surface and the platform readiness pro
 using Isa.Sdk;
 using Isa.Sdk.Zyins;
 
-var isa = Isa.WithBearer("isa_live_4fjK2nQ7mX1aB8sR9pZ3");
+var isa = IsaClient.WithBearer("isa_live_4fjK2nQ7mX1aB8sR9pZ3");
 
 var result = await isa.Zyins.License.CheckAsync(new LicenseCheckRequest
 {

@@ -1,14 +1,14 @@
-// <c>Isa.Builder</c> — fluent constructor for the unified
-// <see cref="Isa"/> facade. Mirrors the locked TS API
-// (<c>await Isa.withKeycode({ keycode, email, autocorrector?, matchAlgorithm?, autocompleteAlgorithm? })</c>).
+// <c>IsaClient.Builder</c> — fluent constructor for the unified
+// <see cref="IsaClient"/> facade. Mirrors the locked TS API
+// (<c>await IsaClient.withKeycode({ keycode, email, autocorrector?, matchAlgorithm?, autocompleteAlgorithm? })</c>).
 //
 // The builder is the only documented entry point for injecting custom
 // <see cref="Isa.Sdk.Zyins.Reference.IAutocorrector"/> /
 // <see cref="Isa.Sdk.Zyins.Reference.IMatchAlgorithm"/> /
 // <see cref="Isa.Sdk.Zyins.Reference.IAutocompleteAlgorithm"/> adapters.
 // Omitting an adapter falls back to the corresponding <c>Default*</c>
-// implementation. The credential factories (<see cref="Isa.WithKeycode(string, string)"/>,
-// <see cref="Isa.WithBearer(string)"/>, etc.) remain the convenient
+// implementation. The credential factories (<see cref="IsaClient.WithKeycode(string, string)"/>,
+// <see cref="IsaClient.WithBearer(string)"/>, etc.) remain the convenient
 // path when defaults are sufficient.
 using System;
 using System.Threading.Tasks;
@@ -18,9 +18,9 @@ using Isa.Sdk.Zyins.Reference;
 
 namespace Isa.Sdk;
 
-public sealed partial class Isa
+public sealed partial class IsaClient
 {
-    /// <summary>Begin a fluent <see cref="Isa"/> construction. Pick a
+    /// <summary>Begin a fluent <see cref="IsaClient"/> construction. Pick a
     /// credential mode via <see cref="IsaBuilder.WithKeycode(string, string)"/>
     /// / <see cref="IsaBuilder.WithBearer(string)"/> /
     /// <see cref="IsaBuilder.WithSession(string, string)"/>, then layer
@@ -29,13 +29,13 @@ public sealed partial class Isa
     public static IsaBuilder Builder() => new();
 }
 
-/// <summary>Fluent constructor for <see cref="Isa"/>. Adapter overrides
+/// <summary>Fluent constructor for <see cref="IsaClient"/>. Adapter overrides
 /// are wholesale-replacement: the supplied instance is used verbatim
 /// (no chaining, no decoration). To compose, wrap the previous adapter
 /// in your custom impl before calling <c>With*</c>.</summary>
 /// <example>
 /// <code>
-/// var isa = Isa.Builder()
+/// var isa = IsaClient.Builder()
 ///     .WithKeycode("ABC-123-XYZ", "agent@example.com")
 ///     .WithAutocorrector(myCustomAutocorrector)
 ///     .Build();
@@ -120,28 +120,28 @@ public sealed class IsaBuilder
         return this;
     }
 
-    /// <summary>Build the <see cref="Isa"/> instance. Picks the
+    /// <summary>Build the <see cref="IsaClient"/> instance. Picks the
     /// credential mode by which <c>With*</c> setter was last called;
     /// resolution order: bearer, keycode+email, session, form.</summary>
-    public Isa Build()
+    public IsaClient Build()
     {
         var isa = ResolveCredentialMode();
         isa.Zyins.AttachAdapters(_autocorrector, _matchAlgorithm, _autocompleteAlgorithm);
         return isa;
     }
 
-    private Isa ResolveCredentialMode()
+    private IsaClient ResolveCredentialMode()
     {
-        if (!string.IsNullOrWhiteSpace(_bearerToken)) return Isa.WithBearer(_bearerToken, _env);
+        if (!string.IsNullOrWhiteSpace(_bearerToken)) return IsaClient.WithBearer(_bearerToken, _env);
         if (!string.IsNullOrWhiteSpace(_keycode) && !string.IsNullOrWhiteSpace(_email))
-            return Isa.WithLicense(_keycode!, _email!, _env);
+            return IsaClient.WithLicense(_keycode!, _email!, _env);
         if (!string.IsNullOrWhiteSpace(_sessionId) && !string.IsNullOrWhiteSpace(_sessionSecret))
-            return Isa.WithSession(
+            return IsaClient.WithSession(
                 new SessionOptions { SessionId = _sessionId!, SessionSecret = _sessionSecret! },
                 _env);
         if (!string.IsNullOrWhiteSpace(_formToken))
-            return Isa.ForForm(new FormOptions { FormToken = _formToken! }, _env);
+            return IsaClient.ForForm(new FormOptions { FormToken = _formToken! }, _env);
         throw new ArgumentException(
-            "Isa.Builder.Build: no credential mode supplied. Call one of WithKeycode/WithBearer/WithSession/ForForm before Build.");
+            "IsaClient.Builder.Build: no credential mode supplied. Call one of WithKeycode/WithBearer/WithSession/ForForm before Build.");
     }
 }

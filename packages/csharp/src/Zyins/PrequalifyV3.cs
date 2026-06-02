@@ -17,6 +17,7 @@ using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using Isa.Sdk.Core;
+using Product = global::Isa.Sdk.Catalog.Product;
 
 namespace Isa.Sdk.Zyins;
 

@@ -218,7 +218,7 @@ public sealed class LicenseSubClient
     private const string DeactivateOperation = "license_deactivate";
 
     private readonly OperationContext _ctx;
-    // Optional credential state — populated only for license-mode Isa
+    // Optional credential state — populated only for license-mode IsaClient
     // instances. When present, the zero-arg overloads fill defaults from
     // the state and the activate path auto-stashes the returned key.
     private readonly IsaCredentialState? _state;
@@ -279,8 +279,8 @@ public sealed class LicenseSubClient
     public Task<LicenseActivateResult> ActivateAsync(CancellationToken ct = default)
     {
         var state = _state ?? throw new InvalidOperationException(
-            "ActivateAsync() with no args requires a license-mode Isa. " +
-            "Use Isa.WithLicense(keycode, email) or pass a request explicitly.");
+            "ActivateAsync() with no args requires a license-mode IsaClient. " +
+            "Use IsaClient.WithLicense(keycode, email) or pass a request explicitly.");
         return ActivateAsync(new LicenseActivateRequest
         {
             Email = state.Email,
@@ -355,8 +355,8 @@ public sealed class LicenseSubClient
     public Task<LicenseCheckResult> CheckAsync(CancellationToken ct = default)
     {
         var state = _state ?? throw new InvalidOperationException(
-            "CheckAsync() with no args requires a license-mode Isa. " +
-            "Use Isa.WithLicense(keycode, email) or pass a request explicitly.");
+            "CheckAsync() with no args requires a license-mode IsaClient. " +
+            "Use IsaClient.WithLicense(keycode, email) or pass a request explicitly.");
         return CheckAsync(new LicenseCheckRequest
         {
             Email = state.Email,
@@ -370,8 +370,8 @@ public sealed class LicenseSubClient
     public Task<LicenseDeactivateResult> DeactivateAsync(CancellationToken ct = default)
     {
         var state = _state ?? throw new InvalidOperationException(
-            "DeactivateAsync() with no args requires a license-mode Isa. " +
-            "Use Isa.WithLicense(keycode, email) or pass a request explicitly.");
+            "DeactivateAsync() with no args requires a license-mode IsaClient. " +
+            "Use IsaClient.WithLicense(keycode, email) or pass a request explicitly.");
         return DeactivateAsync(new LicenseDeactivateRequest
         {
             Email = state.Email,

@@ -15,6 +15,7 @@ using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using Isa.Sdk.Core;
+using Product = global::Isa.Sdk.Catalog.Product;
 
 namespace Isa.Sdk.Zyins;
 
@@ -175,10 +176,21 @@ internal static class V3WireBuilder
             writer.WritePropertyName("coverage");
             WriteV3Coverage(writer, coverage, applicant.State, applicant.Zip);
 
-            // products[]
+            // products[] — serialize the opaque prod_<uuid> id only.
+            // A product without an id is a hard error: the server silently
+            // returns zero plans for any non-id value (the booby-trap the
+            // spec calls out). Fail here so callers see a clear message.
             writer.WritePropertyName("products");
             writer.WriteStartArray();
-            foreach (var p in products) writer.WriteStringValue(p.Token);
+            foreach (var p in products)
+            {
+                var id = p?.Id;
+                if (string.IsNullOrEmpty(id))
+                    throw new InvalidOperationException(
+                        "V3WireBuilder: product has no id — cannot serialize to wire. " +
+                        "Use Products.Fex.* / Products.Medsup.* catalog constants.");
+                writer.WriteStringValue(id);
+            }
             writer.WriteEndArray();
 
             // include_ineligible (only option carried into the v3 envelope)
@@ -373,12 +385,17 @@ internal static class V3WireBuilder
             writer.WriteEndArray();
             writer.WriteEndObject();
 
-            // products
+            // products — serialize the opaque prod_<uuid> id, same as v3 prequalify.
             writer.WritePropertyName("products");
             writer.WriteStartArray();
             foreach (var p in products)
             {
-                writer.WriteStringValue(p.Token);
+                var id = p?.Id;
+                if (string.IsNullOrEmpty(id))
+                    throw new InvalidOperationException(
+                        "V3WireBuilder: product has no id — cannot serialize to wire. " +
+                        "Use Products.Fex.* / Products.Medsup.* catalog constants.");
+                writer.WriteStringValue(id);
             }
             writer.WriteEndArray();
 

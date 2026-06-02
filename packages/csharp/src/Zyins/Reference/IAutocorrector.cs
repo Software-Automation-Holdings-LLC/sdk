@@ -17,7 +17,7 @@
 // Tier 1 invariants:
 //   - Public types live in <c>Isa.Sdk.Zyins.Reference</c>.
 //   - The interface stays minimal: one method, one struct argument.
-//   - Default-impl factories on <see cref="Isa.Sdk.Isa.AutocorrectorFactory"/>
+//   - Default-impl factories on <see cref="Isa.Sdk.IsaClient.Autocorrector"/>
 //     and <see cref="Isa.Sdk.Zyins.ZyInsClient.Autocorrector"/>.
 using System.Collections.Generic;
 
@@ -50,7 +50,7 @@ public sealed record AutocorrectorAppliedEvent(string From, string To, int Windo
 /// <summary>Free-text → corrected-text adapter. Tier-1 surface.</summary>
 /// <example>
 /// <code>
-/// var corrector = Isa.Autocorrector.Create(new Dictionary&lt;string,string&gt;
+/// var corrector = IsaClient.Autocorrector.Create(new Dictionary&lt;string,string&gt;
 /// {
 ///     ["HYPRTENSION"] = "HYPERTENSION",
 /// });

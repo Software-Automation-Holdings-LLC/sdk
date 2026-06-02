@@ -5,7 +5,7 @@ namespace Isa.Sdk.Webhooks;
 
 /// <summary>
 /// Accessor for webhook helpers (signature verification, replay tolerance),
-/// reached via <see cref="global::Isa.Sdk.Isa.Webhooks"/>.
+/// reached via <see cref="global::Isa.Sdk.IsaClient.Webhooks"/>.
 /// </summary>
 /// <example>
 /// <code>
@@ -15,7 +15,7 @@ namespace Isa.Sdk.Webhooks;
 /// </example>
 public sealed class WebhooksNamespace
 {
-    /// <summary>Internal: bound by <see cref="global::Isa.Sdk.Isa"/> at construction.</summary>
+    /// <summary>Internal: bound by <see cref="global::Isa.Sdk.IsaClient"/> at construction.</summary>
     public WebhooksNamespace()
     {
     }

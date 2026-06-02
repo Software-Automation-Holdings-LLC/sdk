@@ -6,6 +6,10 @@
 using System;
 using System.Collections.Generic;
 using System.Text.Json.Serialization;
+// Re-export the catalog Product so callers can use Products.Fex.* constants
+// directly with PrequalifyV3Request and QuoteV3Request without an extra using.
+using Product = global::Isa.Sdk.Catalog.Product;
+using Products = global::Isa.Sdk.Catalog.Products;
 
 namespace Isa.Sdk.Zyins;
 
@@ -190,122 +194,6 @@ public sealed record Coverage
     }
 }
 
-/// <summary>One product to consider in the underwriting run.</summary>
-public sealed record Product(string Brand, string Token);
-
-/// <summary>Product type category.</summary>
-public enum ProductType
-{
-    /// <summary>Final expense / burial insurance.</summary>
-    FinalExpense,
-    /// <summary>Term life insurance.</summary>
-    Term,
-    /// <summary>Whole life insurance.</summary>
-    WholeLife,
-    /// <summary>Medicare supplement.</summary>
-    MedicareSupplement,
-    /// <summary>Universal life.</summary>
-    Universal,
-    /// <summary>Indexed universal life.</summary>
-    Indexed,
-}
-
-/// <summary>Full product entry with display metadata.</summary>
-public sealed record ProductEntry(
-    string Brand,
-    ProductType Type,
-    string WireToken,
-    string DisplayName);
-
-/// <summary>In-memory catalog of known products. Build via
-/// <see cref="DefaultCatalog"/> or <see cref="FromDatasets"/>.</summary>
-public sealed class ProductCatalog
-{
-    private readonly IReadOnlyList<ProductEntry> _products;
-
-    private ProductCatalog(IReadOnlyList<ProductEntry> products) => _products = products;
-
-    /// <summary>The static built-in catalog shipped with the SDK.</summary>
-    public static ProductCatalog DefaultCatalog() => new(DefaultProducts());
-
-    /// <summary>Build a catalog from a datasets bundle returned by the datasets endpoint.
-    /// Entries missing required fields are silently skipped.</summary>
-    public static ProductCatalog FromDatasets(IReadOnlyDictionary<string, object?> bundle)
-    {
-        if (!bundle.TryGetValue("products", out var raw) ||
-            raw is not System.Text.Json.JsonElement elem ||
-            elem.ValueKind != System.Text.Json.JsonValueKind.Object)
-        {
-            return new ProductCatalog(Array.Empty<ProductEntry>());
-        }
-        var products = new List<ProductEntry>();
-        foreach (var kvp in elem.EnumerateObject())
-        {
-            if (kvp.Value.ValueKind != System.Text.Json.JsonValueKind.Array) continue;
-            foreach (var entry in kvp.Value.EnumerateArray())
-            {
-                var p = RawEntryToProduct(entry);
-                if (p is not null) products.Add(p);
-            }
-        }
-        return new ProductCatalog(products);
-    }
-
-    /// <summary>Return the product matching brand and type, or throw.</summary>
-    public ProductEntry Find(string brand, ProductType type) =>
-        TryFind(brand, type) ?? throw new KeyNotFoundException(
-            $"ProductCatalog.Find: no product matches brand={brand} type={type}");
-
-    /// <summary>Return the product matching brand and type, or null.</summary>
-    public ProductEntry? TryFind(string brand, ProductType type) =>
-        _products.FirstOrDefault(p => p.Brand == brand && p.Type == type);
-
-    /// <summary>Return the product matching the wire token slug, or throw.</summary>
-    public ProductEntry FindBySlug(string slug) =>
-        TryFindBySlug(slug) ?? throw new KeyNotFoundException(
-            $"ProductCatalog.FindBySlug: no product matches slug={slug}");
-
-    /// <summary>Return the product matching the wire token slug, or null.</summary>
-    public ProductEntry? TryFindBySlug(string slug) =>
-        _products.FirstOrDefault(p => p.WireToken == slug);
-
-    /// <summary>All products in the catalog.</summary>
-    public IReadOnlyList<ProductEntry> List() => _products;
-
-    private static ProductEntry? RawEntryToProduct(System.Text.Json.JsonElement entry)
-    {
-        if (!entry.TryGetProperty("identifier", out var id) ||
-            !entry.TryGetProperty("carrier", out var carrier) ||
-            !entry.TryGetProperty("name", out var name))
-            return null;
-        var identifier = id.GetString();
-        var carrierStr = carrier.GetString();
-        var nameStr = name.GetString();
-        if (string.IsNullOrEmpty(identifier) || string.IsNullOrEmpty(carrierStr) || string.IsNullOrEmpty(nameStr))
-            return null;
-        var cls = entry.TryGetProperty("product", out var prod) ? (prod.GetString() ?? "") : "";
-        return new ProductEntry(carrierStr!, MapProductClass(cls), identifier!, nameStr!);
-    }
-
-    private static ProductType MapProductClass(string cls) =>
-        cls.ToLowerInvariant() switch
-        {
-            "fex"                                    => ProductType.FinalExpense,
-            "term"                                   => ProductType.Term,
-            "wl" or "whole_life" or "wholelife"      => ProductType.WholeLife,
-            "medsup" or "medicare_supplement"         => ProductType.MedicareSupplement,
-            "ul" or "universal"                      => ProductType.Universal,
-            "indexed"                                => ProductType.Indexed,
-            _                                        => ProductType.FinalExpense,
-        };
-
-    private static IReadOnlyList<ProductEntry> DefaultProducts() =>
-    [
-        new("colonial-penn",  ProductType.FinalExpense,       "colonial-penn.final-expense",   "Colonial Penn Final Expense"),
-        new("mutual-of-omaha",ProductType.FinalExpense,       "mutual-of-omaha.final-expense", "Mutual of Omaha Final Expense"),
-        new("aetna",          ProductType.MedicareSupplement, "aetna.medicare-supplement",     "Aetna Medicare Supplement"),
-    ];
-}
 
 /// <summary>Input to <see cref="ZyInsClient.Prequalify"/>.</summary>
 public sealed record PrequalifyInput

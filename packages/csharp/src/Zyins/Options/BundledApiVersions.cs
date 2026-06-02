@@ -32,10 +32,10 @@ public static class BundledApiVersions
     public static readonly IReadOnlyDictionary<string, IsaApiVersion> Map =
         new Dictionary<string, IsaApiVersion>
         {
-            ["prequalify"] = IsaApiVersion.V2,
-            ["quote"] = IsaApiVersion.V2,
-            ["datasets"] = IsaApiVersion.V2,
-            ["reference"] = IsaApiVersion.V2,
+            ["prequalify"] = IsaApiVersion.V3,
+            ["quote"] = IsaApiVersion.V3,
+            ["datasets"] = IsaApiVersion.V3,
+            ["reference"] = IsaApiVersion.V3,
             ["sessions"] = IsaApiVersion.V1,
             ["branding"] = IsaApiVersion.V1,
             ["cases"] = IsaApiVersion.V1,

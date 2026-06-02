@@ -51,8 +51,8 @@ public sealed class ProxyCallOptions
 }
 
 /// <summary>
-/// Session-signed `/v1/call` entry point reached via <see cref="global::Isa.Sdk.Isa.Proxy"/>.
-/// Carries the session binding for the parent <see cref="global::Isa.Sdk.Isa"/>;
+/// Session-signed `/v1/call` entry point reached via <see cref="global::Isa.Sdk.IsaClient.Proxy"/>.
+/// Carries the session binding for the parent <see cref="global::Isa.Sdk.IsaClient"/>;
 /// non-session callers see <see cref="global::Isa.Sdk.Core.IsaConfigException"/>
 /// at the boundary so they know to exchange credentials first.
 /// </summary>
@@ -87,7 +87,7 @@ public sealed class ProxyNamespace
     }
 
     /// <summary>
-    /// Construct a session-bound proxy namespace. Used by <see cref="global::Isa.Sdk.Isa"/>
+    /// Construct a session-bound proxy namespace. Used by <see cref="global::Isa.Sdk.IsaClient"/>
     /// to plumb credentials; tests pass a handler + fixed clock to drive
     /// deterministic outbound assertions.
     /// </summary>

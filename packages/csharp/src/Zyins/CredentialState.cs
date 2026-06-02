@@ -1,9 +1,9 @@
-// Shared credential state for license-mode `Isa` instances. The shared
+// Shared credential state for license-mode `IsaClient` instances. The shared
 // object is mutated in place when `Licenses.ActivateAsync()` returns a
 // fresh license key; every downstream sub-client observes the new value
 // without re-bootstrap because they all hold the same reference.
 //
-// Persistence is driven through `ICredentialStore` (passed via `Isa`
+// Persistence is driven through `ICredentialStore` (passed via `IsaClient`
 // construction). The store is the source of truth across process boots;
 // the in-memory state is the source of truth within one process so
 // per-call AsyncStorage round-trips stay off the hot path.
@@ -89,7 +89,7 @@ public sealed record LicenseRefreshedEvent
 }
 
 /// <summary>Holds the shared license credentials and an event channel for
-/// <c>OnLicenseRefreshed</c>. One instance per license-mode <see cref="Isa"/>.</summary>
+/// <c>OnLicenseRefreshed</c>. One instance per license-mode <see cref="IsaClient"/>.</summary>
 public sealed class IsaCredentialState
 {
     private readonly ICredentialStore _store;

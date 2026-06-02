@@ -1,11 +1,11 @@
-// Top-level Isa.Sdk.Isa facade. Single entry point across all products
+// Top-level Isa.Sdk.IsaClient facade. Single entry point across all products
 // (zyins, rapidsign, proxy, webhooks). Mirrors `isa.zyins.*`,
 // `isa.rapidsign.*`, `isa.proxy.*`, `isa.webhooks.*` in the TS/Python/Go
 // SDKs per SDK_DESIGN.md §0 (consolidation v0.3.0).
 //
 // Hello-world:
 //
-//     var isa = Isa.WithBearer();                       // reads ISA_TOKEN
+//     var isa = IsaClient.WithBearer();                 // reads ISA_TOKEN
 //     var result = await isa.Zyins.Prequalify.RunAsync(req);
 //
 // Missing env vars produce IsaConfigException synchronously; the
@@ -49,7 +49,7 @@ public sealed record SessionOptions
 }
 
 /// <summary>Embedded-form token credentials. Used by
-/// <see cref="Isa.ForForm(FormOptions)"/> to bootstrap an SDK instance
+/// <see cref="IsaClient.ForForm(FormOptions)"/> to bootstrap an SDK instance
 /// for hosted-form integrations.</summary>
 public sealed record FormOptions
 {
@@ -67,19 +67,19 @@ public sealed record FormOptions
 /// </summary>
 /// <example>
 /// <code>
-/// var isa = Isa.WithBearer();
+/// var isa = IsaClient.WithBearer();
 /// var quote = await isa.Zyins.Prequalify.RunAsync(req);
 /// </code>
 /// </example>
-public sealed partial class Isa
+public sealed partial class IsaClient
 {
     /// <summary>ZyINS underwriting and prequalification surface.</summary>
     public ZyInsClient Zyins { get; }
 
     /// <summary>License-scoped account operations (branding, preferences, cases,
     /// email, reference-data). Available only on license-mode instances built
-    /// via <see cref="WithLicense(string, string)"/> /
-    /// <see cref="WithLicenseAsync(LicenseOptions)"/> / <see cref="FromEnv()"/>.</summary>
+    /// via <see cref="IsaClient.WithLicense(string, string)"/> /
+    /// <see cref="IsaClient.WithLicenseAsync(LicenseOptions)"/> / <see cref="IsaClient.FromEnv()"/>.</summary>
     public global::Isa.Sdk.Account.AccountNamespace Account { get; }
 
     /// <summary>Fires when the SDK observes a fresh license key (typically the
@@ -90,7 +90,7 @@ public sealed partial class Isa
         add
         {
             var state = Zyins.CredentialState ?? throw new InvalidOperationException(
-                "Isa.OnLicenseRefreshed is available only on license-mode instances.");
+                "IsaClient.OnLicenseRefreshed is available only on license-mode instances.");
             if (value is not null)
             {
                 // Hold the unsubscribe handle in the shared multicast table.
@@ -118,7 +118,7 @@ public sealed partial class Isa
     /// <summary>Webhook verification helpers (HMAC, timestamp tolerance).</summary>
     public global::Isa.Sdk.Webhooks.WebhooksNamespace Webhooks { get; }
 
-    private Isa(ZyInsClient zyins, string? sessionId = null, string? sessionSecret = null)
+    private IsaClient(ZyInsClient zyins, string? sessionId = null, string? sessionSecret = null)
     {
         Zyins = zyins;
         RapidSign = new global::Isa.Sdk.RapidSign.RapidSignNamespace();
@@ -138,15 +138,15 @@ public sealed partial class Isa
     /// <exception cref="IsaConfigException">When no token is supplied AND env is unset.</exception>
     /// <example>
     /// <code>
-    /// var isa = Isa.WithBearer();              // env-driven
-    /// var isa = Isa.WithBearer("isa_live_…");  // explicit
+    /// var isa = IsaClient.WithBearer();              // env-driven
+    /// var isa = IsaClient.WithBearer("isa_live_…");  // explicit
     /// </code>
     /// </example>
-    public static Isa WithBearer(string? token = null)
+    public static IsaClient WithBearer(string? token = null)
         => new(ZyinsFactory.WithBearer(token, options: null, env: SystemEnvironment.Instance));
 
     /// <summary>Test seam: same as <see cref="WithBearer(string)"/> but with an injectable environment.</summary>
-    public static Isa WithBearer(string? token, IEnvironment env)
+    public static IsaClient WithBearer(string? token, IEnvironment env)
         => new(ZyinsFactory.WithBearer(token, options: null, env: env));
 
     /// <summary>
@@ -156,18 +156,18 @@ public sealed partial class Isa
     /// <exception cref="IsaConfigException">When keycode or email is missing.</exception>
     /// <example>
     /// <code>
-    /// var isa = await Isa.WithLicenseAsync(new LicenseOptions
+    /// var isa = await IsaClient.WithLicenseAsync(new LicenseOptions
     /// {
     ///     Keycode = "ABC-123-XYZ",
     ///     Email   = "agent@example.com",
     /// });
     /// </code>
     /// </example>
-    public static Task<Isa> WithLicenseAsync(LicenseOptions? options = null)
+    public static Task<IsaClient> WithLicenseAsync(LicenseOptions? options = null)
         => WithLicenseAsync(options, SystemEnvironment.Instance);
 
     /// <summary>Test seam: env-injectable variant.</summary>
-    public static Task<Isa> WithLicenseAsync(LicenseOptions? options, IEnvironment env)
+    public static Task<IsaClient> WithLicenseAsync(LicenseOptions? options, IEnvironment env)
     {
         try
         {
@@ -180,11 +180,11 @@ public sealed partial class Isa
             };
             var store = options?.CredentialStore ?? new InMemoryCredentialStore();
             var client = ZyinsFactory.WithLicense(creds, options: null, env: env, store: store);
-            return Task.FromResult(new Isa(client));
+            return Task.FromResult(new IsaClient(client));
         }
         catch (Exception ex)
         {
-            return Task.FromException<Isa>(ex);
+            return Task.FromException<IsaClient>(ex);
         }
     }
 
@@ -192,53 +192,53 @@ public sealed partial class Isa
     /// <see cref="LicenseOptions"/> with just <c>Keycode</c> + <c>Email</c>.
     /// The SDK mints a device id automatically; an in-memory credential
     /// store backs the license key.</summary>
-    public static Isa WithLicense(string keycode, string email)
+    public static IsaClient WithLicense(string keycode, string email)
         => WithLicense(keycode, email, SystemEnvironment.Instance);
 
     /// <summary>Canonical license-mode factory per the locked SDK syntax
-    /// (TS canon: <c>Isa.withKeycode</c>). Equivalent to
+    /// (TS canon: <c>IsaClient.withKeycode</c>). Equivalent to
     /// <see cref="WithLicense(string, string)"/>, which is retained as
     /// a deprecated alias.</summary>
-    public static Isa WithKeycode(string keycode, string email)
+    public static IsaClient WithKeycode(string keycode, string email)
         => WithLicense(keycode, email);
 
     /// <summary>Test seam: env-injectable variant of
     /// <see cref="WithKeycode(string, string)"/>.</summary>
-    public static Isa WithKeycode(string keycode, string email, IEnvironment env)
+    public static IsaClient WithKeycode(string keycode, string email, IEnvironment env)
         => WithLicense(keycode, email, env);
 
     /// <summary>Async canonical license-mode factory per the locked SDK
     /// syntax. Mirrors <see cref="WithLicenseAsync(LicenseOptions)"/>.</summary>
-    public static Task<Isa> WithKeycodeAsync(LicenseOptions? options = null)
+    public static Task<IsaClient> WithKeycodeAsync(LicenseOptions? options = null)
         => WithLicenseAsync(options);
 
     /// <summary>Construct an SDK instance from an embedded-form token.
     /// Canonical factory per the locked SDK syntax (TS canon:
-    /// <c>Isa.forForm</c>). The form token is exchanged via
+    /// <c>IsaClient.forForm</c>). The form token is exchanged via
     /// <c>POST /v1/sessions/reissue</c> on first use; in the C# SDK this
     /// is a thin bootstrap that wraps the token as the bearer credential
     /// for subsequent requests until session reissue is wired.</summary>
     /// <exception cref="ArgumentException">When <paramref name="options"/>
     /// is null or its <c>FormToken</c> is empty.</exception>
-    public static Isa ForForm(FormOptions options)
+    public static IsaClient ForForm(FormOptions options)
         => ForForm(options, SystemEnvironment.Instance);
 
     /// <summary>Test seam: env-injectable variant.</summary>
-    public static Isa ForForm(FormOptions options, IEnvironment env)
+    public static IsaClient ForForm(FormOptions options, IEnvironment env)
     {
         if (options is null) throw new ArgumentNullException(nameof(options));
         if (string.IsNullOrWhiteSpace(options.FormToken))
             throw new ArgumentException("FormToken required", nameof(options));
         var bootstrapToken = FormBootstrapToken(options.FormToken);
-        return new Isa(ZyinsFactory.WithBearer(bootstrapToken, options: null, env: env));
+        return new IsaClient(ZyinsFactory.WithBearer(bootstrapToken, options: null, env: env));
     }
 
     /// <summary>Dispatching factory — picks the right credential path by
     /// argument shape. Canonical factory per the locked SDK syntax (TS
-    /// canon: <c>Isa.authenticate</c>). Resolution order: bearer token,
+    /// canon: <c>IsaClient.authenticate</c>). Resolution order: bearer token,
     /// keycode+email, form token.</summary>
     /// <exception cref="ArgumentException">When no valid combination is supplied.</exception>
-    public static Isa Authenticate(
+    public static IsaClient Authenticate(
         string? token = null,
         string? keycode = null,
         string? email = null,
@@ -246,7 +246,7 @@ public sealed partial class Isa
         => Authenticate(token, keycode, email, formToken, SystemEnvironment.Instance);
 
     /// <summary>Test seam: env-injectable variant of <see cref="Authenticate(string, string, string, string)"/>.</summary>
-    public static Isa Authenticate(
+    public static IsaClient Authenticate(
         string? token,
         string? keycode,
         string? email,
@@ -260,7 +260,7 @@ public sealed partial class Isa
         if (!string.IsNullOrWhiteSpace(formToken))
             return ForForm(new FormOptions { FormToken = formToken! }, env);
         throw new ArgumentException(
-            "Isa.Authenticate: provide one of token, keycode+email, or formToken.");
+            "IsaClient.Authenticate: provide one of token, keycode+email, or formToken.");
     }
 
     private static string FormBootstrapToken(string formToken)
@@ -279,29 +279,29 @@ public sealed partial class Isa
     }
 
     /// <summary>Test seam: env-injectable variant.</summary>
-    public static Isa WithLicense(string keycode, string email, IEnvironment env)
+    public static IsaClient WithLicense(string keycode, string email, IEnvironment env)
     {
         if (string.IsNullOrWhiteSpace(keycode)) throw new ArgumentException("keycode required", nameof(keycode));
         if (string.IsNullOrWhiteSpace(email)) throw new ArgumentException("email required", nameof(email));
         var creds = new LicenseCredentials { Keycode = keycode, Email = email };
         var store = new InMemoryCredentialStore();
         var client = ZyinsFactory.WithLicense(creds, options: null, env: env, store: store);
-        return new Isa(client);
+        return new IsaClient(client);
     }
 
     /// <summary>Construct from environment variables. Reads
     /// <c>ISA_LICENSE_KEYCODE</c> + <c>ISA_LICENSE_EMAIL</c> and returns a
-    /// license-mode <see cref="Isa"/>. Equivalent to
-    /// <c>Isa.WithLicense()</c> with no args, but resolves synchronously
-    /// without a Task.</summary>
-    public static Isa FromEnv() => FromEnv(SystemEnvironment.Instance);
+    /// license-mode <see cref="IsaClient"/>. Equivalent to
+    /// <see cref="WithLicenseAsync(LicenseOptions)"/> with no args, but resolves
+    /// synchronously without a Task.</summary>
+    public static IsaClient FromEnv() => FromEnv(SystemEnvironment.Instance);
 
     /// <summary>Test seam: env-injectable variant of <see cref="FromEnv()"/>.</summary>
-    public static Isa FromEnv(IEnvironment env)
+    public static IsaClient FromEnv(IEnvironment env)
     {
         var store = new InMemoryCredentialStore();
         var client = ZyinsFactory.WithLicense(credentials: null, options: null, env: env, store: store);
-        return new Isa(client);
+        return new IsaClient(client);
     }
 
     /// <summary>
@@ -311,14 +311,14 @@ public sealed partial class Isa
     /// <exception cref="IsaConfigException">When sessionId or sessionSecret is missing.</exception>
     /// <example>
     /// <code>
-    /// var isa = Isa.WithSession();             // env-driven
+    /// var isa = IsaClient.WithSession();             // env-driven
     /// </code>
     /// </example>
-    public static Isa WithSession(SessionOptions? options = null)
+    public static IsaClient WithSession(SessionOptions? options = null)
         => WithSession(options, SystemEnvironment.Instance);
 
     /// <summary>Test seam: env-injectable variant.</summary>
-    public static Isa WithSession(SessionOptions? options, IEnvironment env)
+    public static IsaClient WithSession(SessionOptions? options, IEnvironment env)
     {
         var creds = options is null ? null : new SessionCredentials
         {
@@ -331,6 +331,6 @@ public sealed partial class Isa
         // internals. env-fallback mirrors ZyinsFactory.WithSession.
         var sessionId = options?.SessionId is { Length: > 0 } sid ? sid : env.Get("ISA_SESSION_ID");
         var sessionSecret = options?.SessionSecret is { Length: > 0 } sec ? sec : env.Get("ISA_SESSION_SECRET");
-        return new Isa(client, sessionId, sessionSecret);
+        return new IsaClient(client, sessionId, sessionSecret);
     }
 }

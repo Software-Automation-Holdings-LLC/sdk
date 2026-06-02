@@ -210,97 +210,175 @@ ${byAbbr}
   writeFile('States.cs', content);
 }
 
+// When v2_products.json is absent (CI runners check out only the platform
+// repo, not the sibling engine repo that holds it), the committed Products.cs /
+// Carriers.cs are the source of truth — they carry the real prod_<uuid> ids.
+// Preserve them rather than overwriting with an empty catalog (shipping an empty
+// catalog is the isa-sdk@1.0.1 launch-blocker). With nothing committed to
+// preserve, fail loud rather than let an empty catalog reach a registry.
+function preserveOrFail(names, label) {
+  const missing = names.filter((n) => !existsSync(join(CATALOG_DIR, n)));
+  if (missing.length > 0) {
+    process.stderr.write(
+      `gen-catalog (cs): FATAL: ${label}: v2_products.json not found AND no committed ` +
+        `catalog to preserve (${missing.join(', ')}). Refusing to emit an empty product ` +
+        `catalog. Run where ${join(INSURANCE_REPO, 'v2_products.json')} exists, or commit ` +
+        `a populated catalog first.\n`,
+    );
+    process.exit(1);
+  }
+  gaps.push(`${label}: v2_products.json not found — preserving committed catalog.`);
+  for (const name of names) {
+    process.stderr.write(`gen-catalog (cs): preserved committed ${join(CATALOG_DIR, name)}\n`);
+  }
+}
+
 function genProducts() {
   const path = join(INSURANCE_REPO, 'v2_products.json');
   const raw = tryReadJson(path);
   const sources = ['insurance/v2_products.json'];
 
+  if (!raw) {
+    preserveOrFail(['Products.cs', 'Carriers.cs'], 'Products');
+    return;
+  }
+
   const products = [];
-  if (raw) {
-    for (const [cls, list] of Object.entries(raw)) {
-      if (!Array.isArray(list)) continue;
-      for (const p of list) {
-        if (!p || typeof p !== 'object') continue;
-        const identifier = String(p.identifier || '');
-        if (!identifier) continue;
-        products.push({
-          slug: identifier,
-          productClass: cls,
-          carrierDisplay: String(p.carrier || ''),
-          carrierSlug: slugify(String(p.carrier || '')),
-          displayName: String(p.name || ''),
-          stateVariations: Array.isArray(p.state_variations) ? p.state_variations.map((v) => String(v)) : [],
-        });
+  for (const [cls, list] of Object.entries(raw)) {
+    if (!Array.isArray(list)) continue;
+    for (const p of list) {
+      if (!p || typeof p !== 'object') continue;
+      const identifier = String(p.identifier || '');
+      if (!identifier) continue;
+      const rawId = String(p.id || '');
+      if (!rawId) {
+        process.stderr.write(`gen-catalog: FATAL: product ${identifier} has no id — refusing to generate idless catalog\n`);
+        process.exit(1);
       }
+      products.push({
+        id: 'prod_' + rawId,
+        slug: identifier,
+        productClass: cls,
+        carrierDisplay: String(p.carrier || ''),
+        carrierSlug: slugify(String(p.carrier || '')),
+        displayName: String(p.name || ''),
+      });
     }
-  } else {
-    gaps.push('Products: v2_products.json not found.');
   }
   products.sort((a, b) => a.slug.localeCompare(b.slug));
 
-  const enumMembers = products.map((p) =>
-    `    /// <summary>${p.displayName.replace(/</g,'&lt;').replace(/>/g,'&gt;')} (${p.slug}).</summary>\n    [WireValue("${p.slug}")] ${pascal(p.slug)},`
-  ).join('\n');
+  // Group products by class for nested namespaces.
+  const byClass = new Map();
+  for (const p of products) {
+    const key = p.productClass.charAt(0).toUpperCase() + p.productClass.slice(1).toLowerCase();
+    if (!byClass.has(key)) byClass.set(key, []);
+    byClass.get(key).push(p);
+  }
 
-  const metaInit = products.map((p) => {
-    const stateVars = p.stateVariations.length === 0
-      ? 'Array.Empty<string>()'
-      : `new[] { ${p.stateVariations.map(csStr).join(', ')} }`;
-    return `        ["${p.slug}"] = new ProductMetadata("${p.slug}", ${csStr(p.displayName)}, "${p.carrierSlug}", "${p.productClass}", ${stateVars}),`;
+  // Build nested namespace classes: Fex, Medsup, Preneed, Term.
+  const namespaceBlocks = [...byClass.entries()].sort((a, b) => a[0].localeCompare(b[0])).map(([ns, prods]) => {
+    const fields = prods.map((p) => {
+      const memberName = pascal(p.slug.replace(/^[a-z]+-/, ''));
+      return `        /// <summary>${p.displayName.replace(/</g,'&lt;').replace(/>/g,'&gt;')}.</summary>\n        public static readonly Product ${memberName} = new Product(${csStr(p.id)}, ${csStr(p.displayName)}, "${p.productClass}", "${p.carrierSlug}");`;
+    }).join('\n');
+    return `    /// <summary>Products in the <c>${prods[0]?.productClass ?? ns.toLowerCase()}</c> family.</summary>\n    public static class ${ns}\n    {\n${fields}\n    }`;
+  }).join('\n\n');
+
+  const byIdEntries = products.map((p) => {
+    const ns = p.productClass.charAt(0).toUpperCase() + p.productClass.slice(1).toLowerCase();
+    const memberName = pascal(p.slug.replace(/^[a-z]+-/, ''));
+    return `        [${csStr(p.id)}] = ${ns}.${memberName},`;
+  }).join('\n');
+
+  const allEntries = products.map((p) => {
+    const ns = p.productClass.charAt(0).toUpperCase() + p.productClass.slice(1).toLowerCase();
+    const memberName = pascal(p.slug.replace(/^[a-z]+-/, ''));
+    return `        ${ns}.${memberName},`;
   }).join('\n');
 
   const productsContent = `${HEADER(sources)}using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
-using System.Linq;
-using System.Reflection;
 
 namespace Isa.Sdk.Catalog;
 
-/// <summary>Product slug enum. Each member's wire value is the canonical product
-/// identifier the platform uses in URLs and reference-data lookups.</summary>
-public enum Product
-{
-${enumMembers}
-}
+/// <summary>
+/// A typed product value. Stable across SDK releases inside one wire major.
+/// The <see cref="Id"/> (<c>prod_&lt;uuid&gt;</c>) is the only identity: it
+/// is the value the v3 prequalify <c>products[]</c> filter matches on.
+/// <c>Name</c>, <c>Class</c>, and <c>Carrier</c> are display fields; they
+/// may change when a carrier renames a product. Never use them as identifiers.
+/// </summary>
+/// <param name="Id">Opaque product id (<c>prod_&lt;uuid&gt;</c>). Wire identity for v3 prequalify.</param>
+/// <param name="Name">Human-readable product name. Display only; not a stable key.</param>
+/// <param name="Class">Product family (<c>fex</c>, <c>term</c>, <c>medsup</c>, <c>preneed</c>).</param>
+/// <param name="Carrier">Carrier slug (e.g. <c>aetna</c>). Display only; not a stable key.</param>
+public sealed record Product(string Id, string Name, string Class, string Carrier);
 
-/// <summary>Public metadata for a single <see cref="Product"/>.</summary>
-public sealed record ProductMetadata(
-    string Slug,
-    string DisplayName,
-    string Carrier,
-    string ProductClass,
-    IReadOnlyList<string> StateVariations);
-
-/// <summary>Catalog API for <see cref="Product"/>. Methods return frozen,
-/// sorted views; the underlying tables are constructed once at startup.</summary>
+/// <summary>
+/// Catalog of typed <see cref="Product"/> constants, grouped by product family.
+/// Access constants as <c>Products.Fex.AetnaAccendo</c>, etc.
+///
+/// Reverse lookup by id: <see cref="ById"/> / <see cref="TryById"/>.
+/// No slug-based lookup is intentionally provided — slugs are mutable
+/// display data and must never be used as identity (see spec rationale).
+/// </summary>
 public static class Products
 {
-    private static readonly IReadOnlyDictionary<string, ProductMetadata> METADATA = new ReadOnlyDictionary<string, ProductMetadata>(new Dictionary<string, ProductMetadata>
+${namespaceBlocks}
+
+    private static readonly IReadOnlyDictionary<string, Product> BY_ID =
+        new ReadOnlyDictionary<string, Product>(new Dictionary<string, Product>(StringComparer.Ordinal)
+        {
+${byIdEntries}
+        });
+
+    private static readonly Product[] ALL =
+    [
+${allEntries}
+    ];
+
+    /// <summary>
+    /// Reverse lookup by opaque product id (<c>prod_&lt;uuid&gt;</c>).
+    /// Returns the matching catalog constant, or <c>null</c> when the id is
+    /// not present in the catalog. Callers should use this to re-resolve a
+    /// stored id into a displayable <see cref="Product"/> at render time.
+    /// </summary>
+    public static Product? ById(string id)
     {
-${metaInit}
-    });
+        if (string.IsNullOrEmpty(id)) return null;
+        return BY_ID.TryGetValue(id, out var p) ? p : null;
+    }
 
-    private static readonly Product[] ALL = ((Product[])Enum.GetValues(typeof(Product)))
-        .OrderBy(p => WireValue(p), StringComparer.Ordinal)
-        .ToArray();
+    /// <summary>
+    /// Attempt reverse lookup by opaque product id. Returns <c>true</c> and
+    /// sets <paramref name="product"/> when found; <c>false</c> otherwise.
+    /// </summary>
+    public static bool TryById(string id, out Product? product)
+    {
+        if (string.IsNullOrEmpty(id)) { product = null; return false; }
+        return BY_ID.TryGetValue(id, out product);
+    }
 
-    /// <summary>Every product slug, sorted alphabetically.</summary>
-    public static IReadOnlyList<Product> Values() => ALL;
+    private static readonly IReadOnlyList<Product> ALL_READONLY = Array.AsReadOnly(ALL);
 
-    /// <summary>(<see cref="Product"/>, <see cref="ProductMetadata"/>) pairs in catalog order.</summary>
-    public static IReadOnlyList<(Product Product, ProductMetadata Metadata)> Entries() =>
-        ALL.Select(p => (p, METADATA[WireValue(p)])).ToList().AsReadOnly();
+    /// <summary>Every catalog product, in slug order.</summary>
+    public static IReadOnlyList<Product> Values() => ALL_READONLY;
 
     /// <summary>Products filed by a given carrier slug. Case-insensitive match.</summary>
     public static IReadOnlyList<Product> ByCarrier(string carrier)
     {
         if (carrier is null) throw new ArgumentNullException(nameof(carrier));
         var target = carrier.ToLowerInvariant();
-        return ALL.Where(p => METADATA[WireValue(p)].Carrier == target).ToList().AsReadOnly();
+        var result = new List<Product>();
+        foreach (var p in ALL)
+        {
+            if (p.Carrier == target) result.Add(p);
+        }
+        return result.AsReadOnly();
     }
 
-    /// <summary>Substring search across slug + display name. Prefix matches come first.</summary>
+    /// <summary>Substring search across display name. Prefix matches come first.</summary>
     public static IReadOnlyList<Product> Search(string query)
     {
         if (query is null) return Array.Empty<Product>();
@@ -310,37 +388,18 @@ ${metaInit}
         var substring = new List<Product>();
         foreach (var p in ALL)
         {
-            var m = METADATA[WireValue(p)];
-            var disp = m.DisplayName.ToLowerInvariant();
-            var hay = m.Slug + " " + disp;
-            if (hay.StartsWith(q, StringComparison.Ordinal) || disp.StartsWith(q, StringComparison.Ordinal))
+            var name = p.Name.ToLowerInvariant();
+            if (name.StartsWith(q, StringComparison.Ordinal))
                 prefix.Add(p);
-            else if (hay.Contains(q))
+            else if (name.Contains(q))
                 substring.Add(p);
         }
         prefix.AddRange(substring);
         return prefix.AsReadOnly();
     }
-
-    /// <summary>Metadata lookup for a <see cref="Product"/> enum value.</summary>
-    public static ProductMetadata Metadata(Product p)
-    {
-        var slug = WireValue(p);
-        if (!METADATA.TryGetValue(slug, out var m))
-            throw new ArgumentException($"Products.Metadata: unknown product '{p}'", nameof(p));
-        return m;
-    }
-
-    /// <summary>Canonical wire-form value for a <see cref="Product"/>.</summary>
-    public static string WireValue(Product p)
-    {
-        var member = typeof(Product).GetField(p.ToString());
-        if (member is null) return p.ToString();
-        var attr = member.GetCustomAttribute<WireValueAttribute>();
-        return attr is not null ? attr.Value : p.ToString();
-    }
 }
 `;
+
   writeFile('Products.cs', productsContent);
 
   const byCarrier = new Map();
@@ -352,8 +411,16 @@ ${metaInit}
   }
   const carriers = [...byCarrier.values()].sort((a, b) => a.slug.localeCompare(b.slug));
 
+  // Build a slug→product map for carrier entry generation.
+  const slugToProduct = new Map(products.map((p) => [p.slug, p]));
+
   const carrierEntries = carriers.map((c) => {
-    const productExprs = c.products.map((p) => `Product.${pascal(p)}`).join(', ');
+    const productExprs = c.products.map((slug) => {
+      const prod = slugToProduct.get(slug);
+      const ns = prod.productClass.charAt(0).toUpperCase() + prod.productClass.slice(1).toLowerCase();
+      const memberName = pascal(slug.replace(/^[a-z]+-/, ''));
+      return `Products.${ns}.${memberName}`;
+    }).join(', ');
     const productList = c.products.length === 0 ? 'Array.Empty<Product>()' : `new[] { ${productExprs} }`;
     return `        ["${c.slug}"] = new ProductCarrierMetadata(${csStr(c.displayName)}, ${productList}),`;
   }).join('\n');

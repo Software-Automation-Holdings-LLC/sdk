@@ -69,7 +69,7 @@ public sealed record NicotineOptionRow(string Id, string Name, string Type);
 /// <code>
 /// var typoMap = bundle.SpellingCorrections
 ///     .ToDictionary(c =&gt; c.From, c =&gt; c.To);
-/// var corrector = Isa.Autocorrector.Create(typoMap);
+/// var corrector = IsaClient.Autocorrector.Create(typoMap);
 /// </code>
 /// </example>
 public sealed record SpellingCorrectionRow(string Id, string From, string To);
