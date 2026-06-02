@@ -34,9 +34,22 @@ final class DefaultMatchAlgorithm implements MatchAlgorithmInterface
         if ($key === '') {
             return ConceptHandle::unknown($query);
         }
+        // First pass: exact id key. Identity-preserving — the sorted
+        // fallback never reroutes a query that already matched here.
         foreach ($candidates as $candidate) {
             if ($candidate->id() === $key) {
                 return $candidate;
+            }
+        }
+        // Second pass: word-order-invariant name match via the engine
+        // sorted check-key. A strict superset; first candidate wins.
+        // Severity qualifiers stay distinct (different letter multisets).
+        $checkKey = CheckKey::normalize($query);
+        if ($checkKey !== '') {
+            foreach ($candidates as $candidate) {
+                if (CheckKey::normalize($candidate->name()) === $checkKey) {
+                    return $candidate;
+                }
             }
         }
         return ConceptHandle::unknown($query);

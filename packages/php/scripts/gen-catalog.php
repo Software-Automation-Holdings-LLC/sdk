@@ -391,8 +391,23 @@ if (! is_array($condJson)) {
 }
 
 if (! is_array($medJson)) {
-    $gaps[] = "MedicationUses: {$medicationsPath} not found — emitting empty catalog.";
-    writeData($dataDir, 'medication_uses.php', []);
+    // Same contract as Products: the committed data/medication_uses.php is the
+    // published source of truth (~1865 uses) and CI does not check out the
+    // engine repo, so preserve it instead of clobbering it with an empty
+    // catalog. Fail loud only when there is nothing committed to preserve.
+    $committedMeds = $dataDir . '/medication_uses.php';
+    if (! is_file($committedMeds)) {
+        fwrite(STDERR, sprintf(
+            "gen-catalog: FATAL: MedicationUses: %s not found AND no committed catalog to "
+            . "preserve (%s). Refusing to emit an empty catalog. Run where the data file "
+            . "exists, or commit a populated catalog first.\n",
+            $medicationsPath,
+            $committedMeds,
+        ));
+        exit(1);
+    }
+    $gaps[] = "MedicationUses: {$medicationsPath} not found — preserving committed catalog.";
+    fwrite(STDERR, "gen-catalog: preserved committed {$committedMeds}\n");
 } else {
     $uses = [];
     foreach ($medJson as $entry) {

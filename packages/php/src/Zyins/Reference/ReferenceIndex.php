@@ -27,6 +27,12 @@ final class ReferenceIndex
     /** @var array<string,string> */
     private array $medicationNames = [];
 
+    /** @var array<string,string> name check-key → condition id (first-write-wins) */
+    private array $conditionIdByCheckKey = [];
+
+    /** @var array<string,string> name check-key → medication id (first-write-wins) */
+    private array $medicationIdByCheckKey = [];
+
     /** @var array<string,list<string>> */
     private array $medsByCondition = [];
 
@@ -50,6 +56,7 @@ final class ReferenceIndex
 
         foreach ($bundle->conditions as $row) {
             $this->conditionNames[$row->id] = $row->name;
+            $this->indexCheckKey($this->conditionIdByCheckKey, $row->name, $row->id);
             $medIds = [];
             foreach ($row->treatedWith as $rel) {
                 $medIds[] = $rel->id;
@@ -63,6 +70,7 @@ final class ReferenceIndex
         }
         foreach ($bundle->medications as $row) {
             $this->medicationNames[$row->id] = $row->name;
+            $this->indexCheckKey($this->medicationIdByCheckKey, $row->name, $row->id);
             $condIds = [];
             foreach ($row->usedFor as $rel) {
                 $condIds[] = $rel->id;
@@ -111,6 +119,56 @@ final class ReferenceIndex
     public function medicationName(string $id): ?string
     {
         return $this->medicationNames[$id] ?? null;
+    }
+
+    /**
+     * Resolve free text to a condition id: exact id/name key first, then
+     * the word-order-invariant check-key fallback. Returns null on a miss.
+     * The fallback is a strict superset — it only fires when the exact key
+     * missed.
+     */
+    public function resolveCondition(string $text): ?string
+    {
+        $key = MakeKey::normalize($text);
+        if ($key === '') {
+            return null;
+        }
+        if (isset($this->conditionNames[$key])) {
+            return $key;
+        }
+        return $this->conditionIdByCheckKey[CheckKey::normalize($text)] ?? null;
+    }
+
+    /**
+     * Resolve free text to a medication id: exact key first, then the
+     * word-order-invariant check-key fallback. Returns null on a miss.
+     */
+    public function resolveMedication(string $text): ?string
+    {
+        $key = MakeKey::normalize($text);
+        if ($key === '') {
+            return null;
+        }
+        if (isset($this->medicationNames[$key])) {
+            return $key;
+        }
+        return $this->medicationIdByCheckKey[CheckKey::normalize($text)] ?? null;
+    }
+
+    /**
+     * Record an entity under its name's sorted check key, first-write-wins
+     * so a name-multiset collision resolves to the earliest catalog entry
+     * rather than letting a later row shadow it (engine-determinism parity).
+     *
+     * @param array<string,string> $map
+     */
+    private function indexCheckKey(array &$map, string $name, string $id): void
+    {
+        $key = CheckKey::normalize($name);
+        if ($key === '' || isset($map[$key])) {
+            return;
+        }
+        $map[$key] = $id;
     }
 
     /** @return list<string> */

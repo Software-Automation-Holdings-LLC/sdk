@@ -32,15 +32,13 @@ final class ConceptsMatcher implements Matcher
         if ($index === null) {
             return ConceptHandle::unknown($text);
         }
-        $key = MakeKey::normalize($text);
-        if ($key === '') {
-            return ConceptHandle::unknown($text);
+        $conditionId = $index->resolveCondition($text);
+        if ($conditionId !== null) {
+            return ConceptHandle::knownCondition($index, $conditionId, $text);
         }
-        if ($index->conditionName($key) !== null) {
-            return ConceptHandle::knownCondition($index, $key, $text);
-        }
-        if ($index->medicationName($key) !== null) {
-            return ConceptHandle::knownMedication($index, $key, $text);
+        $medicationId = $index->resolveMedication($text);
+        if ($medicationId !== null) {
+            return ConceptHandle::knownMedication($index, $medicationId, $text);
         }
         return ConceptHandle::unknown($text);
     }

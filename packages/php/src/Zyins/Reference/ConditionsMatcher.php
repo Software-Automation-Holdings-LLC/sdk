@@ -44,9 +44,9 @@ final class ConditionsMatcher implements Matcher
         if ($this->matchAlgorithm !== null) {
             return $this->matchAlgorithm->match($text, $this->buildCandidates($index));
         }
-        $key = MakeKey::normalize($text);
-        if ($key !== '' && $index->conditionName($key) !== null) {
-            return ConceptHandle::knownCondition($index, $key, $text);
+        $id = $index->resolveCondition($text);
+        if ($id !== null) {
+            return ConceptHandle::knownCondition($index, $id, $text);
         }
         return ConceptHandle::unknown($text);
     }

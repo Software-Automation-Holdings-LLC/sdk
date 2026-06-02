@@ -1442,6 +1442,11 @@ class BundleBoundAutocorrector implements AutocorrectorInterface
     public function __construct(private ReferenceBundleCache $cache)
     public function correct(string $text, string $mode = AutocorrectorInterface::MODE_SUBMIT) : string
 
+=== Zyins/Reference/CheckKey.php ===
+namespace Isa\Sdk\Zyins\Reference;
+class CheckKey
+    public function normalize(string $text) : string
+
 === Zyins/Reference/ConceptInterface.php ===
 namespace Isa\Sdk\Zyins\Reference;
 interface ConceptInterface
@@ -1711,6 +1716,8 @@ class ReferenceIndex
     public function datasetVersion() : string
     public function conditionName(string $id) : ?string
     public function medicationName(string $id) : ?string
+    public function resolveCondition(string $text) : ?string
+    public function resolveMedication(string $text) : ?string
     public function medicationsForCondition(string $conditionId) : array
     public function conditionsForMedication(string $medicationId) : array
     public function allConditionIds() : array

@@ -44,9 +44,9 @@ final class MedicationsMatcher implements Matcher
         if ($this->matchAlgorithm !== null) {
             return $this->matchAlgorithm->match($text, $this->buildCandidates($index));
         }
-        $key = MakeKey::normalize($text);
-        if ($key !== '' && $index->medicationName($key) !== null) {
-            return ConceptHandle::knownMedication($index, $key, $text);
+        $id = $index->resolveMedication($text);
+        if ($id !== null) {
+            return ConceptHandle::knownMedication($index, $id, $text);
         }
         return ConceptHandle::unknown($text);
     }

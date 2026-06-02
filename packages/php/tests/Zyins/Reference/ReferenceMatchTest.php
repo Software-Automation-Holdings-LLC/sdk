@@ -229,6 +229,62 @@ final class ReferenceMatchTest extends TestCase
         }
     }
 
+    public function testWordReorderedSeverityResolvesViaCheckKey(): void
+    {
+        $reference = new Reference();
+        $bundle = self::copdSeverityBundle();
+        $concept = $reference->conditions->match('Severe Chronic Obstructive Pulmonary Disease', $bundle);
+
+        self::assertTrue($concept->isKnown());
+        self::assertSame('COPDSEVERE', $concept->id());
+        self::assertSame('Severe Chronic Obstructive Pulmonary Disease', $concept->inputText());
+    }
+
+    public function testKeepsSeverityDistinct(): void
+    {
+        $reference = new Reference();
+        $bundle = self::copdSeverityBundle();
+
+        self::assertSame(
+            'COPDMILD',
+            $reference->conditions->match('Mild Chronic Obstructive Pulmonary Disease', $bundle)->id(),
+        );
+        self::assertSame(
+            'COPDSEVERE',
+            $reference->conditions->match('Severe Chronic Obstructive Pulmonary Disease', $bundle)->id(),
+        );
+    }
+
+    public function testExactKeyStillResolvesSuperset(): void
+    {
+        $reference = new Reference();
+        $bundle = self::tinyBundle();
+
+        self::assertSame('HBP', $reference->conditions->match('high blood pressure', $bundle)->id());
+    }
+
+    private static function copdSeverityBundle(string $version = '2026-06-02'): DatasetBundleV3
+    {
+        $conditions = [
+            new ConditionRow(id: 'COPDSEVERE', name: 'Chronic Obstructive Pulmonary Disease (Severe)', treatedWith: []),
+            new ConditionRow(id: 'COPDMILD', name: 'Chronic Obstructive Pulmonary Disease (Mild)', treatedWith: []),
+        ];
+        $datasets = [
+            'conditions' => new DatasetEntry(version: $version, itemCount: count($conditions), items: $conditions),
+            'medications' => new DatasetEntry(version: $version, itemCount: 0, items: []),
+        ];
+
+        return new DatasetBundleV3(
+            version: $version,
+            medications: [],
+            conditions: $conditions,
+            products: [],
+            nicotineOptions: [],
+            spellingCorrections: [],
+            datasets: $datasets,
+        );
+    }
+
     private static function tinyBundle(string $version = '2026-05-14'): DatasetBundleV3
     {
         $conditions = [
