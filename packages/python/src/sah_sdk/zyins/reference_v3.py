@@ -27,7 +27,7 @@ no string aliases. New sort orders ship as new enum members.
 
 from __future__ import annotations
 
-from collections.abc import Callable, Mapping, Sequence
+from collections.abc import Callable, Iterable, Mapping, Sequence
 from dataclasses import dataclass, field
 from enum import Enum
 
@@ -77,6 +77,34 @@ def _make_key(text: str) -> str:
 
 
 # ---------------------------------------------------------------------------
+# Internal — _check_key normalizer (engine ``CondNameMakeCheckKey``).
+#
+# Mirrors Go ``CondNameMakeCheckKey`` (``go/zyins/utils/strings/normalize.go``)
+# and Perl ``cond_name_make_check_key_xs``: uppercase, strip non-ASCII-
+# alphanumerics, then SORT the surviving characters ascending. Digits
+# (0x30-0x39) sort before letters (0x41-0x5A), byte-identical to the engine.
+#
+# Sorting collapses word order so prefix / suffix / no-space severity
+# variants of one concept resolve identically, while severity qualifiers
+# stay distinct (MILD vs SEVERE differ in letter multiset). Used ONLY for
+# word-order-invariant NAME matching; opaque ids stay on ``_make_key``.
+# ---------------------------------------------------------------------------
+
+
+def _check_key(text: str) -> str:
+    upper = text.upper()
+    chars: list[str] = []
+    for ch in upper:
+        code = ord(ch)
+        is_digit = 0x30 <= code <= 0x39
+        is_upper = 0x41 <= code <= 0x5A
+        if is_digit or is_upper:
+            chars.append(ch)
+    chars.sort()
+    return "".join(chars)
+
+
+# ---------------------------------------------------------------------------
 # Catalog facade — a thin read-only view over a v3 DatasetBundleV3.
 # ---------------------------------------------------------------------------
 
@@ -88,12 +116,34 @@ class _Catalog:
     medications_by_condition: Mapping[str, Sequence[str]]
     conditions_by_medication: Mapping[str, Sequence[str]]
     use_map: Mapping[str, Mapping[str, int]]
+    # Word-order-invariant fallback: name check-key -> id. First-write-wins
+    # so name-multiset collisions resolve deterministically (engine parity).
+    condition_id_by_check_key: Mapping[str, str]
+    medication_id_by_check_key: Mapping[str, str]
 
     def condition_name(self, entity_id: str) -> str | None:
         return self.condition_names.get(entity_id)
 
     def medication_name(self, entity_id: str) -> str | None:
         return self.medication_names.get(entity_id)
+
+    def condition_id_for_text(self, text: str) -> str | None:
+        """Resolve text to a condition id: exact id key, then check-key."""
+        key = _make_key(text)
+        if not key:
+            return None
+        if key in self.condition_names:
+            return key
+        return self.condition_id_by_check_key.get(_check_key(text))
+
+    def medication_id_for_text(self, text: str) -> str | None:
+        """Resolve text to a medication id: exact id key, then check-key."""
+        key = _make_key(text)
+        if not key:
+            return None
+        if key in self.medication_names:
+            return key
+        return self.medication_id_by_check_key.get(_check_key(text))
 
     def medications_for_condition(self, condition_id: str) -> Sequence[str]:
         return self.medications_by_condition.get(condition_id, ())
@@ -125,7 +175,25 @@ def _build_catalog(bundle: DatasetBundleV3) -> _Catalog:
             k: tuple(v) for k, v in conditions_by_medication.items()
         },
         use_map=bundle.frequency_graphs.use_map,
+        condition_id_by_check_key=_check_key_index(
+            (e.name, e.id) for e in bundle.conditions
+        ),
+        medication_id_by_check_key=_check_key_index(
+            (e.name, e.id) for e in bundle.medications
+        ),
     )
+
+
+def _check_key_index(
+    name_id_pairs: Iterable[tuple[str, str]],
+) -> dict[str, str]:
+    """Build a name-check-key -> id map, first-write-wins on collisions."""
+    index: dict[str, str] = {}
+    for name, entity_id in name_id_pairs:
+        key = _check_key(name)
+        if key and key not in index:
+            index[key] = entity_id
+    return index
 
 
 # Catalog is rebuilt per matcher invocation.
@@ -296,18 +364,18 @@ def _build_unknown_concept(input_text: str) -> Concept:
 def match_medication(text: str, bundle: DatasetBundleV3) -> Concept:
     """Resolve free text against the medication catalog. Never raises."""
     catalog = _catalog_for(bundle)
-    key = _make_key(text)
-    if key and catalog.medication_name(key) is not None:
-        return _build_medication_concept(catalog, key, text)
+    entity_id = catalog.medication_id_for_text(text)
+    if entity_id is not None:
+        return _build_medication_concept(catalog, entity_id, text)
     return _build_unknown_concept(text)
 
 
 def match_condition(text: str, bundle: DatasetBundleV3) -> Concept:
     """Resolve free text against the condition catalog. Never raises."""
     catalog = _catalog_for(bundle)
-    key = _make_key(text)
-    if key and catalog.condition_name(key) is not None:
-        return _build_condition_concept(catalog, key, text)
+    entity_id = catalog.condition_id_for_text(text)
+    if entity_id is not None:
+        return _build_condition_concept(catalog, entity_id, text)
     return _build_unknown_concept(text)
 
 
@@ -319,13 +387,12 @@ def match_concept(text: str, bundle: DatasetBundleV3) -> Concept:
     Never raises.
     """
     catalog = _catalog_for(bundle)
-    key = _make_key(text)
-    if not key:
-        return _build_unknown_concept(text)
-    if catalog.condition_name(key) is not None:
-        return _build_condition_concept(catalog, key, text)
-    if catalog.medication_name(key) is not None:
-        return _build_medication_concept(catalog, key, text)
+    condition_id = catalog.condition_id_for_text(text)
+    if condition_id is not None:
+        return _build_condition_concept(catalog, condition_id, text)
+    medication_id = catalog.medication_id_for_text(text)
+    if medication_id is not None:
+        return _build_medication_concept(catalog, medication_id, text)
     return _build_unknown_concept(text)
 
 

@@ -22,14 +22,25 @@ exposes the data structure.
 
 from __future__ import annotations
 
-from collections.abc import Callable, Mapping, Sequence
+from collections.abc import Callable, Iterable, Mapping, Sequence
 from dataclasses import dataclass, field
 from types import MappingProxyType
 
 from ..datasets_v3 import DatasetBundleV3
+from ._check_key import _check_key
 from ._make_key import _make_key
 from .concept import Concept, ConceptKind
 from .sort import Sort
+
+
+def _check_key_index(name_id_pairs: Iterable[tuple[str, str]]) -> dict[str, str]:
+    """Build a name-check-key -> id map, first-write-wins on collisions."""
+    index: dict[str, str] = {}
+    for name, entity_id in name_id_pairs:
+        key = _check_key(name)
+        if key and key not in index:
+            index[key] = entity_id
+    return index
 
 
 @dataclass(frozen=True, slots=True)
@@ -48,6 +59,10 @@ class ReferenceIndex:
     medications_by_condition: Mapping[str, Sequence[str]]
     conditions_by_medication: Mapping[str, Sequence[str]]
     use_map: Mapping[str, Mapping[str, int]]
+    # Word-order-invariant fallback: name check-key -> id. First-write-wins
+    # so name-multiset collisions resolve deterministically (engine parity).
+    condition_id_by_check_key: Mapping[str, str]
+    medication_id_by_check_key: Mapping[str, str]
     # Pre-built sorted id tuples for the ``.list()`` accessors so the
     # sugar does not pay a sort cost per call.
     _condition_ids_alpha: tuple[str, ...] = field(repr=False, compare=False)
@@ -92,6 +107,12 @@ class ReferenceIndex:
                 {k: tuple(v) for k, v in conditions_by_medication.items()}
             ),
             use_map=bundle.frequency_graphs.use_map,
+            condition_id_by_check_key=MappingProxyType(
+                _check_key_index((e.name, e.id) for e in bundle.conditions)
+            ),
+            medication_id_by_check_key=MappingProxyType(
+                _check_key_index((e.name, e.id) for e in bundle.medications)
+            ),
             _condition_ids_alpha=condition_ids_alpha,
             _medication_ids_alpha=medication_ids_alpha,
         )
@@ -105,14 +126,19 @@ class ReferenceIndex:
         key = _make_key(text)
         if not key:
             return None
-        return key if key in self.medication_names else None
+        if key in self.medication_names:
+            return key
+        # Word-order-invariant fallback (engine sorted check-key).
+        return self.medication_id_by_check_key.get(_check_key(text))
 
     def lookup_condition(self, text: str) -> str | None:
         """Resolve free text to a condition id, or ``None`` on miss."""
         key = _make_key(text)
         if not key:
             return None
-        return key if key in self.condition_names else None
+        if key in self.condition_names:
+            return key
+        return self.condition_id_by_check_key.get(_check_key(text))
 
     def lookup_either(self, text: str) -> tuple[ConceptKind, str] | None:
         """Resolve free text against conditions first, then medications.
@@ -121,13 +147,12 @@ class ReferenceIndex:
         (the typical "the user typed a symptom" case), then medications.
         Returns ``None`` on a miss in both catalogs.
         """
-        key = _make_key(text)
-        if not key:
-            return None
-        if key in self.condition_names:
-            return ConceptKind.CONDITION, key
-        if key in self.medication_names:
-            return ConceptKind.MEDICATION, key
+        condition_id = self.lookup_condition(text)
+        if condition_id is not None:
+            return ConceptKind.CONDITION, condition_id
+        medication_id = self.lookup_medication(text)
+        if medication_id is not None:
+            return ConceptKind.MEDICATION, medication_id
         return None
 
     def medication_name(self, entity_id: str) -> str | None:

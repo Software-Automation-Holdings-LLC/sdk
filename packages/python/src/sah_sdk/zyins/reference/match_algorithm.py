@@ -16,6 +16,7 @@ from collections.abc import Sequence
 from dataclasses import dataclass, replace
 from typing import Any, Protocol, runtime_checkable
 
+from ._check_key import _check_key
 from ._make_key import _make_key
 from .concept import Concept, ConceptKind
 
@@ -78,20 +79,32 @@ class DefaultMatchAlgorithm:
         key = _make_key(query)
         if not key:
             return _unknown(query)
+        # First pass: exact name key. Identity-preserving — the sorted
+        # fallback never reroutes a query that already matched here.
         for candidate in candidates:
             if _make_key(candidate.name) == key:
-                # Re-stamp ``input_text`` so the returned concept
-                # carries the raw query, matching the locked surface
-                # contract on ``Concept.input_text``.
-                return Concept(
-                    id=candidate.id,
-                    name=candidate.name,
-                    kind=candidate.kind,
-                    is_known=True,
-                    input_text=query,
-                    _index=candidate._index,
-                )
+                return _resolved(candidate, query)
+        # Second pass: word-order-invariant name match via the engine's
+        # sorted check-key. A strict superset; first candidate wins.
+        check_key = _check_key(query)
+        if check_key:
+            for candidate in candidates:
+                if _check_key(candidate.name) == check_key:
+                    return _resolved(candidate, query)
         return _unknown(query)
+
+
+def _resolved(candidate: Concept, query: str) -> Concept:
+    # Re-stamp ``input_text`` so the returned concept carries the raw
+    # query, matching the locked surface contract on ``Concept.input_text``.
+    return Concept(
+        id=candidate.id,
+        name=candidate.name,
+        kind=candidate.kind,
+        is_known=True,
+        input_text=query,
+        _index=candidate._index,
+    )
 
 
 def _unknown(query: str) -> Concept:

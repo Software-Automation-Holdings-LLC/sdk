@@ -117,15 +117,15 @@ def _write_file(name: str, content: str) -> None:
     sys.stderr.write(f"gen_catalog: wrote {out}\n")
 
 
-def _preserve_or_fail(names: list[str], label: str) -> None:
-    """Handle a missing product data source without ever shipping an empty catalog.
+def _preserve_or_fail(names: list[str], label: str, source: str) -> None:
+    """Handle a missing data source without ever shipping an empty catalog.
 
-    The product catalog is the SDK's headline surface (``Products.Fex.AetnaAccendo``
-    etc.); shipping it empty is a launch-blocking defect (isa-sdk@1.0.1). The
-    upstream ``v2_products.json`` lives in the engine repo, which CI runners do
-    not check out — so a clean CI build legitimately misses it. In that case the
-    committed catalog is the source of truth: it carries the real ``prod_<uuid>``
-    ids, so preserve it untouched rather than clobbering it with an empty stub.
+    Several catalogs derive from JSON that lives in the engine repo, which CI
+    runners do not check out — so a clean CI build legitimately misses
+    ``source``. Shipping the catalog empty is a launch-blocking defect
+    (isa-sdk@1.0.1 shipped empty ``Products``). In the missing-source case the
+    committed catalog is the source of truth — it carries the real published
+    rows — so preserve it untouched rather than clobbering it with an empty stub.
 
     When NO committed catalog exists (a genuinely fresh tree with nothing to
     preserve) emitting empty would let a broken catalog reach a registry, so
@@ -135,12 +135,12 @@ def _preserve_or_fail(names: list[str], label: str) -> None:
     missing = [n for n in names if not (CATALOG_DIR / n).exists()]
     if missing:
         raise SystemExit(
-            f"gen_catalog: {label}: v2_products.json not found AND no committed "
+            f"gen_catalog: {label}: {source} not found AND no committed "
             f"catalog to preserve ({', '.join(missing)}). Refusing to emit an empty "
-            f"product catalog. Run where {INSURANCE_REPO / 'v2_products.json'} exists, "
+            f"catalog. Run where {INSURANCE_REPO / source} exists, "
             f"or commit a populated catalog first."
         )
-    GAPS.append(f"{label}: v2_products.json not found — preserving committed catalog.")
+    GAPS.append(f"{label}: {source} not found — preserving committed catalog.")
     for name in names:
         sys.stderr.write(f"gen_catalog: preserved committed {CATALOG_DIR / name}\n")
 
@@ -154,7 +154,7 @@ def gen_products() -> None:
     sources = ["insurance/v2_products.json"]
     raw = _try_read_json(INSURANCE_REPO / "v2_products.json")
     if not raw:
-        _preserve_or_fail(["products.py", "carriers.py"], "Products")
+        _preserve_or_fail(["products.py", "carriers.py"], "Products", "v2_products.json")
         return
 
     # Family name → PascalCase namespace key (mirrors TS productsByType.ts).
@@ -520,24 +520,29 @@ ConditionCategories = _ConditionCategoriesAPI()
 '''
     _write_file("conditions.py", cond_module)
 
+    if not isinstance(meds_raw, list):
+        # Same contract as Products: the committed medications.py is the
+        # published source of truth (~1865 uses) and CI does not check out the
+        # engine repo, so preserve it instead of clobbering it with an empty
+        # catalog. Fail loud only when there is nothing committed to preserve.
+        _preserve_or_fail(["medications.py"], "MedicationUses", "v2_medications.json")
+        return
+
     use_to_meds: dict[str, set[str]] = {}
-    if isinstance(meds_raw, list):
-        for m in meds_raw:
-            if not isinstance(m, dict):
+    for m in meds_raw:
+        if not isinstance(m, dict):
+            continue
+        name = str(m.get("name") or "")
+        uses = m.get("uses") or []
+        if not isinstance(uses, list):
+            continue
+        for u in uses:
+            if not isinstance(u, dict):
                 continue
-            name = str(m.get("name") or "")
-            uses = m.get("uses") or []
-            if not isinstance(uses, list):
+            cond = str(u.get("condition") or "")
+            if not cond or not name:
                 continue
-            for u in uses:
-                if not isinstance(u, dict):
-                    continue
-                cond = str(u.get("condition") or "")
-                if not cond or not name:
-                    continue
-                use_to_meds.setdefault(cond, set()).add(name)
-    else:
-        GAPS.append("MedicationUses: v2_medications.json missing or malformed.")
+            use_to_meds.setdefault(cond, set()).add(name)
 
     use_names = sorted(use_to_meds.keys())
     use_entries = "\n".join(

@@ -17,7 +17,7 @@ adds over the bare client is:
 from __future__ import annotations
 
 from collections.abc import Callable, Mapping
-from typing import TYPE_CHECKING, Any, overload
+from typing import TYPE_CHECKING, Any, cast, overload
 
 from .zyins.bundled_api_versions import BUNDLED_API_VERSIONS
 from .zyins.cases.storage import CaseStorage
@@ -871,6 +871,15 @@ class ZyinsNamespace:
     auditable bump that flips every consumer not pinned at v2.
     """
 
+    # The de-versioned `prequalify` / `quote` accessors are typed against the
+    # bundled-default surface (`v3`) so de-versioned examples accept a
+    # `PrequalifyV3Request` / `QuoteV3Request` and read `plans[].pricing`,
+    # `death_benefit`, and the v3 result shape without narrowing. A v1/v2 pin
+    # re-routes the runtime call; those callers reach the legacy wire shape
+    # through the explicit `prequalify_v2` / `quote_v2` accessors.
+    prequalify: _PrequalifyV3Callable
+    quote: _QuoteV3Callable
+
     def __init__(self, isa: Isa) -> None:
         self._isa = isa
         self._client = isa._client
@@ -1134,21 +1143,21 @@ class ZyinsNamespace:
         ``v3`` routes to the dedicated v3 callable.
         """
         prequalify_version = resolve_api_version(api_versions, "prequalify")
-        # Union annotation so mypy accepts either branch — the public
-        # surface promises one of the version-pinned callable shapes.
-        # v1 + v2 share the legacy callable (no split v2 module in
-        # Python yet); v3 routes to the dedicated v3 callable.
-        prequalify: _PrequalifyCallable | _PrequalifyV3Callable = (
-            self.prequalify_v3
-            if prequalify_version == "v3"
-            else self.prequalify_v2
-        )
-        self.prequalify = prequalify
+        # `prequalify` is typed as the bundled-default v3 callable so the
+        # de-versioned surface type-checks against `PrequalifyV3Request` /
+        # `PrequalifyV3Result`. A v1/v2 pin re-routes the runtime call to the
+        # legacy callable (no split v2 module in Python yet); the cast is the
+        # single point where the static v3 type meets that runtime routing,
+        # and v1/v2 callers reach the legacy shape via `prequalify_v2`.
+        if prequalify_version == "v3":
+            self.prequalify = self.prequalify_v3
+        else:
+            self.prequalify = cast(_PrequalifyV3Callable, self.prequalify_v2)
         quote_version = resolve_api_version(api_versions, "quote")
-        quote: _Quote | _QuoteV3Callable = (
-            self.quote_v3 if quote_version == "v3" else self.quote_v2
-        )
-        self.quote = quote
+        if quote_version == "v3":
+            self.quote = self.quote_v3
+        else:
+            self.quote = cast(_QuoteV3Callable, self.quote_v2)
 
 
 class _PrequalifyCallable:

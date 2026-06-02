@@ -195,6 +195,38 @@ def test_match_clone_independent() -> None:
     assert m.version_tag == "a"
 
 
+def test_match_word_order_invariant_via_check_key() -> None:
+    """A reordered severity query resolves via the engine sorted check-key."""
+    m = DefaultMatchAlgorithm()
+    candidates = _concepts(
+        ("COPDSEVERE", "Chronic Obstructive Pulmonary Disease (Severe)", ConceptKind.CONDITION),
+        ("COPDMILD", "Chronic Obstructive Pulmonary Disease (Mild)", ConceptKind.CONDITION),
+    )
+    severe = m.match("Severe Chronic Obstructive Pulmonary Disease", candidates)
+    assert severe.id == "COPDSEVERE"
+    assert severe.input_text == "Severe Chronic Obstructive Pulmonary Disease"
+
+
+def test_match_keeps_severity_distinct() -> None:
+    """MILD and SEVERE never collapse — different letter multisets."""
+    m = DefaultMatchAlgorithm()
+    candidates = _concepts(
+        ("COPDSEVERE", "Chronic Obstructive Pulmonary Disease (Severe)", ConceptKind.CONDITION),
+        ("COPDMILD", "Chronic Obstructive Pulmonary Disease (Mild)", ConceptKind.CONDITION),
+    )
+    assert m.match("Mild Chronic Obstructive Pulmonary Disease", candidates).id == "COPDMILD"
+    assert m.match("Severe Chronic Obstructive Pulmonary Disease", candidates).id == "COPDSEVERE"
+
+
+def test_match_exact_key_still_wins_superset() -> None:
+    """Exact-key (incl. opaque id) lookups keep resolving — strict superset."""
+    m = DefaultMatchAlgorithm()
+    candidates = _concepts(
+        ("cond_01JZULID", "High Blood Pressure", ConceptKind.CONDITION),
+    )
+    assert m.match("high blood pressure", candidates).id == "cond_01JZULID"
+
+
 # ---------------------------------------------------------------------------
 # AutocompleteAlgorithm
 # ---------------------------------------------------------------------------

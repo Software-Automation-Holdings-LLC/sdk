@@ -367,6 +367,8 @@ class Isa
     def on_license_refreshed(self, listener: LicenseRefreshedListener) -> Callable[[], None]
     def close(self) -> None
 class ZyinsNamespace
+    prequalify: _PrequalifyV3Callable
+    quote: _QuoteV3Callable
     def set_dataset_bundle(self, bundle: DatasetBundleV3) -> None
     def license(self) -> LicenseFacade
     def cases(self) -> Any
@@ -1054,6 +1056,8 @@ class ReferenceIndex
     medications_by_condition: Mapping[str, Sequence[str]]
     conditions_by_medication: Mapping[str, Sequence[str]]
     use_map: Mapping[str, Mapping[str, int]]
+    condition_id_by_check_key: Mapping[str, str]
+    medication_id_by_check_key: Mapping[str, str]
     def from_bundle(cls, bundle: DatasetBundleV3) -> ReferenceIndex
     def lookup_medication(self, text: str) -> str | None
     def lookup_condition(self, text: str) -> str | None
