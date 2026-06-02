@@ -33,6 +33,12 @@ parameters:
         -
             message: '#is never read, only written\.#'
             path: tests/Core/*
+        # Products\Facade holds a forward-compatibility slot for live catalog
+        # refresh; the datasetsGet callback is intentionally reserved for the
+        # next refresh() call without being consumed today.
+        -
+            identifier: property.onlyWritten
+            path: src/Zyins/Products/Facade.php
         # The core Sleeper test fake intentionally exposes a `$calls` log
         # via a dynamic property on the interface alias; PHPStan can't see
         # that an anonymous class implementing Sleeper carries it.

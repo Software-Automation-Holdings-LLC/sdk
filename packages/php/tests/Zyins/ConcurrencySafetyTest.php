@@ -13,7 +13,6 @@ use Isa\Sdk\Zyins\Height;
 use Isa\Sdk\Zyins\NicotineUsage;
 use Isa\Sdk\Zyins\Prequalify\Input;
 use Isa\Sdk\Zyins\Product;
-use Isa\Sdk\Zyins\ProductType;
 use Isa\Sdk\Zyins\Sex;
 use Isa\Sdk\Zyins\Transport;
 use Isa\Sdk\Zyins\Weight;
@@ -55,7 +54,9 @@ final class ConcurrencySafetyTest extends TestCase
             ], JSON_THROW_ON_ERROR));
         }
 
-        $client = new ZyInsClient(token: self::TOKEN, httpClient: $http);
+        // Pin v2 so the legacy Prequalify\Service is exercised; the bundled
+        // default now routes prequalify to PrequalifyV3.
+        $client = new ZyInsClient(token: self::TOKEN, httpClient: $http, apiVersionMap: ['prequalify' => 'v2']);
 
         $sentIdempotencyKeys = [];
         $surfacedRequestIds = [];
@@ -91,7 +92,7 @@ final class ConcurrencySafetyTest extends TestCase
                 'data' => ['plans' => []],
             ], JSON_THROW_ON_ERROR));
         }
-        $client = new ZyInsClient(token: self::TOKEN, httpClient: $http);
+        $client = new ZyInsClient(token: self::TOKEN, httpClient: $http, apiVersionMap: ['prequalify' => 'v2']);
 
         $workers = array_fill(0, 10, $client->prequalify);
         $ids = [];
@@ -113,7 +114,7 @@ final class ConcurrencySafetyTest extends TestCase
                 nicotineUse: NicotineUsage::None,
             ),
             coverage: Coverage::faceValue(25000),
-            products: [new Product('colonial-penn', ProductType::FinalExpense, 'colonial-penn.final-expense', 'Colonial Penn FE')],
+            products: [new Product(id: 'prod_cp_fixture', name: 'Colonial Penn FE', class: 'fex', carrier: 'Colonial Penn')],
         );
     }
 }

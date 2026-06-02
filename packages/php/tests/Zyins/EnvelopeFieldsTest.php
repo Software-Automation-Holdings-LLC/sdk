@@ -13,7 +13,6 @@ use Isa\Sdk\Zyins\NicotineUsage;
 use Isa\Sdk\Zyins\Prequalify\Input;
 use Isa\Sdk\Zyins\Prequalify\Result;
 use Isa\Sdk\Zyins\Product;
-use Isa\Sdk\Zyins\ProductType;
 use Isa\Sdk\Zyins\RawResponse;
 use Isa\Sdk\Zyins\RequestOptions;
 use Isa\Sdk\Zyins\Sex;
@@ -41,10 +40,13 @@ final class EnvelopeFieldsTest extends TestCase
             'data' => ['plans' => []],
         ], JSON_THROW_ON_ERROR));
 
+        // Pin v2 so the legacy Prequalify\Service is exercised; the bundled
+        // default now routes prequalify to PrequalifyV3.
         $client = new ZyInsClient(
             token: self::TOKEN,
             httpClient: $http,
             idempotency: new FixedKeySource('550e8400-e29b-41d4-a716-446655440000'),
+            apiVersionMap: ['prequalify' => 'v2'],
         );
 
         $result = $client->prequalify->run(self::sampleInput());
@@ -66,6 +68,7 @@ final class EnvelopeFieldsTest extends TestCase
             token: self::TOKEN,
             httpClient: $http,
             idempotency: new FixedKeySource('aaaa-bbbb-cccc-dddd'),
+            apiVersionMap: ['prequalify' => 'v2'],
         );
 
         $result = $client->prequalify->run(self::sampleInput());
@@ -86,7 +89,7 @@ final class EnvelopeFieldsTest extends TestCase
             ['X-Custom-Header' => 'custom-value', 'Content-Type' => 'application/json'],
         );
 
-        $client = new ZyInsClient(token: self::TOKEN, httpClient: $http);
+        $client = new ZyInsClient(token: self::TOKEN, httpClient: $http, apiVersionMap: ['prequalify' => 'v2']);
         // Narrow the v1/v3 facade-routing union — this assertion covers the
         // v1 service shape.
         self::assertInstanceOf(\Isa\Sdk\Zyins\Prequalify\Service::class, $client->prequalify);
@@ -105,7 +108,7 @@ final class EnvelopeFieldsTest extends TestCase
     {
         $http = new MockHttpClient();
         $http->queue(500, json_encode(['code' => 'internal_error', 'message' => 'boom'], JSON_THROW_ON_ERROR));
-        $client = new ZyInsClient(token: self::TOKEN, httpClient: $http);
+        $client = new ZyInsClient(token: self::TOKEN, httpClient: $http, apiVersionMap: ['prequalify' => 'v2']);
         self::assertInstanceOf(\Isa\Sdk\Zyins\Prequalify\Service::class, $client->prequalify);
 
         $this->expectException(\Isa\Sdk\Zyins\Exception\IsaException::class);
@@ -127,7 +130,7 @@ final class EnvelopeFieldsTest extends TestCase
                 nicotineUse: NicotineUsage::None,
             ),
             coverage: Coverage::faceValue(25000),
-            products: [new Product('colonial-penn', ProductType::FinalExpense, 'colonial-penn.final-expense', 'Colonial Penn FE')],
+            products: [new Product(id: 'prod_cp_fixture', name: 'Colonial Penn FE', class: 'fex', carrier: 'Colonial Penn')],
         );
     }
 }

@@ -27,15 +27,14 @@ use Isa\Sdk\Zyins\Applicant;
 use Isa\Sdk\Zyins\Coverage;
 use Isa\Sdk\Zyins\Height;
 use Isa\Sdk\Zyins\NicotineUsage;
-use Isa\Sdk\Zyins\Prequalify\Input;
-use Isa\Sdk\Zyins\Product;
-use Isa\Sdk\Zyins\ProductType;
+use Isa\Sdk\Zyins\Reference\PrequalifyV3Request;
 use Isa\Sdk\Zyins\Sex;
 use Isa\Sdk\Zyins\Weight;
+use Isa\Sdk\Catalog\Products;
 
 $isa = Isa::withBearer();   // reads ISA_TOKEN from env
 
-$input = new Input(
+$request = new PrequalifyV3Request(
     applicant: new Applicant(
         dob: '1962-04-18',
         sex: Sex::Male,
@@ -45,11 +44,9 @@ $input = new Input(
         nicotineUse: NicotineUsage::None,
     ),
     coverage: Coverage::faceValue(25_000),
-    products: [
-        new Product('colonial-penn', ProductType::FinalExpense, 'colonial-penn.final-expense', 'Colonial Penn FE'),
-    ],
+    products: [Products::fex()->aetnaAccendo()],
 );
-$result = $isa->zyins->prequalify->run($input);
+$result = $isa->zyins->prequalifyV3->run($request);
 ```
 
 ## Factories
@@ -66,24 +63,36 @@ $result = $isa->zyins->prequalify->run($input);
 Missing env vars raise `Isa\Sdk\Zyins\Exception\IsaConfigException` with the
 exact variable name in the message.
 
-## First call in <15 lines
+## Your first call
 
 ```php
 use Isa\Sdk\Isa;
 use Isa\Sdk\Zyins\Applicant;
 use Isa\Sdk\Zyins\Coverage;
-use Isa\Sdk\Zyins\Prequalify\Input;
+use Isa\Sdk\Zyins\Height;
+use Isa\Sdk\Zyins\NicotineUsage;
+use Isa\Sdk\Zyins\Reference\PrequalifyV3Request;
 use Isa\Sdk\Zyins\Sex;
+use Isa\Sdk\Zyins\Weight;
+use Isa\Sdk\Catalog\Products;
 
 $isa = Isa::withKeycode(
     keycode: 'SDV-HWH-WDD',
     email:   'john.doe@acme-agency.com',
 );
-$result = $isa->zyins->prequalify->run(new Input(
-    applicant: new Applicant(dob: '1962-04-18', sex: Sex::Male, state: 'NC'),
+$result = $isa->zyins->prequalifyV3->run(new PrequalifyV3Request(
+    applicant: new Applicant(
+        dob: '1962-04-18',
+        sex: Sex::Male,
+        height: Height::fromFeetInches(5, 10),
+        weight: Weight::fromPounds(195),
+        state: 'NC',
+        nicotineUse: NicotineUsage::None,
+    ),
     coverage:  Coverage::faceValue(25_000),
+    products:  [Products::fex()->aetnaAccendo()],
 ));
-echo $result->data->plans[0]->monthlyPremium;
+echo $result->plans[0]->pricing[0]->premium?->amount->display;
 ```
 
 ## Per-surface API versions
@@ -226,7 +235,7 @@ use Isa\Sdk\Zyins\ZyInsClient;
 
 $client = ZyInsClient::withBearer();
 
-$result = $client->licenses->check(new CheckInput(
+$result = $client->license->check(new CheckInput(
     email: 'john.doe@acme-agency.com',
     keycode: 'ABC-123-XYZ',
 ));

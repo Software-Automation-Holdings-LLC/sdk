@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Isa\Sdk\Zyins\Quote;
 
-use InvalidArgumentException;
 use Isa\Sdk\Zyins\Applicant;
 use Isa\Sdk\Zyins\Coverage;
 use Isa\Sdk\Zyins\NicotineDuration;
@@ -23,9 +22,7 @@ final readonly class Input
         public Coverage $coverage,
         public Product $product,
     ) {
-        if ($product->wireToken === '') {
-            throw new InvalidArgumentException('QuoteInput.product must have a non-empty wireToken');
-        }
+        // id emptiness is already guarded by Product's own constructor.
     }
 
     /**
@@ -50,7 +47,7 @@ final readonly class Input
             $applicant['zip'] = $this->applicant->zip;
         }
         return [
-            'product' => $this->product->wireToken,
+            'product' => $this->product->id,
             'applicant' => $applicant,
             'coverage' => [
                 'type' => $this->coverage->type,

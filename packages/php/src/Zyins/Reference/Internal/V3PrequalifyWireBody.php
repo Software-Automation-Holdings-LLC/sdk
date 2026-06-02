@@ -12,7 +12,6 @@ use Isa\Sdk\Zyins\NicotineDuration;
 use Isa\Sdk\Zyins\NicotineProductUsage;
 use Isa\Sdk\Zyins\NicotineUsage;
 use Isa\Sdk\Zyins\NicotineUsageInput;
-use Isa\Sdk\Zyins\Product;
 use Isa\Sdk\Zyins\QuoteType;
 use Isa\Sdk\Zyins\Reference\PrequalifyV3Options;
 
@@ -101,7 +100,7 @@ final class V3PrequalifyWireBody
         $payload = [
             'applicant' => $applicantWire,
             'coverage' => self::buildCoverage($coverage, $applicant->state, $applicant->zip),
-            'products' => Product::toWireArray($products),
+            'products' => array_values(array_map(static fn ($p): string => $p->id, $products)),
         ];
 
         // v3 prequalify defaults `include_ineligible` to true: rows the

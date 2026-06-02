@@ -13,7 +13,6 @@ use Isa\Sdk\Zyins\NicotineUsage;
 use Isa\Sdk\Zyins\Options\BundledApiVersions;
 use Isa\Sdk\Zyins\Prequalify\Service as PrequalifyService;
 use Isa\Sdk\Zyins\Product;
-use Isa\Sdk\Zyins\ProductType;
 use Isa\Sdk\Zyins\Quote\Service as QuoteService;
 use Isa\Sdk\Zyins\Reference\PrequalifyV3;
 use Isa\Sdk\Zyins\Reference\PrequalifyV3Request;
@@ -30,10 +29,10 @@ use PHPUnit\Framework\TestCase;
  * Locks the per-surface facade routing exposed by {@see ZyInsClient}:
  *
  *  - With no override (bundled default) `prequalify` and `quote` route
- *    to the v1 services that hit `/v1/prequalify` and `/v1/quote`.
- *  - With `['prequalify' => 'v3']` (and same for `quote`) the namespace
- *    properties route to the v3 callables backed by `/v3/prequalify`
- *    and `/v3/quote`.
+ *    to the v3 callables backed by `/v3/prequalify` and `/v3/quote`.
+ *  - With `['prequalify' => 'v2']` (and same for `quote`) the namespace
+ *    properties route to the legacy services that hit `/v1/prequalify`
+ *    and `/v1/quote`.
  *
  * Mirrors the TS suite in
  * `packages/ts/tests/zyins/bundledApiVersions.test.ts` and the C# /
@@ -52,28 +51,28 @@ final class V3FacadeRoutingTest extends TestCase
     public static function prequalifyRoutingMatrix(): array
     {
         return [
-            'bundled default routes to v1 PHP services' => [
+            'bundled default routes to v3 services' => [
                 [],
-                PrequalifyService::class,
-                QuoteService::class,
+                PrequalifyV3::class,
+                QuoteV3::class,
             ],
             'explicit v1 pin routes to v1 service' => [
                 ['prequalify' => 'v1', 'quote' => 'v1'],
                 PrequalifyService::class,
                 QuoteService::class,
             ],
-            'explicit v2 pin matches default routing' => [
+            'explicit v2 pin routes to legacy service' => [
                 ['prequalify' => 'v2', 'quote' => 'v2'],
                 PrequalifyService::class,
                 QuoteService::class,
             ],
-            'v3 pin on prequalify routes to PrequalifyV3' => [
-                ['prequalify' => 'v3'],
+            'v3 prequalify with quote pinned v2 keeps surfaces independent' => [
+                ['prequalify' => 'v3', 'quote' => 'v2'],
                 PrequalifyV3::class,
                 QuoteService::class,
             ],
-            'v3 pin on quote routes to QuoteV3' => [
-                ['quote' => 'v3'],
+            'v3 quote with prequalify pinned v2 keeps surfaces independent' => [
+                ['prequalify' => 'v2', 'quote' => 'v3'],
                 PrequalifyService::class,
                 QuoteV3::class,
             ],
@@ -242,10 +241,10 @@ final class V3FacadeRoutingTest extends TestCase
     {
         return [
             new Product(
-                'colonial-penn',
-                ProductType::FinalExpense,
-                'colonial-penn.final-expense',
-                'Colonial Penn FE',
+                id: 'prod_cp_fixture',
+                name: 'Colonial Penn FE',
+                class: 'fex',
+                carrier: 'Colonial Penn',
             ),
         ];
     }

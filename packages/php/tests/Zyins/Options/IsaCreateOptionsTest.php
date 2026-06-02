@@ -232,10 +232,10 @@ final class IsaCreateOptionsTest extends TestCase
     public function testBundledApiVersionsMapShape(): void
     {
         // Pin the locked release table — v3 freeze plan, §2.7.
-        self::assertSame('v2', BundledApiVersions::MAP['prequalify']);
-        self::assertSame('v2', BundledApiVersions::MAP['quote']);
-        self::assertSame('v2', BundledApiVersions::MAP['datasets']);
-        self::assertSame('v2', BundledApiVersions::MAP['reference']);
+        self::assertSame('v3', BundledApiVersions::MAP['prequalify']);
+        self::assertSame('v3', BundledApiVersions::MAP['quote']);
+        self::assertSame('v3', BundledApiVersions::MAP['datasets']);
+        self::assertSame('v3', BundledApiVersions::MAP['reference']);
         self::assertSame('v1', BundledApiVersions::MAP['sessions']);
         self::assertSame('v1', BundledApiVersions::MAP['branding']);
         self::assertSame('v1', BundledApiVersions::MAP['cases']);
@@ -243,14 +243,14 @@ final class IsaCreateOptionsTest extends TestCase
 
     public function testBundledApiVersionsResolveFallsBackToBundled(): void
     {
-        self::assertSame('v2', BundledApiVersions::resolve('quote'));
-        self::assertSame('v2', BundledApiVersions::resolve('quote', []));
+        self::assertSame('v3', BundledApiVersions::resolve('quote'));
+        self::assertSame('v3', BundledApiVersions::resolve('quote', []));
     }
 
     public function testBundledApiVersionsResolveHonorsOverride(): void
     {
-        self::assertSame('v3', BundledApiVersions::resolve('quote', ['quote' => 'v3']));
+        self::assertSame('v2', BundledApiVersions::resolve('quote', ['quote' => 'v2']));
         // Override on an unrelated surface does not affect this surface.
-        self::assertSame('v2', BundledApiVersions::resolve('quote', ['datasets' => 'v3']));
+        self::assertSame('v3', BundledApiVersions::resolve('quote', ['datasets' => 'v2']));
     }
 }

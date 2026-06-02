@@ -87,6 +87,51 @@ final readonly class Http
     }
 
     /**
+     * GET a path and return the top-level JSON object verbatim. Used by the
+     * zero-knowledge case `open` flow to fetch an opaque envelope by id.
+     *
+     * @return array<string,mixed>
+     * @throws IsaException
+     */
+    public function getRawEnvelope(string $path): array
+    {
+        $headers = ['Accept' => 'application/json'];
+        if ($this->tokenSource !== null) {
+            $headers['Authorization'] = $this->authorizationScheme . ' ' . $this->tokenSource->token();
+        }
+        $request = new Request('GET', $this->baseUrl . $path, $headers);
+        try {
+            $response = $this->http->sendRequest($request);
+        } catch (ClientExceptionInterface $e) {
+            throw new IsaException('account: transport failure: ' . $e->getMessage(), 'transport_error', previous: $e);
+        }
+        $status = $response->getStatusCode();
+        $bodyStr = (string) $response->getBody();
+        if ($status < 200 || $status >= 300) {
+            throw $this->errorFromResponse($response, $bodyStr);
+        }
+        if ($bodyStr === '') {
+            throw new IsaException('account: response body was empty', 'unknown');
+        }
+        try {
+            /** @var mixed $parsed */
+            $parsed = json_decode($bodyStr, true, flags: JSON_THROW_ON_ERROR);
+        } catch (JsonException $e) {
+            throw new IsaException('account: response body was not JSON', 'unknown', previous: $e);
+        }
+        if (! is_array($parsed)) {
+            throw new IsaException('account: response body was not a JSON object', 'unknown');
+        }
+        if (is_array($parsed['data'] ?? null)) {
+            /** @var array<string,mixed> $data */
+            $data = $parsed['data'];
+            return $data;
+        }
+        /** @var array<string,mixed> $parsed */
+        return $parsed;
+    }
+
+    /**
      * @param array<string,mixed> $payload
      * @throws IsaException
      */

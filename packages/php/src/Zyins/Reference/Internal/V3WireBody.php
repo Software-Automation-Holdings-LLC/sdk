@@ -11,7 +11,6 @@ use Isa\Sdk\Zyins\Medication;
 use Isa\Sdk\Zyins\NicotineDuration;
 use Isa\Sdk\Zyins\NicotineUsage;
 use Isa\Sdk\Zyins\NicotineUsageInput;
-use Isa\Sdk\Zyins\Product;
 use Isa\Sdk\Zyins\QuoteType;
 use Isa\Sdk\Zyins\Reference\PrequalifyV3Options;
 
@@ -65,7 +64,7 @@ final class V3WireBody
                 $applicant->medications,
             ),
             'quote_options' => self::serializeQuoteOptions($coverage),
-            'products' => Product::toWireArray($products),
+            'products' => array_values(array_map(static fn ($p): string => $p->id, $products)),
         ];
 
         if ($applicant->zip !== null) {

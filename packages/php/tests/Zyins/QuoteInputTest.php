@@ -12,7 +12,6 @@ use Isa\Sdk\Zyins\Height;
 use Isa\Sdk\Zyins\NicotineDuration;
 use Isa\Sdk\Zyins\NicotineUsageInput;
 use Isa\Sdk\Zyins\Product;
-use Isa\Sdk\Zyins\ProductType;
 use Isa\Sdk\Zyins\Quote\Input;
 use Isa\Sdk\Zyins\Sex;
 use Isa\Sdk\Zyins\Weight;
@@ -32,7 +31,7 @@ final class QuoteInputTest extends TestCase
                 nicotineUse: new NicotineUsageInput(NicotineDuration::Within12Months),
             ),
             coverage: Coverage::faceValue(50_000),
-            product: new Product('x', ProductType::FinalExpense, 'tok', 'X'),
+            product: new Product(id: 'prod_x', name: 'X', class: 'fex', carrier: 'X'),
         ))->toWireBody();
 
         self::assertSame('current', $body['applicant']['nicotine_use']);

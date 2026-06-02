@@ -10,6 +10,7 @@ use Isa\Sdk\Catalog\Carriers;
 use Isa\Sdk\Catalog\ErrorAdviceCodes;
 use Isa\Sdk\Catalog\ErrorCode;
 use Isa\Sdk\Catalog\ErrorDocUrls;
+use Isa\Sdk\Catalog\FexProducts;
 use Isa\Sdk\Catalog\Product;
 use Isa\Sdk\Catalog\Products;
 use Isa\Sdk\Catalog\Scope;
@@ -20,56 +21,87 @@ use Isa\Sdk\Catalog\State;
 use Isa\Sdk\Catalog\States;
 
 #[CoversClass(Products::class)]
+#[CoversClass(FexProducts::class)]
 #[CoversClass(Carriers::class)]
 #[CoversClass(States::class)]
 #[CoversClass(Product::class)]
 final class CatalogTest extends TestCase
 {
-    public function testProductConstantsResolveToSlugs(): void
+    // -------------------------------------------------------------------------
+    // Products rich catalog
+    // -------------------------------------------------------------------------
+
+    public function testFexAetnaAccendoHasExpectedId(): void
     {
-        self::assertSame('fex-aetna-accendo', Product::AETNA_ACCENDO_FEX);
+        $p = Products::fex()->aetnaAccendo();
+        self::assertSame('prod_d7b57156-3e83-506b-8936-0692c1193dc7', $p->id);
+        self::assertSame('Aetna Accendo', $p->name);
+        self::assertSame('fex', $p->class);
+        self::assertSame('Aetna', $p->carrier);
     }
 
-    public function testProductsValuesIsNonEmpty(): void
+    public function testByIdReturnsSameProductAsConstant(): void
     {
-        $values = Products::values();
-        self::assertNotEmpty($values);
-        self::assertContains('fex-aetna-accendo', $values);
+        $constant = Products::fex()->aetnaAccendo();
+        $byId = Products::byId($constant->id);
+        self::assertNotNull($byId);
+        self::assertSame($constant->id, $byId->id);
+        self::assertSame($constant->name, $byId->name);
+        self::assertSame($constant->class, $byId->class);
+        self::assertSame($constant->carrier, $byId->carrier);
     }
 
-    public function testProductsMetadataReturnsExpectedShape(): void
+    public function testByIdReturnsNullForUnknownId(): void
     {
-        $meta = Products::metadata(Product::AETNA_ACCENDO_FEX);
-        self::assertSame('fex-aetna-accendo', $meta->slug);
-        self::assertSame('Aetna Accendo', $meta->displayName);
-        self::assertSame('aetna', $meta->carrier);
-        self::assertSame('fex', $meta->productClass);
-        self::assertContains('Aetna Accendo Montana', $meta->stateVariations);
+        self::assertNull(Products::byId('prod_00000000-0000-0000-0000-000000000000'));
     }
 
-    public function testProductsByCarrierResolvesBothSlugAndDisplayName(): void
+    public function testByIdDoesNotAcceptStaleNames(): void
     {
-        $bySlug = Products::byCarrier('aetna');
-        $byName = Products::byCarrier('Aetna');
-        self::assertSame($bySlug, $byName);
-        self::assertContains('fex-aetna-accendo', $bySlug);
+        // Only ids resolve — stale names, slugs, and display strings return null
+        self::assertNull(Products::byId('fex-aetna-accendo'));
+        self::assertNull(Products::byId('Aetna Accendo'));
+        self::assertNull(Products::byId('aetna'));
     }
 
-    public function testProductsSearchPrefersPrefix(): void
+    public function testTermFamilyAccessorReturnsProducts(): void
     {
-        $results = Products::search('aetna');
-        self::assertNotEmpty($results);
-        // Aetna products should appear first
-        $first = $results[0];
-        self::assertStringContainsString('aetna', $first);
+        $p = Products::term()->americanAmicableEasyTerm();
+        self::assertStringStartsWith('prod_', $p->id);
+        self::assertSame('term', $p->class);
     }
+
+    public function testMedsupFamilyAccessorReturnsProducts(): void
+    {
+        $p = Products::medsup()->aetnaAccendoMedicareSupplement();
+        self::assertStringStartsWith('prod_', $p->id);
+        self::assertSame('medsup', $p->class);
+    }
+
+    public function testPreneedFamilyAccessorReturnsProducts(): void
+    {
+        $p = Products::preneed()->betterlifeSinglePremium();
+        self::assertStringStartsWith('prod_', $p->id);
+        self::assertSame('preneed', $p->class);
+    }
+
+    // -------------------------------------------------------------------------
+    // Carriers catalog
+    // -------------------------------------------------------------------------
 
     public function testCarriersMetadataReturnsExpectedShape(): void
     {
         $meta = Carriers::metadata('aetna');
         self::assertSame('Aetna', $meta->displayName);
-        self::assertContains('fex-aetna-accendo', $meta->products);
+        // Products are now keyed by prod_ id
+        foreach ($meta->products as $prodId) {
+            self::assertStringStartsWith('prod_', $prodId);
+        }
     }
+
+    // -------------------------------------------------------------------------
+    // States catalog
+    // -------------------------------------------------------------------------
 
     public function testStatesByAbbreviationResolvesAbbrAndName(): void
     {
@@ -86,6 +118,10 @@ final class CatalogTest extends TestCase
         $meta2 = States::metadata(State::NorthCarolina);
         self::assertFalse($meta2->isTerritory);
     }
+
+    // -------------------------------------------------------------------------
+    // Scope / SignEvent / ErrorCode catalogs
+    // -------------------------------------------------------------------------
 
     public function testScopeEnumExposesWireValues(): void
     {

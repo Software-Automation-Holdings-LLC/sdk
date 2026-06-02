@@ -14,7 +14,6 @@ use Isa\Sdk\Zyins\Medication;
 use Isa\Sdk\Zyins\NicotineUsage;
 use Isa\Sdk\Zyins\Prequalify\Input;
 use Isa\Sdk\Zyins\Product;
-use Isa\Sdk\Zyins\ProductType;
 use Isa\Sdk\Zyins\RequestOptions;
 use Isa\Sdk\Zyins\Sex;
 use Isa\Sdk\Zyins\Weight;
@@ -49,10 +48,13 @@ final class PrequalifyServiceTest extends TestCase
             ],
         ], JSON_THROW_ON_ERROR));
 
+        // Pin v2 so the legacy Prequalify\Service (flat /v1/prequalify wire)
+        // is exercised; the bundled default now routes prequalify to v3.
         $client = new ZyInsClient(
             token: self::FIXTURE_TOKEN,
             httpClient: $http,
             idempotency: new FixedKeySource('550e8400-e29b-41d4-a716-446655440000'),
+            apiVersionMap: ['prequalify' => 'v2'],
         );
 
         $input = new Input(
@@ -67,7 +69,7 @@ final class PrequalifyServiceTest extends TestCase
                 conditions: [new Condition('HBP', '5 YEARS AGO', '3 MONTHS AGO')],
             ),
             coverage: Coverage::faceValue(25000),
-            products: [new Product('colonial-penn', ProductType::FinalExpense, 'colonial-penn.final-expense', 'Colonial Penn FE')],
+            products: [new Product(id: 'prod_cp_fixture', name: 'Colonial Penn FE', class: 'fex', carrier: 'Colonial Penn')],
         );
 
         // Narrow the union — this suite covers the v1 path; the v3 facade
@@ -91,7 +93,8 @@ final class PrequalifyServiceTest extends TestCase
         self::assertSame('male', $body['gender']);
         self::assertSame(70, $body['height']);
         self::assertSame(195, $body['weight']);
-        self::assertSame(['colonial-penn.final-expense'], $body['products']);
+        // Products wire carries the opaque prod_<uuid> id, never a slug.
+        self::assertSame(['prod_cp_fixture'], $body['products']);
         self::assertSame('never', $body['nicotine_usage']['last_used']);
         self::assertArrayHasKey('quote_options', $body);
         self::assertArrayNotHasKey('applicant', $body);
@@ -102,7 +105,7 @@ final class PrequalifyServiceTest extends TestCase
     {
         $http = new MockHttpClient();
         $http->queue(200, '{"data":{"plans":[]},"object":"list","livemode":false,"request_id":"req_x"}');
-        $client = new ZyInsClient(token: self::FIXTURE_TOKEN, httpClient: $http);
+        $client = new ZyInsClient(token: self::FIXTURE_TOKEN, httpClient: $http, apiVersionMap: ['prequalify' => 'v2']);
 
         $input = new Input(
             applicant: new Applicant(
@@ -114,7 +117,7 @@ final class PrequalifyServiceTest extends TestCase
                 nicotineUse: NicotineUsage::None,
             ),
             coverage: Coverage::monthlyBudget(50),
-            products: [new Product('mutual-of-omaha', ProductType::FinalExpense, 'mutual-of-omaha.final-expense', 'Mutual of Omaha FE')],
+            products: [new Product(id: 'prod_moo_fixture', name: 'Mutual of Omaha FE', class: 'fex', carrier: 'Mutual of Omaha')],
         );
 
         $client->prequalify->run($input, RequestOptions::default()->withIdempotencyKey('caller-supplied-key'));

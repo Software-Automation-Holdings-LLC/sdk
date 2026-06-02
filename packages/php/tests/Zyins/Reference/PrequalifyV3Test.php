@@ -10,7 +10,6 @@ use Isa\Sdk\Zyins\Coverage;
 use Isa\Sdk\Zyins\Height;
 use Isa\Sdk\Zyins\NicotineUsage;
 use Isa\Sdk\Zyins\Product;
-use Isa\Sdk\Zyins\ProductType;
 use Isa\Sdk\Zyins\Reference\PrequalifyV3;
 use Isa\Sdk\Zyins\Reference\V3Offer;
 use Isa\Sdk\Zyins\Reference\PrequalifyV3Request;
@@ -99,7 +98,7 @@ final class PrequalifyV3Test extends TestCase
                     nicotineUse: NicotineUsage::None,
                 ),
                 coverage: Coverage::faceValue(25000),
-                products: [new Product('Carrier', ProductType::Term, 'p|term', 'Product')],
+                products: [new Product(id: 'prod_p_fixture', name: 'Product', class: 'term', carrier: 'Carrier')],
             ),
             RequestOptions::default()->withIdempotencyKey('550e8400-e29b-41d4-a716-446655440000'),
         );
@@ -151,7 +150,7 @@ final class PrequalifyV3Test extends TestCase
                     nicotineUse: NicotineUsage::None,
                 ),
                 coverage: Coverage::faceValue(25000),
-                products: [new Product('Carrier', ProductType::Term, 'p|term', 'Product')],
+                products: [new Product(id: 'prod_p_fixture', name: 'Product', class: 'term', carrier: 'Carrier')],
             ),
         );
 
@@ -188,7 +187,7 @@ final class PrequalifyV3Test extends TestCase
         // empty string; the server pattern ^\d{5}(-\d{4})?$ rejects "").
         self::assertArrayNotHasKey('zip', $coverage);
 
-        self::assertSame(['p|term'], $decoded['products']);
+        self::assertSame(['prod_p_fixture'], $decoded['products']);
         self::assertTrue($decoded['include_ineligible']);
     }
 
@@ -215,7 +214,7 @@ final class PrequalifyV3Test extends TestCase
                     zip: '75001',
                 ),
                 coverage: Coverage::faceValue(25000),
-                products: [new Product('Carrier', ProductType::Term, 'p|term', 'Product')],
+                products: [new Product(id: 'prod_p_fixture', name: 'Product', class: 'term', carrier: 'Carrier')],
             ),
         );
 
@@ -256,7 +255,7 @@ final class PrequalifyV3Test extends TestCase
                     )],
                 ),
                 coverage: Coverage::faceValue(50000),
-                products: [new Product('Carrier', ProductType::Term, 'p|term', 'Product')],
+                products: [new Product(id: 'prod_p_fixture', name: 'Product', class: 'term', carrier: 'Carrier')],
             ),
         );
 
@@ -303,7 +302,7 @@ final class PrequalifyV3Test extends TestCase
                     nicotineUse: NicotineUsage::None,
                 ),
                 coverage: Coverage::monthlyBudget(50),
-                products: [new Product('Carrier', ProductType::Term, 'p|term', 'Product')],
+                products: [new Product(id: 'prod_p_fixture', name: 'Product', class: 'term', carrier: 'Carrier')],
             ),
         );
 
@@ -335,7 +334,7 @@ final class PrequalifyV3Test extends TestCase
                     nicotineUse: NicotineUsage::None,
                 ),
                 coverage: Coverage::faceValue(25000),
-                products: [new Product('Carrier', ProductType::Term, 'p|term', 'Product')],
+                products: [new Product(id: 'prod_p_fixture', name: 'Product', class: 'term', carrier: 'Carrier')],
             ),
             RequestOptions::default()->withExtraHeaders(['api-version' => 'v9']),
         );

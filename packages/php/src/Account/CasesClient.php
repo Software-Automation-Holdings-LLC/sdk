@@ -19,8 +19,11 @@ use InvalidArgumentException;
  */
 final readonly class CasesClient
 {
-    public function __construct(private Http $http)
-    {
+    public function __construct(
+        private Http $http,
+        private string $caseViewerBaseUrl = CaseLink::DEFAULT_VIEWER_BASE_URL,
+        private CaseCrypto $caseCrypto = new CaseCrypto(),
+    ) {
     }
 
     /**
@@ -122,6 +125,63 @@ final readonly class CasesClient
             idempotencyKey: $env->idempotencyKey,
             data: EmailCaseAck::fromWire($env->data),
         );
+    }
+
+    /**
+     * Encrypt a payload client-side, store the opaque envelope via
+     * `POST /v1/case`, and return the fragment-keyed share link. The
+     * decryption key never reaches the server. The returned link is a value
+     * and nothing else — never logged, never attached to a thrown error.
+     *
+     * @param mixed $payload Arbitrary JSON payload, encrypted before it leaves the SDK.
+     */
+    public function share(string $product, mixed $payload): CaseShareResult
+    {
+        if (trim($product) === '') {
+            throw new InvalidArgumentException('account.cases: share requires a product');
+        }
+        if ($payload === null) {
+            throw new InvalidArgumentException('account.cases: share requires a payload');
+        }
+        $encrypted = $this->caseCrypto->encrypt($product, $payload);
+        $raw = $this->http->postRawEnvelope('/v1/case', [
+            'product' => $product,
+            'ciphertext' => $encrypted->envelope->ciphertext,
+            'iv' => $encrypted->envelope->iv,
+            'tag' => $encrypted->envelope->tag,
+        ]);
+        $data = is_array($raw['data'] ?? null) ? $raw['data'] : $raw;
+        $id = is_string($data['id'] ?? null) ? (string) $data['id'] : '';
+        if ($id === '') {
+            throw new InvalidArgumentException('account.cases: share response missing id');
+        }
+        return new CaseShareResult(
+            id: $id,
+            link: CaseLink::assemble($this->caseViewerBaseUrl, $id, $encrypted->keyFragment),
+        );
+    }
+
+    /**
+     * Resolve a share link: parse the code + fragment key, fetch the opaque
+     * envelope via `GET /v1/case/{code}`, and decrypt locally. The key comes
+     * only from the link the caller already holds.
+     */
+    public function open(string $link): CaseOpenResult
+    {
+        $parsed = CaseLink::parse($link);
+        $path = '/v1/case/' . rawurlencode($parsed->code);
+        $data = $this->http->getRawEnvelope($path);
+        $product = is_string($data['product'] ?? null) ? (string) $data['product'] : '';
+        if ($product === '') {
+            throw new InvalidArgumentException('account.cases: open response missing product');
+        }
+        $envelope = new CaseEnvelope(
+            ciphertext: is_string($data['ciphertext'] ?? null) ? (string) $data['ciphertext'] : '',
+            iv: is_string($data['iv'] ?? null) ? (string) $data['iv'] : '',
+            tag: is_string($data['tag'] ?? null) ? (string) $data['tag'] : '',
+        );
+        $payload = $this->caseCrypto->decrypt($product, $envelope, $parsed->keyFragment);
+        return new CaseOpenResult(product: $product, payload: $payload);
     }
 
     /**

@@ -10,7 +10,6 @@ use Isa\Sdk\Zyins\Coverage;
 use Isa\Sdk\Zyins\Height;
 use Isa\Sdk\Zyins\NicotineUsage;
 use Isa\Sdk\Zyins\Product;
-use Isa\Sdk\Zyins\ProductType;
 use Isa\Sdk\Zyins\Reference\PrequalifyV3;
 use Isa\Sdk\Zyins\Reference\PrequalifyV3Request;
 use Isa\Sdk\Zyins\Reference\PrequalifyV3Result;
@@ -51,7 +50,7 @@ final class PrequalifyV3MultiAmountTest extends TestCase
     /** @return list<Product> */
     private function products(): array
     {
-        return [new Product('Carrier', ProductType::Term, 'p|term', 'Product')];
+        return [new Product(id: 'prod_p_fixture', name: 'Product', class: 'term', carrier: 'Carrier')];
     }
 
     /** @return array<string,mixed> */

@@ -4,55 +4,20 @@ declare(strict_types=1);
 
 namespace Isa\Sdk\Zyins\Products;
 
-use Isa\Sdk\Zyins\ProductCatalog;
-
 /**
- * `$client->products` — live product catalog with memoization.
+ * `$client->products` — namespace accessor for product-related operations.
  *
- * {@see catalog()} calls the datasets service's `get(include: ['products'])`
- * once and memoizes the resulting {@see ProductCatalog} for the lifetime of
- * the facade instance. Subsequent calls return the cached catalog without a
- * network round-trip.
+ * The static catalog constants in {@see \Isa\Sdk\Catalog\Products} are the
+ * primary entry point for product selection:
  *
- * The catalog is invalidated only on facade recreation. For long-lived
- * processes that need fresh product lists, call {@see refresh()} to force
- * a re-fetch.
+ *     use Isa\Sdk\Catalog\Products;
+ *     $product = Products::fex()->aetnaAccendo();
+ *
+ * This facade exists for forward-compatibility as an injection point for
+ * future live-catalog refresh operations.
  */
 final class Facade
 {
-    private const PRODUCTS_INCLUDE = 'products';
-
-    private ?ProductCatalog $cached = null;
-
-    /**
-     * @param callable(array<string,mixed>): array<string,mixed> $datasetsGet
-     */
+    /** @param callable(array<string,mixed>): array<string,mixed> $datasetsGet */
     public function __construct(private readonly mixed $datasetsGet) {}
-
-    /**
-     * Returns the {@see ProductCatalog} built from the server's products dataset.
-     *
-     * The first call fetches from `GET /v1/reference-data`; subsequent calls
-     * return the memoized result instantly.
-     */
-    public function catalog(): ProductCatalog
-    {
-        if ($this->cached !== null) {
-            return $this->cached;
-        }
-        $bundle = ($this->datasetsGet)(['include' => self::PRODUCTS_INCLUDE]);
-        $this->cached = ProductCatalog::fromDatasets($bundle);
-        return $this->cached;
-    }
-
-    /**
-     * Evict the cached catalog and re-fetch on the next {@see catalog()} call.
-     *
-     * Returns the freshly fetched {@see ProductCatalog}.
-     */
-    public function refresh(): ProductCatalog
-    {
-        $this->cached = null;
-        return $this->catalog();
-    }
 }

@@ -16,14 +16,12 @@ use Isa\Sdk\Zyins\NicotineUsage;
 use Isa\Sdk\Zyins\NicotineUsageInput;
 use Isa\Sdk\Zyins\Prequalify\Input;
 use Isa\Sdk\Zyins\Product;
-use Isa\Sdk\Zyins\ProductCatalog;
-use Isa\Sdk\Zyins\ProductType;
 use Isa\Sdk\Zyins\QuoteType;
 use Isa\Sdk\Zyins\Sex;
 use Isa\Sdk\Zyins\Weight;
 
 /**
- * 0.5.1 flat wire body and new type tests.
+ * Flat wire body shape and Product id-wire tests.
  */
 final class PrequalifyWireBodyTest extends TestCase
 {
@@ -39,6 +37,11 @@ final class PrequalifyWireBodyTest extends TestCase
         );
     }
 
+    private function fixtureProduct(): Product
+    {
+        return new Product(id: 'prod_d7b57156-3e83-506b-8936-0692c1193dc7', name: 'Aetna Accendo', class: 'fex', carrier: 'Aetna');
+    }
+
     // -------------------------------------------------------------------------
     // Flat wire shape
     // -------------------------------------------------------------------------
@@ -48,7 +51,7 @@ final class PrequalifyWireBodyTest extends TestCase
         $body = (new Input(
             applicant: $this->johnDoeNc(),
             coverage: Coverage::faceValue(25_000),
-            products: [new Product('cp', ProductType::FinalExpense, 'senior-life', 'Senior Life')],
+            products: [$this->fixtureProduct()],
         ))->toWireBody();
 
         self::assertArrayHasKey('date_of_birth', $body);
@@ -70,7 +73,7 @@ final class PrequalifyWireBodyTest extends TestCase
         $body = (new Input(
             applicant: $this->johnDoeNc(),
             coverage: Coverage::faceValue(25_000),
-            products: [new Product('cp', ProductType::FinalExpense, 'senior-life', 'Senior Life')],
+            products: [$this->fixtureProduct()],
         ))->toWireBody();
 
         self::assertSame('1962-04-18', $body['date_of_birth']);
@@ -79,7 +82,8 @@ final class PrequalifyWireBodyTest extends TestCase
         self::assertSame(195, $body['weight']);
         self::assertSame('NC', $body['state']);
         self::assertSame('never', $body['nicotine_usage']['last_used']);
-        self::assertSame(['senior-life'], $body['products']);
+        // Wire products must be the prod_ id, not a slug
+        self::assertSame(['prod_d7b57156-3e83-506b-8936-0692c1193dc7'], $body['products']);
         self::assertSame(['25000'], $body['quote_options']['amounts']);
         self::assertSame('face_amounts', $body['quote_options']['quote_type']);
         self::assertSame([], $body['conditions']);
@@ -91,7 +95,7 @@ final class PrequalifyWireBodyTest extends TestCase
         $bodyMale = (new Input(
             applicant: $this->johnDoeNc(),
             coverage: Coverage::faceValue(25_000),
-            products: [new Product('cp', ProductType::FinalExpense, 'tok', 'CP')],
+            products: [new Product(id: 'prod_a', name: 'CP', class: 'fex', carrier: 'CP')],
         ))->toWireBody();
         self::assertSame('male', $bodyMale['gender']);
 
@@ -105,7 +109,7 @@ final class PrequalifyWireBodyTest extends TestCase
                 nicotineUse: new NicotineUsageInput(NicotineDuration::Never),
             ),
             coverage: Coverage::faceValue(50_000),
-            products: [new Product('x', ProductType::FinalExpense, 'tok', 'X')],
+            products: [new Product(id: 'prod_b', name: 'X', class: 'fex', carrier: 'X')],
         ))->toWireBody();
         self::assertSame('female', $bodyFemale['gender']);
     }
@@ -116,12 +120,12 @@ final class PrequalifyWireBodyTest extends TestCase
             applicant: $this->johnDoeNc(),
             coverage: Coverage::faceValue(25_000),
             products: [
-                new Product('cp', ProductType::FinalExpense, 'cp.fex', 'CP'),
-                new Product('moo', ProductType::FinalExpense, 'moo.fex', 'MOO'),
+                new Product(id: 'prod_cp', name: 'CP', class: 'fex', carrier: 'CP'),
+                new Product(id: 'prod_moo', name: 'MOO', class: 'fex', carrier: 'MOO'),
             ],
         ))->toWireBody();
 
-        self::assertSame(['cp.fex', 'moo.fex'], $body['products']);
+        self::assertSame(['prod_cp', 'prod_moo'], $body['products']);
     }
 
     public function testWireBodyMonthlyBudgetQuoteType(): void
@@ -129,7 +133,7 @@ final class PrequalifyWireBodyTest extends TestCase
         $body = (new Input(
             applicant: $this->johnDoeNc(),
             coverage: Coverage::monthlyBudget(50),
-            products: [new Product('x', ProductType::FinalExpense, 'tok', 'X')],
+            products: [new Product(id: 'prod_x', name: 'X', class: 'fex', carrier: 'X')],
         ))->toWireBody();
 
         self::assertSame('monthly_budget', $body['quote_options']['quote_type']);
@@ -148,7 +152,7 @@ final class PrequalifyWireBodyTest extends TestCase
                 nicotineUse: new NicotineUsageInput(NicotineDuration::Within12Months),
             ),
             coverage: Coverage::faceValue(50_000),
-            products: [new Product('x', ProductType::FinalExpense, 'tok', 'X')],
+            products: [new Product(id: 'prod_x', name: 'X', class: 'fex', carrier: 'X')],
         ))->toWireBody();
 
         self::assertSame('within_12_months', $body['nicotine_usage']['last_used']);
@@ -179,7 +183,7 @@ final class PrequalifyWireBodyTest extends TestCase
                 ),
             ),
             coverage: Coverage::faceValue(50_000),
-            products: [new Product('x', ProductType::FinalExpense, 'tok', 'X')],
+            products: [new Product(id: 'prod_x', name: 'X', class: 'fex', carrier: 'X')],
         ))->toWireBody();
 
         self::assertSame('CIGARETTE', $body['nicotine_usage']['product_usage'][0]['type']);
@@ -204,7 +208,7 @@ final class PrequalifyWireBodyTest extends TestCase
                     nicotineUse: $legacy,
                 ),
                 coverage: Coverage::faceValue(25_000),
-                products: [new Product('x', ProductType::FinalExpense, 'tok', 'X')],
+                products: [new Product(id: 'prod_x', name: 'X', class: 'fex', carrier: 'X')],
             ))->toWireBody();
             self::assertSame($expectedLastUsed, $body['nicotine_usage']['last_used']);
         }
@@ -215,7 +219,7 @@ final class PrequalifyWireBodyTest extends TestCase
         $body = (new Input(
             applicant: $this->johnDoeNc(),
             coverage: Coverage::faceValue(25_000),
-            products: [new Product('x', ProductType::FinalExpense, 'tok', 'X')],
+            products: [new Product(id: 'prod_x', name: 'X', class: 'fex', carrier: 'X')],
         ))->toWireBody();
 
         self::assertArrayNotHasKey('zip', $body);
@@ -234,7 +238,7 @@ final class PrequalifyWireBodyTest extends TestCase
                 zip: '27601',
             ),
             coverage: Coverage::faceValue(25_000),
-            products: [new Product('x', ProductType::FinalExpense, 'tok', 'X')],
+            products: [new Product(id: 'prod_x', name: 'X', class: 'fex', carrier: 'X')],
         ))->toWireBody();
 
         self::assertSame('27601', $body['zip']);
@@ -254,7 +258,7 @@ final class PrequalifyWireBodyTest extends TestCase
                 conditions: [new Condition('HBP', '3 YEARS AGO', '3 MONTHS AGO')],
             ),
             coverage: Coverage::faceValue(25_000),
-            products: [new Product('x', ProductType::FinalExpense, 'tok', 'X')],
+            products: [new Product(id: 'prod_x', name: 'X', class: 'fex', carrier: 'X')],
         ))->toWireBody();
 
         self::assertSame('LOSARTAN', $body['medications'][0]['name']);
@@ -285,56 +289,5 @@ final class PrequalifyWireBodyTest extends TestCase
     {
         self::assertSame('face_amounts',   QuoteType::FaceAmounts->value);
         self::assertSame('monthly_budget', QuoteType::MonthlyBudget->value);
-    }
-
-    // -------------------------------------------------------------------------
-    // ProductCatalog
-    // -------------------------------------------------------------------------
-
-    public function testProductCatalogFromDatasetsParses(): void
-    {
-        $catalog = ProductCatalog::fromDatasets([
-            'products' => [
-                'fex' => [
-                    ['identifier' => 'fex-cp', 'carrier' => 'colonial-penn', 'name' => 'CP FEX', 'product' => 'fex'],
-                ],
-            ],
-        ]);
-
-        $p = $catalog->findBySlug('fex-cp');
-        self::assertSame('colonial-penn', $p->brand);
-        self::assertSame('fex-cp', $p->wireToken);
-        self::assertSame('CP FEX', $p->displayName);
-    }
-
-    public function testProductCatalogFindBySlugThrowsOnMiss(): void
-    {
-        $this->expectException(\OutOfBoundsException::class);
-        ProductCatalog::fromDatasets(['products' => []])->findBySlug('nonexistent');
-    }
-
-    public function testProductCatalogTryFindBySlugReturnsNullOnMiss(): void
-    {
-        self::assertNull(
-            ProductCatalog::fromDatasets(['products' => []])->tryFindBySlug('nonexistent')
-        );
-    }
-
-    public function testProductCatalogFromDatasetsSkipsBadEntries(): void
-    {
-        $catalog = ProductCatalog::fromDatasets([
-            'products' => [
-                'fex' => [
-                    ['identifier' => 'ok', 'carrier' => 'x', 'name' => 'X', 'product' => 'fex'],
-                    ['identifier' => 'final-expense', 'carrier' => 'x', 'name' => 'X', 'product' => 'final_expense'],
-                    ['identifier' => 'unknown', 'carrier' => 'x', 'name' => 'X', 'product' => 'unknown'],
-                    ['identifier' => 'blank', 'carrier' => ' ', 'name' => 'X', 'product' => 'fex'],
-                    ['missing' => 'fields'],
-                    null,
-                ],
-            ],
-        ]);
-        self::assertCount(2, $catalog->list());
-        self::assertSame(ProductType::FinalExpense, $catalog->findBySlug('final-expense')->type);
     }
 }

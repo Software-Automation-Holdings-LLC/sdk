@@ -14,7 +14,6 @@ use Isa\Sdk\Zyins\Height;
 use Isa\Sdk\Zyins\NicotineUsage;
 use Isa\Sdk\Zyins\Prequalify\Input;
 use Isa\Sdk\Zyins\Product;
-use Isa\Sdk\Zyins\ProductType;
 use Isa\Sdk\Zyins\RequestOptions;
 use Isa\Sdk\Zyins\Sex;
 use Isa\Sdk\Zyins\Weight;
@@ -35,9 +34,12 @@ final class IdempotencyConflictTest extends TestCase
             'request_id' => 'req_01HZK2N5GQR9T8X4B6FJW3Y1AS',
         ], JSON_THROW_ON_ERROR));
 
+        // Pin v2 so the legacy Prequalify\Service is exercised; the bundled
+        // default now routes prequalify to PrequalifyV3.
         $client = new ZyInsClient(
             token: 'isa_test_' . 'EXAMPLE000000000000000',
             httpClient: $http,
+            apiVersionMap: ['prequalify' => 'v2'],
         );
 
         try {
@@ -67,6 +69,7 @@ final class IdempotencyConflictTest extends TestCase
         $client = new ZyInsClient(
             token: 'isa_test_' . 'EXAMPLE000000000000000',
             httpClient: $http,
+            apiVersionMap: ['prequalify' => 'v2'],
         );
 
         try {
@@ -93,7 +96,7 @@ final class IdempotencyConflictTest extends TestCase
                 nicotineUse: NicotineUsage::None,
             ),
             coverage: Coverage::faceValue(25000),
-            products: [new Product('colonial-penn', ProductType::FinalExpense, 'colonial-penn.final-expense', 'Colonial Penn FE')],
+            products: [new Product(id: 'prod_cp_fixture', name: 'Colonial Penn FE', class: 'fex', carrier: 'Colonial Penn')],
         );
     }
 }

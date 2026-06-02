@@ -15,7 +15,6 @@ use Isa\Sdk\Zyins\Height;
 use Isa\Sdk\Zyins\NicotineUsage;
 use Isa\Sdk\Zyins\Prequalify\Input;
 use Isa\Sdk\Zyins\Product;
-use Isa\Sdk\Zyins\ProductType;
 use Isa\Sdk\Zyins\Sex;
 use Isa\Sdk\Zyins\Transport;
 use Isa\Sdk\Zyins\Weight;
@@ -84,7 +83,9 @@ final class TransportTest extends TestCase
     {
         $http = new MockHttpClient();
         $http->queue(200, '{"data":{"plans":[]},"request_id":"req_y"}');
-        $client = new ZyInsClient(token: self::FIXTURE_TOKEN, httpClient: $http);
+        // Pin v2 so the legacy Prequalify\Service (flat wire) is exercised;
+        // the bundled default now routes prequalify to PrequalifyV3.
+        $client = new ZyInsClient(token: self::FIXTURE_TOKEN, httpClient: $http, apiVersionMap: ['prequalify' => 'v2']);
         $input = new Input(
             applicant: new Applicant(
                 dob: '1962-04-18',
@@ -95,7 +96,7 @@ final class TransportTest extends TestCase
                 nicotineUse: NicotineUsage::None,
             ),
             coverage: Coverage::faceValue(25_000),
-            products: [new Product('colonial-penn', ProductType::FinalExpense, 'colonial-penn.final-expense', 'CP FE')],
+            products: [new Product(id: 'prod_cp_fixture', name: 'Colonial Penn FE', class: 'fex', carrier: 'Colonial Penn')],
         );
         $client->prequalify->run($input);
         $body = json_decode((string) $http->lastRequest()->getBody(), true, flags: JSON_THROW_ON_ERROR);
@@ -108,7 +109,7 @@ final class TransportTest extends TestCase
     {
         $http = new MockHttpClient();
         $http->queue(200, '{"data":{"plans":[]},"request_id":"req_w"}');
-        $client = new ZyInsClient(token: self::FIXTURE_TOKEN, httpClient: $http);
+        $client = new ZyInsClient(token: self::FIXTURE_TOKEN, httpClient: $http, apiVersionMap: ['prequalify' => 'v2']);
         $input = new Input(
             applicant: new Applicant(
                 dob: '1962-04-18',
@@ -121,7 +122,7 @@ final class TransportTest extends TestCase
                 conditions: [new \Isa\Sdk\Zyins\Condition('COPD', '3 DAYS AGO', '3 DAYS AGO')],
             ),
             coverage: Coverage::faceValue(25_000),
-            products: [new Product('colonial-penn', ProductType::FinalExpense, 'colonial-penn.final-expense', 'CP FE')],
+            products: [new Product(id: 'prod_cp_fixture', name: 'Colonial Penn FE', class: 'fex', carrier: 'Colonial Penn')],
         );
         $client->prequalify->run($input);
         $body = json_decode((string) $http->lastRequest()->getBody(), true, flags: JSON_THROW_ON_ERROR);
@@ -144,7 +145,7 @@ final class TransportTest extends TestCase
     {
         $http = new MockHttpClient();
         $http->queue(200, '{"data":{"plans":[]},"request_id":"req_xyz"}');
-        $client = new ZyInsClient(token: self::FIXTURE_TOKEN, httpClient: $http);
+        $client = new ZyInsClient(token: self::FIXTURE_TOKEN, httpClient: $http, apiVersionMap: ['prequalify' => 'v2']);
         $input = new Input(
             applicant: new Applicant(
                 dob: '1962-04-18',
@@ -155,7 +156,7 @@ final class TransportTest extends TestCase
                 nicotineUse: NicotineUsage::None,
             ),
             coverage: Coverage::faceValue(25_000),
-            products: [new Product('colonial-penn', ProductType::FinalExpense, 'colonial-penn.final-expense', 'CP FE')],
+            products: [new Product(id: 'prod_cp_fixture', name: 'Colonial Penn FE', class: 'fex', carrier: 'Colonial Penn')],
         );
         $result = $client->prequalify->run($input);
         self::assertSame('req_xyz', $result->requestId);

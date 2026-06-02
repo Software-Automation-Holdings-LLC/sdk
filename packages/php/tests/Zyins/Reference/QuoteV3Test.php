@@ -10,7 +10,6 @@ use Isa\Sdk\Zyins\Coverage;
 use Isa\Sdk\Zyins\Height;
 use Isa\Sdk\Zyins\NicotineUsage;
 use Isa\Sdk\Zyins\Product;
-use Isa\Sdk\Zyins\ProductType;
 use Isa\Sdk\Zyins\Reference\QuoteV3;
 use Isa\Sdk\Zyins\Reference\QuoteV3Request;
 use Isa\Sdk\Zyins\Sex;
@@ -85,7 +84,7 @@ final class QuoteV3Test extends TestCase
                 nicotineUse: NicotineUsage::None,
             ),
             coverage: Coverage::faceValue(25000),
-            products: [new Product('Carrier', ProductType::Term, 'p|term', 'Product')],
+            products: [new Product(id: 'prod_p_fixture', name: 'Product', class: 'term', carrier: 'Carrier')],
         ));
 
         self::assertSame('req_v3q', $result->requestId);
@@ -113,7 +112,7 @@ final class QuoteV3Test extends TestCase
         $decoded = json_decode($body, true, flags: JSON_THROW_ON_ERROR);
         self::assertSame('1962-04-18', $decoded['date_of_birth']);
         self::assertSame('male', $decoded['gender']);
-        self::assertSame(['p|term'], $decoded['products']);
+        self::assertSame(['prod_p_fixture'], $decoded['products']);
         self::assertTrue($decoded['include_ineligible']);
     }
 
@@ -151,7 +150,7 @@ final class QuoteV3Test extends TestCase
                 nicotineUse: NicotineUsage::None,
             ),
             coverage: Coverage::faceValue(25000),
-            products: [new Product('Carrier', ProductType::Term, 'p|term', 'Product')],
+            products: [new Product(id: 'prod_p_fixture', name: 'Product', class: 'term', carrier: 'Carrier')],
         );
     }
 }
