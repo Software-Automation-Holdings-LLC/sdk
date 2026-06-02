@@ -1,47 +1,52 @@
-# sah-sdk
+# isa-sdk
 
 Python SDK for the [Best Plan Pro API](https://docs.isaapi.com) — powered by the ZyINS engine. Mirrors the
-canonical TypeScript SDK at `packages/zyins/js/` with Python-idiomatic
-naming (`snake_case`) and pydantic v2 models.
+canonical TypeScript SDK with Python-idiomatic naming (`snake_case`) and
+pydantic v2 models.
 
 ## Install
 
 ```bash
-pip install sah-sdk
+pip install isa-sdk
 ```
-
-> **GitHub Packages fallback.** Until `sah-sdk` is fully published on PyPI, install directly from the source repository:
->
-> ```bash
-> pip install "git+https://github.com/Software-Automation-Holdings-LLC/sdk.git@sdk/v0.5.0#subdirectory=packages/python"
-> ```
->
-> The wire surface is identical either way; only the install command changes.
 
 ## Quick start
 
 ```python
-import os
-from sah_sdk.zyins import Isa, Applicant, Coverage, PrequalifyInput, Sex
+from isa_sdk.zyins import (
+    Isa, Applicant, Coverage, Sex,
+    NicotineUsageInput, NicotineDuration,
+)
+from isa_sdk.zyins.prequalify_v3 import PrequalifyV3Request
+from isa_sdk.zyins.product import Product, ProductSelection, ProductType
 
-# Reads ISA_TOKEN from the environment — no explicit token needed.
+# Reads ISA_TOKEN from the environment — no explicit token needed. The bare
+# `isa.zyins.prequalify` facade routes to v3 by default; `prequalify_v3` is
+# the explicit, typed entry point. Both resolve to an envelope.
 isa = Isa.with_bearer()
 
-result = isa.zyins.prequalify(PrequalifyInput(
+result = isa.zyins.prequalify_v3(PrequalifyV3Request(
     applicant=Applicant(
         dob="1962-04-18",
         sex=Sex.MALE,
         height_inches=70,
         weight_pounds=195,
         state="NC",
-        nicotine_use="none",
+        nicotine_use=NicotineUsageInput(last_used=NicotineDuration.NEVER),
     ),
     coverage=Coverage.face_value(100_000),
-    products="colonial-penn.final-expense",
+    products=ProductSelection.of(Product(
+        brand="aetna-accendo",
+        type=ProductType.FINAL_EXPENSE,
+        wire_token="fex",
+        display_name="Final Expense",
+    )),
 ))
 
-for plan in result.data.plans:
-    print(plan.brand, plan.tier, plan.monthly_premium)
+for offer in result.data.plans:
+    headline = next((row for row in offer.pricing if row.primary), None)
+    premium = headline.premium.amount.display if headline and headline.premium else None
+    print(offer.carrier.name, offer.product.name, premium)
 ```
 
 `Isa.with_bearer()` reads `ISA_TOKEN` from the environment. `Authorization: Bearer <token>`,
@@ -50,18 +55,28 @@ for plan in result.data.plans:
 ## First call in <15 lines
 
 ```python
-from sah_sdk.zyins import Isa, Coverage
+from isa_sdk.zyins import Isa, Applicant, Coverage, Sex
+from isa_sdk.zyins.prequalify_v3 import PrequalifyV3Request, offer_premium
+from isa_sdk.zyins.product import Product, ProductSelection, ProductType
 
 isa = Isa.with_keycode(
-    keycode="SDV-HWH-WDD",
+    keycode="ABC-123-XYZ",
     email="john.doe@acme-agency.com",
 )
-result = isa.zyins.prequalify_v2(
-    applicant={"dob": "1962-04-18", "sex": "male", "state": "NC"},
+result = isa.zyins.prequalify_v3(PrequalifyV3Request(
+    applicant=Applicant(
+        dob="1962-04-18", sex=Sex.MALE,
+        height_inches=70, weight_pounds=195, state="NC",
+    ),
     coverage=Coverage.face_value(25_000),
-    products="colonial-penn.final-expense",
-)
-print(result.data.plans[0].monthly_premium)
+    products=ProductSelection.of(Product(
+        brand="aetna-accendo", type=ProductType.FINAL_EXPENSE,
+        wire_token="fex", display_name="Final Expense",
+    )),
+))
+first = result.data.plans[0]
+headline = offer_premium(first)
+print(first.carrier.name, headline.amount.display if headline else None)
 ```
 
 ## Per-surface API versions
@@ -71,14 +86,14 @@ release exports a frozen `BUNDLED_API_VERSIONS` mapping recording which
 `/vN` each surface targets:
 
 ```python
-from sah_sdk.zyins import BUNDLED_API_VERSIONS
+from isa_sdk import BUNDLED_API_VERSIONS
 
 print(BUNDLED_API_VERSIONS)
 # {
-#   "prequalify": "v2",
-#   "quote":      "v2",
-#   "datasets":   "v2",
-#   "reference":  "v2",
+#   "prequalify": "v3",
+#   "quote":      "v3",
+#   "datasets":   "v3",
+#   "reference":  "v3",
 #   "sessions":   "v1",
 #   "branding":   "v1",
 #   "cases":      "v1",
@@ -90,15 +105,17 @@ Pin individual surfaces with a per-surface `api_version` map. There is **no**
 `api_version.get(surface, BUNDLED_API_VERSIONS[surface])`:
 
 ```python
-isa = await Isa.with_keycode(
-    keycode="SDV-HWH-WDD",
+isa = Isa.with_keycode(
+    keycode="ABC-123-XYZ",
     email="john.doe@acme-agency.com",
     api_version={"quote": "v2"},   # pin only quote; everything else bundled
 )
 ```
 
-The release that retargets `prequalify` / `quote` / `datasets` / `reference`
-to `v3` will bump those entries. See [SDK syntax proposal §2.7][syntax-27].
+`prequalify` / `quote` / `datasets` / `reference` default to `v3` — the flat
+`plans` shape, the Money primitive, and the reference adapters all work out of
+the box. Pin `api_version={"prequalify": "v2"}` only when a consumer still
+needs the legacy v2 shape. See [SDK syntax proposal §2.7][syntax-27].
 
 [syntax-27]: ../../docs/sdk-syntax-proposal.md#27-versioning--per-surface-not-global
 
@@ -109,15 +126,18 @@ medication and condition input. Unknown text never rejects — it returns a
 structured envelope so the final canonicalization fires server-side at
 `/vN/prequalify`:
 
+The bundleless `match` lazily builds and caches the reference index on
+its first call — no explicit dataset fetch is required.
+
 ```python
-ds = await isa.zyins.datasets.get(include=["conditions", "medications"])
+from isa_sdk.zyins.reference import Sort
 
 insulin = isa.zyins.medications.match("insulin")
 print(insulin.id, insulin.name, insulin.is_known)
 # med_01KSR2WVAGC05ZGR6FA4QYEB12  INSULIN  True
 
 # Symmetric traversal — what conditions is insulin used for?
-used_for = insulin.conditions(isa.zyins.reference.Sort.MOST_COMMON_FIRST)
+used_for = insulin.conditions(Sort.MOST_COMMON_FIRST)
 # frequency-ordered list; cond_01KSR2WVAGC05ZGR6FA4QYEA8X first
 
 novel = isa.zyins.medications.match("NewExperimental XR 2026")
@@ -134,7 +154,7 @@ the zero-knowledge store — ISA's servers only hold ciphertext and an opaque
 ID. To plug a carrier-controlled store, pass your adapter at construction:
 
 ```python
-isa = await Isa.with_keycode(
+isa = Isa.with_keycode(
     keycode=..., email=...,
     case_storage=CarrierCaseStorage(),   # optional; default = ZeroKnowledgeCaseStorage
 )
@@ -175,7 +195,7 @@ Per [SDK_DESIGN.md §3](https://github.com/Software-Automation-Holdings-LLC/isa-
 the recommended entry point is the `Isa` class with three named factories:
 
 ```python
-from sah_sdk.zyins import Isa
+from isa_sdk.zyins import Isa
 
 # Reads ISA_TOKEN from the environment.
 isa = Isa.with_bearer()
@@ -223,7 +243,7 @@ server returns 409 `idempotency_conflict`. The SDK raises
 caller can audit the queued-write bug class:
 
 ```python
-from sah_sdk.zyins import IsaIdempotencyConflictError
+from isa_sdk.zyins import IsaIdempotencyConflictError
 
 try:
     isa.zyins.prequalify(req, idempotency_key="case-42")
@@ -242,7 +262,7 @@ for you.
 
 ```python
 import asyncio
-from sah_sdk.zyins import Isa
+from isa_sdk.zyins import Isa
 
 isa = Isa.with_bearer()
 
@@ -273,7 +293,7 @@ The Python SDK exposes the public BPP license-lifecycle surface and the
 platform readiness probe on every `ZyInsClient`:
 
 ```python
-from sah_sdk.zyins import LicenseCheckInput, ZyInsClient
+from isa_sdk.zyins import LicenseCheckInput, ZyInsClient
 
 client = ZyInsClient("isa_live_...")
 

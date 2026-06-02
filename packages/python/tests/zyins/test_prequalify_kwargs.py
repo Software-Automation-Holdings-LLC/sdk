@@ -5,7 +5,7 @@ Mirrors the cross-language quickstart's call shape::
     isa.zyins.prequalify(
         applicant={...} | Applicant(...),
         coverage=Coverage.face_value(25_000),
-        products=[Product.FexAetnaAccendo],
+        products=[Products.Fex.AetnaAccendo],
     )
 """
 
@@ -15,7 +15,8 @@ import json
 
 import pytest
 
-from sah_sdk import Height, Isa, Product, Weight
+from sah_sdk import Height, Isa, Weight
+from sah_sdk.catalog.products import Products
 from sah_sdk.core.env import IsaConfigError
 from sah_sdk.core.transport import TransportResponse
 from sah_sdk.zyins import (
@@ -23,24 +24,49 @@ from sah_sdk.zyins import (
     Coverage,
     NicotineDuration,
     NicotineUsageInput,
-    PrequalifyInput,
     Sex,
 )
+from sah_sdk.zyins.prequalify_v3 import PrequalifyV3Request
+from sah_sdk.zyins.product import ProductSelection
 
 _OK_BODY = json.dumps(
     {
         "request_id": "req_01HZK2N5GQR9T8X4B6FJW3Y1AS",
         "idempotency_key": "550e8400-e29b-41d4-a716-446655440000",
         "livemode": False,
-        "data": {},
-        "plans": [
-            {
-                "carrier": {"id": "aetna-accendo", "name": "Aetna Accendo"},
-                "product": {"wire_token": "fex", "display_name": "Final Expense"},
-                "eligibility": {"eligible": True, "category": "immediate"},
-                "premium": {"cents": 8742, "display": "$87.42", "mode": "monthly"},
-            }
-        ],
+        "data": {
+            "plans": [
+                {
+                    "id": "offer_01",
+                    "eligible": True,
+                    "carrier": {"id": "aetna-accendo", "name": "Aetna Accendo", "logo_url": ""},
+                    "product": {
+                        "id": "prod_d7b57156-3e83-506b-8936-0692c1193dc7",
+                        "slug": "fex-aetna-accendo",
+                        "name": "fex-aetna-accendo",
+                        "display_name": "Aetna Accendo",
+                        "type": "fex",
+                        "wire_token": "fex-aetna-accendo",
+                    },
+                    "plan_info": [],
+                    "death_benefit": {"amount": {"cents": 2500000, "display": "$25,000"}, "period": None},
+                    "pricing": [
+                        {
+                            "rate_class": "standard",
+                            "primary": True,
+                            "eligibility": {"eligible": True, "category": "immediate", "reasons": []},
+                            "rank": 1,
+                            "premium": {
+                                "amount": {"cents": 8742, "display": "$87.42"},
+                                "default_mode": "MONTHLY-EFT",
+                                "modes": {"MONTHLY-EFT": {"cents": 8742, "display": "$87.42"}},
+                            },
+                        }
+                    ],
+                    "metadata": {},
+                }
+            ]
+        },
     }
 )
 
@@ -106,24 +132,27 @@ class TestPrequalifyKwargs:
         envelope = isa.zyins.prequalify(
             applicant=_applicant(),
             coverage=Coverage.face_value(25_000),
-            products=[Product.FexAetnaAccendo],
+            products=[Products.Fex.AetnaAccendo],
         )
 
         assert transport.last_body is not None
         assert envelope.data.plans[0].carrier.name == "Aetna Accendo"
 
     def test_accepts_dict_applicant(self) -> None:
+        from sah_sdk.zyins.prequalify_v3 import offer_premium
+
         transport = _CapturingTransport()
         isa = Isa.with_bearer(_FAKE_TOKEN, transport=transport)
 
         envelope = isa.zyins.prequalify(
             applicant=_applicant_dict(),
             coverage=Coverage.face_value(25_000),
-            products=[Product.FexAetnaAccendo],
+            products=[Products.Fex.AetnaAccendo],
         )
 
-        assert envelope.data.plans[0].premium is not None
-        assert envelope.data.plans[0].premium.cents == 8742
+        premium = offer_premium(envelope.data.plans[0])
+        assert premium is not None
+        assert premium.amount.cents == 8742
 
     def test_accepts_quickstart_height_weight_applicant_keys(self) -> None:
         transport = _CapturingTransport()
@@ -132,13 +161,16 @@ class TestPrequalifyKwargs:
         isa.zyins.prequalify(
             applicant=_quickstart_applicant_dict(),
             coverage=Coverage.face_value(25_000),
-            products=[Product.FexAetnaAccendo],
+            products=[Products.Fex.AetnaAccendo],
         )
 
         assert transport.last_body is not None
         body = json.loads(transport.last_body)
-        assert body["height"] == 70
-        assert body["weight"] == 195
+        # v3 prequalify envelope: height/weight live under applicant.
+        assert body["applicant"]["height_inches"] == 70
+        assert body["applicant"]["weight_lbs"] == 195
+        # products[] must serialize to the opaque prod_<uuid> id — never a slug.
+        assert body["products"] == ["prod_d7b57156-3e83-506b-8936-0692c1193dc7"]
 
     def test_rejects_conflicting_height_weight_aliases(self) -> None:
         transport = _CapturingTransport()
@@ -150,7 +182,7 @@ class TestPrequalifyKwargs:
             isa.zyins.prequalify(
                 applicant=applicant,
                 coverage=Coverage.face_value(25_000),
-                products=[Product.FexAetnaAccendo],
+                products=[Products.Fex.AetnaAccendo],
             )
 
     def test_positional_input_still_supported(self) -> None:
@@ -158,30 +190,31 @@ class TestPrequalifyKwargs:
         isa = Isa.with_bearer(_FAKE_TOKEN, transport=transport)
 
         envelope = isa.zyins.prequalify(
-            PrequalifyInput(
+            PrequalifyV3Request(
                 applicant=_applicant(),
                 coverage=Coverage.face_value(25_000),
-                products=Product.FexAetnaAccendo.value,
+                products=ProductSelection.of(Products.Fex.AetnaAccendo),
             )
         )
 
-        assert envelope.data.plans[0].eligibility.category == "immediate"
+        # In v3, eligibility is per pricing row, not on the offer directly.
+        assert envelope.data.plans[0].pricing[0].eligibility.category.value == "immediate"
 
     def test_rejects_mixed_input_and_kwargs(self) -> None:
         transport = _CapturingTransport()
         isa = Isa.with_bearer(_FAKE_TOKEN, transport=transport)
 
-        positional = PrequalifyInput(
+        positional = PrequalifyV3Request(
             applicant=_applicant(),
             coverage=Coverage.face_value(25_000),
-            products=Product.FexAetnaAccendo.value,
+            products=ProductSelection.of(Products.Fex.AetnaAccendo),
         )
         with pytest.raises(IsaConfigError, match="not both"):
             isa.zyins.prequalify(  # type: ignore[call-overload]
                 positional,
                 applicant=_applicant(),
                 coverage=Coverage.face_value(25_000),
-                products=[Product.FexAetnaAccendo],
+                products=[Products.Fex.AetnaAccendo],
             )
 
     def test_rejects_missing_required_kwargs(self) -> None:
@@ -191,7 +224,7 @@ class TestPrequalifyKwargs:
         with pytest.raises(IsaConfigError, match="applicant"):
             isa.zyins.prequalify(  # type: ignore[call-overload]
                 coverage=Coverage.face_value(25_000),
-                products=[Product.FexAetnaAccendo],
+                products=[Products.Fex.AetnaAccendo],
             )
 
     def test_rejects_empty_products_string(self) -> None:
@@ -213,5 +246,5 @@ class TestPrequalifyKwargs:
             isa.zyins.prequalify(
                 applicant=_applicant(),
                 coverage=Coverage.face_value(25_000),
-                products=[Product.FexAetnaAccendo, Product.FexAetnaAccendo.value],
+                products=[Products.Fex.AetnaAccendo, "fex-aetna-accendo"],
             )

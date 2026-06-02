@@ -8,6 +8,7 @@ from dataclasses import dataclass, field
 
 import pytest
 
+from sah_sdk.catalog.products import Products
 from sah_sdk.core.errors import ISAError
 from sah_sdk.core.transport import TransportResponse
 from sah_sdk.zyins.applicant import (
@@ -25,7 +26,7 @@ from sah_sdk.zyins.prequalify_v3 import (
     prequalify_v3,
     serialize_wire_body,
 )
-from sah_sdk.zyins.product import Product, ProductSelection, ProductType
+from sah_sdk.zyins.product import ProductSelection
 
 
 @dataclass
@@ -65,14 +66,7 @@ def _applicant() -> Applicant:
 
 
 def _product_selection() -> ProductSelection:
-    return ProductSelection.of(
-        Product(
-            brand="aetna-accendo",
-            type=ProductType.FINAL_EXPENSE,
-            wire_token="fex",
-            display_name="Final Expense",
-        )
-    )
+    return ProductSelection.of(Products.Fex.AetnaAccendo)
 
 
 def _sample_envelope() -> str:
@@ -164,7 +158,7 @@ def test_serialize_wire_body_emits_flat_v3_shape() -> None:
         "quote_type": "face_amounts",
         "amounts": ["10000"],
     }
-    assert payload["products"] == ["fex"]
+    assert payload["products"] == [Products.Fex.AetnaAccendo.id]
     # include_ineligible defaults to True per the v3 contract.
     assert payload["include_ineligible"] is True
 

@@ -22,12 +22,17 @@ from dataclasses import dataclass
 from ..core.license_hmac import LicenseClock, system_license_clock
 from ..core.transport import HttpTransport, Transport
 from .branding import AccountBranding, BrandingDetail, BrandingLookupRequest
+from .case_crypto import RandomBytes, system_random_bytes
+from .case_link import DEFAULT_CASE_VIEWER_BASE_URL
 from .cases import (
     AccountCases,
     CaseCreateRequest,
     CaseCreateResult,
     CaseEmailRequest,
     CaseEmailResult,
+    CaseOpenResult,
+    CaseShareRequest,
+    CaseShareResult,
     CaseSummary,
 )
 from .email import (
@@ -74,6 +79,8 @@ class _OperationContext:
     base_url: str
     transport: Transport
     clock: LicenseClock
+    case_viewer_base_url: str
+    random_bytes: RandomBytes
 
 
 class AccountNamespace:
@@ -92,6 +99,8 @@ class AccountNamespace:
         base_url: str,
         transport: Transport | None = None,
         clock: LicenseClock | None = None,
+        case_viewer_base_url: str = DEFAULT_CASE_VIEWER_BASE_URL,
+        random_bytes: RandomBytes | None = None,
     ) -> None:
         auth_provider = auth if callable(auth) else lambda: auth
         resolved_transport = transport or HttpTransport()
@@ -100,6 +109,8 @@ class AccountNamespace:
             base_url=base_url.rstrip("/"),
             transport=resolved_transport,
             clock=clock or system_license_clock,
+            case_viewer_base_url=case_viewer_base_url,
+            random_bytes=random_bytes or system_random_bytes,
         )
         self._ctx = ctx
         self._owns_transport = transport is None
@@ -115,6 +126,7 @@ class AccountNamespace:
 
 
 __all__ = [
+    "DEFAULT_CASE_VIEWER_BASE_URL",
     "AccountBranding",
     "AccountCases",
     "AccountEmail",
@@ -128,6 +140,9 @@ __all__ = [
     "CaseCreateResult",
     "CaseEmailRequest",
     "CaseEmailResult",
+    "CaseOpenResult",
+    "CaseShareRequest",
+    "CaseShareResult",
     "CaseSummary",
     "EmailAttachment",
     "EmailEnqueueRequest",

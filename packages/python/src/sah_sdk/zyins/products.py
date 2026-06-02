@@ -1,54 +1,42 @@
-"""``isa.zyins.products`` — live product catalog with memoization.
+"""Deprecated: ``ProductsFacade`` has been removed.
 
-:meth:`ProductsFacade.catalog` calls
-``isa.zyins.datasets.get(include=["products"])`` once and memoizes the
-resulting :class:`~sah_sdk.zyins.product.ProductCatalog` for the lifetime
-of the facade instance. Subsequent calls return the cached catalog
-without a network round-trip.
+Use the rich catalog constants at :data:`sah_sdk.catalog.products.Products`
+instead::
 
-The catalog is invalidated only on facade recreation (i.e. when a new
-``ZyInsClient`` is constructed). For long-lived processes that need fresh
-product lists, call :meth:`ProductsFacade.refresh` to force a re-fetch.
+    from sah_sdk.catalog.products import Products
+    Products.Fex.AetnaAccendo  # -> Product(id='prod_...', ...)
+
+This module is kept so that ``import sah_sdk.zyins.products`` does not raise
+``ImportError``, but any attribute access on symbols that no longer exist will
+produce a clear ``AttributeError`` with a migration hint rather than a cryptic
+``module has no attribute`` message.
 """
 
 from __future__ import annotations
 
-from collections.abc import Callable, Mapping
-from typing import Any
-
-from .product import ProductCatalog
+from typing import NoReturn
 
 
-class ProductsFacade:
-    """``client.products`` — live product catalog with memoization.
+class _RemovedSymbol:
+    """Placeholder for symbols removed in the id-only catalog cutover."""
 
-    Do not construct directly; obtain from ``ZyInsClient.products``.
-    """
+    def __init__(self, name: str, hint: str) -> None:
+        self._name = name
+        self._hint = hint
 
-    __slots__ = ("_cached", "_get_products")
+    def __repr__(self) -> str:  # pragma: no cover
+        return f"<removed symbol {self._name!r}: {self._hint}>"
 
-    def __init__(self, get_products: Callable[[], Mapping[str, Any]]) -> None:
-        self._get_products = get_products
-        self._cached: ProductCatalog | None = None
+    def __call__(self, *args: object, **kwargs: object) -> NoReturn:
+        raise AttributeError(f"{self._name} has been removed. {self._hint}")
 
-    def catalog(self) -> ProductCatalog:
-        """Return the :class:`~sah_sdk.zyins.product.ProductCatalog` built
-        from the server's products dataset.
 
-        The first call fetches from ``GET /v1/reference-data``; subsequent
-        calls return the memoized result instantly.
-        """
-        if self._cached is not None:
-            return self._cached
-        bundle = self._get_products()
-        cat = ProductCatalog.from_datasets(bundle)
-        self._cached = cat
-        return cat
+# Deprecated shim: ``from sah_sdk.zyins.products import ProductsFacade`` now
+# returns a sentinel that raises on use rather than silently failing.
+ProductsFacade = _RemovedSymbol(
+    "ProductsFacade",
+    "Use `from sah_sdk.catalog.products import Products` instead. "
+    "Access products as `Products.Fex.AetnaAccendo`, `Products.byId(id)`, etc.",
+)
 
-    def refresh(self) -> ProductCatalog:
-        """Evict the cached catalog and re-fetch on the next :meth:`catalog` call.
-
-        Returns the freshly fetched :class:`~sah_sdk.zyins.product.ProductCatalog`.
-        """
-        self._cached = None
-        return self.catalog()
+__all__ = ["ProductsFacade"]

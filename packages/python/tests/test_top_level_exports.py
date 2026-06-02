@@ -20,6 +20,7 @@ def test_quickstart_top_level_imports_resolve() -> None:
         Premium,
         PrequalifyPlan,
         Product,
+        Products,
         Sex,
         State,
         Weight,
@@ -31,7 +32,9 @@ def test_quickstart_top_level_imports_resolve() -> None:
     assert Weight.from_pounds(195).pounds == 195
     assert callable(Coverage.face_value)
     assert hasattr(State, "NorthCarolina")
-    assert hasattr(Product, "FexAetnaAccendo")
+    # Rich catalog constant — Products.Fex.AetnaAccendo carries the prod_ id.
+    assert Products.Fex.AetnaAccendo.id == "prod_d7b57156-3e83-506b-8936-0692c1193dc7"
+    assert isinstance(Products.Fex.AetnaAccendo, Product)
     assert NicotineUsage.NONE.value == "none"
     # The v2 typed sub-objects are exported (not just present on the model).
     assert Carrier().name == ""

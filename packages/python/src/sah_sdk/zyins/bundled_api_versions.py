@@ -35,10 +35,10 @@ from typing import Final
 #: signal that the SDK release now talks to the new version.
 BUNDLED_API_VERSIONS: Final[Mapping[str, str]] = MappingProxyType(
     {
-        "prequalify": "v2",
-        "quote": "v2",
-        "datasets": "v2",
-        "reference": "v2",
+        "prequalify": "v3",
+        "quote": "v3",
+        "datasets": "v3",
+        "reference": "v3",
         "sessions": "v1",
         "branding": "v1",
         "cases": "v1",

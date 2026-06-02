@@ -117,6 +117,34 @@ def _write_file(name: str, content: str) -> None:
     sys.stderr.write(f"gen_catalog: wrote {out}\n")
 
 
+def _preserve_or_fail(names: list[str], label: str) -> None:
+    """Handle a missing product data source without ever shipping an empty catalog.
+
+    The product catalog is the SDK's headline surface (``Products.Fex.AetnaAccendo``
+    etc.); shipping it empty is a launch-blocking defect (isa-sdk@1.0.1). The
+    upstream ``v2_products.json`` lives in the engine repo, which CI runners do
+    not check out — so a clean CI build legitimately misses it. In that case the
+    committed catalog is the source of truth: it carries the real ``prod_<uuid>``
+    ids, so preserve it untouched rather than clobbering it with an empty stub.
+
+    When NO committed catalog exists (a genuinely fresh tree with nothing to
+    preserve) emitting empty would let a broken catalog reach a registry, so
+    fail loud instead — the build must regenerate from data or be run where the
+    committed catalog is present.
+    """
+    missing = [n for n in names if not (CATALOG_DIR / n).exists()]
+    if missing:
+        raise SystemExit(
+            f"gen_catalog: {label}: v2_products.json not found AND no committed "
+            f"catalog to preserve ({', '.join(missing)}). Refusing to emit an empty "
+            f"product catalog. Run where {INSURANCE_REPO / 'v2_products.json'} exists, "
+            f"or commit a populated catalog first."
+        )
+    GAPS.append(f"{label}: v2_products.json not found — preserving committed catalog.")
+    for name in names:
+        sys.stderr.write(f"gen_catalog: preserved committed {CATALOG_DIR / name}\n")
+
+
 # ---------------------------------------------------------------------------
 # Products + Carriers
 # ---------------------------------------------------------------------------
@@ -126,164 +154,179 @@ def gen_products() -> None:
     sources = ["insurance/v2_products.json"]
     raw = _try_read_json(INSURANCE_REPO / "v2_products.json")
     if not raw:
-        GAPS.append("Products: v2_products.json not found — emitting empty catalog.")
-        _write_file("products.py", _header(sources) + _empty_products_module())
-        _write_file("carriers.py", _header(sources) + _empty_carriers_module())
+        _preserve_or_fail(["products.py", "carriers.py"], "Products")
         return
 
-    products: list[dict[str, Any]] = []
-    for cls, items in raw.items():
+    # Family name → PascalCase namespace key (mirrors TS productsByType.ts).
+    _FAMILY_NAMESPACE: dict[str, str] = {
+        "fex": "Fex",
+        "medsup": "Medsup",
+        "preneed": "Preneed",
+        "term": "Term",
+    }
+
+    # Collect per-family product rows; fail loud when any entry lacks an id.
+    by_family: dict[str, list[dict[str, Any]]] = {}
+    all_products: list[dict[str, Any]] = []
+    for family_key, items in raw.items():
         if not isinstance(items, list):
             continue
         for p in items:
             if not isinstance(p, dict):
                 continue
+            raw_id = p.get("id")
+            if not raw_id:
+                raise ValueError(
+                    f"gen_catalog: product entry missing 'id': {p!r}"
+                )
             ident = str(p.get("identifier") or "")
             if not ident:
                 continue
-            products.append(
-                {
-                    "slug": ident,
-                    "product_class": cls,
-                    "carrier_display": str(p.get("carrier") or ""),
-                    "carrier_slug": _slugify(str(p.get("carrier") or "")),
-                    "display_name": str(p.get("name") or ""),
-                    "state_variations": list(p.get("state_variations") or []),
-                }
-            )
-    products.sort(key=lambda x: x["slug"])
+            ns = _FAMILY_NAMESPACE.get(family_key, _pascal(family_key))
+            # Strip the family prefix from the slug so `Products.Fex.AetnaAccendo`
+            # reads naturally — the namespace already carries the family name.
+            strip_prefix = family_key + "-"
+            attr_slug = ident[len(strip_prefix):] if ident.startswith(strip_prefix) else ident
+            row = {
+                "id": f"prod_{raw_id}",
+                "slug": ident,
+                "family": family_key,
+                "namespace": ns,
+                "carrier_display": str(p.get("carrier") or ""),
+                "carrier_slug": _slugify(str(p.get("carrier") or "")),
+                "display_name": str(p.get("name") or ""),
+                "attr_name": _pascal(attr_slug),
+            }
+            by_family.setdefault(family_key, []).append(row)
+            all_products.append(row)
 
-    enum_lines = "\n".join(f"    {_pascal(p['slug'])} = {p['slug']!r}" for p in products)
+    # Stable sort within each family for byte-stable output.
+    for rows in by_family.values():
+        rows.sort(key=lambda r: r["slug"])
+    all_products.sort(key=lambda r: r["id"])
 
-    metadata_entries = "\n".join(
-        f"    {p['slug']!r}: ProductMetadata("
-        f"slug={p['slug']!r}, "
-        f"display_name={p['display_name']!r}, "
-        f"carrier={p['carrier_slug']!r}, "
-        f"product_class={p['product_class']!r}, "
-        f"ages=(0, 0), "
-        f"states=(), "
-        f"face_amount=(0, 0), "
-        f"state_variations=tuple({p['state_variations']!r})),"
-        for p in products
+    # Emit one frozen constant per product inside its family class.
+    family_blocks: list[str] = []
+    for family_key in sorted(by_family.keys()):
+        ns = _FAMILY_NAMESPACE.get(family_key, _pascal(family_key))
+        rows = by_family[family_key]
+        member_lines = "\n".join(
+            f"    {r['attr_name']}: Product = Product("
+            f"id={r['id']!r}, name={r['display_name']!r}, "
+            f"product_class={r['family']!r}, carrier={r['carrier_display']!r})"
+            for r in rows
+        )
+        family_blocks.append(
+            f"class _{ns}Products:\n"
+            f"    __slots__ = ()\n\n"
+            f"{member_lines}\n"
+        )
+
+    family_block_text = "\n\n".join(family_blocks)
+
+    # Frozen id→Product index built from family-class attributes.
+    index_entries = "\n".join(
+        f"    {r['id']!r}: _{r['namespace']}Products.{r['attr_name']},"
+        for r in all_products
+    )
+
+    # _ProductsAPI attribute declarations (no __slots__ — class-level family attrs).
+    family_keys_sorted = sorted(by_family.keys())
+    family_attrs = "\n".join(
+        f"    {_FAMILY_NAMESPACE.get(fk, _pascal(fk))}: _{_FAMILY_NAMESPACE.get(fk, _pascal(fk))}Products"
+        f" = _{_FAMILY_NAMESPACE.get(fk, _pascal(fk))}Products()"
+        for fk in family_keys_sorted
     )
 
     body = f'''{_header(sources)}from dataclasses import dataclass
-from enum import Enum
-
-
-class Product(str, Enum):
-    """Product slug enum.
-
-    Each member's value is the canonical product identifier the platform
-    uses in URLs and reference-data lookups.
-
-    ``ages``, ``states``, and ``face_amount`` ranges are placeholders today —
-    the upstream catalog does not expose per-product underwriting bounds in
-    a stable, public-facing form. Treat them as advisory zeros until the
-    engine publishes a normalized catalog dump (tracked separately).
-    """
-
-{enum_lines if enum_lines else "    pass"}
+from types import MappingProxyType
 
 
 @dataclass(frozen=True, slots=True)
-class ProductMetadata:
-    """Public metadata for a single ``Product``."""
+class Product:
+    """A catalog product carrying its stable opaque id.
 
-    slug: str
-    display_name: str
-    carrier: str
+    ``id`` (``prod_<uuid>``) is the identity key: the v3 prequalify
+    ``products[]`` filter, the ``by_id`` handle, and the wire value.
+    ``name``, ``product_class``, and ``carrier`` are display-time metadata;
+    they may change when a carrier renames a product but ``id`` stays stable.
+
+    Never construct directly — use :data:`Products`.Fex.AetnaAccendo etc.
+    """
+
+    id: str
+    name: str
     product_class: str
-    ages: tuple[int, int]
-    states: tuple[str, ...]
-    face_amount: tuple[int, int]
-    state_variations: tuple[str, ...]
+    carrier: str
 
 
-_METADATA: dict[str, ProductMetadata] = {{
-{metadata_entries}
-}}
+{family_block_text}
 
-_ALL_PRODUCTS: tuple[Product, ...] = tuple(sorted(Product, key=lambda p: p.value))
-
-
-def _lc(s: str) -> str:
-    return s.lower()
+_BY_ID: MappingProxyType[str, Product] = MappingProxyType({{
+{index_entries}
+}})
 
 
 class _ProductsAPI:
-    """Catalog API for ``Product``. All methods return frozen, sorted views."""
+    """Nested product catalog with ``by_id`` reverse lookup.
 
-    __slots__ = ()
+    Access products as ``Products.Fex.AetnaAccendo`` etc.
+    Use ``Products.by_id(id)`` to resolve a ``prod_<uuid>`` back to its
+    constant — the only supported lookup key. There is no ``by_slug``; slug
+    is display-time metadata, not an identity key.
+    """
 
-    def values(self) -> tuple[Product, ...]:
-        """Every product slug. Sorted alphabetically."""
-        return _ALL_PRODUCTS
+{family_attrs}
 
-    def entries(self) -> tuple[tuple[Product, ProductMetadata], ...]:
-        """``(Product, ProductMetadata)`` pairs in catalog order."""
-        return tuple((p, _METADATA[p.value]) for p in _ALL_PRODUCTS)
+    def by_id(self, product_id: str) -> Product | None:
+        """Return the :class:`Product` for a ``prod_<uuid>`` id, or ``None``."""
+        return _BY_ID.get(product_id)
 
-    def by_carrier(self, carrier: str) -> tuple[Product, ...]:
-        """Products filed by a given carrier slug. Case-insensitive match."""
-        target = _lc(carrier)
-        return tuple(p for p in _ALL_PRODUCTS if _METADATA[p.value].carrier == target)
-
-    def search(self, query: str) -> tuple[Product, ...]:
-        """Substring search across slug + display name.
-
-        Returns matches sorted by relevance (prefix matches first, then
-        substring matches).
-        """
-        q = _lc(query.strip())
-        if not q:
-            return ()
-        prefix: list[Product] = []
-        substring: list[Product] = []
-        for p in _ALL_PRODUCTS:
-            m = _METADATA[p.value]
-            hay = m.slug + " " + _lc(m.display_name)
-            if hay.startswith(q) or _lc(m.display_name).startswith(q):
-                prefix.append(p)
-            elif q in hay:
-                substring.append(p)
-        return tuple(prefix + substring)
-
-    def metadata(self, p: Product) -> ProductMetadata:
-        """Metadata lookup; raises on unknown slug."""
-        m = _METADATA.get(p.value)
-        if m is None:
-            raise KeyError(f"Products.metadata: unknown product {{p.value!r}}")
-        return m
+    def all(self) -> tuple[Product, ...]:
+        """All products in catalog order (sorted by id)."""
+        return tuple(_BY_ID.values())
 
 
 Products = _ProductsAPI()
+
+__all__ = ["Product", "Products"]
 '''
     _write_file("products.py", body)
 
-    # Carriers
+    # Carriers — reference per-family product class attributes directly.
     by_carrier: dict[str, dict[str, Any]] = {}
-    for p in products:
+    for p in all_products:
         entry = by_carrier.setdefault(
             p["carrier_slug"],
-            {"slug": p["carrier_slug"], "display_name": p["carrier_display"], "products": []},
+            {
+                "slug": p["carrier_slug"],
+                "display_name": p["carrier_display"],
+                "products": [],
+            },
         )
-        entry["products"].append(p["slug"])
+        entry["products"].append((p["namespace"], p["attr_name"]))
     carriers = sorted(by_carrier.values(), key=lambda c: c["slug"])
 
     carrier_entries = "\n".join(
         f"    {c['slug']!r}: ProductCarrierMetadata("
         f"display_name={c['display_name']!r}, "
-        f"products=tuple(Product(s) for s in {c['products']!r}), "
+        f"products=({', '.join(f'_{ns}Products.{attr}' for ns, attr in c['products'])},), "
         f"states=()),"
         for c in carriers
     )
-    all_carriers_tuple = "(" + ", ".join(f"{c['slug']!r}" for c in carriers) + (",)" if len(carriers) == 1 else ")")
+    all_carriers_tuple = (
+        "(" + ", ".join(f"{c['slug']!r}" for c in carriers) + (",)" if len(carriers) == 1 else ")")
+    )
+
+    # Import every family class used in this file.
+    used_namespaces = sorted(
+        {_FAMILY_NAMESPACE.get(fk, _pascal(fk)) for fk in by_family}
+    )
+    ns_imports = ", ".join(f"_{ns}Products" for ns in used_namespaces)
 
     carriers_module = f'''{_header(sources)}from dataclasses import dataclass
 
-from .products import Product
+from .products import Product, {ns_imports}
 
 
 @dataclass(frozen=True, slots=True)
@@ -321,77 +364,6 @@ class _ProductCarriersAPI:
 ProductCarriers = _ProductCarriersAPI()
 '''
     _write_file("carriers.py", carriers_module)
-
-
-def _empty_products_module() -> str:
-    return '''from dataclasses import dataclass
-from enum import Enum
-
-
-class Product(str, Enum):
-    """Empty placeholder — source data unavailable at generation time."""
-
-
-@dataclass(frozen=True, slots=True)
-class ProductMetadata:
-    slug: str
-    display_name: str
-    carrier: str
-    product_class: str
-    ages: tuple[int, int]
-    states: tuple[str, ...]
-    face_amount: tuple[int, int]
-    state_variations: tuple[str, ...]
-
-
-class _ProductsAPI:
-    __slots__ = ()
-
-    def values(self) -> tuple[Product, ...]:
-        return ()
-
-    def entries(self) -> tuple[tuple[Product, ProductMetadata], ...]:
-        return ()
-
-    def by_carrier(self, _carrier: str) -> tuple[Product, ...]:
-        return ()
-
-    def search(self, _query: str) -> tuple[Product, ...]:
-        return ()
-
-    def metadata(self, p: Product) -> ProductMetadata:
-        raise KeyError(f"Products.metadata: unknown product {p!r}")
-
-
-Products = _ProductsAPI()
-'''
-
-
-def _empty_carriers_module() -> str:
-    return '''from dataclasses import dataclass
-
-from .products import Product
-
-
-@dataclass(frozen=True, slots=True)
-class ProductCarrierMetadata:
-    display_name: str
-    products: tuple[Product, ...]
-    states: tuple[str, ...]
-
-
-class _ProductCarriersAPI:
-    __slots__ = ()
-
-    def values(self) -> tuple[str, ...]:
-        return ()
-
-    def metadata(self, c: str) -> ProductCarrierMetadata:
-        raise KeyError(f"ProductCarriers.metadata: unknown carrier {c!r}")
-
-
-ProductCarriers = _ProductCarriersAPI()
-'''
 
 
 # ---------------------------------------------------------------------------
@@ -831,7 +803,7 @@ from .carriers import ProductCarrierMetadata, ProductCarriers
 from .conditions import ConditionCategories, ConditionCategoryMetadata
 from .errors import ErrorAdviceCodes, ErrorCode, ErrorDocUrls
 from .medications import MedicationUseMetadata, MedicationUses
-from .products import Product, ProductMetadata, Products
+from .products import Product, Products
 from .scopes import Scope, ScopeDescriptions
 from .sign_events import SignEvent, SignEventLabels
 from .states import State, StateMetadata, States
@@ -847,7 +819,6 @@ __all__ = [
     "Product",
     "ProductCarrierMetadata",
     "ProductCarriers",
-    "ProductMetadata",
     "Products",
     "Scope",
     "ScopeDescriptions",

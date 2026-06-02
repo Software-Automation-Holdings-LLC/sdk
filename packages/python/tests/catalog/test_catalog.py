@@ -22,33 +22,51 @@ from sah_sdk import (
 )
 
 
-def test_products_values_is_non_empty_and_sorted() -> None:
-    values = Products.values()
-    assert len(values) > 0
-    slugs = [p.value for p in values]
-    assert slugs == sorted(slugs)
+def test_products_all_is_non_empty() -> None:
+    all_products = Products.all()
+    assert len(all_products) > 0
+    assert all(isinstance(p, Product) for p in all_products)
 
 
-def test_products_by_carrier_filters_case_insensitively() -> None:
-    aetna_lower = Products.by_carrier("aetna")
-    aetna_mixed = Products.by_carrier("Aetna")
-    assert tuple(p.value for p in aetna_lower) == tuple(p.value for p in aetna_mixed)
-    assert all(Products.metadata(p).carrier == "aetna" for p in aetna_lower)
+def test_products_fex_namespace_has_aetna_accendo() -> None:
+    p = Products.Fex.AetnaAccendo
+    assert p.id == "prod_d7b57156-3e83-506b-8936-0692c1193dc7"
+    assert p.name == "Aetna Accendo"
+    assert p.product_class == "fex"
+    assert isinstance(p.carrier, str)
 
 
-def test_products_metadata_returns_shape() -> None:
-    for product in Products.values()[:5]:
-        meta = Products.metadata(product)
-        assert meta.slug == product.value
-        assert isinstance(meta.display_name, str)
-        assert isinstance(meta.carrier, str)
-        assert isinstance(meta.product_class, str)
+def test_products_by_id_roundtrip() -> None:
+    """by_id(p.id) must return the identical object — the conformance invariant."""
+    p = Products.Fex.AetnaAccendo
+    assert Products.by_id(p.id) is p
 
 
-def test_products_search_prefers_prefix_matches() -> None:
-    results = Products.search("fex")
-    assert len(results) > 0
-    assert all("fex" in p.value.lower() for p in results)
+def test_products_by_id_stale_name_returns_none() -> None:
+    """Resolving by a slug or stale name string must return None (not an id)."""
+    assert Products.by_id("fex-aetna-accendo") is None
+    assert Products.by_id("prod_stale-name-does-not-exist") is None
+
+
+def test_products_medsup_namespace_non_empty() -> None:
+    medsup = Products.Medsup.AetnaAccendoMedsup
+    assert medsup.product_class == "medsup"
+
+
+def test_products_term_namespace_non_empty() -> None:
+    term = Products.Term.BannerOpterm
+    assert term.product_class == "term"
+
+
+def test_products_preneed_namespace_non_empty() -> None:
+    preneed = Products.Preneed.BetterlifeSinglePremium
+    assert preneed.product_class == "preneed"
+
+
+def test_product_carriers_metadata_indexes_into_products() -> None:
+    aetna_meta = ProductCarriers.metadata("aetna")
+    assert aetna_meta.display_name == "Aetna"
+    assert all(isinstance(p, Product) for p in aetna_meta.products)
 
 
 def test_states_by_abbreviation_works_two_ways() -> None:
@@ -66,17 +84,10 @@ def test_states_includes_territories() -> None:
     assert nc.is_territory is False
 
 
-def test_product_carriers_metadata_indexes_back_into_products() -> None:
-    aetna_meta = ProductCarriers.metadata("aetna")
-    assert aetna_meta.display_name == "Aetna"
-    assert all(isinstance(p, Product) for p in aetna_meta.products)
-
-
 def test_medication_uses_values_sorted() -> None:
     values = MedicationUses.values()
     assert len(values) > 0
     assert list(values) == sorted(values)
-    # Metadata lookup returns the same display name.
     first = values[0]
     meta = MedicationUses.metadata(first)
     assert meta.display_name == first

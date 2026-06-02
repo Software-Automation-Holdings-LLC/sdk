@@ -48,7 +48,6 @@ from .licenses import (
     parse_deactivate_response,
 )
 from .prequalify import PrequalifyInput, PrequalifyResult, parse_prequalify_response
-from .products import ProductsFacade
 from .quote import QuoteInput, QuoteResult, parse_quote_response
 from .reference_data import ReferenceDataResponse, parse_reference_data
 from .usage import UsageSummary, parse_usage_summary
@@ -119,7 +118,6 @@ class ZyInsClient:
         self.quote = QuoteSubClient(self)
         self.datasets = DatasetsSubClient(self)
         self.reference_data = ReferenceDataSubClient(self)
-        self.products = ProductsFacade(self._product_catalog_bundle)
         self.usage = UsageSubClient(self)
         self.license = LicenseSubClient(self)
         self.health = HealthSubClient(self)
@@ -225,14 +223,6 @@ class ZyInsClient:
             headers=response.headers,
             idempotency_key_sent=minted_key,
         )
-
-    def _product_catalog_bundle(self) -> dict[str, Any]:
-        data = self.reference_data.get("products").data
-        products = data.get("products")
-        if isinstance(products, dict):
-            return data
-        return {"products": data}
-
 
 # ----------------------------------------------------------------------
 # Sub-clients

@@ -19,15 +19,18 @@ import uuid
 
 import pytest
 
+from sah_sdk.catalog.products import Products
 from sah_sdk.core.transport import TransportResponse
 from sah_sdk.zyins import (
     Applicant,
     Coverage,
     Isa,
-    NicotineUsage,
-    PrequalifyInput,
+    NicotineDuration,
+    NicotineUsageInput,
     Sex,
 )
+from sah_sdk.zyins.prequalify_v3 import PrequalifyV3Request
+from sah_sdk.zyins.product import ProductSelection
 
 
 class CountingTransport:
@@ -54,11 +57,10 @@ class CountingTransport:
         idem = headers.get("Idempotency-Key", "")
         envelope = json.dumps(
             {
-                "plans": [],
+                "data": {"plans": []},
                 "request_id": request_id,
                 "idempotency_key": idem,
                 "livemode": False,
-                "retry_attempts": 0,
             }
         )
         return TransportResponse(
@@ -72,18 +74,18 @@ _FAKE_TOKEN = "isa_" + "test_" + "concurrency" + "00000000"
 _PARALLEL = 100
 
 
-def _input() -> PrequalifyInput:
-    return PrequalifyInput(
+def _input() -> PrequalifyV3Request:
+    return PrequalifyV3Request(
         applicant=Applicant(
             dob="1962-04-18",
             sex=Sex.MALE,
             height_inches=70,
             weight_pounds=195,
             state="NC",
-            nicotine_use=NicotineUsage.NONE,
+            nicotine_use=NicotineUsageInput(last_used=NicotineDuration.NEVER),
         ),
         coverage=Coverage.face_value(100_000),
-        products="colonial-penn.final-expense",
+        products=ProductSelection.of(Products.Fex.AetnaAccendo),
     )
 
 

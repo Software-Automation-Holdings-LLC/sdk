@@ -8,6 +8,7 @@ from dataclasses import dataclass, field
 
 import pytest
 
+from sah_sdk.catalog.products import Products
 from sah_sdk.core.transport import TransportResponse
 from sah_sdk.zyins import (
     DEFAULT_BASE_URL,
@@ -15,7 +16,6 @@ from sah_sdk.zyins import (
     Coverage,
     NicotineUsage,
     PrequalifyInput,
-    ProductType,
     Sex,
     ZyInsClient,
 )
@@ -119,35 +119,18 @@ def test_get_requests_omit_idempotency_key() -> None:
     assert "Idempotency-Key" not in headers
 
 
-def test_products_catalog_fetches_reference_data_once() -> None:
-    transport = RecordingTransport(
-        response_body=json.dumps(
-            {
-                "data": {
-                    "fex": [
-                        {
-                            "identifier": "cp.fex",
-                            "carrier": "colonial-penn",
-                            "name": "CP FEX",
-                            "product": "fex",
-                        }
-                    ]
-                }
-            }
-        )
-    )
+def test_products_catalog_constants_are_accessible() -> None:
+    """Products.Fex.AetnaAccendo is the canonical constant; no network call needed."""
+    transport = RecordingTransport()
     client = ZyInsClient(_TOKEN, transport=transport)
-
-    catalog = client.products.catalog()
-    cached = client.products.catalog()
-
-    assert catalog is cached
-    assert catalog.find("colonial-penn", ProductType.FINAL_EXPENSE).wire_token == "cp.fex"
-    assert len(transport.calls) == 1
-    method, url, _, body = transport.calls[0]
-    assert method == "GET"
-    assert url.endswith("/v1/reference-data/products")
-    assert body is None
+    # The rich catalog constants require no network fetch.
+    p = Products.Fex.AetnaAccendo
+    assert p.id == "prod_d7b57156-3e83-506b-8936-0692c1193dc7"
+    # Client construction does not add a products sub-client (removed in id-only rework).
+    assert not hasattr(client, "products")
+    # No network calls were made — assert on the SAME transport instance to avoid
+    # accidentally checking a fresh (always-empty) RecordingTransport() object.
+    assert len(transport.calls) == 0
 
 
 @pytest.mark.integration

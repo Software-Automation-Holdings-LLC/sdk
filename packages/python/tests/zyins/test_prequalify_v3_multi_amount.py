@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import json
 
+from sah_sdk.catalog.products import Products
 from sah_sdk.zyins.applicant import (
     Applicant,
     NicotineDuration,
@@ -25,7 +26,7 @@ from sah_sdk.zyins.prequalify_v3 import (
     parse_prequalify_v3_envelope,
     serialize_v3_prequalify_body,
 )
-from sah_sdk.zyins.product import Product, ProductSelection, ProductType
+from sah_sdk.zyins.product import ProductSelection
 
 
 def _applicant() -> Applicant:
@@ -40,14 +41,7 @@ def _applicant() -> Applicant:
 
 
 def _products() -> ProductSelection:
-    return ProductSelection.of(
-        Product(
-            brand="aetna-accendo",
-            type=ProductType.FINAL_EXPENSE,
-            wire_token="fex",
-            display_name="Final Expense",
-        )
-    )
+    return ProductSelection.of(Products.Fex.AetnaAccendo)
 
 
 def _face_offer(amount_cents: int, display: str, premium_cents: int) -> dict:

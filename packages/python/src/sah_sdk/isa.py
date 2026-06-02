@@ -54,6 +54,7 @@ from .zyins.logos import LogosSubClient
 from .zyins.measurements import Height, Weight
 from .zyins.prequalify import PrequalifyInput, PrequalifyResult, parse_prequalify_response
 from .zyins.prequalify_v3 import (
+    PrequalifyV3Options,
     PrequalifyV3Request,
     PrequalifyV3Result,
     parse_prequalify_v3_envelope,
@@ -62,6 +63,7 @@ from .zyins.prequalify_v3 import (
 from .zyins.prequalify_v3 import (
     serialize_wire_body as serialize_v3_quote_wire_body,
 )
+from .zyins.product import ProductSelection
 from .zyins.quote import QuoteInput, QuoteResult, parse_quote_response
 from .zyins.quote_v3 import (
     QuoteV3Request,
@@ -1322,18 +1324,20 @@ def _coerce_products_arg(products: Any) -> Any:
 
     Accepts (in priority order):
 
-    * A :class:`ProductSelection` — passed through unchanged.
-    * A wire-token string (``"fex|term"``) — passed through unchanged.
-    * A list/tuple of catalog ``Product`` enum members (``StrEnum`` whose
-      values are wire tokens) — joined into the wire-token string.
-    * A list/tuple of zyins ``Product`` model instances — wrapped in a
-      ``ProductSelection``.
+    * A :class:`~sah_sdk.zyins.product.ProductSelection` — passed through.
+    * A catalog :class:`~sah_sdk.catalog.products.Product` instance — wrapped.
+    * A list/tuple of catalog :class:`~sah_sdk.catalog.products.Product`
+      instances — wrapped in a ``ProductSelection``.
+    * A legacy wire-token string (``"fex|term"``) — passed through for v1/v2
+      surface backwards compatibility.
     """
-    from .zyins.product import Product as ZyinsProduct
+    from .catalog.products import Product as CatalogProduct
     from .zyins.product import ProductSelection
 
     if isinstance(products, ProductSelection):
         return products
+    if isinstance(products, CatalogProduct):
+        return ProductSelection.of(products)
     if isinstance(products, str):
         if not products:
             raise IsaConfigError(
@@ -1347,14 +1351,15 @@ def _coerce_products_arg(products: Any) -> Any:
                 "isa.zyins.prequalify: products must contain at least one entry.",
                 missing_env=("products",),
             )
-        if all(isinstance(p, ZyinsProduct) for p in products):
-            return ProductSelection.many(products)
-        if any(isinstance(p, ZyinsProduct) for p in products):
+        if all(isinstance(p, CatalogProduct) for p in products):
+            return ProductSelection.of(list(products))
+        if any(isinstance(p, CatalogProduct) for p in products):
             raise IsaConfigError(
-                "isa.zyins.prequalify: products must not mix zyins Product "
-                "models with catalog Product enum members or wire-token strings.",
+                "isa.zyins.prequalify: products must not mix Product "
+                "catalog constants with wire-token strings.",
                 missing_env=("products",),
             )
+        # Legacy: list of str wire-tokens for backwards compatibility.
         first_type = type(products[0])
         if any(type(p) is not first_type for p in products):
             raise IsaConfigError(
@@ -1374,7 +1379,82 @@ def _coerce_products_arg(products: Any) -> Any:
         return "|".join(tokens)
     raise IsaConfigError(
         "isa.zyins.prequalify: products must be a ProductSelection, "
-        "wire-token string, or non-empty list/tuple of products.",
+        "catalog Product constant, or non-empty list/tuple.",
+        missing_env=("products",),
+    )
+
+
+def _resolve_prequalify_v3_request(
+    *,
+    request: PrequalifyV3Request | PrequalifyInput | None,
+    applicant: Applicant | Mapping[str, Any] | None,
+    coverage: Coverage | None,
+    products: Any,
+    options: PrequalifyV3Options | None,
+) -> PrequalifyV3Request:
+    """Coerce the ergonomic v3 prequalify call shapes to a request.
+
+    The bundled default routes ``isa.zyins.prequalify`` to v3, so the
+    facade keeps the same call shapes the v2 facade accepts:
+
+    * ``isa.zyins.prequalify(PrequalifyV3Request(...))`` — typed v3 request.
+    * ``isa.zyins.prequalify(PrequalifyInput(...))`` — legacy positional
+      input, lifted onto the v3 request (no ``options``).
+    * ``isa.zyins.prequalify(applicant=, coverage=, products=)`` —
+      decomposed keywords from the cross-language quickstart.
+
+    All shapes serialize through the v3 envelope; ``options`` only
+    attaches on the typed-request or keyword path. Passing a positional
+    request together with any decomposed keyword raises rather than
+    silently dropping the keywords.
+    """
+    decomposed = applicant is not None or coverage is not None or products is not None
+    if request is not None and decomposed:
+        raise IsaConfigError(
+            "isa.zyins.prequalify: pass either a PrequalifyV3Request positional "
+            "argument OR (applicant=, coverage=, products=) keywords — not both.",
+            missing_env=(),
+        )
+    if isinstance(request, PrequalifyV3Request):
+        if options is not None:
+            raise IsaConfigError(
+                "isa.zyins.prequalify: the options= keyword is not accepted when a "
+                "PrequalifyV3Request positional argument is supplied — embed options "
+                "in the request object's options field instead.",
+                missing_env=(),
+            )
+        return request
+    resolved = _resolve_prequalify_input(
+        input=request,
+        applicant=applicant,
+        coverage=coverage,
+        products=products,
+    )
+    return PrequalifyV3Request(
+        applicant=resolved.applicant,
+        coverage=resolved.coverage,
+        products=_products_as_selection(resolved.products),
+        options=options,
+    )
+
+
+def _products_as_selection(products: str | ProductSelection) -> ProductSelection:
+    """Normalize a resolved ``products`` value to a :class:`ProductSelection`.
+
+    The v3 envelope serializer renders ``products`` from
+    :meth:`ProductSelection.to_wire_array`, which emits the opaque
+    ``prod_<uuid>`` id. The id-only catalog has no slug surface, so the
+    v3 path accepts only a :class:`ProductSelection` built from catalog
+    ``Product`` constants — a legacy ``"fex|term"`` wire-token string
+    (valid on the v1/v2 surfaces) cannot be lifted to an id and is
+    rejected here.
+    """
+    if isinstance(products, ProductSelection):
+        return products
+    raise IsaConfigError(
+        "isa.zyins.prequalify (v3): products must be catalog Product constants "
+        "wrapped in a ProductSelection — legacy wire-token strings are not "
+        "accepted by the v3 prequalify endpoint.",
         missing_env=("products",),
     )
 
@@ -1426,6 +1506,13 @@ class _PrequalifyV3Callable:
     Raises :class:`IsaConfigError` when invoked on an :class:`Isa`
     instance whose ``api_version`` map pins ``prequalify`` to anything
     other than ``v3`` — mirrors the TS ``prequalifyV3`` guard.
+
+    Because the bundled default routes ``isa.zyins.prequalify`` here, the
+    callable accepts the same ergonomic shapes as the legacy facade —
+    a typed :class:`PrequalifyV3Request`, a legacy
+    :class:`PrequalifyInput`, or the decomposed
+    ``applicant=``/``coverage=``/``products=`` keywords — and serializes
+    every shape through the v3 envelope.
     """
 
     _PATH = "/v3/prequalify"
@@ -1433,27 +1520,68 @@ class _PrequalifyV3Callable:
     def __init__(self, ns: ZyinsNamespace) -> None:
         self._ns = ns
 
+    @overload
     def __call__(
         self,
-        request: PrequalifyV3Request,
+        request: PrequalifyV3Request | PrequalifyInput,
         *,
+        idempotency_key: str | None = None,
+    ) -> Envelope[PrequalifyV3Result]: ...
+
+    @overload
+    def __call__(
+        self,
+        *,
+        applicant: Applicant | Mapping[str, Any],
+        coverage: Coverage,
+        products: Any,
+        options: PrequalifyV3Options | None = None,
+        idempotency_key: str | None = None,
+    ) -> Envelope[PrequalifyV3Result]: ...
+
+    def __call__(
+        self,
+        request: PrequalifyV3Request | PrequalifyInput | None = None,
+        *,
+        applicant: Applicant | Mapping[str, Any] | None = None,
+        coverage: Coverage | None = None,
+        products: Any = None,
+        options: PrequalifyV3Options | None = None,
         idempotency_key: str | None = None,
     ) -> Envelope[PrequalifyV3Result]:
         _assert_surface_pinned_to_v3(self._ns._isa, "prequalify", "prequalify_v3")
+        resolved = _resolve_prequalify_v3_request(
+            request=request,
+            applicant=applicant,
+            coverage=coverage,
+            products=products,
+            options=options,
+        )
         env, _raw = _run_v3_prequalify(
-            ns=self._ns, request=request, idempotency_key=idempotency_key
+            ns=self._ns, request=resolved, idempotency_key=idempotency_key
         )
         return env
 
     def with_raw_response(
         self,
-        request: PrequalifyV3Request,
+        request: PrequalifyV3Request | PrequalifyInput | None = None,
         *,
+        applicant: Applicant | Mapping[str, Any] | None = None,
+        coverage: Coverage | None = None,
+        products: Any = None,
+        options: PrequalifyV3Options | None = None,
         idempotency_key: str | None = None,
     ) -> tuple[Envelope[PrequalifyV3Result], RawResponse]:
         _assert_surface_pinned_to_v3(self._ns._isa, "prequalify", "prequalify_v3")
+        resolved = _resolve_prequalify_v3_request(
+            request=request,
+            applicant=applicant,
+            coverage=coverage,
+            products=products,
+            options=options,
+        )
         return _run_v3_prequalify(
-            ns=self._ns, request=request, idempotency_key=idempotency_key
+            ns=self._ns, request=resolved, idempotency_key=idempotency_key
         )
 
 

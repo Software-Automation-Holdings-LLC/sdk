@@ -8,7 +8,7 @@ from .carriers import ProductCarrierMetadata, ProductCarriers
 from .conditions import ConditionCategories, ConditionCategoryMetadata
 from .errors import ErrorAdviceCodes, ErrorCode, ErrorDocUrls
 from .medications import MedicationUseMetadata, MedicationUses
-from .products import Product, ProductMetadata, Products
+from .products import Product, Products
 from .scopes import Scope, ScopeDescriptions
 from .sign_events import SignEvent, SignEventLabels
 from .states import State, StateMetadata, States
@@ -24,7 +24,6 @@ __all__ = [
     "Product",
     "ProductCarrierMetadata",
     "ProductCarriers",
-    "ProductMetadata",
     "Products",
     "Scope",
     "ScopeDescriptions",

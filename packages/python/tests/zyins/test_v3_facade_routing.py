@@ -3,17 +3,18 @@
 Mirrors the TS SDK contract pinned in PR #377
 (``feat(sdk-ts): wire v3 facade routing on prequalify/quote``):
 
-* With ``api_version={'prequalify': 'v3'}`` the version-routed
+* With the bundled defaults (``v3``) the version-routed
   ``isa.zyins.prequalify`` attribute is identity-equal to the dedicated
   ``isa.zyins.prequalify_v3`` callable and POSTs ``/v3/prequalify``.
-* With the bundled defaults (``v2``) it remains the legacy callable.
+* With ``api_version={'prequalify': 'v2'}`` it falls back to the legacy
+  v2 callable.
 * The dedicated ``prequalify_v3`` / ``quote_v3`` callables refuse to run
   when their surface is not pinned to ``v3`` — config error, not a
   silent fallback.
 
-These guards pin the locked behaviour ahead of the Phase 5 bundled-default
-cut-over; flipping :data:`BUNDLED_API_VERSIONS` later is the deliberate
-auditable bump that flips every consumer not pinned at v2.
+These guards pin the locked behaviour now that :data:`BUNDLED_API_VERSIONS`
+defaults ``prequalify`` / ``quote`` to ``v3``; an explicit ``v2`` pin is the
+deliberate opt-out that keeps a consumer on the legacy shape.
 """
 
 from __future__ import annotations
@@ -24,6 +25,7 @@ from dataclasses import dataclass, field
 import pytest
 
 from sah_sdk import Isa, IsaConfigError
+from sah_sdk.catalog.products import Products
 from sah_sdk.core.transport import TransportResponse
 from sah_sdk.zyins.applicant import (
     Applicant,
@@ -33,7 +35,7 @@ from sah_sdk.zyins.applicant import (
 )
 from sah_sdk.zyins.coverage import Coverage
 from sah_sdk.zyins.prequalify_v3 import PrequalifyV3Options, PrequalifyV3Request
-from sah_sdk.zyins.product import Product, ProductSelection, ProductType
+from sah_sdk.zyins.product import ProductSelection
 from sah_sdk.zyins.quote_v3 import QuoteV3Request
 
 # ---------------------------------------------------------------------------
@@ -85,14 +87,7 @@ def _coverage() -> Coverage:
 
 
 def _products() -> ProductSelection:
-    return ProductSelection.of(
-        Product(
-            brand="aetna-accendo",
-            type=ProductType.FINAL_EXPENSE,
-            wire_token="fex",
-            display_name="Final Expense",
-        )
-    )
+    return ProductSelection.of(Products.Fex.AetnaAccendo)
 
 
 def _v3_response_body() -> str:
@@ -140,15 +135,15 @@ def test_prequalify_routes_to_v3_when_pinned() -> None:
     assert env.livemode is True
 
 
-def test_prequalify_keeps_v2_alias_when_api_version_omitted() -> None:
-    """Bundled default (``v2``) → ``prequalify`` aliases ``prequalify_v2``."""
+def test_prequalify_aliases_v3_when_api_version_omitted() -> None:
+    """Bundled default (``v3``) → ``prequalify`` aliases ``prequalify_v3``."""
     isa = Isa.with_keycode(
         keycode="SDV-HWH-WDD",
         email="john.doe@acme-agency.com",
     )
 
-    assert isa.zyins.prequalify is isa.zyins.prequalify_v2
-    assert isa.zyins.prequalify is not isa.zyins.prequalify_v3
+    assert isa.zyins.prequalify is isa.zyins.prequalify_v3
+    assert isa.zyins.prequalify is not isa.zyins.prequalify_v2
 
 
 def test_quote_routes_to_v3_when_pinned() -> None:
@@ -182,6 +177,7 @@ def test_prequalify_v3_refuses_to_run_when_prequalify_pinned_to_v2() -> None:
     isa = Isa.with_keycode(
         keycode="SDV-HWH-WDD",
         email="john.doe@acme-agency.com",
+        api_version={"prequalify": "v2"},
     )
 
     with pytest.raises(IsaConfigError, match=r"api_version.*'v3'"):
@@ -199,6 +195,7 @@ def test_quote_v3_refuses_to_run_when_quote_pinned_to_v2() -> None:
     isa = Isa.with_keycode(
         keycode="SDV-HWH-WDD",
         email="john.doe@acme-agency.com",
+        api_version={"quote": "v2"},
     )
 
     with pytest.raises(IsaConfigError, match=r"api_version.*'v3'"):

@@ -33,6 +33,27 @@ class BrandingLookupRequest
 class AccountBranding
     def lookup(self, request: BrandingLookupRequest | None) -> BrandingDetail
 
+=== account/case_crypto.py ===
+def system_random_bytes(n: int) -> bytes
+class CaseEnvelope
+    ciphertext: str
+    iv: str
+    tag: str
+class EncryptedCase
+    envelope: CaseEnvelope
+    key_fragment: str
+class CaseDecryptError(ValueError)
+def encrypt_case(product: str, payload: Any, random_bytes: RandomBytes | None) -> EncryptedCase
+def decrypt_case(product: str, envelope: CaseEnvelope, key_fragment: str) -> Any
+
+=== account/case_link.py ===
+DEFAULT_CASE_VIEWER_BASE_URL = ...
+class ParsedLink
+    code: str
+    key_fragment: str
+def assemble_link(viewer_base_url: str, code: str, key_fragment: str) -> str
+def parse_link(link: str) -> ParsedLink
+
 === account/cases.py ===
 class CaseCreateRequest
     input: dict[str, Any] | str
@@ -56,11 +77,22 @@ class CaseEmailRequest
     to: str
 class CaseEmailResult
     queued: bool
+class CaseShareRequest
+    product: str
+    payload: Any
+class CaseShareResult
+    id: str
+    link: str
+class CaseOpenResult
+    product: str
+    payload: Any
 class AccountCases
     def create(self, request: CaseCreateRequest) -> CaseCreateResult
     def get(self, case_id: str) -> CaseSummary
     def list(self) -> tuple[CaseSummary, ...]
     def email(self, request: CaseEmailRequest) -> CaseEmailResult
+    def share(self, request: CaseShareRequest) -> CaseShareResult
+    def open(self, link: str) -> CaseOpenResult
 
 === account/email.py ===
 class EmailAttachment
@@ -120,16 +152,11 @@ class MedicationUseMetadata
     medications: tuple[str, ...]
 
 === catalog/products.py ===
-class Product(str, Enum)
-class ProductMetadata
-    slug: str
-    display_name: str
-    carrier: str
+class Product
+    id: str
+    name: str
     product_class: str
-    ages: tuple[int, int]
-    states: tuple[str, ...]
-    face_amount: tuple[int, int]
-    state_variations: tuple[str, ...]
+    carrier: str
 
 === catalog/scopes.py ===
 class Scope(str, Enum)
@@ -906,31 +933,10 @@ def coerce_pricing_row(raw: object) -> V3PricingRow
 
 === zyins/product.py ===
 class ProductType(str, Enum)
-class Product(BaseModel)
-    brand: str
-    type: ProductType
-    wire_token: str
-    display_name: str
 class ProductSelection
-    def of(cls, product: Product) -> ProductSelection
-    def many(cls, products: Iterable[Product]) -> ProductSelection
+    def of(cls, products: Product | Sequence[Product]) -> ProductSelection
     def list(self) -> tuple[Product, ...]
     def to_wire_array(self) -> tuple[str, ...]
-    def to_wire_string(self) -> str
-class ProductCatalog
-    def default(cls) -> ProductCatalog
-    def from_datasets(cls, bundle: Mapping[str, Any]) -> ProductCatalog
-    def find(self, brand: str, product_type: ProductType) -> Product
-    def try_find(self, brand: str, product_type: ProductType) -> Product | None
-    def find_by_slug(self, slug: str) -> Product
-    def try_find_by_slug(self, slug: str) -> Product | None
-    def list(self) -> tuple[Product, ...]
-def default_catalog() -> tuple[Product, ...]
-
-=== zyins/products.py ===
-class ProductsFacade
-    def catalog(self) -> ProductCatalog
-    def refresh(self) -> ProductCatalog
 
 === zyins/quote.py ===
 class QuoteInput(BaseModel)

@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 from dataclasses import dataclass, field
 
+from sah_sdk.catalog.products import Products
 from sah_sdk.core.envelope import extract_envelope_fields
 from sah_sdk.core.transport import TransportResponse
 from sah_sdk.zyins import (
@@ -13,10 +14,12 @@ from sah_sdk.zyins import (
     Envelope,
     Isa,
     NicotineUsage,
-    PrequalifyInput,
     RawResponse,
     Sex,
 )
+from sah_sdk.zyins.prequalify_v3 import PrequalifyV3Request
+from sah_sdk.zyins.product import ProductSelection
+from sah_sdk.zyins.quote_v3 import QuoteV3Request
 
 
 @dataclass
@@ -48,63 +51,65 @@ def _bearer_isa(transport: RecordingTransport) -> Isa:
     return Isa.with_bearer(_FAKE_TOKEN, transport=transport)
 
 
-def _input() -> PrequalifyInput:
-    return PrequalifyInput(
-        applicant=Applicant(
-            dob="1962-04-18",
-            sex=Sex.MALE,
-            height_inches=70,
-            weight_pounds=195,
-            state="NC",
-            nicotine_use=NicotineUsage.NONE,
-        ),
-        coverage=Coverage.face_value(100_000),
-        products="colonial-penn.final-expense",
+def _applicant() -> Applicant:
+    return Applicant(
+        dob="1962-04-18",
+        sex=Sex.MALE,
+        height_inches=70,
+        weight_pounds=195,
+        state="NC",
+        nicotine_use=NicotineUsage.NONE,
     )
+
+
+def _products() -> ProductSelection:
+    return ProductSelection.of(Products.Fex.AetnaAccendo)
+
+
+def _prequalify_request() -> PrequalifyV3Request:
+    return PrequalifyV3Request(
+        applicant=_applicant(),
+        coverage=Coverage.face_value(100_000),
+        products=_products(),
+    )
+
+
+def _v3_body(**overrides: object) -> str:
+    """A minimal valid ``/v3/prequalify`` envelope, with overrides merged in."""
+    base: dict[str, object] = {"data": {"plans": []}}
+    base.update(overrides)
+    return json.dumps(base)
 
 
 def test_envelope_carries_typed_fields() -> None:
-    body = json.dumps(
-        {
-            "plans": [],
-            "request_id": "req_01HZK2N5GQR9T8X4B6FJW3Y1AS",
-            "idempotency_key": "550e8400-e29b-41d4-a716-446655440000",
-            "livemode": True,
-            "retry_attempts": 2,
-        }
+    body = _v3_body(
+        request_id="req_01HZK2N5GQR9T8X4B6FJW3Y1AS",
+        idempotency_key="550e8400-e29b-41d4-a716-446655440000",
+        livemode=True,
     )
     transport = RecordingTransport(response_body=body)
     isa = _bearer_isa(transport)
-    env = isa.zyins.prequalify(_input())
+    env = isa.zyins.prequalify(_prequalify_request())
 
     assert isinstance(env, Envelope)
     assert env.request_id == "req_01HZK2N5GQR9T8X4B6FJW3Y1AS"
     assert env.idempotency_key == "550e8400-e29b-41d4-a716-446655440000"
     assert env.livemode is True
-    assert env.retry_attempts == 2
     # Typed payload preserved.
-    assert env.data.plans == ()
+    assert tuple(env.data.plans) == ()
 
 
 def test_envelope_falls_back_to_client_minted_key() -> None:
-    body = json.dumps({"plans": [], "request_id": "req_x"})
+    body = _v3_body(request_id="req_x")
     transport = RecordingTransport(response_body=body)
     isa = _bearer_isa(transport)
-    env = isa.zyins.prequalify(_input(), idempotency_key="case-42")
+    env = isa.zyins.prequalify(_prequalify_request(), idempotency_key="case-42")
     # Server omitted idempotency_key — SDK echoes the key it sent.
     assert env.idempotency_key == "case-42"
 
 
 def test_with_raw_response_returns_envelope_and_raw() -> None:
-    body = json.dumps(
-        {
-            "plans": [],
-            "request_id": "req_raw_01",
-            "idempotency_key": "k-1",
-            "livemode": False,
-            "retry_attempts": 0,
-        }
-    )
+    body = _v3_body(request_id="req_raw_01", idempotency_key="k-1", livemode=False)
     transport = RecordingTransport(
         response_body=body,
         response_status=200,
@@ -115,32 +120,31 @@ def test_with_raw_response_returns_envelope_and_raw() -> None:
     )
     isa = _bearer_isa(transport)
 
-    env, raw = isa.zyins.prequalify.with_raw_response(_input())
+    env, raw = isa.zyins.prequalify.with_raw_response(_prequalify_request())
 
     assert isinstance(env, Envelope)
     assert env.request_id == "req_raw_01"
 
     assert isinstance(raw, RawResponse)
     assert raw.status == 200
-    assert raw.url.endswith("/v1/prequalify")
+    assert raw.url.endswith("/v3/prequalify")
     assert raw.headers["x-isa-request-id"] == "req_raw_01"
 
 
 def test_with_raw_response_quote_variant() -> None:
-    body = json.dumps({"plans": [], "request_id": "req_quote_01"})
+    body = _v3_body(request_id="req_quote_01")
     transport = RecordingTransport(response_body=body, response_status=200)
     isa = _bearer_isa(transport)
-    from sah_sdk.zyins import QuoteInput
 
-    qi = QuoteInput(
-        applicant=_input().applicant,
-        coverage=_input().coverage,
-        products="colonial-penn.final-expense",
+    qr = QuoteV3Request(
+        applicant=_applicant(),
+        coverage=Coverage.face_value(100_000),
+        products=_products(),
     )
-    env, raw = isa.zyins.quote.with_raw_response(qi)
+    env, raw = isa.zyins.quote.with_raw_response(qr)
     assert env.request_id == "req_quote_01"
     assert raw.status == 200
-    assert raw.url.endswith("/v1/quote")
+    assert raw.url.endswith("/v3/quote")
 
 
 def test_extract_envelope_fields_defaults() -> None:

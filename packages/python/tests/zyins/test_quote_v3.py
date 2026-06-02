@@ -7,6 +7,7 @@ from dataclasses import dataclass, field
 
 import pytest
 
+from sah_sdk.catalog.products import Products
 from sah_sdk.core.errors import ISAError
 from sah_sdk.core.transport import TransportResponse
 from sah_sdk.zyins.applicant import (
@@ -16,7 +17,7 @@ from sah_sdk.zyins.applicant import (
     Sex,
 )
 from sah_sdk.zyins.coverage import Coverage
-from sah_sdk.zyins.product import Product, ProductSelection, ProductType
+from sah_sdk.zyins.product import ProductSelection
 from sah_sdk.zyins.quote_v3 import (
     QuoteV3Request,
     parse_quote_v3_envelope,
@@ -61,14 +62,7 @@ def _applicant() -> Applicant:
 
 
 def _product_selection() -> ProductSelection:
-    return ProductSelection.of(
-        Product(
-            brand="aetna-accendo",
-            type=ProductType.FINAL_EXPENSE,
-            wire_token="fex",
-            display_name="Final Expense",
-        )
-    )
+    return ProductSelection.of(Products.Fex.AetnaAccendo)
 
 
 def _sample_envelope() -> str:

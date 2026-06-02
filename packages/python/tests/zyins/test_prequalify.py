@@ -6,6 +6,7 @@ import json
 
 import pytest
 
+from sah_sdk.catalog.products import Products
 from sah_sdk.zyins import (
     Applicant,
     Condition,
@@ -20,12 +21,7 @@ from sah_sdk.zyins import (
 )
 from sah_sdk.zyins.coverage import QuoteType
 from sah_sdk.zyins.prequalify import parse_prequalify_response
-from sah_sdk.zyins.product import (
-    Product,
-    ProductCatalog,
-    ProductSelection,
-    ProductType,
-)
+from sah_sdk.zyins.product import ProductSelection
 
 # ---------------------------------------------------------------------------
 # John Doe canonical persona (NC, no nicotine, no conditions/medications)
@@ -124,18 +120,8 @@ def test_wire_body_john_doe_nc_canonical() -> None:
 
 def test_wire_body_products_is_array() -> None:
     """products field must be a JSON array, never a pipe-joined string."""
-    sel = ProductSelection.many(
-        [
-            Product(
-                brand="cp", type=ProductType.FINAL_EXPENSE, wire_token="cp.fex", display_name="CP"
-            ),
-            Product(
-                brand="moo",
-                type=ProductType.FINAL_EXPENSE,
-                wire_token="moo.fex",
-                display_name="MOO",
-            ),
-        ]
+    sel = ProductSelection.of(
+        [Products.Fex.AetnaAccendo, Products.Fex.AetnaProtectionSeries]
     )
     parsed = json.loads(
         PrequalifyInput(
@@ -144,7 +130,10 @@ def test_wire_body_products_is_array() -> None:
             products=sel,
         ).to_wire_body()
     )
-    assert parsed["products"] == ["cp.fex", "moo.fex"]
+    assert parsed["products"] == [
+        Products.Fex.AetnaAccendo.id,
+        Products.Fex.AetnaProtectionSeries.id,
+    ]
 
 
 def test_wire_body_splits_legacy_pipe_product_string() -> None:
@@ -346,83 +335,26 @@ def test_quote_type_values() -> None:
 
 
 # ---------------------------------------------------------------------------
-# ProductCatalog
+# ProductSelection — id-only wire serialization
 # ---------------------------------------------------------------------------
 
 
-def test_product_catalog_from_datasets_parses_entries() -> None:
-    bundle = {
-        "products": {
-            "fex": [
-                {
-                    "identifier": "fex-cp",
-                    "carrier": "colonial-penn",
-                    "name": "CP FEX",
-                    "product": "fex",
-                },
-            ]
-        }
-    }
-    catalog = ProductCatalog.from_datasets(bundle)
-    p = catalog.find_by_slug("fex-cp")
-    assert p.brand == "colonial-penn"
-    assert p.wire_token == "fex-cp"
-    assert p.display_name == "CP FEX"
-
-
-def test_product_catalog_default_is_callable() -> None:
-    assert (
-        ProductCatalog.default().find_by_slug("colonial-penn.final-expense").brand
-        == "colonial-penn"
+def test_product_selection_to_wire_array_emits_prod_ids() -> None:
+    sel = ProductSelection.of(
+        [Products.Fex.AetnaAccendo, Products.Fex.AetnaProtectionSeries]
+    )
+    assert sel.to_wire_array() == (
+        Products.Fex.AetnaAccendo.id,
+        Products.Fex.AetnaProtectionSeries.id,
     )
 
 
-def test_product_catalog_find_by_slug_raises_on_miss() -> None:
-    catalog = ProductCatalog.from_datasets({"products": {}})
-    with pytest.raises(KeyError):
-        catalog.find_by_slug("nonexistent")
+def test_product_selection_by_id_roundtrip() -> None:
+    """by_id(Products.Fex.AetnaAccendo.id) is Products.Fex.AetnaAccendo."""
+    p = Products.Fex.AetnaAccendo
+    from sah_sdk.catalog.products import Products as CatalogProducts
 
-
-def test_product_catalog_try_find_by_slug_returns_none_on_miss() -> None:
-    catalog = ProductCatalog.from_datasets({"products": {}})
-    assert catalog.try_find_by_slug("nonexistent") is None
-
-
-def test_product_catalog_from_datasets_skips_bad_entries() -> None:
-    bundle = {
-        "products": {
-            "fex": [
-                {"identifier": "ok", "carrier": "x", "name": "X", "product": "fex"},
-                {"identifier": "bad", "carrier": "x", "name": "X", "product": None},
-                {"missing": "fields"},
-                None,
-            ]
-        }
-    }
-    catalog = ProductCatalog.from_datasets(bundle)
-    assert len(catalog.list()) == 1
-
-
-# ---------------------------------------------------------------------------
-# ProductSelection.to_wire_array (replaces to_wire_string)
-# ---------------------------------------------------------------------------
-
-
-def test_product_selection_to_wire_array() -> None:
-    sel = ProductSelection.many(
-        [
-            Product(
-                brand="cp", type=ProductType.FINAL_EXPENSE, wire_token="cp.fex", display_name="CP"
-            ),
-            Product(
-                brand="moo",
-                type=ProductType.FINAL_EXPENSE,
-                wire_token="moo.fex",
-                display_name="MOO",
-            ),
-        ]
-    )
-    assert sel.to_wire_array() == ("cp.fex", "moo.fex")
+    assert CatalogProducts.by_id(p.id) is p
 
 
 def test_empty_product_selection_rejected() -> None:

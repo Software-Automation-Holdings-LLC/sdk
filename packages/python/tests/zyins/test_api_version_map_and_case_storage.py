@@ -82,17 +82,17 @@ def test_bundled_api_versions_is_read_only() -> None:
         BUNDLED_API_VERSIONS["prequalify"] = "v9"  # type: ignore[index]
     with pytest.raises(TypeError):
         del BUNDLED_API_VERSIONS["prequalify"]  # type: ignore[attr-defined]
-    assert BUNDLED_API_VERSIONS["prequalify"] == "v2"
+    assert BUNDLED_API_VERSIONS["prequalify"] == "v3"
     assert BUNDLED_API_VERSIONS["sessions"] == "v1"
 
 
 def test_bundled_api_versions_covers_locked_surfaces() -> None:
     """Locked surfaces from §2.7 — bumping any of these is a deliberate act."""
     expected = {
-        "prequalify": "v2",
-        "quote": "v2",
-        "datasets": "v2",
-        "reference": "v2",
+        "prequalify": "v3",
+        "quote": "v3",
+        "datasets": "v3",
+        "reference": "v3",
         "sessions": "v1",
         "branding": "v1",
         "cases": "v1",

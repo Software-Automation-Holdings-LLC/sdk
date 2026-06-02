@@ -84,8 +84,13 @@ from .prequalify import (
     PrequalifyPlan,
     PrequalifyResult,
 )
-from .product import Product, ProductCatalog, ProductSelection, ProductType
-from .products import ProductsFacade
+from .prequalify_v3 import (
+    PrequalifyV3Request,
+    PrequalifyV3Result,
+    V3Offer,
+    by_amount,
+)
+from .product import Product, ProductSelection, ProductType
 from .quote import QuotedPlan, QuoteInput, QuoteResult
 from .reference_data import ReferenceDataResponse
 from .usage import UsageSummary
@@ -179,12 +184,12 @@ __all__ = [
     "PrequalifyInput",
     "PrequalifyPlan",
     "PrequalifyResult",
+    "PrequalifyV3Request",
+    "PrequalifyV3Result",
     "ProbeResult",
     "Product",
-    "ProductCatalog",
     "ProductSelection",
     "ProductType",
-    "ProductsFacade",
     "ProxyEngine",
     "QuoteInput",
     "QuoteResult",
@@ -199,11 +204,13 @@ __all__ = [
     "SessionAuth",
     "Sex",
     "UsageSummary",
+    "V3Offer",
     "ValidationError",
     "Weight",
     "WeightParseError",
     "ZyInsClient",
     "ZyInsError",
+    "by_amount",
     "coerce_plan_info",
     "resolve_isa_options",
     "title_case_label",

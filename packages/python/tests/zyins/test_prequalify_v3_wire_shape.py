@@ -21,6 +21,7 @@ import json
 from dataclasses import dataclass, field
 from typing import Any
 
+from sah_sdk.catalog.products import Products
 from sah_sdk.core.transport import TransportResponse
 from sah_sdk.zyins.applicant import (
     Applicant,
@@ -37,7 +38,7 @@ from sah_sdk.zyins.prequalify_v3 import (
     prequalify_v3,
     serialize_v3_prequalify_body,
 )
-from sah_sdk.zyins.product import Product, ProductSelection, ProductType
+from sah_sdk.zyins.product import ProductSelection
 
 
 @dataclass
@@ -89,14 +90,7 @@ def _basic_applicant() -> Applicant:
 
 
 def _product_selection() -> ProductSelection:
-    return ProductSelection.of(
-        Product(
-            brand="aetna-accendo",
-            type=ProductType.FINAL_EXPENSE,
-            wire_token="fex",
-            display_name="Final Expense",
-        )
-    )
+    return ProductSelection.of(Products.Fex.AetnaAccendo)
 
 
 def _captured_body(
@@ -173,8 +167,8 @@ def test_prequalify_v3_emits_envelope_shape_targets_v3_path_sends_api_version() 
     # empty string; the server pattern ^\d{5}(-\d{4})?$ rejects "").
     assert "zip" not in coverage
 
-    # Products: flat slug list per the PrequalifyV3Request schema.
-    assert payload["products"] == ["fex"]
+    # Products: flat prod_<uuid> id list per the PrequalifyV3Request schema.
+    assert payload["products"] == ["prod_d7b57156-3e83-506b-8936-0692c1193dc7"]
 
 
 def test_prequalify_v3_threads_applicant_zip_into_coverage() -> None:

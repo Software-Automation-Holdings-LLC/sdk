@@ -70,7 +70,7 @@ from .zyins.prequalify import (
     Premium,
     PrequalifyPlan,
 )
-from .zyins.product import Product as ZyinsProduct  # zyins regex helper (legacy)
+from .zyins.product import ProductSelection
 
 __version__ = "0.4.0rc1"
 
@@ -114,6 +114,7 @@ __all__ = [
     "Product",
     "ProductCarriers",
     "ProductLabels",
+    "ProductSelection",
     "Products",
     "RateLimitError",
     "RawResponse",
@@ -128,6 +129,5 @@ __all__ = [
     "ValidationError",
     "Weight",
     "WeightParseError",
-    "ZyinsProduct",
     "__version__",
 ]

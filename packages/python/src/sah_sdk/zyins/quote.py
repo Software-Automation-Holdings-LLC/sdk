@@ -31,8 +31,8 @@ class QuoteInput(BaseModel):
     riders: tuple[str, ...] = Field(default_factory=tuple)
 
     def to_wire_body(self) -> str:
-        products_wire = (
-            self.products.to_wire_string()
+        products_wire: str | list[str] = (
+            list(self.products.to_wire_array())
             if isinstance(self.products, ProductSelection)
             else self.products
         )
