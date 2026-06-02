@@ -29,7 +29,7 @@ export interface CaseShareRequest {
 export interface CaseShareResult {
     /** Server-assigned case uuid. */
     id: string;
-    /** Full share link `${caseViewerBaseUrl}/c/<id>#k=<base64url(key)>`. */
+    /** Full share link `${caseViewerBaseUrl}/<id>#k=<base64url(key)>`. */
     link: string;
 }
 export interface CasesContext {

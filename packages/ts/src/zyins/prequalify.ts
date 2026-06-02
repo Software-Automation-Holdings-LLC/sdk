@@ -619,7 +619,7 @@ function coercePlan(raw: unknown): Plan {
     planInfoLegacy: planInfoCoerced.legacy,
     raw: r,
   };
-  const hydrated = id ? Products.byWireToken(id) : undefined;
+  const hydrated = id ? Products.byId(id) : undefined;
   if (hydrated) plan.product = hydrated;
   return plan;
 }

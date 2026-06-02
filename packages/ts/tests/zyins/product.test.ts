@@ -1,8 +1,9 @@
 /**
- * Product catalog tests (v0.5.3 spec).
+ * Product catalog tests.
  *
- * Covers the nested-by-type `Products` namespace and the typed-only
- * `ProductSelection` factories.
+ * Covers the nested-by-type `Products` namespace, the `byId` reverse lookup,
+ * the conformance round-trip invariant, and the typed-only `ProductSelection`
+ * factories.
  */
 
 import { describe, expect, it } from 'vitest';
@@ -21,32 +22,44 @@ describe('Products catalog', () => {
     expect(Object.keys(Products.Term).length).toBeGreaterThan(0);
   });
 
-  it('every wire token is prefixed by its product type', () => {
-    for (const p of Object.values(Products.Fex) as Product[]) {
-      expect(p.wireToken.startsWith('fex-')).toBe(true);
-    }
-    for (const p of Object.values(Products.Medsup) as Product[]) {
-      expect(p.wireToken.startsWith('medsup-')).toBe(true);
-    }
-    for (const p of Object.values(Products.Preneed) as Product[]) {
-      expect(p.wireToken.startsWith('preneed-')).toBe(true);
-    }
-    for (const p of Object.values(Products.Term) as Product[]) {
-      expect(p.wireToken.startsWith('term-')).toBe(true);
+  it('every product carries a prod_<uuid> id', () => {
+    for (const p of Products.all()) {
+      expect(p.id).toMatch(/^prod_[0-9a-f-]+$/);
     }
   });
 
-  it('byWireToken roundtrips against the flat catalog', () => {
+  it('no product has a wireToken field on the public type', () => {
+    // wireToken must not appear on the Product interface — only id is identity.
     for (const p of Products.all()) {
-      expect(Products.byWireToken(p.wireToken)?.wireToken).toBe(p.wireToken);
+      expect('wireToken' in p).toBe(false);
     }
-    expect(Products.byWireToken('not-a-real-token')).toBeUndefined();
+  });
+
+  it('byId roundtrips: every product resolves to itself', () => {
+    for (const p of Products.all()) {
+      expect(Products.byId(p.id)).toBe(p);
+    }
+    expect(Products.byId('prod_does-not-exist')).toBeUndefined();
+  });
+
+  it('conformance: byId(AetnaAccendo.id) === AetnaAccendo (strict reference equality)', () => {
+    const accendo = Products.Fex['AetnaAccendo'] as Product;
+    expect(accendo).toBeDefined();
+    expect(Products.byId(accendo.id)).toBe(accendo);
+  });
+
+  it('conformance: a stale name does not resolve — only ids resolve via byId', () => {
+    // byId accepts only prod_<uuid> strings; display names must not match.
+    const accendo = Products.Fex['AetnaAccendo'] as Product;
+    expect(Products.byId(accendo.displayName)).toBeUndefined();
+    expect(Products.byId('fex-aetna-accendo')).toBeUndefined();
+    expect(Products.byId('Aetna Accendo')).toBeUndefined();
   });
 
   it('byLegacy is case-insensitive on display name within a type', () => {
     const accendo = Products.Fex['AetnaAccendo'] as Product;
     const found = Products.byLegacy(ProductClass.FinalExpense, accendo.displayName.toLowerCase());
-    expect(found?.wireToken).toBe(accendo.wireToken);
+    expect(found?.id).toBe(accendo.id);
     expect(
       Products.byLegacy(ProductClass.Term, accendo.displayName),
     ).toBeUndefined();
@@ -54,10 +67,12 @@ describe('Products catalog', () => {
 });
 
 describe('ProductSelection factories', () => {
-  it('of() emits products[] in toWireFields()', () => {
+  it('of() emits products[] with prod_<uuid> ids in toWireFields()', () => {
     const accendo = Products.Fex['AetnaAccendo'] as Product;
     const sel = ProductSelection.of([accendo]);
-    expect(sel.toWireFields()).toEqual({ products: [accendo.wireToken] });
+    const fields = sel.toWireFields();
+    expect(fields.products).toEqual([accendo.id]);
+    expect(fields.products![0]).toMatch(/^prod_[0-9a-f-]+$/);
   });
 
   it('byTypes() emits include_product_class[]', () => {
@@ -74,7 +89,7 @@ describe('ProductSelection factories', () => {
       plus: [accendo],
     });
     expect(sel.toWireFields()).toEqual({
-      products: [accendo.wireToken],
+      products: [accendo.id],
       include_product_class: ['term'],
     });
   });
@@ -89,7 +104,7 @@ describe('ProductSelection factories', () => {
     types.pop();
 
     expect(sel.toWireFields()).toEqual({
-      products: [accendo.wireToken],
+      products: [accendo.id],
       include_product_class: ['term'],
     });
   });

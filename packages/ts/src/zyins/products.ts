@@ -23,9 +23,9 @@ export class ProductsFacade {
     return Products;
   }
 
-  /** Resolve a product by wire-token slug. */
-  byWireToken(token: string): Product | undefined {
-    return Products.byWireToken(token);
+  /** Resolve a product by its opaque `prod_<uuid>` id. */
+  byId(id: string): Product | undefined {
+    return Products.byId(id);
   }
 
   /** Resolve a product by legacy display name within a type. */

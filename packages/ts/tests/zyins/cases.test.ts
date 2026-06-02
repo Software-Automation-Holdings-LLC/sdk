@@ -21,7 +21,7 @@ describe('ZyInsClient.cases.share', () => {
       products: ['senior-life'],
     });
     expect(result.id).toBe(CASE_ID);
-    expect(result.link).toContain(`/c/${CASE_ID}#k=`);
+    expect(result.link).toContain(`/${CASE_ID}#k=`);
     expect(requests[0]!.method).toBe('POST');
     expect(requests[0]!.url).toBe('https://test.example/v1/case');
     expect(requests[0]!.headers['Idempotency-Key']).toBeTruthy();
@@ -38,7 +38,7 @@ describe('ZyInsClient.cases.share', () => {
     const { transport } = recordingTransport(201, JSON.stringify({ object: 'case', id: CASE_ID }));
     const result = await client(transport).cases.create({ input: '<applicant/>' });
     expect(result.id).toBe(CASE_ID);
-    expect(result.link).toContain(`/c/${CASE_ID}#k=`);
+    expect(result.link).toContain(`/${CASE_ID}#k=`);
   });
 
   it('rejects missing input', async () => {

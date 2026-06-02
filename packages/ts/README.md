@@ -1,27 +1,21 @@
-# @software-automation-holdings-llc/sdk
+# isa-sdk
 
 Unified TypeScript SDK for the [Best Plan Pro API](https://docs.isaapi.com) — powered by the ZyINS engine.
 
 ## Install
 
 ```sh
-npm install @software-automation-holdings-llc/sdk
-```
-
-The package is published to GitHub Packages (org-private). Configure your `.npmrc`:
-
-```
-@software-automation-holdings-llc:registry=https://npm.pkg.github.com
-//npm.pkg.github.com/:_authToken=${GITHUB_TOKEN}
+npm install isa-sdk
 ```
 
 ## Hello world
 
 ```ts @no-compile
-import { Isa } from '@software-automation-holdings-llc/sdk';
+import { Isa } from 'isa-sdk';
 
 const isa = Isa.withBearer();                   // reads ISA_TOKEN
-const { data } = await isa.zyins.prequalify(req);
+const { data } = await isa.zyins.prequalify(req);  // v3 by default
+console.log(data.plans[0].carrier.name);
 ```
 
 Three bootstrap factories cover all auth contexts:
@@ -41,30 +35,36 @@ import {
   State,
   Height,
   Weight,
-  NicotineUsage,
+  NicotineDuration,
   Coverage,
   ProductSelection,
-  ProductClass,
-} from '@software-automation-holdings-llc/sdk';
+  Products,
+} from 'isa-sdk';
 
 const isa = await Isa.withKeycode({
-  keycode: 'SDV-HWH-WDD',
+  keycode: 'ABC-123-XYZ',
   email:   'john.doe@acme-agency.com',
 });
 
-const { data } = await isa.zyins.prequalifyV2({
+// The bare `isa.zyins.prequalify` facade routes to v3 by default and
+// resolves to an envelope; destructure `data` to read the flat plans[].
+const { data } = await isa.zyins.prequalifyV3({
   applicant: {
     dob:         '1962-04-18',
     sex:         Sex.Male,
     state:       State.NorthCarolina,
     height:      Height.fromFeetInches(5, 10),
     weight:      Weight.fromPounds(195),
-    nicotineUse: NicotineUsage.None,
+    nicotineUse: { lastUsed: NicotineDuration.Never },
   },
   coverage: Coverage.faceValue(25_000),
-  products: ProductSelection.byTypes([ProductClass.Term]),
+  products: ProductSelection.of([Products.Term.FidelityLifeInstabrainTerm]),
 });
-console.log(data.plans[0].premium?.display);
+
+for (const offer of data.plans) {
+  const headline = offer.pricing.find(row => row.primary);
+  console.log(`${offer.carrier.name} ${offer.product.name}: ${headline?.premium?.amount.display}`);
+}
 ```
 
 ## Per-surface API versions
@@ -75,14 +75,14 @@ ships a frozen `BundledApiVersions` table recording which `/vN` each surface
 targets:
 
 ```ts @no-compile
-import { BundledApiVersions } from '@software-automation-holdings-llc/sdk';
+import { BundledApiVersions } from 'isa-sdk';
 
 console.log(BundledApiVersions);
 // {
-//   prequalify: 'v2',
-//   quote:      'v2',
-//   datasets:   'v2',
-//   reference:  'v2',
+//   prequalify: 'v3',
+//   quote:      'v3',
+//   datasets:   'v3',
+//   reference:  'v3',
 //   sessions:   'v1',
 //   branding:   'v1',
 //   cases:      'v1',
@@ -94,11 +94,11 @@ To pin a single surface without disturbing the rest, pass a per-surface
 shorthand — resolution is `apiVersion[surface] ?? BundledApiVersions[surface]`:
 
 ```ts
-import { Isa } from '@software-automation-holdings-llc/sdk';
+import { Isa } from 'isa-sdk';
 
 const isa = await Isa.withKeycode(
   {
-    keycode: 'SDV-HWH-WDD',
+    keycode: 'ABC-123-XYZ',
     email:   'john.doe@acme-agency.com',
   },
   undefined,                       // env reader — defaults to process.env
@@ -106,8 +106,10 @@ const isa = await Isa.withKeycode(
 );
 ```
 
-The release that retargets `prequalify` / `quote` / `datasets` / `reference`
-to `v3` will bump those entries. See [SDK syntax proposal §2.7][syntax-27].
+`prequalify` / `quote` / `datasets` / `reference` default to `v3` — the
+flat `plans[]` shape, the Money primitive, and the reference adapters all
+work out of the box. Pin `apiVersion: { prequalify: 'v2' }` only when a
+consumer still needs the legacy v2 shape. See [SDK syntax proposal §2.7][syntax-27].
 
 [syntax-27]: ../../docs/sdk-syntax-proposal.md#27-versioning--per-surface-not-global
 
@@ -138,10 +140,10 @@ corrections. The `mode` option chooses between mid-typing guards
 (`keyup`) and anti-duplication guards (`submit`).
 
 ```ts @no-compile
-import { Isa } from '@software-automation-holdings-llc/sdk';
+import { Isa } from 'isa-sdk';
 
 const isa = await Isa.withKeycode({
-  keycode: 'SDV-HWH-WDD',
+  keycode: 'ABC-123-XYZ',
   email:   'john.doe@acme-agency.com',
 });
 
@@ -201,7 +203,7 @@ method plus a `versionTag` getter. Use `clone()` to swap one field
 without restating the others:
 
 ```ts @no-compile
-import { DefaultAutocorrector } from '@software-automation-holdings-llc/sdk';
+import { DefaultAutocorrector } from 'isa-sdk';
 
 // Start from the SDK-bundled corrector, override the typo map, keep
 // the rest of the wiring (mode, onApplied sink, etc.) intact:
@@ -228,7 +230,7 @@ hosted-LLM lookup), implement the interface directly and pass it on the
 constructor. The minimal `MatchAlgorithm` is two lines:
 
 ```ts @no-compile
-import type { MatchAlgorithm, Concept } from '@software-automation-holdings-llc/sdk';
+import type { MatchAlgorithm, Concept } from 'isa-sdk';
 
 // Exact-string match against `concept.name`, no key normalization.
 class ExactNameMatch implements MatchAlgorithm {
@@ -238,7 +240,7 @@ class ExactNameMatch implements MatchAlgorithm {
 }
 
 const isa = await Isa.withKeycode({
-  keycode: 'SDV-HWH-WDD',
+  keycode: 'ABC-123-XYZ',
   email:   'john.doe@acme-agency.com',
   autocorrector:         new MyAutocorrector(),         // Autocorrector
   matchAlgorithm:        new ExactNameMatch(),          // MatchAlgorithm
@@ -253,14 +255,14 @@ route through it. Same wholesale + decorator + composition pattern as
 
 ### `BundledApiVersions` and the adapter wire
 
-The default adapters consume the v3 reference catalog. The `/datasets`
+The default adapters consume the reference catalog. The `/datasets`
 surface is pinned in [`BundledApiVersions`](https://docs.isaapi.com/docs/api-version-pinning):
 
 ```ts @no-compile
-import { BundledApiVersions } from '@software-automation-holdings-llc/sdk';
+import { BundledApiVersions } from 'isa-sdk';
 
-BundledApiVersions.datasets;    // 'v3'
-BundledApiVersions.prequalify;  // 'v2' as of this SDK release
+BundledApiVersions.datasets;    // 'v3' as of this SDK release
+BundledApiVersions.prequalify;  // 'v3' as of this SDK release
 ```
 
 Override per-surface via the `apiVersion` map on `Isa.withKeycode`. The
@@ -276,7 +278,7 @@ ID. To plug a carrier-controlled store, pass your adapter at construction:
 ```ts @no-compile
 // `CarrierCaseStorage` is a placeholder for a consumer-supplied
 // implementation of the `CaseStorage` interface — see the cases guide.
-import { Isa, LicenseAuth, type CaseStorage } from '@software-automation-holdings-llc/sdk';
+import { Isa, LicenseAuth, type CaseStorage } from 'isa-sdk';
 declare const CarrierCaseStorage: new () => CaseStorage;
 
 const isa = await Isa.create({
@@ -343,10 +345,10 @@ License activation, check, and deactivation hang off `isa.zyins.license`
 construct `isa`, so the common call is argument-free:
 
 ```ts
-import { Isa } from '@software-automation-holdings-llc/sdk';
+import { Isa } from 'isa-sdk';
 
 const isa = await Isa.withKeycode({
-  keycode: 'SDV-HWH-WDD',
+  keycode: 'ABC-123-XYZ',
   email:   'john.doe@acme-agency.com',
 });
 

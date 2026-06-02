@@ -21,8 +21,8 @@ import {
 } from './applicant.js';
 import { type CoverageInput, QuoteType, isMulti } from './coverage.js';
 import { fromHttpResponse } from './errors.js';
-import { buildLicenseHMACHeaders } from '../core/index.js';
 import { type AuthContext } from './auth.js';
+import { type RequestSigner, licenseSigner } from './requestSigner.js';
 import { type Clock, systemClock } from '../core/index.js';
 import { retryAttemptsFromHeaders } from './retryAttempts.js';
 import { coercePlanInfo } from './planInfo.js';
@@ -84,6 +84,7 @@ export async function prequalifyV3(
   const idempotencyKey = ctx.idempotencyKey ?? mintUuidV4();
   const headers = await buildHeaders({
     auth: ctx.auth,
+    ...(ctx.signer !== undefined && { signer: ctx.signer }),
     body,
     idempotencyKey,
     clock: ctx.clock,
@@ -443,6 +444,12 @@ function serializeNicotineUsage(
 
 export async function buildHeaders(args: {
   readonly auth: AuthContext;
+  /**
+   * Auth-header strategy. When supplied, its headers (e.g. bearer
+   * `Authorization`) replace the License-HMAC set. Absent → License-HMAC
+   * from {@link auth}, byte-identical to the legacy keycode path.
+   */
+  readonly signer?: RequestSigner;
   readonly body: string;
   readonly idempotencyKey: string;
   readonly clock: Clock;
@@ -454,18 +461,14 @@ export async function buildHeaders(args: {
    */
   readonly apiVersion?: string;
 }): Promise<Record<string, string>> {
-  const licenseHeaders = await buildLicenseHMACHeaders(
-    args.auth.licenseKey,
-    args.auth.orderId,
-    args.auth.email,
-    'POST',
-    args.path,
-    args.body,
-    args.auth.deviceId,
-    args.clock ?? systemClock,
-  );
+  const signer = args.signer ?? licenseSigner(args.auth, args.clock ?? systemClock);
+  const authHeaders = await signer.signHeaders({
+    method: 'POST',
+    path: args.path,
+    body: args.body,
+  });
   const headers: Record<string, string> = {
-    ...licenseHeaders,
+    ...authHeaders,
     'Content-Type': 'application/json',
     'Idempotency-Key': args.idempotencyKey,
   };

@@ -12,6 +12,7 @@
 import { type Applicant } from './applicant.js';
 import { type CoverageInput } from './coverage.js';
 import { type AuthContext } from './auth.js';
+import { type RequestSigner } from './requestSigner.js';
 import { type Clock } from '../core/index.js';
 import { type PrequalifyV3Context, type PrequalifyV3Request, type PrequalifyV3Result, type V3Offer, type V3PricingRow } from './prequalify-v3-types.js';
 export { byAmount, offerPremium } from './prequalify-v3-types.js';
@@ -49,6 +50,12 @@ export declare function serializeWireBody(request: {
 }): string;
 export declare function buildHeaders(args: {
     readonly auth: AuthContext;
+    /**
+     * Auth-header strategy. When supplied, its headers (e.g. bearer
+     * `Authorization`) replace the License-HMAC set. Absent → License-HMAC
+     * from {@link auth}, byte-identical to the legacy keycode path.
+     */
+    readonly signer?: RequestSigner;
     readonly body: string;
     readonly idempotencyKey: string;
     readonly clock: Clock;

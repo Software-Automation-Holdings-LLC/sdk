@@ -245,7 +245,7 @@ export class CasesFacade {
 
   /**
    * Share an existing record by id + opaque recallToken. Built-in:
-   * assembles `${caseViewerBaseUrl}/c/<id>#k=<recallToken>`. Carrier
+   * assembles `${caseViewerBaseUrl}/<id>#k=<recallToken>`. Carrier
    * adapters may not have URL semantics; in that case the recipient
    * exchanges `(id, recallToken)` through whatever channel the carrier
    * documents — the SDK has no shared URL contract for non-default

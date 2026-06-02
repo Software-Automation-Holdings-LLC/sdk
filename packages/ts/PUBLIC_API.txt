@@ -77,9 +77,11 @@ export declare function lookup(request: BrandingLookupRequest | undefined, ctx: 
  * Zero-knowledge case crypto envelope (E2EE Phase 2).
  *
  * The platform stores opaque ciphertext and never holds a key: the SDK
- * generates a fresh 256-bit data key per case, encrypts the payload with
- * AES-256-GCM (the cleartext `product` tag is bound as additional
+ * generates a fresh 128-bit data key per case, encrypts the payload with
+ * AES-128-GCM (the cleartext `product` tag is bound as additional
  * authenticated data), and carries the key only in the share-link fragment.
+ * AES-GCM derives its variant from the key length, so {@link decryptCase}
+ * still opens older envelopes sealed under a 256-bit key with no branching.
  * See `docs/design/case-store-e2ee.md`.
  *
  * WebCrypto returns the GCM auth tag appended to the ciphertext; the wire
@@ -90,7 +92,7 @@ import { type RandomBytes } from '../core/index.js';
 import { IsaError } from '../zyins/apiError.js';
 /** The opaque crypto fields the server stores, all base64 (std alphabet). */
 export interface TCaseEnvelope {
-    /** Base64 AES-256-GCM ciphertext (auth tag stripped). */
+    /** Base64 AES-GCM ciphertext (auth tag stripped). */
     ciphertext: string;
     /** Base64 AES-GCM nonce. */
     iv: string;
@@ -120,7 +122,7 @@ export declare class IsaCaseDecryptError extends IsaError {
     constructor(message: string);
 }
 /**
- * Encrypts a JSON payload under a fresh 256-bit key, binding `product` as
+ * Encrypts a JSON payload under a fresh 128-bit key, binding `product` as
  * AEAD additional data. Returns the base64 wire envelope and the base64url
  * fragment key. The key never leaves this call except as the returned
  * fragment value — the caller must keep it out of logs and telemetry.
@@ -128,7 +130,7 @@ export declare class IsaCaseDecryptError extends IsaError {
  * @example
  * ```ts
  * const { envelope, keyFragment } = await encryptCase('zyins', { input });
- * // POST envelope; assemble `${viewer}/c/${id}#k=${keyFragment}`
+ * // POST envelope; assemble `${viewer}/${id}#k=${keyFragment}`
  * ```
  */
 export declare function encryptCase(product: string, payload: unknown, options?: TCaseCryptoOptions): Promise<TEncryptedCase>;
@@ -154,7 +156,7 @@ export declare function decryptCase(product: string, envelope: TCaseEnvelope, ke
  *   email  → `POST /v1/case/{id}/email`
  *
  * The payload is applicant PII the platform must never decrypt. The SDK
- * encrypts client-side with a fresh per-case key (AES-256-GCM, `product`
+ * encrypts client-side with a fresh per-case key (AES-128-GCM, `product`
  * bound as AEAD data), posts only the opaque envelope, and carries the key
  * in the share-link fragment (`#k=…`) — never on the wire, never in a log.
  * See `docs/design/case-store-e2ee.md` and zyins #363 for the wire contract.
@@ -169,11 +171,11 @@ export declare function decryptCase(product: string, envelope: TCaseEnvelope, ke
 import { type TCaseListEntry } from './caseWire.js';
 import { type TCaseRequestContext } from './caseTransport.js';
 /**
- * Default share-link viewer origin. The SDK appends `/c/<id>#k=<key>`; the
- * base intentionally omits the `/c/` segment so a deployment can point the
+ * Default share-link viewer origin. The SDK appends `/<code>#k=<key>`; any
+ * product prefix rides inside this base URL so a deployment can point the
  * option at any host without re-encoding the path shape.
  */
-export declare const DEFAULT_CASE_VIEWER_BASE_URL = "https://app.isaapi.com";
+export declare const DEFAULT_CASE_VIEWER_BASE_URL = "https://link.isaapi.com";
 /**
  * Cleartext routing tag identifying the app that owns the payload. Not PII;
  * mirrors the known zyins #363 product set while preserving server-side
@@ -191,7 +193,7 @@ export interface CaseCreateRequest {
 export interface CaseCreateResult {
     /** Server-assigned case uuid. */
     id: string;
-    /** Full share link `${caseViewerBaseUrl}/c/<id>#k=<base64url(key)>`. */
+    /** Full share link `${caseViewerBaseUrl}/<id>#k=<base64url(key)>`. */
     link: string;
 }
 /** A decrypted case returned by `open`. */
@@ -226,7 +228,7 @@ export interface CasesContext extends TCaseRequestContext {
  *   product: 'zyins',
  *   payload: { input: currentCaseToJSON() },
  * });
- * // `link` is `https://app.isaapi.com/c/<id>#k=<key>` — send it to the client.
+ * // `link` is `https://link.isaapi.com/<id>#k=<key>` — send it to the client.
  * ```
  */
 export declare function create(request: CaseCreateRequest, ctx: CasesContext): Promise<CaseCreateResult>;
@@ -323,11 +325,17 @@ export interface TCaseListEntry {
     expiresAt: string;
 }
 /**
- * Assemble `${base}/c/<id>#k=<keyFragment>`, normalizing a trailing slash on
- * the viewer base. The base must NOT already include the `/c/` segment.
+ * Assemble `${base}/<code>#k=<keyFragment>`, normalizing a trailing slash on
+ * the viewer base. The code is the only path segment the SDK adds; any product
+ * prefix rides inside the configured base URL — this never adds one.
  */
-export declare function assembleLink(viewerBaseUrl: string, id: string, keyFragment: string): string;
-/** Parse a share link into its case id and fragment key. */
+export declare function assembleLink(viewerBaseUrl: string, code: string, keyFragment: string): string;
+/**
+ * Parse a share link into its case id and fragment key. Accepts both the
+ * current single-segment shape (`{base}/<code>#k=<key>`) and the legacy
+ * `{base}/c/<id>#k=<key>` shape, so links shared before the format change keep
+ * opening. The id/code is the last non-empty path segment.
+ */
 export declare function parseLink(link: string): TParsedLink;
 /** Decode a create response into the server-assigned case id. */
 export declare function parseCreatedId(body: string): string;
@@ -456,8 +464,8 @@ export interface AccountNamespaceOptions {
     baseUrl: string;
     /**
      * Viewer origin used to assemble case share links. Defaults to
-     * {@link DEFAULT_CASE_VIEWER_BASE_URL}. The SDK appends `/c/<id>#k=<key>`;
-     * the base must NOT include the `/c/` segment.
+     * {@link DEFAULT_CASE_VIEWER_BASE_URL}. The SDK appends `/<code>#k=<key>`;
+     * any product prefix rides inside this base URL.
      */
     caseViewerBaseUrl?: string;
     /** Optional transport override; defaults to {@link defaultTransport}. */
@@ -977,7 +985,13 @@ export declare const ProductType: {
 export type ProductTypeValue = (typeof ProductType)[keyof typeof ProductType];
 /** A typed product. Stable across SDK releases inside one wire major. */
 export interface Product {
-    readonly wireToken: string;
+    /**
+     * Opaque product id (`prod_<uuid>`). The only stable identity for a product.
+     * This is the value the v3 prequalify `products[]` filter matches — pass this
+     * product (or `ProductSelection.of([...])`) and the SDK serializes this id.
+     * Slugs are mutable display data; the id is not.
+     */
+    readonly id: string;
     readonly displayName: string;
     readonly productType: ProductTypeValue;
     /** Carrier brand extracted from the display name (first 1–2 words). */
@@ -990,7 +1004,7 @@ export declare const Products: Readonly<{
     Preneed: ProductBag;
     Term: ProductBag;
     all: () => readonly Product[];
-    byWireToken: (token: string) => Product | undefined;
+    byId: (id: string) => Product | undefined;
     byLegacy: (productType: ProductTypeValue, displayName: string) => Product | undefined;
 }>;
 export {};
@@ -3351,7 +3365,7 @@ export interface CaseShareRequest {
 export interface CaseShareResult {
     /** Server-assigned case uuid. */
     id: string;
-    /** Full share link `${caseViewerBaseUrl}/c/<id>#k=<base64url(key)>`. */
+    /** Full share link `${caseViewerBaseUrl}/<id>#k=<base64url(key)>`. */
     link: string;
 }
 export interface CasesContext {
@@ -3390,7 +3404,7 @@ export declare function share(request: CaseShareRequest, ctx: CasesContext): Pro
  * link is a redirect into the carrier's portal.
  *
  * Adapters MUST treat `recallToken` as opaque. The default returns a
- * base64url AES-256-GCM data key; a carrier may return a signed bearer
+ * base64url AES-128-GCM data key; a carrier may return a signed bearer
  * token, an SSO handoff blob, or omit the token entirely. Consumers
  * thread it through unchanged.
  *
@@ -3425,7 +3439,7 @@ export interface CaseStoragePutResult {
     id: string;
     /**
      * Opaque material the recipient needs to recover the record. The
-     * default implementation returns a base64url AES-256-GCM data key
+     * default implementation returns a base64url AES-128-GCM data key
      * intended for a share-link fragment (`#k=…`); carrier adapters may
      * return a signed bearer token, an SSO handoff blob, or omit the
      * field when no client-side material is required.
@@ -3488,7 +3502,7 @@ export interface CaseStorage {
  * `ZeroKnowledgeCaseStorage` — the default {@link CaseStorage} adapter.
  *
  * Preserves the ISA platform's E2EE Phase 2 guarantee: the SDK generates a
- * fresh 256-bit AES-GCM key per record, encrypts the payload client-side
+ * fresh 128-bit AES-GCM key per record, encrypts the payload client-side
  * (with `product` bound as AEAD additional data), posts only the opaque
  * envelope to `/v1/case`, and returns the key as `recallToken` (base64url)
  * — the server never holds key material.
@@ -3543,6 +3557,7 @@ export declare class ZeroKnowledgeCaseStorage implements CaseStorage {
  *   - Retries and backoff are NOT exposed here; they live in Tier 2.
  */
 import { type AuthContext } from './auth.js';
+import { type RequestSigner } from './requestSigner.js';
 import { type Transport } from './transport.js';
 import { type Clock } from '../core/index.js';
 import { type PrequalifyRequest, type PrequalifyResult } from './prequalify.js';
@@ -3566,6 +3581,14 @@ export interface OperationContext {
     caseViewerBaseUrl: string;
     transport: Transport;
     clock: Clock;
+    /**
+     * Auth-header strategy for v3 quoting/datasets operations. When set
+     * (bearer mode), the operation signs requests with this instead of
+     * License-HMAC from {@link auth}. Absent → License-HMAC (keycode mode).
+     * Account-namespace operations (`/v1/*`) do not yet read this and remain
+     * License-HMAC-only.
+     */
+    signer?: RequestSigner;
 }
 /** Production ZyINS endpoint. Override only for staging / local. */
 export declare const DEFAULT_ZYINS_BASE_URL = "https://zyins.isaapi.com";
@@ -3577,14 +3600,21 @@ export interface ZyInsClientOptions {
     baseUrl?: string;
     /**
      * Viewer origin for case share links; defaults to
-     * {@link DEFAULT_CASE_VIEWER_BASE_URL}. The SDK appends `/c/<id>#k=<key>`,
-     * so the base must NOT include `/c/`.
+     * {@link DEFAULT_CASE_VIEWER_BASE_URL}. The SDK appends `/<code>#k=<key>`;
+     * any product prefix rides inside this base URL.
      */
     caseViewerBaseUrl?: string;
     /** Transport override; defaults to {@link defaultTransport}. */
     transport?: Transport;
     /** Clock override; defaults to {@link systemClock}. */
     clock?: Clock;
+    /**
+     * Auth-header strategy for v3 quoting/datasets operations. Bearer-mode
+     * `Isa` instances pass a {@link import('./requestSigner.js').bearerSigner};
+     * keycode-mode instances omit it and the operation defaults to
+     * License-HMAC built from {@link auth}.
+     */
+    signer?: RequestSigner;
     /**
      * Logos fetcher override. The `/v1/logos/{carrier}` endpoint returns
      * binary bytes by default, which the standard string-bodied {@link Transport}
@@ -3606,6 +3636,7 @@ export declare class ZyInsClient {
     private readonly transport;
     private readonly clock;
     private readonly logosFetch;
+    private readonly signer;
     /**
      * Proto-backed license-lifecycle sub-client. Targets `/v1/licenses/*`.
      * The TS surface is singular: a device has exactly one license.
@@ -4440,7 +4471,7 @@ import { type PrequalifyV2Request, type PrequalifyV2Result } from './prequalify-
 import { type PrequalifyV3Request, type PrequalifyV3Result, type QuoteV3Request, type QuoteV3Result } from './prequalify-v3-types.js';
 import { WebhooksService } from '../rapidsign/webhooks.js';
 import { type ProxyCallOptions, type ProxyCallResult } from '../proxy/call.js';
-import { BrandingFacade, DatasetsFacade, PreferencesFacade, CasesFacade, EmailFacade, LicenseFacade, LogosFacade, ReferenceFacade, ReferenceMedicationsFacade, ReferenceConditionsFacade, type Autocorrector, type MatchAlgorithm, type AutocompleteAlgorithm, type DefaultAutocorrectorOptions } from './isaNamespaces.js';
+import { BrandingFacade, DatasetsFacade, PreferencesFacade, CasesFacade, EmailFacade, LicenseFacade, LogosFacade, ReferenceFacade, ReferenceMedicationsFacade, ReferenceConditionsFacade, DefaultAutocorrector, type Autocorrector, type MatchAlgorithm, type AutocompleteAlgorithm, type DefaultAutocorrectorOptions } from './isaNamespaces.js';
 import { ProductsFacade } from './products.js';
 import { type ClientVersionListener } from './clientVersion.js';
 import { AccountNamespace } from '../account/index.js';
@@ -4456,8 +4487,8 @@ export interface IsaOptions {
     proxyOrigin?: string;
     /**
      * Viewer origin used to assemble case share links (`isa.account.cases`).
-     * Defaults to `https://app.isaapi.com`. The SDK appends `/c/<id>#k=<key>`,
-     * so the base must NOT include the `/c/` segment. The fragment key never
+     * Defaults to `https://link.isaapi.com`. The SDK appends `/<code>#k=<key>`;
+     * any product prefix rides inside this base URL. The fragment key never
      * reaches the server; this only controls the host the link points at.
      */
     caseViewerBaseUrl?: string;
@@ -4800,8 +4831,13 @@ interface ZyInsNamespaceOptions {
  * dataset bundle.
  */
 export interface AutocorrectorKernel {
-    /** Construct a domain-agnostic autocorrector from a typo map. */
-    create(opts: DefaultAutocorrectorOptions): Autocorrector;
+    /**
+     * Construct a domain-agnostic autocorrector from a typo map. Returns the
+     * concrete {@link DefaultAutocorrector} so callers reach `versionTag` and
+     * `clone()` — the staleness-detection and map-swap surface — not just the
+     * narrow {@link Autocorrector.correct} method.
+     */
+    create(opts: DefaultAutocorrectorOptions): DefaultAutocorrector;
 }
 /**
  * `isa.zyins.*` — methods for the ZyINS product. Each method has a
@@ -4869,11 +4905,11 @@ export declare class ZyInsNamespace {
     /**
      * `isa.zyins.prequalify` — runs the prequalify decision against the
      * version pinned on the parent `Isa`. With the default
-     * (`BundledApiVersions.prequalify`) this aliases {@link prequalifyV2} and
-     * returns `Envelope<PrequalifyV2Result>`. With
-     * `apiVersion: { prequalify: 'v1' }` it routes to {@link prequalifyV1};
-     * with `apiVersion: { prequalify: 'v3' }` it routes to
-     * {@link prequalifyV3}. Narrow on `isa.apiVersion.prequalify` to
+     * (`BundledApiVersions.prequalify`) this aliases {@link prequalifyV3} and
+     * returns `Envelope<PrequalifyV3Result>`. With
+     * `apiVersion: { prequalify: 'v2' }` it routes to {@link prequalifyV2};
+     * with `apiVersion: { prequalify: 'v1' }` it routes to
+     * {@link prequalifyV1}. Narrow on `isa.apiVersion.prequalify` to
      * disambiguate the return shape.
      */
     readonly prequalify: PrequalifyV3Callable | PrequalifyV2Callable | PrequalifyV1Callable;
@@ -4883,9 +4919,9 @@ export declare class ZyInsNamespace {
      * product with the best qualifying tier at the top level and
      * alternates in `other_offers[]`.
      *
-     * @deprecated Prefer `isa.zyins.prequalify` (v2 by default). Retained
-     * for one release as an alias of the canonical method so existing
-     * callers do not break.
+     * @deprecated Prefer `isa.zyins.prequalify` (v3 by default), or pin
+     * `apiVersion: { prequalify: 'v2' }` when the legacy v2 shape is required.
+     * Retained as an explicit callable so existing callers do not break.
      */
     readonly prequalifyV2: PrequalifyV2Callable;
     /**
@@ -5168,7 +5204,7 @@ export declare class CasesFacade {
     recall(id: string, recallToken?: string): Promise<CaseRecord | null>;
     /**
      * Share an existing record by id + opaque recallToken. Built-in:
-     * assembles `${caseViewerBaseUrl}/c/<id>#k=<recallToken>`. Carrier
+     * assembles `${caseViewerBaseUrl}/<id>#k=<recallToken>`. Carrier
      * adapters may not have URL semantics; in that case the recipient
      * exchanges `(id, recallToken)` through whatever channel the carrier
      * documents — the SDK has no shared URL contract for non-default
@@ -5433,7 +5469,7 @@ export interface IsaCreateOptions {
     /**
      * Optional case-storage adapter. Defaults to
      * {@link import('./cases/ZeroKnowledgeCaseStorage.js').ZeroKnowledgeCaseStorage}
-     * — client-side AES-256-GCM, opaque ciphertext on the wire, fragment
+     * — client-side AES-128-GCM, opaque ciphertext on the wire, fragment
      * key as the recall token. Carrier adapters may substitute a portal-
      * backed store; the SDK only sees the {@link CaseStorage} interface.
      */
@@ -6028,6 +6064,7 @@ import type { Applicant } from './applicant.js';
 import type { CoverageInput } from './coverage.js';
 import type { ProductSelection, ProductClassValue } from './product.js';
 import type { AuthContext } from './auth.js';
+import type { RequestSigner } from './requestSigner.js';
 import type { Transport } from './transport.js';
 import type { Clock } from '../core/index.js';
 import type { OfferCarrier, OfferProduct, OfferPlanInfo } from './prequalify-v2-types.js';
@@ -6236,6 +6273,14 @@ export interface PrequalifyV3Context {
     readonly transport: Transport;
     readonly clock: Clock;
     readonly idempotencyKey?: string;
+    /**
+     * Auth-header strategy. When set, the operation hands method/path/body to
+     * this signer for its auth headers — enabling bearer-mode callers that
+     * carry no `AuthContext`. When absent the operation falls back to
+     * License-HMAC built from {@link auth}, preserving byte-identical behavior
+     * for keycode callers.
+     */
+    readonly signer?: RequestSigner;
 }
 /** Payload of the `data` field on the v3 quote envelope. */
 export interface QuoteV3Result {
@@ -6272,6 +6317,7 @@ export type QuoteV3Context = PrequalifyV3Context;
 import { type Applicant } from './applicant.js';
 import { type CoverageInput } from './coverage.js';
 import { type AuthContext } from './auth.js';
+import { type RequestSigner } from './requestSigner.js';
 import { type Clock } from '../core/index.js';
 import { type PrequalifyV3Context, type PrequalifyV3Request, type PrequalifyV3Result, type V3Offer, type V3PricingRow } from './prequalify-v3-types.js';
 export { byAmount, offerPremium } from './prequalify-v3-types.js';
@@ -6309,6 +6355,12 @@ export declare function serializeWireBody(request: {
 }): string;
 export declare function buildHeaders(args: {
     readonly auth: AuthContext;
+    /**
+     * Auth-header strategy. When supplied, its headers (e.g. bearer
+     * `Authorization`) replace the License-HMAC set. Absent → License-HMAC
+     * from {@link auth}, byte-identical to the legacy keycode path.
+     */
+    readonly signer?: RequestSigner;
     readonly body: string;
     readonly idempotencyKey: string;
     readonly clock: Clock;
@@ -6516,15 +6568,18 @@ export declare function prequalify(request: PrequalifyRequest, ctx: PrequalifyCo
 /**
  * Typed product catalog + selection.
  *
- * `Product` is a typed object — never a bare string. Each product carries
- * its wire token, display name, type, and carrier. Selection composes via
- * `ProductSelection.of` / `byTypes` / `fromMix` — all of which round-trip
- * through `toWireFields()` into the prequalify request body.
+ * `Product` is a typed object carrying its opaque `prod_<uuid>` id, display
+ * name, type, and carrier. The id is the only stable identity — slugs are
+ * mutable display data and are never placed on the wire.
  *
- * The flat catalog and nested-by-type access surfaces live in
- * `src/catalog/productsByType.ts` (re-exported below). Per the locked design,
- * regex / string-based product matching is gone; the server treats `products`
- * as an exact-slug list.
+ * `ProductSelection.of` / `byTypes` / `fromMix` compose a selection that
+ * serializes to `products[]` (id array) and/or `include_product_class[]` via
+ * `toWireFields()`. Serialization is SDK-internal; callers never touch ids
+ * directly.
+ *
+ * Nested-by-type catalog constants (`Products.Fex.AetnaAccendo`, …) and
+ * reverse lookup (`Products.byId`) live in `src/catalog/productsByType.ts`
+ * (re-exported below).
  */
 export { ProductType as ProductClass, type ProductTypeValue as ProductClassValue, type Product, Products, } from '../catalog/productsByType.js';
 import type { Product, ProductTypeValue as ProductClassValue } from '../catalog/productsByType.js';
@@ -6576,8 +6631,8 @@ export declare class ProductsFacade {
     constructor(_deps?: unknown);
     /** Returns the nested-by-type catalog. */
     catalog(): typeof Products;
-    /** Resolve a product by wire-token slug. */
-    byWireToken(token: string): Product | undefined;
+    /** Resolve a product by its opaque `prod_<uuid>` id. */
+    byId(id: string): Product | undefined;
     /** Resolve a product by legacy display name within a type. */
     byLegacy(productClass: ProductClassValue, displayName: string): Product | undefined;
     /** No-op today — the catalog is statically embedded. */
@@ -7377,6 +7432,58 @@ export declare function buildSuggestion(concept: Concept, meta: {
  */
 export declare function _makeKey(text: string): string;
 //# sourceMappingURL=_makeKey.d.ts.map
+=== dist/zyins/requestSigner.d.ts ===
+/**
+ * Per-request auth-header strategy for the Tier 3 ZyINS surface.
+ *
+ * The ZyINS engine honors two interchangeable auth modes on `/v3`
+ * (verified live across all five SDKs): License-HMAC (BPP agents) and
+ * server-to-server bearer tokens (API-licensing customers). Both reach the
+ * same quoting/reference/datasets endpoints; the only difference is the
+ * headers attached to each request.
+ *
+ * A `RequestSigner` names that difference. It is the TS analogue of the C#
+ * `IRequestSigner` / `BearerTokenRequestSigner` pair (see PR #454): the
+ * operation builds method/path/body, hands them to the signer, and the
+ * signer returns the auth headers — never the reverse. Operations stay
+ * auth-mode-agnostic; adding a third mode is a new signer, not a new branch
+ * in every call site.
+ */
+import { type AuthContext } from './auth.js';
+import { type Clock } from '../core/index.js';
+/** Inputs a signer needs to bind auth headers to a specific request. */
+export interface SignableRequest {
+    /** HTTP method (`POST`, `GET`, …). */
+    readonly method: string;
+    /** Request path including query string (e.g. `/v3/datasets?x=1`). */
+    readonly path: string;
+    /** Raw request body string; empty string for body-less verbs. */
+    readonly body: string;
+}
+/**
+ * Produces the auth headers for one request. Implementations own a single
+ * auth mode; the operation layer never inspects which one.
+ */
+export interface RequestSigner {
+    /** Return the auth headers binding this signer's credential to the request. */
+    signHeaders(request: SignableRequest): Promise<Record<string, string>>;
+}
+/**
+ * License-HMAC signer. Wraps {@link buildLicenseHMACHeaders}, binding the
+ * `(licenseKey, orderId, email, deviceId)` identity to each request via
+ * HMAC-SHA256 over the body. This is the BPP agent path; behavior is
+ * byte-identical to the pre-signer inline call so the live `bpp2.0`
+ * consumer is unaffected.
+ */
+export declare function licenseSigner(auth: AuthContext, clock?: Clock): RequestSigner;
+/**
+ * Bearer-token signer. Attaches `Authorization: Bearer <token>` — the
+ * server-to-server credential mode the API-licensing customer authenticates
+ * with. The token is opaque to the SDK; the engine resolves scope and
+ * test/live mode from it.
+ */
+export declare function bearerSigner(token: string): RequestSigner;
+//# sourceMappingURL=requestSigner.d.ts.map
 === dist/zyins/response.d.ts ===
 /** Shared response parsing helpers for ZyINS JSON endpoints. */
 export declare function parseJsonResponse(body: string, operation: string): unknown;

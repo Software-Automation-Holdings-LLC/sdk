@@ -13,7 +13,7 @@
  * This module owns ONLY the wire shape + the parser. Consumer-side index
  * construction (`ReferenceIndex`) lives in `./reference/referenceIndex.ts`.
  */
-import { buildLicenseHMACHeaders } from '../core/index.js';
+import { licenseSigner } from './requestSigner.js';
 import { systemClock } from '../core/index.js';
 import { fromHttpResponse } from './errors.js';
 const DATASETS_V3_PATH = '/v3/datasets';
@@ -75,8 +75,9 @@ export function buildFrequencyMap(bundle) {
 export async function getDatasetsV3(options, ctx) {
     const queryString = buildQueryString(options);
     const pathWithQuery = queryString ? `${DATASETS_V3_PATH}?${queryString}` : DATASETS_V3_PATH;
+    const signer = ctx.signer ?? licenseSigner(ctx.auth, ctx.clock ?? systemClock);
     const headers = {
-        ...(await buildLicenseHMACHeaders(ctx.auth.licenseKey, ctx.auth.orderId, ctx.auth.email, 'GET', pathWithQuery, '', ctx.auth.deviceId, ctx.clock ?? systemClock)),
+        ...(await signer.signHeaders({ method: 'GET', path: pathWithQuery, body: '' })),
     };
     if (options?.ifNoneMatch) {
         headers['If-None-Match'] = options.ifNoneMatch;

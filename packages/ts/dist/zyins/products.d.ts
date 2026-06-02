@@ -15,8 +15,8 @@ export declare class ProductsFacade {
     constructor(_deps?: unknown);
     /** Returns the nested-by-type catalog. */
     catalog(): typeof Products;
-    /** Resolve a product by wire-token slug. */
-    byWireToken(token: string): Product | undefined;
+    /** Resolve a product by its opaque `prod_<uuid>` id. */
+    byId(id: string): Product | undefined;
     /** Resolve a product by legacy display name within a type. */
     byLegacy(productClass: ProductClassValue, displayName: string): Product | undefined;
     /** No-op today — the catalog is statically embedded. */

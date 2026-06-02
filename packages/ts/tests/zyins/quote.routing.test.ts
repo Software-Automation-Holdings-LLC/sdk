@@ -39,16 +39,19 @@ describe('isa.zyins.quote version routing', () => {
     await expect(buildIsa()).resolves.toBeDefined();
   });
 
-  it('rejects a default-pinned quote call with a quote-named config error', async () => {
-    const isa = await buildIsa();
+  it('rejects a v2-pinned quote call with a quote-named config error', async () => {
+    // The bundled default routes quote to v3; only v3 is supported. A
+    // consumer who pins the legacy v2 surface reaches the unsupported
+    // callable, which must surface a `quote`-named error (not `quoteV3`).
+    const isa = await buildIsa({ quote: 'v2' });
     await expect(isa.zyins.quote(QUOTE_REQUEST)).rejects.toBeInstanceOf(IsaConfigError);
     await expect(isa.zyins.quote(QUOTE_REQUEST)).rejects.toThrow(
       /isa\.zyins\.quote requires apiVersion 'v3'/,
     );
   });
 
-  it('does not leak the internal quoteV3 alias in the default-pinned error', async () => {
-    const isa = await buildIsa();
+  it('does not leak the internal quoteV3 alias in the v2-pinned error', async () => {
+    const isa = await buildIsa({ quote: 'v2' });
     const err = await isa.zyins.quote(QUOTE_REQUEST).catch((e: unknown) => e);
     expect((err as Error).message).not.toContain('quoteV3');
   });

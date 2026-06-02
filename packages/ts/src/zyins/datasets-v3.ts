@@ -15,7 +15,7 @@
  */
 
 import type { OperationContext } from './client.js';
-import { buildLicenseHMACHeaders } from '../core/index.js';
+import { licenseSigner } from './requestSigner.js';
 import { systemClock } from '../core/index.js';
 import { fromHttpResponse } from './errors.js';
 
@@ -218,8 +218,9 @@ export function buildFrequencyMap(bundle: Pick<DatasetBundleV3, 'conditions' | '
 export async function getDatasetsV3(options: DatasetsV3GetOptions | undefined, ctx: OperationContext): Promise<DatasetBundleV3 | DatasetsV3NotModified> {
     const queryString = buildQueryString(options);
     const pathWithQuery = queryString ? `${DATASETS_V3_PATH}?${queryString}` : DATASETS_V3_PATH;
+    const signer = ctx.signer ?? licenseSigner(ctx.auth, ctx.clock ?? systemClock);
     const headers: Record<string, string> = {
-        ...(await buildLicenseHMACHeaders(ctx.auth.licenseKey, ctx.auth.orderId, ctx.auth.email, 'GET', pathWithQuery, '', ctx.auth.deviceId, ctx.clock ?? systemClock)),
+        ...(await signer.signHeaders({ method: 'GET', path: pathWithQuery, body: '' })),
     };
     if (options?.ifNoneMatch) {
         headers['If-None-Match'] = options.ifNoneMatch;

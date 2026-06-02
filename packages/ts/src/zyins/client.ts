@@ -18,6 +18,7 @@
  */
 
 import { type AuthContext } from './auth.js';
+import { type RequestSigner } from './requestSigner.js';
 import { type Transport, defaultTransport } from './transport.js';
 import { type Clock, systemClock } from '../core/index.js';
 import {
@@ -79,6 +80,14 @@ export interface OperationContext {
   caseViewerBaseUrl: string;
   transport: Transport;
   clock: Clock;
+  /**
+   * Auth-header strategy for v3 quoting/datasets operations. When set
+   * (bearer mode), the operation signs requests with this instead of
+   * License-HMAC from {@link auth}. Absent → License-HMAC (keycode mode).
+   * Account-namespace operations (`/v1/*`) do not yet read this and remain
+   * License-HMAC-only.
+   */
+  signer?: RequestSigner;
 }
 
 /** Production ZyINS endpoint. Override only for staging / local. */
@@ -92,14 +101,21 @@ export interface ZyInsClientOptions {
   baseUrl?: string;
   /**
    * Viewer origin for case share links; defaults to
-   * {@link DEFAULT_CASE_VIEWER_BASE_URL}. The SDK appends `/c/<id>#k=<key>`,
-   * so the base must NOT include `/c/`.
+   * {@link DEFAULT_CASE_VIEWER_BASE_URL}. The SDK appends `/<code>#k=<key>`;
+   * any product prefix rides inside this base URL.
    */
   caseViewerBaseUrl?: string;
   /** Transport override; defaults to {@link defaultTransport}. */
   transport?: Transport;
   /** Clock override; defaults to {@link systemClock}. */
   clock?: Clock;
+  /**
+   * Auth-header strategy for v3 quoting/datasets operations. Bearer-mode
+   * `Isa` instances pass a {@link import('./requestSigner.js').bearerSigner};
+   * keycode-mode instances omit it and the operation defaults to
+   * License-HMAC built from {@link auth}.
+   */
+  signer?: RequestSigner;
   /**
    * Logos fetcher override. The `/v1/logos/{carrier}` endpoint returns
    * binary bytes by default, which the standard string-bodied {@link Transport}
@@ -122,6 +138,7 @@ export class ZyInsClient {
   private readonly transport: Transport;
   private readonly clock: Clock;
   private readonly logosFetch: LogosFetch | undefined;
+  private readonly signer: RequestSigner | undefined;
 
   /**
    * Proto-backed license-lifecycle sub-client. Targets `/v1/licenses/*`.
@@ -154,6 +171,7 @@ export class ZyInsClient {
     this.transport = options.transport ?? defaultTransport();
     this.clock = options.clock ?? systemClock;
     this.logosFetch = options.logosFetch;
+    this.signer = options.signer;
     this.license = new LicenseSubClient(this.context());
     this.health = new HealthSubClient(this.context());
     this.case = new CaseSubClient(this.context());
@@ -208,6 +226,7 @@ export class ZyInsClient {
       caseViewerBaseUrl: this.caseViewerBaseUrl,
       transport: this.transport,
       clock: this.clock,
+      ...(this.signer !== undefined && { signer: this.signer }),
     };
   }
 }

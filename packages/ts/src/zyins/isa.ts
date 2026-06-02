@@ -53,6 +53,7 @@ import {
   type RawResponseResult,
 } from './envelope.js';
 import { type AuthContext } from './auth.js';
+import { bearerSigner } from './requestSigner.js';
 import { ZyInsClient, DEFAULT_ZYINS_BASE_URL, type ZyInsClientOptions } from './client.js';
 import { defaultTransport, type Transport } from './transport.js';
 import { type LogosFetch } from './logos.js';
@@ -130,8 +131,8 @@ export interface IsaOptions {
   proxyOrigin?: string;
   /**
    * Viewer origin used to assemble case share links (`isa.account.cases`).
-   * Defaults to `https://app.isaapi.com`. The SDK appends `/c/<id>#k=<key>`,
-   * so the base must NOT include the `/c/` segment. The fragment key never
+   * Defaults to `https://link.isaapi.com`. The SDK appends `/<code>#k=<key>`;
+   * any product prefix rides inside this base URL. The fragment key never
    * reaches the server; this only controls the host the link points at.
    */
   caseViewerBaseUrl?: string;
@@ -744,8 +745,13 @@ interface ZyInsNamespaceOptions {
  * dataset bundle.
  */
 export interface AutocorrectorKernel {
-  /** Construct a domain-agnostic autocorrector from a typo map. */
-  create(opts: DefaultAutocorrectorOptions): Autocorrector;
+  /**
+   * Construct a domain-agnostic autocorrector from a typo map. Returns the
+   * concrete {@link DefaultAutocorrector} so callers reach `versionTag` and
+   * `clone()` — the staleness-detection and map-swap surface — not just the
+   * narrow {@link Autocorrector.correct} method.
+   */
+  create(opts: DefaultAutocorrectorOptions): DefaultAutocorrector;
 }
 
 const AUTOCORRECTOR_KERNEL: AutocorrectorKernel = {
@@ -818,11 +824,11 @@ export class ZyInsNamespace {
   /**
    * `isa.zyins.prequalify` — runs the prequalify decision against the
    * version pinned on the parent `Isa`. With the default
-   * (`BundledApiVersions.prequalify`) this aliases {@link prequalifyV2} and
-   * returns `Envelope<PrequalifyV2Result>`. With
-   * `apiVersion: { prequalify: 'v1' }` it routes to {@link prequalifyV1};
-   * with `apiVersion: { prequalify: 'v3' }` it routes to
-   * {@link prequalifyV3}. Narrow on `isa.apiVersion.prequalify` to
+   * (`BundledApiVersions.prequalify`) this aliases {@link prequalifyV3} and
+   * returns `Envelope<PrequalifyV3Result>`. With
+   * `apiVersion: { prequalify: 'v2' }` it routes to {@link prequalifyV2};
+   * with `apiVersion: { prequalify: 'v1' }` it routes to
+   * {@link prequalifyV1}. Narrow on `isa.apiVersion.prequalify` to
    * disambiguate the return shape.
    */
   public readonly prequalify:
@@ -835,9 +841,9 @@ export class ZyInsNamespace {
    * product with the best qualifying tier at the top level and
    * alternates in `other_offers[]`.
    *
-   * @deprecated Prefer `isa.zyins.prequalify` (v2 by default). Retained
-   * for one release as an alias of the canonical method so existing
-   * callers do not break.
+   * @deprecated Prefer `isa.zyins.prequalify` (v3 by default), or pin
+   * `apiVersion: { prequalify: 'v2' }` when the legacy v2 shape is required.
+   * Retained as an explicit callable so existing callers do not break.
    */
   public readonly prequalifyV2: PrequalifyV2Callable;
   /**
@@ -886,7 +892,7 @@ export class ZyInsNamespace {
     let cached: ZyInsClient | undefined;
     this.clientOnce = () => {
       if (cached) return cached;
-      cached = buildLicenseClient(opts);
+      cached = buildZyInsClient(opts);
       return cached;
     };
     this.branding = new BrandingFacade(this.clientOnce);
@@ -1213,18 +1219,28 @@ function synthesizeRawResponse(requestId: string): RawResponse {
 }
 
 /**
- * Build the underlying license-mode `ZyInsClient` from the namespace
- * options. Bearer and session callers reach this path only when they
- * supply enough material to satisfy the legacy ZyInsClient — which today
- * means license identity + deviceId + orderId. Other paths throw
- * `IsaConfigError` with a description of what's missing.
+ * Build the underlying `ZyInsClient` for the namespace's auth identity.
+ *
+ * License mode signs each v3 request with License-HMAC (BPP agents);
+ * bearer mode attaches `Authorization: Bearer <token>` (API-licensing
+ * customers reaching `/v3` server-to-server). Session-mode product calls
+ * are not yet wired and throw `IsaConfigError` describing what's missing.
  */
-function buildLicenseClient(opts: ZyInsNamespaceOptions): ZyInsClient {
-  if (opts.identity.mode !== 'license') {
-    throw new IsaConfigError(
-      `isa.zyins.* product methods currently require Isa.withKeycode() — bearer and session transport wiring lands in Phase 3 of SDK_DESIGN.md`,
-    );
+function buildZyInsClient(opts: ZyInsNamespaceOptions): ZyInsClient {
+  switch (opts.identity.mode) {
+    case 'license':
+      return buildLicenseClient(opts);
+    case 'bearer':
+      return buildBearerClient(opts, opts.identity.token);
+    case 'session':
+      throw new IsaConfigError(
+        `isa.zyins.* product methods do not yet support Isa.withSession() — session transport wiring lands in a follow-up. Use Isa.withBearer() or Isa.withKeycode().`,
+      );
   }
+}
+
+/** Build the License-HMAC `ZyInsClient` (keycode / BPP-agent path). */
+function buildLicenseClient(opts: ZyInsNamespaceOptions): ZyInsClient {
   if (!opts.credentialState) {
     throw new IsaConfigError(
       'isa.zyins.* product methods require a credential state (constructed by Isa.withKeycode)',
@@ -1247,6 +1263,43 @@ function buildLicenseClient(opts: ZyInsNamespaceOptions): ZyInsClient {
   }
   return new ZyInsClient(clientOpts);
 }
+
+/**
+ * Build the bearer-mode `ZyInsClient`. The bearer signer supplies every v3
+ * request's `Authorization` header, so the `auth` field is an unused
+ * placeholder — bearer callers carry no License-HMAC identity. Unlike the
+ * license path there is no activation gate: the token is the credential and
+ * the server resolves scope and test/live mode from it.
+ */
+function buildBearerClient(opts: ZyInsNamespaceOptions, token: string): ZyInsClient {
+  const clientOpts: ZyInsClientOptions = {
+    auth: BEARER_PLACEHOLDER_AUTH,
+    baseUrl: opts.baseUrl ?? DEFAULT_ZYINS_BASE_URL,
+    signer: bearerSigner(token),
+  };
+  if (opts.caseViewerBaseUrl !== undefined) clientOpts.caseViewerBaseUrl = opts.caseViewerBaseUrl;
+  clientOpts.transport = opts.logger
+    ? wrapTransportWithLogger(opts.transport ?? defaultTransport(), opts.logger)
+    : (opts.transport ?? defaultTransport());
+  if (opts.logosFetch) {
+    clientOpts.logosFetch = opts.logosFetch;
+  }
+  return new ZyInsClient(clientOpts);
+}
+
+/**
+ * Placeholder {@link AuthContext} for bearer-mode clients. The bearer signer
+ * overrides auth-header production for every v3 operation, so these fields
+ * are never read; they exist only to satisfy the `ZyInsClient` constructor
+ * shape. The empty strings would be rejected by `isAuthContext` — by design,
+ * since no License-HMAC request is ever signed in bearer mode.
+ */
+const BEARER_PLACEHOLDER_AUTH: AuthContext = {
+  licenseKey: '',
+  orderId: '',
+  email: '',
+  deviceId: '',
+};
 
 function guardTransportWithLicenseKey(inner: Transport, state: IsaCredentialState): Transport {
   return async (request) => {

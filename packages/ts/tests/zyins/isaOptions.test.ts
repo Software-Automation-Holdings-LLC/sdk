@@ -149,6 +149,47 @@ const V2_BODY_LEGACY_PLAN_INFO = JSON.stringify({
   },
 });
 
+const V3_BODY = JSON.stringify({
+  object: 'prequalify_result',
+  request_id: 'req_01HZK2N5GQR9T8X4B6FJW3Y1AS',
+  idempotency_key: '550e8400-e29b-41d4-a716-446655440000',
+  livemode: true,
+  data: {
+    plans: [
+      {
+        object: 'plan_offer',
+        id: '9b7d9b5c-1f3a-5c2b-9a4f-6e1c2d3b4a5e',
+        eligible: true,
+        carrier: { id: 'c1', name: 'American Amicable', logo_url: '' },
+        product: {
+          id: 'p1',
+          slug: 'american-amicable-golden-solution',
+          name: 'Golden Solution',
+          display_name: 'American Amicable Golden Solution',
+          type: 'fex',
+          wire_token: 'fex',
+        },
+        plan_info: [{ key: 'eapp', label: 'eApp', values: ['https://example.com'] }],
+        death_benefit: { amount: { cents: 1500000, display: '$15,000' }, period: null },
+        pricing: [
+          {
+            rate_class: 'graded',
+            primary: true,
+            rank: 8,
+            eligibility: { eligible: true, category: 'graded', coverage_tier: 'graded', reasons: [] },
+            premium: {
+              amount: { cents: 12240, display: '$122.40' },
+              default_mode: 'MONTHLY-EFT',
+              modes: { 'MONTHLY-EFT': { cents: 12240, display: '$122.40' } },
+            },
+          },
+        ],
+        metadata: {},
+      },
+    ],
+  },
+});
+
 const V1_BODY = JSON.stringify({
   data: {
     meta: {
@@ -194,7 +235,7 @@ async function buildIsaWithCreate(opts: IsaCreateOptions): Promise<Isa> {
 describe('resolveIsaOptions', () => {
   it('applies the documented defaults', () => {
     const resolved = resolveIsaOptions({ auth: BearerAuth.fromToken('isa_live_xyz') });
-    expect(resolved.apiVersions.prequalify).toBe('v2');
+    expect(resolved.apiVersions.prequalify).toBe('v3');
     expect(resolved.apiVersions.cases).toBe('v1');
     expect(resolved.engine.kind).toBe('remote');
     expect(resolved.timeoutMs).toBe(DEFAULT_TIMEOUT_MS);
@@ -217,7 +258,7 @@ describe('resolveIsaOptions', () => {
     });
     expect(resolved.apiVersions.prequalify).toBe('v1');
     // Unset surfaces fall back to the bundled default.
-    expect(resolved.apiVersions.quote).toBe('v2');
+    expect(resolved.apiVersions.quote).toBe('v3');
   });
 
   it('honors caseViewerBaseUrl for share-link construction', () => {
@@ -240,8 +281,8 @@ describe('resolveIsaOptions', () => {
 });
 
 describe('Isa.create — IsaOptions sugar constructor', () => {
-  it('binds prequalify to v2 by default and pins Api-Version header', async () => {
-    const { transport, calls } = recordingTransport({ status: 200, body: V2_BODY });
+  it('binds prequalify to v3 by default and pins Api-Version header', async () => {
+    const { transport, calls } = recordingTransport({ status: 200, body: V3_BODY });
     const isa = await Isa.withKeycode(
       {
         keycode: TEST_AUTH.licenseKey,
@@ -253,7 +294,7 @@ describe('Isa.create — IsaOptions sugar constructor', () => {
       licenseEnv(),
     );
 
-    expect(isa.apiVersion.prequalify).toBe('v2');
+    expect(isa.apiVersion.prequalify).toBe('v3');
 
     const envelope = await isa.zyins.prequalify({
       applicant: TEST_APPLICANT,
@@ -261,14 +302,22 @@ describe('Isa.create — IsaOptions sugar constructor', () => {
       products: TEST_PRODUCTS,
     });
 
-    // v2 envelope shape — plans is an array of PlanOffer.
+    // v3 envelope shape — flat plans[] with a uniform pricing[] table.
     expect('plans' in envelope.data).toBe(true);
-    const plans = (envelope.data as { plans: ReadonlyArray<{ carrier: { name: string } }> }).plans;
+    const plans = (
+      envelope.data as {
+        plans: ReadonlyArray<{
+          carrier: { name: string };
+          pricing: ReadonlyArray<{ primary: boolean; premium?: { amount: { display: string } } }>;
+        }>;
+      }
+    ).plans;
     expect(plans[0]?.carrier.name).toBe('American Amicable');
+    expect(plans[0]?.pricing.find((row) => row.primary)?.premium?.amount.display).toBe('$122.40');
 
     expect(calls).toHaveLength(1);
-    expect(calls[0]!.request.url).toContain('/v2/prequalify');
-    expect(calls[0]!.request.headers['Api-Version']).toBe('v2');
+    expect(calls[0]!.request.url).toContain('/v3/prequalify');
+    expect(calls[0]!.request.headers['Api-Version']).toBe('v3');
   });
 
   it('rejects version-specific prequalify calls on mismatched clients', async () => {
@@ -321,7 +370,7 @@ describe('Isa.create — IsaOptions sugar constructor', () => {
       timeout: 1,
     });
 
-    const result = isa.zyins.prequalifyV2({
+    const result = isa.zyins.prequalify({
       applicant: TEST_APPLICANT,
       coverage: TEST_COVERAGE,
       products: TEST_PRODUCTS,
@@ -374,7 +423,7 @@ describe('Isa.create — IsaOptions sugar constructor', () => {
       payload: { applicant: { state: 'TX' } },
     });
 
-    const expectedLinkPrefix = `${CASE_VIEWER_BASE_URL}/c/${CASE_ID}#k=`;
+    const expectedLinkPrefix = `${CASE_VIEWER_BASE_URL}/${CASE_ID}#k=`;
     expect(result.link.startsWith(expectedLinkPrefix)).toBe(true);
   });
 });
@@ -387,6 +436,7 @@ describe('Plan.planInfo typed array surface', () => {
         orderId: TEST_AUTH.orderId,
         licenseKey: TEST_AUTH.licenseKey,
       }),
+      apiVersion: { prequalify: 'v2' },
       engine: inMemoryEngineWith(transport),
     });
 
@@ -421,6 +471,7 @@ describe('Plan.planInfo typed array surface', () => {
         orderId: TEST_AUTH.orderId,
         licenseKey: TEST_AUTH.licenseKey,
       }),
+      apiVersion: { prequalify: 'v2' },
       engine: inMemoryEngineWith(transport),
     });
 
@@ -488,6 +539,7 @@ describe('409 idempotency_conflict self-heal', () => {
         orderId: TEST_AUTH.orderId,
         licenseKey: TEST_AUTH.licenseKey,
       }),
+      apiVersion: { prequalify: 'v2' },
       engine: inMemoryEngineWith(transport),
     });
 
@@ -510,8 +562,8 @@ describe('409 idempotency_conflict self-heal', () => {
 });
 
 describe('backward compatibility', () => {
-  it('Isa.withKeycode(...) constructor still works with default v2 routing', async () => {
-    const { transport, calls } = recordingTransport({ status: 200, body: V2_BODY });
+  it('Isa.withKeycode(...) constructor still works with default v3 routing', async () => {
+    const { transport, calls } = recordingTransport({ status: 200, body: V3_BODY });
     const isa = await Isa.withKeycode(
       {
         keycode: TEST_AUTH.licenseKey,
@@ -523,7 +575,7 @@ describe('backward compatibility', () => {
       licenseEnv(),
     );
 
-    expect(isa.apiVersion.prequalify).toBe('v2');
+    expect(isa.apiVersion.prequalify).toBe('v3');
 
     await isa.zyins.prequalify({
       applicant: TEST_APPLICANT,
@@ -531,7 +583,7 @@ describe('backward compatibility', () => {
       products: TEST_PRODUCTS,
     });
 
-    expect(calls[0]!.request.url).toContain('/v2/prequalify');
+    expect(calls[0]!.request.url).toContain('/v3/prequalify');
   });
 
   it('exposes prequalifyV2 as a back-compat alias of the v2 callable', async () => {
@@ -541,6 +593,7 @@ describe('backward compatibility', () => {
         orderId: TEST_AUTH.orderId,
         licenseKey: TEST_AUTH.licenseKey,
       }),
+      apiVersion: { prequalify: 'v2' },
       engine: inMemoryEngineWith(transport),
     });
 
@@ -583,6 +636,7 @@ describe('Engine abstraction', () => {
         orderId: TEST_AUTH.orderId,
         licenseKey: TEST_AUTH.licenseKey,
       }),
+      apiVersion: { prequalify: 'v2' },
       engine: inMemoryEngineWith(transport),
     });
     await isa.zyins.prequalifyV2({

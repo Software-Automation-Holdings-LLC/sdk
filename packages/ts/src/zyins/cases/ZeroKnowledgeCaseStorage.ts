@@ -2,7 +2,7 @@
  * `ZeroKnowledgeCaseStorage` — the default {@link CaseStorage} adapter.
  *
  * Preserves the ISA platform's E2EE Phase 2 guarantee: the SDK generates a
- * fresh 256-bit AES-GCM key per record, encrypts the payload client-side
+ * fresh 128-bit AES-GCM key per record, encrypts the payload client-side
  * (with `product` bound as AEAD additional data), posts only the opaque
  * envelope to `/v1/case`, and returns the key as `recallToken` (base64url)
  * — the server never holds key material.

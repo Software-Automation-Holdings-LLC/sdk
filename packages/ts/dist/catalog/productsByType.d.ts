@@ -7,6 +7,7 @@
  * Source data:
  *   - insurance/v2_products.json
  */
+/** Coarse product family. The `wireToken` is the server's class identifier. */
 export declare const ProductType: {
     readonly FinalExpense: {
         readonly wireToken: "fex";
@@ -30,19 +31,29 @@ export declare const ProductType: {
     };
 };
 export type ProductTypeValue = (typeof ProductType)[keyof typeof ProductType];
+/** A typed product. Stable across SDK releases inside one wire major. */
 export interface Product {
-    readonly wireToken: string;
+    /**
+     * Opaque product id (`prod_<uuid>`). The only stable identity for a product.
+     * This is the value the v3 prequalify `products[]` filter matches — pass this
+     * product (or `ProductSelection.of([...])`) and the SDK serializes this id.
+     * Slugs are mutable display data; the id is not.
+     */
+    readonly id: string;
     readonly displayName: string;
     readonly productType: ProductTypeValue;
+    /** Carrier brand extracted from the display name (first 1–2 words). */
     readonly carrier: string;
 }
+type ProductBag = Readonly<Record<string, Product>>;
 export declare const Products: Readonly<{
-    Fex: Readonly<Record<string, Product>>;
-    Medsup: Readonly<Record<string, Product>>;
-    Preneed: Readonly<Record<string, Product>>;
-    Term: Readonly<Record<string, Product>>;
-    all(): readonly Product[];
-    byWireToken(_t: string): Product | undefined;
-    byLegacy(_pt: ProductTypeValue, _n: string): Product | undefined;
+    Fex: ProductBag;
+    Medsup: ProductBag;
+    Preneed: ProductBag;
+    Term: ProductBag;
+    all: () => readonly Product[];
+    byId: (id: string) => Product | undefined;
+    byLegacy: (productType: ProductTypeValue, displayName: string) => Product | undefined;
 }>;
+export {};
 //# sourceMappingURL=productsByType.d.ts.map

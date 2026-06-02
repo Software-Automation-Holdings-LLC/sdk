@@ -18,6 +18,7 @@ import type { Applicant } from './applicant.js';
 import type { CoverageInput } from './coverage.js';
 import type { ProductSelection, ProductClassValue } from './product.js';
 import type { AuthContext } from './auth.js';
+import type { RequestSigner } from './requestSigner.js';
 import type { Transport } from './transport.js';
 import type { Clock } from '../core/index.js';
 import type { OfferCarrier, OfferProduct, OfferPlanInfo } from './prequalify-v2-types.js';
@@ -265,6 +266,14 @@ export interface PrequalifyV3Context {
   readonly transport: Transport;
   readonly clock: Clock;
   readonly idempotencyKey?: string;
+  /**
+   * Auth-header strategy. When set, the operation hands method/path/body to
+   * this signer for its auth headers — enabling bearer-mode callers that
+   * carry no `AuthContext`. When absent the operation falls back to
+   * License-HMAC built from {@link auth}, preserving byte-identical behavior
+   * for keycode callers.
+   */
+  readonly signer?: RequestSigner;
 }
 
 // ---------------------------------------------------------------------------

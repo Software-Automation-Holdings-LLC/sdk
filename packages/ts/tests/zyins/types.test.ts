@@ -58,25 +58,28 @@ describe("Coverage discriminated union", () => {
   });
 });
 
-describe("Products catalog and ProductSelection (v0.5.3)", () => {
-  it("looks up a product by wire token", () => {
-    const product = Products.byWireToken('fex-aetna-accendo');
-    expect(product?.wireToken).toBe('fex-aetna-accendo');
+describe("Products catalog and ProductSelection", () => {
+  it("looks up a product by id", () => {
+    // Aetna Accendo FEX — stable prod_<uuid>
+    const product = Products.byId('prod_d7b57156-3e83-506b-8936-0692c1193dc7');
+    expect(product?.id).toBe('prod_d7b57156-3e83-506b-8936-0692c1193dc7');
     expect(product?.productType).toBe(ProductClass.FinalExpense);
   });
 
-  it("returns undefined for unknown wire token", () => {
-    expect(Products.byWireToken('not-a-token')).toBeUndefined();
+  it("returns undefined for unknown id", () => {
+    expect(Products.byId('prod_does-not-exist')).toBeUndefined();
+    expect(Products.byId('fex-aetna-accendo')).toBeUndefined();
   });
 
-  it("emits a stable wire payload for a selection", () => {
+  it("emits prod_<uuid> ids in toWireFields()", () => {
     const aetna = Products.Fex['AetnaAccendo'];
     const americo = Products.Fex['AmericoEaglePremier'];
     if (!aetna || !americo) {
       throw new Error('Missing expected Fex fixtures in generated Products catalog');
     }
     const fields = ProductSelection.of([aetna, americo]).toWireFields();
-    expect(fields.products).toEqual(['fex-aetna-accendo', 'fex-americo-eagle-premier']);
+    expect(fields.products).toEqual([aetna.id, americo.id]);
+    expect(fields.products![0]).toMatch(/^prod_/);
   });
 
   it("refuses an empty selection", () => {

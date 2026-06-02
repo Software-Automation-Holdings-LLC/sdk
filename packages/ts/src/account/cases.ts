@@ -7,7 +7,7 @@
  *   email  → `POST /v1/case/{id}/email`
  *
  * The payload is applicant PII the platform must never decrypt. The SDK
- * encrypts client-side with a fresh per-case key (AES-256-GCM, `product`
+ * encrypts client-side with a fresh per-case key (AES-128-GCM, `product`
  * bound as AEAD data), posts only the opaque envelope, and carries the key
  * in the share-link fragment (`#k=…`) — never on the wire, never in a log.
  * See `docs/design/case-store-e2ee.md` and zyins #363 for the wire contract.
@@ -38,11 +38,11 @@ const CASE_LIST_PATH = '/v1/case/list';
 const HTTP_NOT_FOUND = 404;
 
 /**
- * Default share-link viewer origin. The SDK appends `/c/<id>#k=<key>`; the
- * base intentionally omits the `/c/` segment so a deployment can point the
+ * Default share-link viewer origin. The SDK appends `/<code>#k=<key>`; any
+ * product prefix rides inside this base URL so a deployment can point the
  * option at any host without re-encoding the path shape.
  */
-export const DEFAULT_CASE_VIEWER_BASE_URL = 'https://app.isaapi.com';
+export const DEFAULT_CASE_VIEWER_BASE_URL = 'https://link.isaapi.com';
 
 /**
  * Cleartext routing tag identifying the app that owns the payload. Not PII;
@@ -63,7 +63,7 @@ export interface CaseCreateRequest {
 export interface CaseCreateResult {
   /** Server-assigned case uuid. */
   id: string;
-  /** Full share link `${caseViewerBaseUrl}/c/<id>#k=<base64url(key)>`. */
+  /** Full share link `${caseViewerBaseUrl}/<id>#k=<base64url(key)>`. */
   link: string;
 }
 
@@ -104,7 +104,7 @@ export interface CasesContext extends TCaseRequestContext {
  *   product: 'zyins',
  *   payload: { input: currentCaseToJSON() },
  * });
- * // `link` is `https://app.isaapi.com/c/<id>#k=<key>` — send it to the client.
+ * // `link` is `https://link.isaapi.com/<id>#k=<key>` — send it to the client.
  * ```
  */
 export async function create(

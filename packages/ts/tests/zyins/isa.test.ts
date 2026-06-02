@@ -161,6 +161,7 @@ describe('Envelope<T>', () => {
 
   it('surfaces server livemode for prequalifyV2 envelope calls', async () => {
     const isa = await buildIsa({
+      apiVersion: 'v2',
       transport: async () => ({ status: 200, body: PREQUALIFY_V2_BODY, headers: {} }),
     });
     const envelope = await isa.zyins.prequalifyV2({
@@ -198,7 +199,9 @@ describe('client-version mismatch notifications', () => {
         }),
       },
       licenseEnv(),
-      { clientVersion: 'old-hash' },
+      // OK_BODY is the v2 `data.results` shape; pin prequalify to v2 so the
+      // bare facade routes to the v2 parser rather than the v3 default.
+      { clientVersion: 'old-hash', apiVersion: { prequalify: 'v2' } },
     );
     isa.onClientVersionMismatch((status) => statuses.push(status.level));
 
@@ -245,6 +248,9 @@ describe('.withRawResponse variant (Phase 2 §5.4)', () => {
   it('returns { data, response } from the pinned prequalify version', async () => {
     const requests: Array<{ url: string }> = [];
     const isa = await buildIsa({
+      // prequalifyRaw follows the pinned version; this asserts the legacy
+      // v2 route, so pin v2 — the explicit opt-out from the v3 default.
+      apiVersion: 'v2',
       transport: async (request) => {
         requests.push({ url: request.url });
         return { status: 200, body: PREQUALIFY_V2_BODY, headers: { 'x-foo': 'bar' } };
@@ -271,9 +277,15 @@ describe('Concurrency safety (Phase 2 §12)', () => {
   it('runs 100 parallel calls and returns 100 distinct request IDs', async () => {
     let counter = 0;
     const isa = await buildIsa({
+      // Pin v2 so the bare facade routes to the v2 parser, which reads the
+      // `data.plans` envelope this concurrency fixture returns.
+      apiVersion: 'v2',
       transport: async () => {
         const id = `req_par_${counter++}`;
-        const body = JSON.stringify({ plans: [], request_id: id });
+        const body = JSON.stringify({
+          data: { plans: [], has_more: false, next_cursor: null },
+          request_id: id,
+        });
         return { status: 200, body, headers: {} };
       },
     });

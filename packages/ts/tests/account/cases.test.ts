@@ -62,7 +62,7 @@ describe('isa.account.cases.create', () => {
       payload: { applicant: { dob: '1962-04-18' } },
     });
     expect(result.id).toBe(CASE_ID);
-    expect(result.link).toBe(`${TEST_CASE_VIEWER_BASE_URL}/c/${CASE_ID}#k=${linkKey(result.link)}`);
+    expect(result.link).toBe(`${TEST_CASE_VIEWER_BASE_URL}/${CASE_ID}#k=${linkKey(result.link)}`);
     expect(requests[0]!.method).toBe('POST');
     expect(requests[0]!.url).toBe('https://test.example/v1/case');
     expect(requests[0]!.headers['Idempotency-Key']).toBeTruthy();
@@ -156,26 +156,40 @@ describe('isa.account.cases.open decrypt failures', () => {
   });
 
   it('maps a 404 (absent or expired) to IsaCaseExpiredError', async () => {
-    const link = `${TEST_CASE_VIEWER_BASE_URL}/c/${CASE_ID}#k=AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA`;
+    const link = `${TEST_CASE_VIEWER_BASE_URL}/${CASE_ID}#k=AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA`;
     const { transport } = recordingTransport(404, '');
     await expect(account(transport).cases.open(link)).rejects.toBeInstanceOf(IsaCaseExpiredError);
+  });
+
+  it('opens a legacy /c/<id> link (already-shared links keep working)', async () => {
+    const link = `${TEST_CASE_VIEWER_BASE_URL}/c/${CASE_ID}#k=AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA`;
+    const { transport, requests } = recordingTransport(404, '');
+    await expect(account(transport).cases.open(link)).rejects.toBeInstanceOf(IsaCaseExpiredError);
+    // The /c/<id> id is the last path segment, so the GET addresses CASE_ID.
+    expect(requests[0]!.url).toBe(`https://test.example/v1/case/${CASE_ID}`);
   });
 
   it('rejects a link missing its #k= fragment', async () => {
     const { transport } = recordingTransport(200, '{}');
     await expect(
-      account(transport).cases.open(`${TEST_CASE_VIEWER_BASE_URL}/c/${CASE_ID}`),
+      account(transport).cases.open(`${TEST_CASE_VIEWER_BASE_URL}/${CASE_ID}`),
     ).rejects.toThrow(/fragment key/);
   });
 
-  it('rejects malformed share-link routes before fetching', async () => {
+  it('rejects an empty #k= fragment', async () => {
+    const { transport } = recordingTransport(200, '{}');
+    await expect(
+      account(transport).cases.open(`${TEST_CASE_VIEWER_BASE_URL}/${CASE_ID}#k=`),
+    ).rejects.toThrow(/empty #k=/);
+  });
+
+  it('rejects a link with no path segment before #k=', async () => {
     const { transport, requests } = recordingTransport(200, '{}');
+    await expect(account(transport).cases.open('#k=abc')).rejects.toThrow(/case id/);
+    await expect(account(transport).cases.open('https://x.com#k=abc')).rejects.toThrow(/case id/);
     await expect(
-      account(transport).cases.open(`${TEST_CASE_VIEWER_BASE_URL}#k=abc`),
-    ).rejects.toThrow(/must match/);
-    await expect(
-      account(transport).cases.open(`${TEST_CASE_VIEWER_BASE_URL}/c/#k=abc`),
-    ).rejects.toThrow(/must match/);
+      account(transport).cases.open(`${TEST_CASE_VIEWER_BASE_URL}/c#k=abc`),
+    ).rejects.toThrow(/case id/);
     expect(requests).toHaveLength(0);
   });
 });

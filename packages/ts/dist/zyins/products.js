@@ -19,9 +19,9 @@ export class ProductsFacade {
     catalog() {
         return Products;
     }
-    /** Resolve a product by wire-token slug. */
-    byWireToken(token) {
-        return Products.byWireToken(token);
+    /** Resolve a product by its opaque `prod_<uuid>` id. */
+    byId(id) {
+        return Products.byId(id);
     }
     /** Resolve a product by legacy display name within a type. */
     byLegacy(productClass, displayName) {

@@ -214,9 +214,9 @@ describe('prequalify wire body — flat schema conformance', () => {
     weight: 195,
     state: 'NC',
     nicotine_usage: { last_used: 'never' },
-    // TEST_PRODUCTS uses Products.Fex.AetnaAccendo from the v053 catalog
-    // (type-prefixed wireToken). Update this fixture if TEST_PRODUCTS changes.
-    products: ['fex-aetna-accendo'],
+    // TEST_PRODUCTS uses Products.Fex.AetnaAccendo — now serializes product.id
+    // instead of wireToken. This is the actual ID from the catalog.
+    products: ['prod_d7b57156-3e83-506b-8936-0692c1193dc7'],
     conditions: [],
     medications: [],
     quote_options: { amounts: ['100000'], quote_type: 'face_amounts' },

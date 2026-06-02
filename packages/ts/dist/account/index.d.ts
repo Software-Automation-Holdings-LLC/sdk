@@ -30,8 +30,8 @@ export interface AccountNamespaceOptions {
     baseUrl: string;
     /**
      * Viewer origin used to assemble case share links. Defaults to
-     * {@link DEFAULT_CASE_VIEWER_BASE_URL}. The SDK appends `/c/<id>#k=<key>`;
-     * the base must NOT include the `/c/` segment.
+     * {@link DEFAULT_CASE_VIEWER_BASE_URL}. The SDK appends `/<code>#k=<key>`;
+     * any product prefix rides inside this base URL.
      */
     caseViewerBaseUrl?: string;
     /** Optional transport override; defaults to {@link defaultTransport}. */

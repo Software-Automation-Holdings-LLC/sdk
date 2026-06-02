@@ -12,6 +12,7 @@ import { type TCaseEnvelope } from './caseCrypto.js';
 import { isRecord, parseJsonResponse, stringField, unwrapEnvelope } from '../zyins/response.js';
 
 const FRAGMENT_KEY_PREFIX = '#k=';
+const LEGACY_CASE_ROUTE_SEGMENT = 'c';
 
 /** A case's id and fragment key, parsed out of a share link. */
 export interface TParsedLink {
@@ -28,15 +29,21 @@ export interface TCaseListEntry {
 }
 
 /**
- * Assemble `${base}/c/<id>#k=<keyFragment>`, normalizing a trailing slash on
- * the viewer base. The base must NOT already include the `/c/` segment.
+ * Assemble `${base}/<code>#k=<keyFragment>`, normalizing a trailing slash on
+ * the viewer base. The code is the only path segment the SDK adds; any product
+ * prefix rides inside the configured base URL — this never adds one.
  */
-export function assembleLink(viewerBaseUrl: string, id: string, keyFragment: string): string {
+export function assembleLink(viewerBaseUrl: string, code: string, keyFragment: string): string {
   const base = viewerBaseUrl.replace(/\/$/, '');
-  return `${base}/c/${encodeURIComponent(id)}${FRAGMENT_KEY_PREFIX}${keyFragment}`;
+  return `${base}/${encodeURIComponent(code)}${FRAGMENT_KEY_PREFIX}${keyFragment}`;
 }
 
-/** Parse a share link into its case id and fragment key. */
+/**
+ * Parse a share link into its case id and fragment key. Accepts both the
+ * current single-segment shape (`{base}/<code>#k=<key>`) and the legacy
+ * `{base}/c/<id>#k=<key>` shape, so links shared before the format change keep
+ * opening. The id/code is the last non-empty path segment.
+ */
 export function parseLink(link: string): TParsedLink {
   if (typeof link !== 'string' || link.length === 0) {
     throw new Error('account: cases.open requires a non-empty link');
@@ -49,16 +56,23 @@ export function parseLink(link: string): TParsedLink {
   if (keyFragment.length === 0) {
     throw new Error('account: cases.open link has an empty #k= fragment key');
   }
-  const segments = link
-    .slice(0, hashAt)
+  const path = pathBeforeFragment(link.slice(0, hashAt));
+  const segments = path
     .split('/')
     .filter((s) => s.length > 0);
   const id = segments.at(-1);
-  const route = segments.at(-2);
-  if (route !== 'c' || id === undefined || id.length === 0) {
-    throw new Error('account: cases.open link must match /c/<id>#k=<key>');
+  if (id === undefined || id.length === 0 || id === LEGACY_CASE_ROUTE_SEGMENT) {
+    throw new Error('account: cases.open link must carry a case id before #k=<key>');
   }
   return { id: decodeURIComponent(id), keyFragment };
+}
+
+function pathBeforeFragment(linkPrefix: string): string {
+  try {
+    return new URL(linkPrefix).pathname;
+  } catch {
+    return linkPrefix;
+  }
 }
 
 /** Decode a create response into the server-assigned case id. */

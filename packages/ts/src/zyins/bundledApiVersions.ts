@@ -48,10 +48,10 @@ export type IsaApiVersionOverride = Partial<Readonly<Record<IsaApiSurface, IsaAp
  * {@link IsaApiVersionOverride} on construction; they do not mutate this.
  */
 export const BundledApiVersions: Readonly<Record<IsaApiSurface, IsaApiVersion>> = Object.freeze({
-  prequalify: 'v2',
-  quote: 'v2',
-  datasets: 'v2',
-  reference: 'v2',
+  prequalify: 'v3',
+  quote: 'v3',
+  datasets: 'v3',
+  reference: 'v3',
   sessions: 'v1',
   branding: 'v1',
   cases: 'v1',

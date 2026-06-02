@@ -31,7 +31,7 @@ import { type PrequalifyV2Request, type PrequalifyV2Result } from './prequalify-
 import { type PrequalifyV3Request, type PrequalifyV3Result, type QuoteV3Request, type QuoteV3Result } from './prequalify-v3-types.js';
 import { WebhooksService } from '../rapidsign/webhooks.js';
 import { type ProxyCallOptions, type ProxyCallResult } from '../proxy/call.js';
-import { BrandingFacade, DatasetsFacade, PreferencesFacade, CasesFacade, EmailFacade, LicenseFacade, LogosFacade, ReferenceFacade, ReferenceMedicationsFacade, ReferenceConditionsFacade, type Autocorrector, type MatchAlgorithm, type AutocompleteAlgorithm, type DefaultAutocorrectorOptions } from './isaNamespaces.js';
+import { BrandingFacade, DatasetsFacade, PreferencesFacade, CasesFacade, EmailFacade, LicenseFacade, LogosFacade, ReferenceFacade, ReferenceMedicationsFacade, ReferenceConditionsFacade, DefaultAutocorrector, type Autocorrector, type MatchAlgorithm, type AutocompleteAlgorithm, type DefaultAutocorrectorOptions } from './isaNamespaces.js';
 import { ProductsFacade } from './products.js';
 import { type ClientVersionListener } from './clientVersion.js';
 import { AccountNamespace } from '../account/index.js';
@@ -47,8 +47,8 @@ export interface IsaOptions {
     proxyOrigin?: string;
     /**
      * Viewer origin used to assemble case share links (`isa.account.cases`).
-     * Defaults to `https://app.isaapi.com`. The SDK appends `/c/<id>#k=<key>`,
-     * so the base must NOT include the `/c/` segment. The fragment key never
+     * Defaults to `https://link.isaapi.com`. The SDK appends `/<code>#k=<key>`;
+     * any product prefix rides inside this base URL. The fragment key never
      * reaches the server; this only controls the host the link points at.
      */
     caseViewerBaseUrl?: string;
@@ -391,8 +391,13 @@ interface ZyInsNamespaceOptions {
  * dataset bundle.
  */
 export interface AutocorrectorKernel {
-    /** Construct a domain-agnostic autocorrector from a typo map. */
-    create(opts: DefaultAutocorrectorOptions): Autocorrector;
+    /**
+     * Construct a domain-agnostic autocorrector from a typo map. Returns the
+     * concrete {@link DefaultAutocorrector} so callers reach `versionTag` and
+     * `clone()` — the staleness-detection and map-swap surface — not just the
+     * narrow {@link Autocorrector.correct} method.
+     */
+    create(opts: DefaultAutocorrectorOptions): DefaultAutocorrector;
 }
 /**
  * `isa.zyins.*` — methods for the ZyINS product. Each method has a
@@ -460,11 +465,11 @@ export declare class ZyInsNamespace {
     /**
      * `isa.zyins.prequalify` — runs the prequalify decision against the
      * version pinned on the parent `Isa`. With the default
-     * (`BundledApiVersions.prequalify`) this aliases {@link prequalifyV2} and
-     * returns `Envelope<PrequalifyV2Result>`. With
-     * `apiVersion: { prequalify: 'v1' }` it routes to {@link prequalifyV1};
-     * with `apiVersion: { prequalify: 'v3' }` it routes to
-     * {@link prequalifyV3}. Narrow on `isa.apiVersion.prequalify` to
+     * (`BundledApiVersions.prequalify`) this aliases {@link prequalifyV3} and
+     * returns `Envelope<PrequalifyV3Result>`. With
+     * `apiVersion: { prequalify: 'v2' }` it routes to {@link prequalifyV2};
+     * with `apiVersion: { prequalify: 'v1' }` it routes to
+     * {@link prequalifyV1}. Narrow on `isa.apiVersion.prequalify` to
      * disambiguate the return shape.
      */
     readonly prequalify: PrequalifyV3Callable | PrequalifyV2Callable | PrequalifyV1Callable;
@@ -474,9 +479,9 @@ export declare class ZyInsNamespace {
      * product with the best qualifying tier at the top level and
      * alternates in `other_offers[]`.
      *
-     * @deprecated Prefer `isa.zyins.prequalify` (v2 by default). Retained
-     * for one release as an alias of the canonical method so existing
-     * callers do not break.
+     * @deprecated Prefer `isa.zyins.prequalify` (v3 by default), or pin
+     * `apiVersion: { prequalify: 'v2' }` when the legacy v2 shape is required.
+     * Retained as an explicit callable so existing callers do not break.
      */
     readonly prequalifyV2: PrequalifyV2Callable;
     /**

@@ -1,15 +1,18 @@
 /**
  * Typed product catalog + selection.
  *
- * `Product` is a typed object — never a bare string. Each product carries
- * its wire token, display name, type, and carrier. Selection composes via
- * `ProductSelection.of` / `byTypes` / `fromMix` — all of which round-trip
- * through `toWireFields()` into the prequalify request body.
+ * `Product` is a typed object carrying its opaque `prod_<uuid>` id, display
+ * name, type, and carrier. The id is the only stable identity — slugs are
+ * mutable display data and are never placed on the wire.
  *
- * The flat catalog and nested-by-type access surfaces live in
- * `src/catalog/productsByType.ts` (re-exported below). Per the locked design,
- * regex / string-based product matching is gone; the server treats `products`
- * as an exact-slug list.
+ * `ProductSelection.of` / `byTypes` / `fromMix` compose a selection that
+ * serializes to `products[]` (id array) and/or `include_product_class[]` via
+ * `toWireFields()`. Serialization is SDK-internal; callers never touch ids
+ * directly.
+ *
+ * Nested-by-type catalog constants (`Products.Fex.AetnaAccendo`, …) and
+ * reverse lookup (`Products.byId`) live in `src/catalog/productsByType.ts`
+ * (re-exported below).
  */
 export { ProductType as ProductClass, type ProductTypeValue as ProductClassValue, type Product, Products, } from '../catalog/productsByType.js';
 import type { Product, ProductTypeValue as ProductClassValue } from '../catalog/productsByType.js';

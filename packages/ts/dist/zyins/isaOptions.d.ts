@@ -151,7 +151,7 @@ export interface IsaCreateOptions {
     /**
      * Optional case-storage adapter. Defaults to
      * {@link import('./cases/ZeroKnowledgeCaseStorage.js').ZeroKnowledgeCaseStorage}
-     * — client-side AES-256-GCM, opaque ciphertext on the wire, fragment
+     * — client-side AES-128-GCM, opaque ciphertext on the wire, fragment
      * key as the recall token. Carrier adapters may substitute a portal-
      * backed store; the SDK only sees the {@link CaseStorage} interface.
      */

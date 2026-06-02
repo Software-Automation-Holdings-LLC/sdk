@@ -9,7 +9,7 @@
  * link is a redirect into the carrier's portal.
  *
  * Adapters MUST treat `recallToken` as opaque. The default returns a
- * base64url AES-256-GCM data key; a carrier may return a signed bearer
+ * base64url AES-128-GCM data key; a carrier may return a signed bearer
  * token, an SSO handoff blob, or omit the token entirely. Consumers
  * thread it through unchanged.
  *
@@ -44,7 +44,7 @@ export interface CaseStoragePutResult {
     id: string;
     /**
      * Opaque material the recipient needs to recover the record. The
-     * default implementation returns a base64url AES-256-GCM data key
+     * default implementation returns a base64url AES-128-GCM data key
      * intended for a share-link fragment (`#k=…`); carrier adapters may
      * return a signed bearer token, an SSO handoff blob, or omit the
      * field when no client-side material is required.

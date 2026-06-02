@@ -21,11 +21,17 @@ export interface TCaseListEntry {
     expiresAt: string;
 }
 /**
- * Assemble `${base}/c/<id>#k=<keyFragment>`, normalizing a trailing slash on
- * the viewer base. The base must NOT already include the `/c/` segment.
+ * Assemble `${base}/<code>#k=<keyFragment>`, normalizing a trailing slash on
+ * the viewer base. The code is the only path segment the SDK adds; any product
+ * prefix rides inside the configured base URL — this never adds one.
  */
-export declare function assembleLink(viewerBaseUrl: string, id: string, keyFragment: string): string;
-/** Parse a share link into its case id and fragment key. */
+export declare function assembleLink(viewerBaseUrl: string, code: string, keyFragment: string): string;
+/**
+ * Parse a share link into its case id and fragment key. Accepts both the
+ * current single-segment shape (`{base}/<code>#k=<key>`) and the legacy
+ * `{base}/c/<id>#k=<key>` shape, so links shared before the format change keep
+ * opening. The id/code is the last non-empty path segment.
+ */
 export declare function parseLink(link: string): TParsedLink;
 /** Decode a create response into the server-assigned case id. */
 export declare function parseCreatedId(body: string): string;

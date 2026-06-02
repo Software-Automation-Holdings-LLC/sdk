@@ -9,9 +9,11 @@
  *
  * Run via `npm run gen:catalog` (executed automatically before `build`).
  *
- * Sources are discovered relative to the monorepo layout; missing sources
- * cause the matching catalog to be emitted empty-but-typed and the gap
- * is reported on stderr.
+ * Sources are discovered relative to the monorepo layout. The product catalog
+ * NEVER regenerates empty: on a missing v2_products.json the committed catalog
+ * is preserved, and if there is nothing committed to preserve the generator
+ * fails loud (see preserveOrFail). Shipping an empty product catalog is the
+ * isa-sdk@1.0.1 launch-blocker and is forbidden.
  */
 
 import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'node:fs';
@@ -33,8 +35,10 @@ const PLATFORM_REPO = process.env.SDK_PLATFORM_REPO
   : DEFAULT_PLATFORM;
 
 // Insurance repo holds the engine reference-data artifacts (v2_*.json).
-// Default sibling of the platform repo; override via SDK_INSURANCE_REPO.
-const DEFAULT_INSURANCE = resolve(PLATFORM_REPO, '..', 'insurance');
+// isa-platform is nested INSIDE the insurance repo, so the JSON lives one
+// level up from the platform repo — not in a sibling `insurance/` dir.
+// Override via SDK_INSURANCE_REPO.
+const DEFAULT_INSURANCE = resolve(PLATFORM_REPO, '..');
 const INSURANCE_REPO = process.env.SDK_INSURANCE_REPO
   ? resolve(process.env.SDK_INSURANCE_REPO)
   : DEFAULT_INSURANCE;
@@ -101,6 +105,37 @@ function writeFile(name, content) {
   process.stderr.write(`gen-catalog: wrote ${out}\n`);
 }
 
+/**
+ * Handle a missing product data source without ever shipping an empty catalog.
+ *
+ * The product catalog is the SDK's headline surface (`Products.Fex.AetnaAccendo`
+ * etc.); shipping it empty is a launch-blocking defect (isa-sdk@1.0.1). The
+ * upstream v2_products.json lives in the engine repo, which CI runners do not
+ * check out, so a clean build legitimately misses it. In that case the committed
+ * catalog is the source of truth — it carries the real prod_<uuid> ids and IS
+ * the published artifact — so preserve it untouched.
+ *
+ * With NO committed catalog to preserve (a genuinely fresh tree), emitting empty
+ * would let a broken catalog reach a registry, so fail loud instead: the build
+ * must regenerate from data or run where the committed catalog is present.
+ */
+function preserveOrFail(names, label) {
+  const missing = names.filter((n) => !existsSync(join(CATALOG_DIR, n)));
+  if (missing.length > 0) {
+    process.stderr.write(
+      `gen-catalog: FATAL: ${label}: v2_products.json not found AND no committed ` +
+        `catalog to preserve (${missing.join(', ')}). Refusing to emit an empty product ` +
+        `catalog. Run where ${join(INSURANCE_REPO, 'v2_products.json')} exists, or commit ` +
+        `a populated catalog first.\n`,
+    );
+    process.exit(1);
+  }
+  gaps.push(`${label}: v2_products.json not found — preserving committed catalog.`);
+  for (const name of names) {
+    process.stderr.write(`gen-catalog: preserved committed ${join(CATALOG_DIR, name)}\n`);
+  }
+}
+
 // ---------------------------------------------------------------------------
 // Products + Carriers
 // ---------------------------------------------------------------------------
@@ -111,9 +146,7 @@ function genProducts() {
   const sources = ['insurance/v2_products.json'];
 
   if (!raw) {
-    gaps.push('Products: v2_products.json not found — emitting empty catalog.');
-    writeFile('products.ts', HEADER(sources) + emptyProductsModule());
-    writeFile('carriers.ts', HEADER(sources) + emptyCarriersModule());
+    preserveOrFail(['products.ts', 'carriers.ts'], 'Products');
     return { products: [], carriers: [] };
   }
 
@@ -299,49 +332,6 @@ export const ProductCarriers = Object.freeze({
   writeFile('carriers.ts', carriersModule);
 
   return { products, carriers };
-}
-
-function emptyProductsModule() {
-  return `
-export enum Product {}
-export interface ProductMetadata {
-  readonly slug: string;
-  readonly displayName: string;
-  readonly carrier: string;
-  readonly productClass: string;
-  readonly ages: { readonly min: number; readonly max: number };
-  readonly states: readonly string[];
-  readonly faceAmount: { readonly min: number; readonly max: number };
-  readonly stateVariations: readonly string[];
-}
-export const Products = Object.freeze({
-  values(): readonly Product[] { return []; },
-  entries(): ReadonlyArray<readonly [Product, ProductMetadata]> { return []; },
-  byCarrier(_carrier: string): readonly Product[] { return []; },
-  search(_query: string): readonly Product[] { return []; },
-  metadata(p: Product): ProductMetadata {
-    throw new Error(\`Products.metadata: unknown product '\${p}'\`);
-  },
-});
-`;
-}
-
-function emptyCarriersModule() {
-  return `
-import type { Product } from './products.js';
-import type { State } from './states.js';
-export interface ProductCarrierMetadata {
-  readonly displayName: string;
-  readonly products: readonly Product[];
-  readonly states: readonly State[];
-}
-export const ProductCarriers = Object.freeze({
-  values(): readonly string[] { return []; },
-  metadata(c: string): ProductCarrierMetadata {
-    throw new Error(\`ProductCarriers.metadata: unknown carrier '\${c}'\`);
-  },
-});
-`;
 }
 
 // ---------------------------------------------------------------------------
@@ -856,8 +846,7 @@ function genProductsByType() {
   const raw = tryReadJson(path);
   const sources = ['insurance/v2_products.json'];
   if (!raw) {
-    gaps.push('ProductsByType: v2_products.json not found — emitting empty nested catalog.');
-    writeFile('productsByType.ts', HEADER(sources) + emptyProductsByTypeModule());
+    preserveOrFail(['productsByType.ts'], 'ProductsByType');
     return;
   }
   const TYPE_MAP = {
@@ -888,7 +877,13 @@ function genProductsByType() {
       if (!entry || typeof entry !== 'object') continue;
       const displayName = String(entry.name || '');
       const identifier = String(entry.identifier || '');
+      const productId = entry.id ? `prod_${entry.id}` : '';
       if (!displayName || !identifier) continue;
+      if (!productId) {
+        throw new Error(
+          `ProductsByType: product '${displayName}' (${identifier}) has no id — the v3 prequalify products[] filter matches only the prod_<uuid> id, so a catalog entry without one is unusable.`,
+        );
+      }
       const enumKey = pascal(displayName);
       if (seenByNs[tm.nsKey].has(enumKey)) {
         throw new Error(
@@ -902,6 +897,7 @@ function genProductsByType() {
       seenWireTokens.add(identifier);
       namespaces[tm.nsKey].push({
         enumKey,
+        id: productId,
         wireToken: identifier,
         displayName,
         ctorName: tm.tsKey,
@@ -918,7 +914,7 @@ function genProductsByType() {
 
   function bagBody(items, ctorName) {
     return items.map((p) =>
-      `  ${p.enumKey}: Object.freeze({ wireToken: ${JSON.stringify(p.wireToken)}, displayName: ${JSON.stringify(p.displayName)}, productType: ProductType.${ctorName}, carrier: ${JSON.stringify(p.carrier)} }) as Product,`,
+      `  ${p.enumKey}: Object.freeze({ id: ${JSON.stringify(p.id)}, displayName: ${JSON.stringify(p.displayName)}, productType: ProductType.${ctorName}, carrier: ${JSON.stringify(p.carrier)} }) as Product,`,
     ).join('\n');
   }
 
@@ -935,7 +931,13 @@ export type ProductTypeValue = (typeof ProductType)[keyof typeof ProductType];
 
 /** A typed product. Stable across SDK releases inside one wire major. */
 export interface Product {
-  readonly wireToken: string;
+  /**
+   * Opaque product id (\`prod_<uuid>\`). The only stable identity for a product.
+   * This is the value the v3 prequalify \`products[]\` filter matches — pass this
+   * product (or \`ProductSelection.of([...])\`) and the SDK serializes this id.
+   * Slugs are mutable display data; the id is not.
+   */
+  readonly id: string;
   readonly displayName: string;
   readonly productType: ProductTypeValue;
   /** Carrier brand extracted from the display name (first 1–2 words). */
@@ -967,8 +969,8 @@ const ALL_PRODUCTS: readonly Product[] = Object.freeze([
   ...Object.values(TERM_PRODUCTS),
 ]);
 
-const BY_WIRE_TOKEN: Readonly<Record<string, Product>> = Object.freeze(
-  Object.fromEntries(ALL_PRODUCTS.map((p) => [p.wireToken, p])),
+const BY_ID: Readonly<Record<string, Product>> = Object.freeze(
+  Object.fromEntries(ALL_PRODUCTS.map((p) => [p.id, p])),
 );
 
 export const Products = Object.freeze({
@@ -977,7 +979,11 @@ export const Products = Object.freeze({
   Preneed: PRENEED_PRODUCTS as ProductBag,
   Term: TERM_PRODUCTS as ProductBag,
   all(): readonly Product[] { return ALL_PRODUCTS; },
-  byWireToken(token: string): Product | undefined { return BY_WIRE_TOKEN[token]; },
+  /**
+   * Resolve a product by its opaque \`prod_<uuid>\` id.
+   * Returns \`undefined\` for unknown ids — never throws.
+   */
+  byId(id: string): Product | undefined { return BY_ID[id]; },
   byLegacy(productType: ProductTypeValue, displayName: string): Product | undefined {
     const ns = (Products as unknown as Record<string, ProductBag>)[productType.namespaceKey];
     if (!ns) return undefined;
@@ -993,32 +999,11 @@ export const Products = Object.freeze({
   Preneed: ProductBag;
   Term: ProductBag;
   all: () => readonly Product[];
-  byWireToken: (token: string) => Product | undefined;
+  byId: (id: string) => Product | undefined;
   byLegacy: (productType: ProductTypeValue, displayName: string) => Product | undefined;
 }>;
 `;
   writeFile('productsByType.ts', module);
-}
-
-function emptyProductsByTypeModule() {
-  return `
-export const ProductType = {
-  FinalExpense:       { wireToken: 'fex',     displayName: 'Final Expense',       namespaceKey: 'Fex'     },
-  MedicareSupplement: { wireToken: 'medsup',  displayName: 'Medicare Supplement', namespaceKey: 'Medsup'  },
-  Preneed:            { wireToken: 'preneed', displayName: 'Preneed',             namespaceKey: 'Preneed' },
-  Term:               { wireToken: 'term',    displayName: 'Term',                namespaceKey: 'Term'    },
-} as const;
-export type ProductTypeValue = (typeof ProductType)[keyof typeof ProductType];
-export interface Product { readonly wireToken: string; readonly displayName: string; readonly productType: ProductTypeValue; readonly carrier: string; }
-type ProductBag = Readonly<Record<string, Product>>;
-const EMPTY: ProductBag = Object.freeze({});
-export const Products = Object.freeze({
-  Fex: EMPTY, Medsup: EMPTY, Preneed: EMPTY, Term: EMPTY,
-  all(): readonly Product[] { return []; },
-  byWireToken(_t: string): Product | undefined { return undefined; },
-  byLegacy(_pt: ProductTypeValue, _n: string): Product | undefined { return undefined; },
-});
-`;
 }
 
 // ---------------------------------------------------------------------------

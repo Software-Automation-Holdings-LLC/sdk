@@ -54,10 +54,10 @@ describe('BundledApiVersions', () => {
 
   it('matches the documented per-release table (docs/sdk-syntax-proposal §2.7)', () => {
     expect(BundledApiVersions).toEqual({
-      prequalify: 'v2',
-      quote: 'v2',
-      datasets: 'v2',
-      reference: 'v2',
+      prequalify: 'v3',
+      quote: 'v3',
+      datasets: 'v3',
+      reference: 'v3',
       sessions: 'v1',
       branding: 'v1',
       cases: 'v1',
@@ -72,19 +72,20 @@ describe('resolveApiVersions', () => {
   });
 
   it('overlays a per-surface override onto the bundled defaults', () => {
-    const resolved = resolveApiVersions({ quote: 'v3' });
-    expect(resolved.quote).toBe('v3');
+    // Pin quote back to the legacy v2 surface; everything else stays bundled.
+    const resolved = resolveApiVersions({ quote: 'v2' });
+    expect(resolved.quote).toBe('v2');
     // Untouched surfaces keep their bundled values.
-    expect(resolved.prequalify).toBe('v2');
+    expect(resolved.prequalify).toBe('v3');
     expect(resolved.cases).toBe('v1');
   });
 
   it('produces a frozen result that does not alias the bundled constant', () => {
-    const resolved = resolveApiVersions({ datasets: 'v3' });
+    const resolved = resolveApiVersions({ datasets: 'v2' });
     expect(Object.isFrozen(resolved)).toBe(true);
     expect(resolved).not.toBe(BundledApiVersions);
-    // Mutating the override after the fact must not affect the resolved view.
-    expect(BundledApiVersions.datasets).toBe('v2');
+    // The override view must not bleed back into the frozen bundled constant.
+    expect(BundledApiVersions.datasets).toBe('v3');
   });
 });
 
@@ -196,13 +197,28 @@ describe('v3 facade routing (selector dispatches to prequalifyV3 / quoteV3)', ()
     expect(env.livemode).toBe(true);
   });
 
-  it('keeps the v2 alias when apiVersion is omitted (bundled default)', async () => {
+  it('aliases the v3 callable when apiVersion is omitted (bundled default)', async () => {
+    const { transport } = recordingTransport({ status: 200, body: PREQUALIFY_V3_BODY });
+    const isa = await Isa.create({
+      auth: LicenseAuth.fromKeycode(TEST_AUTH.licenseKey, TEST_AUTH.email, {
+        orderId: TEST_AUTH.orderId,
+        licenseKey: TEST_AUTH.licenseKey,
+      }),
+      engine: inMemoryEngineWith(transport),
+    });
+
+    expect(isa.apiVersion.prequalify).toBe('v3');
+    expect(isa.zyins.prequalify).toBe(isa.zyins.prequalifyV3);
+  });
+
+  it('aliases the v2 callable when prequalify is explicitly pinned to v2', async () => {
     const { transport } = recordingTransport({ status: 200, body: '{}' });
     const isa = await Isa.create({
       auth: LicenseAuth.fromKeycode(TEST_AUTH.licenseKey, TEST_AUTH.email, {
         orderId: TEST_AUTH.orderId,
         licenseKey: TEST_AUTH.licenseKey,
       }),
+      apiVersion: { prequalify: 'v2' },
       engine: inMemoryEngineWith(transport),
     });
 
@@ -244,6 +260,7 @@ describe('v3 facade routing (selector dispatches to prequalifyV3 / quoteV3)', ()
         orderId: TEST_AUTH.orderId,
         licenseKey: TEST_AUTH.licenseKey,
       }),
+      apiVersion: { prequalify: 'v2' },
       engine: inMemoryEngineWith(transport),
     });
 
@@ -263,6 +280,7 @@ describe('v3 facade routing (selector dispatches to prequalifyV3 / quoteV3)', ()
         orderId: TEST_AUTH.orderId,
         licenseKey: TEST_AUTH.licenseKey,
       }),
+      apiVersion: { quote: 'v2' },
       engine: inMemoryEngineWith(transport),
     });
 

@@ -1,15 +1,18 @@
 /**
  * Typed product catalog + selection.
  *
- * `Product` is a typed object — never a bare string. Each product carries
- * its wire token, display name, type, and carrier. Selection composes via
- * `ProductSelection.of` / `byTypes` / `fromMix` — all of which round-trip
- * through `toWireFields()` into the prequalify request body.
+ * `Product` is a typed object carrying its opaque `prod_<uuid>` id, display
+ * name, type, and carrier. The id is the only stable identity — slugs are
+ * mutable display data and are never placed on the wire.
  *
- * The flat catalog and nested-by-type access surfaces live in
- * `src/catalog/productsByType.ts` (re-exported below). Per the locked design,
- * regex / string-based product matching is gone; the server treats `products`
- * as an exact-slug list.
+ * `ProductSelection.of` / `byTypes` / `fromMix` compose a selection that
+ * serializes to `products[]` (id array) and/or `include_product_class[]` via
+ * `toWireFields()`. Serialization is SDK-internal; callers never touch ids
+ * directly.
+ *
+ * Nested-by-type catalog constants (`Products.Fex.AetnaAccendo`, …) and
+ * reverse lookup (`Products.byId`) live in `src/catalog/productsByType.ts`
+ * (re-exported below).
  */
 
 export {
@@ -89,7 +92,10 @@ export class ProductSelection {
   } {
     const fields: { products?: string[]; include_product_class?: string[] } = {};
     if (this.explicit.length > 0) {
-      fields.products = this.explicit.map((p) => p.wireToken);
+      // The v3 prequalify `products[]` filter matches the opaque product id
+      // (`prod_<uuid>`), NOT the legacy slug — the server silently returns
+      // zero plans for a slug. Serialize the id.
+      fields.products = this.explicit.map((p) => p.id);
     }
     if (this.types.length > 0) {
       fields.include_product_class = this.types.map((t) => t.wireToken);

@@ -31,6 +31,7 @@ export async function quoteV3(request: QuoteV3Request, ctx: QuoteV3Context): Pro
   const idempotencyKey = ctx.idempotencyKey ?? mintUuidV4();
   const headers = await buildHeaders({
     auth: ctx.auth,
+    ...(ctx.signer !== undefined && { signer: ctx.signer }),
     body,
     idempotencyKey,
     clock: ctx.clock,

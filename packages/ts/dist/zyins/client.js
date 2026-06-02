@@ -47,6 +47,7 @@ export class ZyInsClient {
     transport;
     clock;
     logosFetch;
+    signer;
     /**
      * Proto-backed license-lifecycle sub-client. Targets `/v1/licenses/*`.
      * The TS surface is singular: a device has exactly one license.
@@ -77,6 +78,7 @@ export class ZyInsClient {
         this.transport = options.transport ?? defaultTransport();
         this.clock = options.clock ?? systemClock;
         this.logosFetch = options.logosFetch;
+        this.signer = options.signer;
         this.license = new LicenseSubClient(this.context());
         this.health = new HealthSubClient(this.context());
         this.case = new CaseSubClient(this.context());
@@ -126,6 +128,7 @@ export class ZyInsClient {
             caseViewerBaseUrl: this.caseViewerBaseUrl,
             transport: this.transport,
             clock: this.clock,
+            ...(this.signer !== undefined && { signer: this.signer }),
         };
     }
 }

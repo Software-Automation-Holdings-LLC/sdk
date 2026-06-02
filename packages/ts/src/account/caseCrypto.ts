@@ -2,9 +2,11 @@
  * Zero-knowledge case crypto envelope (E2EE Phase 2).
  *
  * The platform stores opaque ciphertext and never holds a key: the SDK
- * generates a fresh 256-bit data key per case, encrypts the payload with
- * AES-256-GCM (the cleartext `product` tag is bound as additional
+ * generates a fresh 128-bit data key per case, encrypts the payload with
+ * AES-128-GCM (the cleartext `product` tag is bound as additional
  * authenticated data), and carries the key only in the share-link fragment.
+ * AES-GCM derives its variant from the key length, so {@link decryptCase}
+ * still opens older envelopes sealed under a 256-bit key with no branching.
  * See `docs/design/case-store-e2ee.md`.
  *
  * WebCrypto returns the GCM auth tag appended to the ciphertext; the wire
@@ -22,8 +24,10 @@ import {
 } from '../core/index.js';
 import { IsaError } from '../zyins/apiError.js';
 
-/** AES-256 data-key length in bytes. */
-const KEY_BYTES = 32;
+/** AES-128 data-key length in bytes used for fresh case keys. Decrypt is
+ * length-agnostic, so 256-bit (32-byte) keys from earlier envelopes still
+ * open — this constant governs generation only. */
+const KEY_BYTES = 16;
 /** AES-GCM nonce length in bytes (96-bit, the GCM-recommended size). */
 const IV_BYTES = 12;
 /** AES-GCM authentication-tag length in bits. */
@@ -38,7 +42,7 @@ const CASE_CRYPTO_CONTEXT = 'CaseCrypto';
 
 /** The opaque crypto fields the server stores, all base64 (std alphabet). */
 export interface TCaseEnvelope {
-  /** Base64 AES-256-GCM ciphertext (auth tag stripped). */
+  /** Base64 AES-GCM ciphertext (auth tag stripped). */
   ciphertext: string;
   /** Base64 AES-GCM nonce. */
   iv: string;
@@ -75,7 +79,7 @@ export class IsaCaseDecryptError extends IsaError {
 }
 
 /**
- * Encrypts a JSON payload under a fresh 256-bit key, binding `product` as
+ * Encrypts a JSON payload under a fresh 128-bit key, binding `product` as
  * AEAD additional data. Returns the base64 wire envelope and the base64url
  * fragment key. The key never leaves this call except as the returned
  * fragment value — the caller must keep it out of logs and telemetry.
@@ -83,7 +87,7 @@ export class IsaCaseDecryptError extends IsaError {
  * @example
  * ```ts
  * const { envelope, keyFragment } = await encryptCase('zyins', { input });
- * // POST envelope; assemble `${viewer}/c/${id}#k=${keyFragment}`
+ * // POST envelope; assemble `${viewer}/${id}#k=${keyFragment}`
  * ```
  */
 export async function encryptCase(
