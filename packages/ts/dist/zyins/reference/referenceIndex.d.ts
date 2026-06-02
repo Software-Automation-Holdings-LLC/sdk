@@ -15,8 +15,10 @@ import { type Concept, type ConditionConcept, type MedicationConcept, type Unkno
 export declare class ReferenceIndex {
     private readonly conditionById;
     private readonly conditionByKey;
+    private readonly conditionByCheckKey;
     private readonly medicationById;
     private readonly medicationByKey;
+    private readonly medicationByCheckKey;
     /** Bundle reference retained for traversal lookups. */
     private readonly bundle;
     constructor(bundle: DatasetBundleV3);

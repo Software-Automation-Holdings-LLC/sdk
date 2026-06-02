@@ -53,10 +53,22 @@ export declare class DatasetsFacade {
      */
     constructor(clientOnce: ClientThunk, onBundle?: ((bundle: DatasetBundleV3) => void) | undefined);
     /**
-     * Fetch the legacy v2 reference-data bundle.
+     * Fetch the reference-data bundle for the bundled-default version (`v3`).
+     *
+     * Returns the typed {@link DatasetBundleV3} (`{id, name}` entities,
+     * inline relationship rows, a top-level `version` token) so de-versioned
+     * consumers reach `.version` and the entity shape without narrowing. This
+     * is the unconditional fetch; for ETag revalidation (`{ ifNoneMatch }`,
+     * which may resolve `304 Not Modified`) or the cheap `{ fields: 'meta' }`
+     * check, use {@link getV3}. The legacy v2 bundle stays reachable via
+     * {@link getLegacy} during the migration window.
      */
-    get(options?: DatasetsGetOptions): Promise<DatasetBundle>;
-    /** Alias for `get()` retained for explicit migration call sites. */
+    get(options?: DatasetsV3GetOptions): Promise<DatasetBundleV3>;
+    /**
+     * Fetch the legacy v2 reference-data bundle (response-root relationship
+     * maps, untyped product names). Retained for callers that have not
+     * migrated their downstream parsing to the v3 entity shape.
+     */
     getLegacy(options?: DatasetsGetOptions): Promise<DatasetBundle>;
     /**
      * Fetch the v3 reference catalog. Pass `{ include }` to narrow,

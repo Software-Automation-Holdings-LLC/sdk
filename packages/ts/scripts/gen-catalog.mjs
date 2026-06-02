@@ -119,18 +119,18 @@ function writeFile(name, content) {
  * would let a broken catalog reach a registry, so fail loud instead: the build
  * must regenerate from data or run where the committed catalog is present.
  */
-function preserveOrFail(names, label) {
+function preserveOrFail(names, label, source) {
   const missing = names.filter((n) => !existsSync(join(CATALOG_DIR, n)));
   if (missing.length > 0) {
     process.stderr.write(
-      `gen-catalog: FATAL: ${label}: v2_products.json not found AND no committed ` +
-        `catalog to preserve (${missing.join(', ')}). Refusing to emit an empty product ` +
-        `catalog. Run where ${join(INSURANCE_REPO, 'v2_products.json')} exists, or commit ` +
+      `gen-catalog: FATAL: ${label}: ${source} not found AND no committed ` +
+        `catalog to preserve (${missing.join(', ')}). Refusing to emit an empty ` +
+        `catalog. Run where ${join(INSURANCE_REPO, source)} exists, or commit ` +
         `a populated catalog first.\n`,
     );
     process.exit(1);
   }
-  gaps.push(`${label}: v2_products.json not found — preserving committed catalog.`);
+  gaps.push(`${label}: ${source} not found — preserving committed catalog.`);
   for (const name of names) {
     process.stderr.write(`gen-catalog: preserved committed ${join(CATALOG_DIR, name)}\n`);
   }
@@ -146,7 +146,7 @@ function genProducts() {
   const sources = ['insurance/v2_products.json'];
 
   if (!raw) {
-    preserveOrFail(['products.ts', 'carriers.ts'], 'Products');
+    preserveOrFail(['products.ts', 'carriers.ts'], 'Products', 'v2_products.json');
     return { products: [], carriers: [] };
   }
 
@@ -506,27 +506,32 @@ export const ConditionCategories = Object.freeze({
 `;
   writeFile('conditions.ts', condCatModule);
 
+  if (!Array.isArray(meds)) {
+    // Same contract as Products: the committed medications.ts is the published
+    // source of truth (~1865 uses) and CI does not check out the engine repo,
+    // so preserve it instead of clobbering it with an empty catalog. Fail loud
+    // only when there is nothing committed to preserve.
+    preserveOrFail(['medications.ts'], 'MedicationUses', 'v2_medications.json');
+    return;
+  }
+
   /** @type {Map<string, Set<string>>} */
   const useToMeds = new Map();
-  if (Array.isArray(meds)) {
-    for (const m of meds) {
-      if (!m || typeof m !== 'object') continue;
-      const name = String(m.name || '');
-      const uses = Array.isArray(m.uses) ? m.uses : [];
-      for (const u of uses) {
-        if (!u || typeof u !== 'object') continue;
-        const cond = String(u.condition || '');
-        if (!cond || !name) continue;
-        let set = useToMeds.get(cond);
-        if (!set) {
-          set = new Set();
-          useToMeds.set(cond, set);
-        }
-        set.add(name);
+  for (const m of meds) {
+    if (!m || typeof m !== 'object') continue;
+    const name = String(m.name || '');
+    const uses = Array.isArray(m.uses) ? m.uses : [];
+    for (const u of uses) {
+      if (!u || typeof u !== 'object') continue;
+      const cond = String(u.condition || '');
+      if (!cond || !name) continue;
+      let set = useToMeds.get(cond);
+      if (!set) {
+        set = new Set();
+        useToMeds.set(cond, set);
       }
+      set.add(name);
     }
-  } else {
-    gaps.push('MedicationUses: v2_medications.json missing or malformed.');
   }
 
   const useNames = [...useToMeds.keys()].sort();
@@ -846,7 +851,7 @@ function genProductsByType() {
   const raw = tryReadJson(path);
   const sources = ['insurance/v2_products.json'];
   if (!raw) {
-    preserveOrFail(['productsByType.ts'], 'ProductsByType');
+    preserveOrFail(['productsByType.ts'], 'ProductsByType', 'v2_products.json');
     return;
   }
   const TYPE_MAP = {

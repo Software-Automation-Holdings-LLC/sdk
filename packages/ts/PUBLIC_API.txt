@@ -4904,15 +4904,18 @@ export declare class ZyInsNamespace {
     readonly email: EmailFacade;
     /**
      * `isa.zyins.prequalify` — runs the prequalify decision against the
-     * version pinned on the parent `Isa`. With the default
-     * (`BundledApiVersions.prequalify`) this aliases {@link prequalifyV3} and
-     * returns `Envelope<PrequalifyV3Result>`. With
-     * `apiVersion: { prequalify: 'v2' }` it routes to {@link prequalifyV2};
-     * with `apiVersion: { prequalify: 'v1' }` it routes to
-     * {@link prequalifyV1}. Narrow on `isa.apiVersion.prequalify` to
-     * disambiguate the return shape.
+     * version pinned on the parent `Isa`. Typed as {@link PrequalifyV3Callable}
+     * because the bundled default (`BundledApiVersions.prequalify`) is `v3`:
+     * the de-versioned surface accepts a {@link PrequalifyV3Request} and
+     * returns `Envelope<PrequalifyV3Result>`, so V3-only fields
+     * (`pricing[]`, `deathBenefit`) type-check without narrowing.
+     *
+     * Pinning `apiVersion: { prequalify: 'v2' }` (or `'v1'`) re-routes the
+     * runtime call to the legacy decision; those callers should use the
+     * explicit {@link prequalifyV2} / {@link prequalifyV1} escape hatches,
+     * whose return types match the legacy wire shape.
      */
-    readonly prequalify: PrequalifyV3Callable | PrequalifyV2Callable | PrequalifyV1Callable;
+    readonly prequalify: PrequalifyV3Callable;
     /**
      * `isa.zyins.prequalifyV2` — callable that runs the v2 prequalify
      * decision (`POST /v2/prequalify`). Returns one `PlanOffer` per
@@ -4965,8 +4968,15 @@ export declare class ZyInsNamespace {
     /** `isa.zyins.logos` — carrier-logo asset lookup (public, no auth). */
     readonly logos: LogosFacade;
     constructor(opts: ZyInsNamespaceOptions);
-    /** Raw-response sibling of {@link prequalify}; follows the pinned API version. */
-    prequalifyRaw: (request: PrequalifyRequest | PrequalifyV2Request | PrequalifyV3Request) => Promise<RawResponseResult<PrequalifyResult | PrequalifyV2Result | PrequalifyV3Result>>;
+    /**
+     * Raw-response sibling of {@link prequalify}; follows the pinned API
+     * version at runtime but is typed against the bundled-default v3 shape
+     * (`PrequalifyV3Request` → `RawResponseResult<PrequalifyV3Result>`) so the
+     * de-versioned `data` exposes `plans[].pricing` / `deathBenefit` without
+     * narrowing. v1/v2-pinned callers reach the legacy shape through
+     * {@link prequalifyV2Raw}.
+     */
+    prequalifyRaw: (request: PrequalifyV3Request) => Promise<RawResponseResult<PrequalifyV3Result>>;
     /** Raw-response sibling of `prequalifyV2`. */
     prequalifyV2Raw: (request: PrequalifyV2Request) => Promise<RawResponseResult<PrequalifyV2Result>>;
     /** Raw-response sibling of `prequalifyV3`. */
@@ -5124,10 +5134,22 @@ export declare class DatasetsFacade {
      */
     constructor(clientOnce: ClientThunk, onBundle?: ((bundle: DatasetBundleV3) => void) | undefined);
     /**
-     * Fetch the legacy v2 reference-data bundle.
+     * Fetch the reference-data bundle for the bundled-default version (`v3`).
+     *
+     * Returns the typed {@link DatasetBundleV3} (`{id, name}` entities,
+     * inline relationship rows, a top-level `version` token) so de-versioned
+     * consumers reach `.version` and the entity shape without narrowing. This
+     * is the unconditional fetch; for ETag revalidation (`{ ifNoneMatch }`,
+     * which may resolve `304 Not Modified`) or the cheap `{ fields: 'meta' }`
+     * check, use {@link getV3}. The legacy v2 bundle stays reachable via
+     * {@link getLegacy} during the migration window.
      */
-    get(options?: DatasetsGetOptions): Promise<DatasetBundle>;
-    /** Alias for `get()` retained for explicit migration call sites. */
+    get(options?: DatasetsV3GetOptions): Promise<DatasetBundleV3>;
+    /**
+     * Fetch the legacy v2 reference-data bundle (response-root relationship
+     * maps, untyped product names). Retained for callers that have not
+     * migrated their downstream parsing to the v3 entity shape.
+     */
     getLegacy(options?: DatasetsGetOptions): Promise<DatasetBundle>;
     /**
      * Fetch the v3 reference catalog. Pass `{ include }` to narrow,
@@ -7314,8 +7336,10 @@ import { type Concept, type ConditionConcept, type MedicationConcept, type Unkno
 export declare class ReferenceIndex {
     private readonly conditionById;
     private readonly conditionByKey;
+    private readonly conditionByCheckKey;
     private readonly medicationById;
     private readonly medicationByKey;
+    private readonly medicationByCheckKey;
     /** Bundle reference retained for traversal lookups. */
     private readonly bundle;
     constructor(bundle: DatasetBundleV3);
@@ -7418,6 +7442,30 @@ export declare function buildSuggestion(concept: Concept, meta: {
     rank: number;
 }): Suggestion;
 //# sourceMappingURL=Suggestion.d.ts.map
+=== dist/zyins/reference/_checkKey.d.ts ===
+/**
+ * Internal text→sorted-check-key normalizer.
+ *
+ * Mirrors the engine's `CondNameMakeCheckKey` (Go
+ * `go/zyins/utils/strings/normalize.go`, Perl `cond_name_make_check_key_xs`):
+ * uppercase the string, strip every character that is not ASCII
+ * alphanumeric, then SORT the surviving bytes ascending. Digits (0x30–0x39)
+ * therefore sort before letters (0x41–0x5A), byte-identical to the engine.
+ *
+ * Sorting collapses word order so that prefix / suffix / no-space variants of
+ * the same concept resolve identically while severity qualifiers stay
+ * distinct (different letter multisets):
+ *   - "SEVERE COPD" → "CCDEEOPRSV"  (after expanding from the catalog name)
+ *   - "COPD (SEVERE)" → "CCDEEOPRSV"
+ *   - "COPD (MILD)" → "CCDDILMOP"   (distinct — collapses with no SEVERE row)
+ *
+ * Used ONLY for word-order-invariant NAME matching. Opaque catalog ids
+ * (e.g. `HIGHBLOODPRESSURE`, `cond_<ULID>`) are never keyed this way —
+ * sorting an id would let unrelated ids collide. Id and exact-name lookups
+ * stay on `_makeKey`.
+ */
+export declare function _checkKey(text: string): string;
+//# sourceMappingURL=_checkKey.d.ts.map
 === dist/zyins/reference/_makeKey.d.ts ===
 /**
  * Internal text→key normalizer.

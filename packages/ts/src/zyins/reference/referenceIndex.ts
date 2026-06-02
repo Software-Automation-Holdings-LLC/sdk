@@ -17,6 +17,7 @@ import type {
   MedicationEntity,
 } from '../datasets-v3.js';
 import { _makeKey } from './_makeKey.js';
+import { _checkKey } from './_checkKey.js';
 import { Sort } from './Sort.js';
 import {
   type Concept,
@@ -28,8 +29,10 @@ import {
 export class ReferenceIndex {
   private readonly conditionById: ReadonlyMap<string, ConditionEntity>;
   private readonly conditionByKey: ReadonlyMap<string, ConditionEntity>;
+  private readonly conditionByCheckKey: ReadonlyMap<string, ConditionEntity>;
   private readonly medicationById: ReadonlyMap<string, MedicationEntity>;
   private readonly medicationByKey: ReadonlyMap<string, MedicationEntity>;
+  private readonly medicationByCheckKey: ReadonlyMap<string, MedicationEntity>;
   /** Bundle reference retained for traversal lookups. */
   private readonly bundle: DatasetBundleV3;
 
@@ -38,23 +41,29 @@ export class ReferenceIndex {
 
     const conditions = new Map<string, ConditionEntity>();
     const conditionsByKey = new Map<string, ConditionEntity>();
+    const conditionsByCheckKey = new Map<string, ConditionEntity>();
     for (const entity of bundle.conditions) {
       conditions.set(entity.id, entity);
       conditionsByKey.set(_makeKey(entity.id), entity);
       conditionsByKey.set(_makeKey(entity.name), entity);
+      indexCheckKey(conditionsByCheckKey, entity.name, entity);
     }
     this.conditionById = conditions;
     this.conditionByKey = conditionsByKey;
+    this.conditionByCheckKey = conditionsByCheckKey;
 
     const medications = new Map<string, MedicationEntity>();
     const medicationsByKey = new Map<string, MedicationEntity>();
+    const medicationsByCheckKey = new Map<string, MedicationEntity>();
     for (const entity of bundle.medications) {
       medications.set(entity.id, entity);
       medicationsByKey.set(_makeKey(entity.id), entity);
       medicationsByKey.set(_makeKey(entity.name), entity);
+      indexCheckKey(medicationsByCheckKey, entity.name, entity);
     }
     this.medicationById = medications;
     this.medicationByKey = medicationsByKey;
+    this.medicationByCheckKey = medicationsByCheckKey;
   }
 
   get versionSignal(): string {
@@ -114,13 +123,19 @@ export class ReferenceIndex {
   private resolveMedication(text: string): MedicationEntity | undefined {
     const key = _makeKey(text);
     if (!key) return undefined;
-    return this.medicationByKey.get(key);
+    const exact = this.medicationByKey.get(key);
+    if (exact) return exact;
+    // Word-order-invariant fallback (engine sorted check-key). A strict
+    // superset: only reached when the exact id/name key missed.
+    return this.medicationByCheckKey.get(_checkKey(text));
   }
 
   private resolveCondition(text: string): ConditionEntity | undefined {
     const key = _makeKey(text);
     if (!key) return undefined;
-    return this.conditionByKey.get(key);
+    const exact = this.conditionByKey.get(key);
+    if (exact) return exact;
+    return this.conditionByCheckKey.get(_checkKey(text));
   }
 
   private buildMedicationConcept(
@@ -197,6 +212,20 @@ export class ReferenceIndex {
         other.kind === 'condition' && other.isKnown && other.id === entity.id,
     };
   }
+}
+
+/**
+ * Index an entity under its name's sorted check key, first-write-wins.
+ *
+ * Two catalog names that share a letter multiset (rare, and a catalog
+ * authoring smell) must resolve deterministically; keeping the first
+ * insertion mirrors the engine's iteration-order determinism rather than
+ * letting later rows silently shadow earlier ones.
+ */
+function indexCheckKey<T>(map: Map<string, T>, name: string, entity: T): void {
+  const key = _checkKey(name);
+  if (!key || map.has(key)) return;
+  map.set(key, entity);
 }
 
 export function buildUnknownConcept(inputText: string): UnknownConcept {

@@ -464,15 +464,18 @@ export declare class ZyInsNamespace {
     readonly email: EmailFacade;
     /**
      * `isa.zyins.prequalify` — runs the prequalify decision against the
-     * version pinned on the parent `Isa`. With the default
-     * (`BundledApiVersions.prequalify`) this aliases {@link prequalifyV3} and
-     * returns `Envelope<PrequalifyV3Result>`. With
-     * `apiVersion: { prequalify: 'v2' }` it routes to {@link prequalifyV2};
-     * with `apiVersion: { prequalify: 'v1' }` it routes to
-     * {@link prequalifyV1}. Narrow on `isa.apiVersion.prequalify` to
-     * disambiguate the return shape.
+     * version pinned on the parent `Isa`. Typed as {@link PrequalifyV3Callable}
+     * because the bundled default (`BundledApiVersions.prequalify`) is `v3`:
+     * the de-versioned surface accepts a {@link PrequalifyV3Request} and
+     * returns `Envelope<PrequalifyV3Result>`, so V3-only fields
+     * (`pricing[]`, `deathBenefit`) type-check without narrowing.
+     *
+     * Pinning `apiVersion: { prequalify: 'v2' }` (or `'v1'`) re-routes the
+     * runtime call to the legacy decision; those callers should use the
+     * explicit {@link prequalifyV2} / {@link prequalifyV1} escape hatches,
+     * whose return types match the legacy wire shape.
      */
-    readonly prequalify: PrequalifyV3Callable | PrequalifyV2Callable | PrequalifyV1Callable;
+    readonly prequalify: PrequalifyV3Callable;
     /**
      * `isa.zyins.prequalifyV2` — callable that runs the v2 prequalify
      * decision (`POST /v2/prequalify`). Returns one `PlanOffer` per
@@ -525,8 +528,15 @@ export declare class ZyInsNamespace {
     /** `isa.zyins.logos` — carrier-logo asset lookup (public, no auth). */
     readonly logos: LogosFacade;
     constructor(opts: ZyInsNamespaceOptions);
-    /** Raw-response sibling of {@link prequalify}; follows the pinned API version. */
-    prequalifyRaw: (request: PrequalifyRequest | PrequalifyV2Request | PrequalifyV3Request) => Promise<RawResponseResult<PrequalifyResult | PrequalifyV2Result | PrequalifyV3Result>>;
+    /**
+     * Raw-response sibling of {@link prequalify}; follows the pinned API
+     * version at runtime but is typed against the bundled-default v3 shape
+     * (`PrequalifyV3Request` → `RawResponseResult<PrequalifyV3Result>`) so the
+     * de-versioned `data` exposes `plans[].pricing` / `deathBenefit` without
+     * narrowing. v1/v2-pinned callers reach the legacy shape through
+     * {@link prequalifyV2Raw}.
+     */
+    prequalifyRaw: (request: PrequalifyV3Request) => Promise<RawResponseResult<PrequalifyV3Result>>;
     /** Raw-response sibling of `prequalifyV2`. */
     prequalifyV2Raw: (request: PrequalifyV2Request) => Promise<RawResponseResult<PrequalifyV2Result>>;
     /** Raw-response sibling of `prequalifyV3`. */

@@ -19,6 +19,27 @@ import { describe, expect, it } from 'vitest';
 import type { DatasetBundleV3 } from '../../src/zyins/datasets-v3';
 import { ReferenceBundleCache, ReferenceFacade, Sort, ReferenceMedicationsFacade, ReferenceConditionsFacade, ReferenceConceptsFacade, DefaultMatchAlgorithm, type MatchAlgorithm } from '../../src/zyins/reference/index';
 import type { Concept } from '../../src/zyins/reference/Concept';
+import { _checkKey } from '../../src/zyins/reference/_checkKey';
+
+describe('_checkKey — engine CondNameMakeCheckKey parity', () => {
+    it('uppercases, strips non-alphanumerics, then sorts the bytes ascending', () => {
+        // "BREAST CANCER" and "CANCER (BREAST)" collapse — the engine's
+        // canonical word-order-invariance example.
+        expect(_checkKey('BREAST CANCER')).toBe('AABCCEENRRST');
+        expect(_checkKey('CANCER (BREAST)')).toBe('AABCCEENRRST');
+        expect(_checkKey('breast cancer')).toBe('AABCCEENRRST');
+    });
+
+    it('sorts digits before letters (byte order 0x30-0x39 < 0x41-0x5A)', () => {
+        expect(_checkKey('Type 2 Diabetes')).toBe('2ABDEEEIPSTTY');
+    });
+
+    it('returns empty for empty / whitespace / symbol-only input', () => {
+        expect(_checkKey('')).toBe('');
+        expect(_checkKey('   ')).toBe('');
+        expect(_checkKey('!!@@##')).toBe('');
+    });
+});
 
 // ---------------------------------------------------------------------------
 // Fixture: a synthetic v3 bundle that mirrors the real wire shape. The
@@ -222,6 +243,53 @@ describe('ReferenceFacade — match() basic semantics', () => {
         const medication = ref.medications.match('med_01HZX6K7QZ6R9A8B7C6D5E4F3B');
         expect(medication.kind).toBe('medication');
         expect(medication.id).toBe('med_01HZX6K7QZ6R9A8B7C6D5E4F3B');
+    });
+});
+
+describe('ReferenceFacade — word-order-invariant match (engine sorted check-key)', () => {
+    // Catalog name is the spelled-out clinical form; the engine's
+    // CondNameMakeCheckKey sorts the bytes so word order, spacing, and
+    // punctuation collapse — while severity qualifiers stay distinct.
+    function copdBundle(): DatasetBundleV3 {
+        return bundle({
+            conditions: [
+                { id: 'COPDSEVERE', name: 'Chronic Obstructive Pulmonary Disease (Severe)', treated_with: [] },
+                { id: 'COPDMILD', name: 'Chronic Obstructive Pulmonary Disease (Mild)', treated_with: [] },
+            ],
+            medications: [],
+        });
+    }
+
+    it('resolves a word-reordered severity query to the matching catalog row', () => {
+        const { facade: ref } = facade(copdBundle());
+        expect(ref.conditions.match('Severe Chronic Obstructive Pulmonary Disease').id).toBe('COPDSEVERE');
+    });
+
+    it('resolves a no-space punctuation variant to the same row', () => {
+        const { facade: ref } = facade(copdBundle());
+        expect(ref.conditions.match('CHRONIC OBSTRUCTIVE PULMONARY DISEASE(SEVERE)').id).toBe('COPDSEVERE');
+    });
+
+    it('keeps severity distinct — MILD never collapses into SEVERE', () => {
+        const { facade: ref } = facade(copdBundle());
+        expect(ref.conditions.match('Mild Chronic Obstructive Pulmonary Disease').id).toBe('COPDMILD');
+        expect(ref.conditions.match('Severe Chronic Obstructive Pulmonary Disease').id).toBe('COPDSEVERE');
+    });
+
+    it('exact-key matches still resolve — the check-key path is a strict superset', () => {
+        const { facade: ref } = facade();
+        // Opaque id lookup (HIGHBLOODPRESSURE) must keep resolving via _makeKey,
+        // never get rerouted through the sorted fallback.
+        expect(ref.conditions.match('HIGHBLOODPRESSURE').id).toBe('HIGHBLOODPRESSURE');
+        expect(ref.conditions.match('high blood pressure').id).toBe('HIGHBLOODPRESSURE');
+    });
+
+    it('routes the check-key fallback through an injected DefaultMatchAlgorithm too', () => {
+        const cache = new ReferenceBundleCache();
+        cache.setBundle(copdBundle());
+        const ref = new ReferenceFacade(cache, { matchAlgorithm: new DefaultMatchAlgorithm() });
+        expect(ref.conditions.match('Severe Chronic Obstructive Pulmonary Disease').id).toBe('COPDSEVERE');
+        expect(ref.conditions.match('Mild Chronic Obstructive Pulmonary Disease').id).toBe('COPDMILD');
     });
 });
 
@@ -650,5 +718,38 @@ describe('isa.zyins.medications/conditions/concepts — top-level cache-backed s
 
         expect(isa.zyins.medications.match('insulin').isKnown).toBe(false);
         expect(isa.zyins.medications.match('Novolog').isKnown).toBe(true);
+    });
+});
+
+describe('isa.zyins.datasets.get — de-versioned facade routes to the bundled v3 bundle', () => {
+    it('returns the typed v3 bundle exposing .version and {id, name} entities', async () => {
+        const isa = await buildIsa(datasetsTransport());
+
+        const bundle = await isa.zyins.datasets.get();
+
+        // The de-versioned `get()` is typed as `DatasetBundleV3`, so reaching
+        // `.version` and the entity-shaped rows must type-check and resolve.
+        expect(typeof bundle.version).toBe('string');
+        expect(bundle.medications.every((m) => typeof m.id === 'string' && typeof m.name === 'string')).toBe(true);
+    });
+
+    it('warms the shared reference cache so match() resolves after get()', async () => {
+        const isa = await buildIsa(datasetsTransport());
+
+        await isa.zyins.datasets.get();
+
+        expect(isa.zyins.medications.match('insulin').isKnown).toBe(true);
+    });
+
+    it('rejects when an unconditional get() hits a 304 (use getV3() for revalidation)', async () => {
+        const transport: Transport = async (req): Promise<TransportResponse> => {
+            if (req.url.includes('/v3/datasets')) {
+                return { status: 304, body: '', headers: { etag: 'W/"unchanged"' } };
+            }
+            return { status: 404, body: '', headers: {} };
+        };
+        const isa = await buildIsa(transport);
+
+        await expect(isa.zyins.datasets.get()).rejects.toThrow(/304 Not Modified/);
     });
 });

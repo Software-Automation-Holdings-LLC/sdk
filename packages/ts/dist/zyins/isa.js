@@ -487,13 +487,16 @@ export class ZyInsNamespace {
     email;
     /**
      * `isa.zyins.prequalify` — runs the prequalify decision against the
-     * version pinned on the parent `Isa`. With the default
-     * (`BundledApiVersions.prequalify`) this aliases {@link prequalifyV3} and
-     * returns `Envelope<PrequalifyV3Result>`. With
-     * `apiVersion: { prequalify: 'v2' }` it routes to {@link prequalifyV2};
-     * with `apiVersion: { prequalify: 'v1' }` it routes to
-     * {@link prequalifyV1}. Narrow on `isa.apiVersion.prequalify` to
-     * disambiguate the return shape.
+     * version pinned on the parent `Isa`. Typed as {@link PrequalifyV3Callable}
+     * because the bundled default (`BundledApiVersions.prequalify`) is `v3`:
+     * the de-versioned surface accepts a {@link PrequalifyV3Request} and
+     * returns `Envelope<PrequalifyV3Result>`, so V3-only fields
+     * (`pricing[]`, `deathBenefit`) type-check without narrowing.
+     *
+     * Pinning `apiVersion: { prequalify: 'v2' }` (or `'v1'`) re-routes the
+     * runtime call to the legacy decision; those callers should use the
+     * explicit {@link prequalifyV2} / {@link prequalifyV1} escape hatches,
+     * whose return types match the legacy wire shape.
      */
     prequalify;
     /**
@@ -603,6 +606,12 @@ export class ZyInsNamespace {
             opts.apiVersion.quote === 'v3'
                 ? this.quoteV3
                 : buildQuoteUnsupportedCallable(opts.apiVersion.quote);
+        // The de-versioned `prequalify` is typed as the bundled-default v3
+        // surface (`PrequalifyV3Callable`) so documented examples reach
+        // `pricing[]` / `deathBenefit` without narrowing. A v1/v2 pin re-routes
+        // the runtime call; that path's wire shape is reached through the
+        // explicit `prequalifyV1` / `prequalifyV2` callables, so the cast is the
+        // single point where the static v3 type and the runtime routing meet.
         this.prequalify =
             opts.apiVersion.prequalify === 'v1'
                 ? this.prequalifyV1
@@ -613,19 +622,32 @@ export class ZyInsNamespace {
         this.license = buildLicenseFacade(opts);
         this.logos = new LogosFacade(opts.baseUrl ?? DEFAULT_ZYINS_BASE_URL, opts.logosFetch);
     }
-    /** Raw-response sibling of {@link prequalify}; follows the pinned API version. */
+    /**
+     * Raw-response sibling of {@link prequalify}; follows the pinned API
+     * version at runtime but is typed against the bundled-default v3 shape
+     * (`PrequalifyV3Request` → `RawResponseResult<PrequalifyV3Result>`) so the
+     * de-versioned `data` exposes `plans[].pricing` / `deathBenefit` without
+     * narrowing. v1/v2-pinned callers reach the legacy shape through
+     * {@link prequalifyV2Raw}.
+     */
     prequalifyRaw = async (request) => {
         const client = this.clientOnce();
         const pinned = this.opts.apiVersion.prequalify;
-        if (pinned === 'v3') {
-            const result = await client.prequalifyV3(request);
-            return { data: result, response: synthesizeRawResponse(result.requestId) };
-        }
         if (pinned === 'v1') {
             const result = await client.prequalify(request);
-            return { data: result, response: synthesizeRawResponse(result.requestId) };
+            return {
+                data: result,
+                response: synthesizeRawResponse(result.requestId),
+            };
         }
-        const result = await client.prequalifyV2(request);
+        if (pinned === 'v2') {
+            const result = await client.prequalifyV2(request);
+            return {
+                data: result,
+                response: synthesizeRawResponse(result.requestId),
+            };
+        }
+        const result = await client.prequalifyV3(request);
         return { data: result, response: synthesizeRawResponse(result.requestId) };
     };
     /** Raw-response sibling of `prequalifyV2`. */

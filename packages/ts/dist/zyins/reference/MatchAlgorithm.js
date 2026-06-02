@@ -23,6 +23,7 @@
  * ```
  */
 import { _makeKey } from './_makeKey.js';
+import { _checkKey } from './_checkKey.js';
 import { buildUnknownConcept } from './referenceIndex.js';
 /**
  * Default matcher. Normalizes query, candidate names, and candidate IDs via the
@@ -50,12 +51,21 @@ export class DefaultMatchAlgorithm {
         const key = _makeKey(query);
         if (!key)
             return buildUnknownConcept(query);
+        // First pass: exact id/name key. Identity-preserving — an opaque id
+        // (e.g. cond_<ULID>) only matches here, never via the sorted fallback.
         for (const candidate of candidates) {
-            if (_makeKey(candidate.name) === key) {
+            if (_makeKey(candidate.name) === key)
                 return candidate;
-            }
-            if (candidate.id !== null && _makeKey(candidate.id) === key) {
+            if (candidate.id !== null && _makeKey(candidate.id) === key)
                 return candidate;
+        }
+        // Second pass: word-order-invariant name match via the engine's sorted
+        // check key. A strict superset of the exact pass — first candidate wins.
+        const checkKey = _checkKey(query);
+        if (checkKey) {
+            for (const candidate of candidates) {
+                if (_checkKey(candidate.name) === checkKey)
+                    return candidate;
             }
         }
         return buildUnknownConcept(query);
