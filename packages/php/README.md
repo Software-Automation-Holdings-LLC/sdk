@@ -27,14 +27,14 @@ use Isa\Sdk\Zyins\Applicant;
 use Isa\Sdk\Zyins\Coverage;
 use Isa\Sdk\Zyins\Height;
 use Isa\Sdk\Zyins\NicotineUsage;
-use Isa\Sdk\Zyins\Reference\PrequalifyV3Request;
+use Isa\Sdk\Zyins\Reference\PrequalifyRequest;
 use Isa\Sdk\Zyins\Sex;
 use Isa\Sdk\Zyins\Weight;
 use Isa\Sdk\Catalog\Products;
 
 $isa = Isa::withBearer();   // reads ISA_TOKEN from env
 
-$request = new PrequalifyV3Request(
+$request = new PrequalifyRequest(
     applicant: new Applicant(
         dob: '1962-04-18',
         sex: Sex::Male,
@@ -46,7 +46,7 @@ $request = new PrequalifyV3Request(
     coverage: Coverage::faceValue(25_000),
     products: [Products::fex()->aetnaAccendo()],
 );
-$result = $isa->zyins->prequalifyV3->run($request);
+$result = $isa->zyins->prequalify->run($request);
 ```
 
 ## Factories
@@ -71,7 +71,7 @@ use Isa\Sdk\Zyins\Applicant;
 use Isa\Sdk\Zyins\Coverage;
 use Isa\Sdk\Zyins\Height;
 use Isa\Sdk\Zyins\NicotineUsage;
-use Isa\Sdk\Zyins\Reference\PrequalifyV3Request;
+use Isa\Sdk\Zyins\Reference\PrequalifyRequest;
 use Isa\Sdk\Zyins\Sex;
 use Isa\Sdk\Zyins\Weight;
 use Isa\Sdk\Catalog\Products;
@@ -80,7 +80,7 @@ $isa = Isa::withKeycode(
     keycode: 'SDV-HWH-WDD',
     email:   'john.doe@acme-agency.com',
 );
-$result = $isa->zyins->prequalifyV3->run(new PrequalifyV3Request(
+$result = $isa->zyins->prequalify->run(new PrequalifyRequest(
     applicant: new Applicant(
         dob: '1962-04-18',
         sex: Sex::Male,

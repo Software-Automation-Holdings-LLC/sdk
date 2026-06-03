@@ -19,7 +19,7 @@ use Isa\Sdk\Zyins\Product;
  * language (camelCase, integer inches/pounds, typed coverage, typed
  * products).
  */
-final readonly class PrequalifyV3Request
+readonly class PrequalifyV3Request
 {
     /**
      * @param list<Product|CatalogProduct> $products

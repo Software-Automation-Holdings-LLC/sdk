@@ -1650,6 +1650,14 @@ namespace Isa\Sdk\Zyins\Reference;
 class NicotineOptionRow
     public function __construct(public string $id, public string $name, public string $type,)
 
+=== Zyins/Reference/PrequalifyRequest.php ===
+namespace Isa\Sdk\Zyins\Reference;
+class PrequalifyRequest extends PrequalifyV3Request
+
+=== Zyins/Reference/PrequalifyResult.php ===
+namespace Isa\Sdk\Zyins\Reference;
+class PrequalifyResult extends PrequalifyV3Result
+
 === Zyins/Reference/PrequalifyV3.php ===
 namespace Isa\Sdk\Zyins\Reference;
 class PrequalifyV3
@@ -1672,6 +1680,14 @@ class PrequalifyV3Result
     public function __construct(public array $plans, public string $requestId, public string $idempotencyKey, public bool $livemode, public int $retryAttempts,)
     public function byAmount(array $plans) : array
     public function offerPremium(V3Offer $offer) : ?V3Premium
+
+=== Zyins/Reference/QuoteRequest.php ===
+namespace Isa\Sdk\Zyins\Reference;
+class QuoteRequest extends QuoteV3Request
+
+=== Zyins/Reference/QuoteResult.php ===
+namespace Isa\Sdk\Zyins\Reference;
+class QuoteResult extends QuoteV3Result
 
 === Zyins/Reference/QuoteV3.php ===
 namespace Isa\Sdk\Zyins\Reference;

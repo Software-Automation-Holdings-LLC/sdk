@@ -10,7 +10,7 @@ namespace Isa\Sdk\Zyins\Reference;
  * {@see PrequalifyV3Result::byAmount()} on the requested dimension
  * (deathBenefit for face amounts, budget for monthly budgets).
  */
-final readonly class QuoteV3Result
+readonly class QuoteV3Result
 {
     /** @param list<V3Offer> $plans */
     public function __construct(

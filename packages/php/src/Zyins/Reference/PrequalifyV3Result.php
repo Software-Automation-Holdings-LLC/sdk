@@ -17,7 +17,7 @@ namespace Isa\Sdk\Zyins\Reference;
  * `retryAttempts` mirror the v3 response envelope so consumers can
  * correlate calls and observe retries without parsing headers.
  */
-final readonly class PrequalifyV3Result
+readonly class PrequalifyV3Result
 {
     /**
      * @param list<V3Offer> $plans

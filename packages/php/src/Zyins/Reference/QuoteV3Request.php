@@ -15,7 +15,7 @@ use Isa\Sdk\Zyins\Product;
  * {@see PrequalifyV3Request}; the response groups qualifying products
  * by requested amount for side-by-side comparison tables.
  */
-final readonly class QuoteV3Request
+readonly class QuoteV3Request
 {
     /**
      * @param list<Product|CatalogProduct> $products
