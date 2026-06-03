@@ -94,12 +94,12 @@ internal static class ZyinsFactory
     /// </code>
     /// </example>
     /// <seealso href="https://docs.isaapi.com/sdk/factories"/>
-    public static ZyInsClient WithBearer(string? token = null, ZyInsClientOptions? options = null)
+    public static ZyInsClient WithBearer(string? token = null, IsaClientOptions? options = null)
         => WithBearer(token, options, SystemEnvironment.Instance);
 
-    /// <summary>Test seam: same as <see cref="WithBearer(string,ZyInsClientOptions)"/> but with
+    /// <summary>Test seam: same as <see cref="WithBearer(string,IsaClientOptions)"/> but with
     /// an injectable environment so tests don't have to mutate process state.</summary>
-    public static ZyInsClient WithBearer(string? token, ZyInsClientOptions? options, IEnvironment env)
+    public static ZyInsClient WithBearer(string? token, IsaClientOptions? options, IEnvironment env)
     {
         if (env is null) throw new ArgumentNullException(nameof(env));
         var resolved = string.IsNullOrWhiteSpace(token) ? env.Get(TokenEnvVar) : token;
@@ -109,7 +109,7 @@ internal static class ZyinsFactory
                 $"IsaClient.WithBearer requires a token: pass one explicitly or set {TokenEnvVar}.");
         }
 
-        var opts = options ?? new ZyInsClientOptions();
+        var opts = options ?? new IsaClientOptions();
         // resolved is non-null here — the IsNullOrWhiteSpace guard above
         // narrows it, but the netstandard2.0 BCL omits the
         // [NotNullWhen(false)] annotation, so we bang for parity.
@@ -138,19 +138,19 @@ internal static class ZyinsFactory
     /// </code>
     /// </example>
     /// <seealso href="https://docs.isaapi.com/sdk/factories"/>
-    public static ZyInsClient WithLicense(LicenseCredentials? credentials = null, ZyInsClientOptions? options = null)
+    public static ZyInsClient WithLicense(LicenseCredentials? credentials = null, IsaClientOptions? options = null)
         => WithLicense(credentials, options, SystemEnvironment.Instance, store: null);
 
-    /// <summary>Test seam: same as <see cref="WithLicense(LicenseCredentials,ZyInsClientOptions)"/>
+    /// <summary>Test seam: same as <see cref="WithLicense(LicenseCredentials,IsaClientOptions)"/>
     /// but with an injectable environment.</summary>
-    public static ZyInsClient WithLicense(LicenseCredentials? credentials, ZyInsClientOptions? options, IEnvironment env)
+    public static ZyInsClient WithLicense(LicenseCredentials? credentials, IsaClientOptions? options, IEnvironment env)
         => WithLicense(credentials, options, env, store: null);
 
     /// <summary>Build a license-mode client with an attached credential store.
     /// The store backs the shared <see cref="IsaCredentialState"/> so the
     /// <see cref="LicenseSubClient"/> can auto-stash the license key on
     /// successful activation.</summary>
-    public static ZyInsClient WithLicense(LicenseCredentials? credentials, ZyInsClientOptions? options, IEnvironment env, ICredentialStore? store)
+    public static ZyInsClient WithLicense(LicenseCredentials? credentials, IsaClientOptions? options, IEnvironment env, ICredentialStore? store)
     {
         if (env is null) throw new ArgumentNullException(nameof(env));
         var keycode = credentials?.Keycode is { Length: > 0 } k ? k : env.Get(LicenseKeycodeEnvVar);
@@ -169,7 +169,7 @@ internal static class ZyinsFactory
         // Signing secret falls back to the keycode until the full license-exchange roundtrip lands.
         var resolvedSecret = signingSecret ?? keycode;
 
-        var opts = options ?? new ZyInsClientOptions();
+        var opts = options ?? new IsaClientOptions();
         var resolvedStore = store ?? new InMemoryCredentialStore();
         var licenseKey = RestoreLicenseKey(resolvedStore);
         var state = new IsaCredentialState(
@@ -212,12 +212,12 @@ internal static class ZyinsFactory
     /// </code>
     /// </example>
     /// <seealso href="https://docs.isaapi.com/sdk/factories"/>
-    public static ZyInsClient WithSession(SessionCredentials? credentials = null, ZyInsClientOptions? options = null)
+    public static ZyInsClient WithSession(SessionCredentials? credentials = null, IsaClientOptions? options = null)
         => WithSession(credentials, options, SystemEnvironment.Instance);
 
-    /// <summary>Test seam: same as <see cref="WithSession(SessionCredentials,ZyInsClientOptions)"/>
+    /// <summary>Test seam: same as <see cref="WithSession(SessionCredentials,IsaClientOptions)"/>
     /// but with an injectable environment.</summary>
-    public static ZyInsClient WithSession(SessionCredentials? credentials, ZyInsClientOptions? options, IEnvironment env)
+    public static ZyInsClient WithSession(SessionCredentials? credentials, IsaClientOptions? options, IEnvironment env)
     {
         if (env is null) throw new ArgumentNullException(nameof(env));
         var sessionId = credentials?.SessionId is { Length: > 0 } s ? s : env.Get(SessionIdEnvVar);
@@ -229,7 +229,7 @@ internal static class ZyinsFactory
                 $"IsaClient.WithSession requires sessionId + sessionSecret: pass them explicitly or set {SessionIdEnvVar} and {SessionSecretEnvVar}.");
         }
 
-        var opts = options ?? new ZyInsClientOptions();
+        var opts = options ?? new IsaClientOptions();
         // Non-null after the IsNullOrWhiteSpace guard above; see note in
         // WithLicense for the netstandard2.0 rationale.
         var signer = new SessionRequestSigner(sessionId!, sessionSecret!, opts.Clock);

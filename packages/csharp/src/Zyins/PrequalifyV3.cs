@@ -138,7 +138,7 @@ public sealed record V3Offer(
 ///
 /// Always a flat <see cref="Plans"/> list — single amount and multi-amount
 /// alike. Group client-side by the requested dimension with
-/// <see cref="V3Grouping.ByAmount"/> (DeathBenefit for face-amount requests,
+/// <see cref="Grouping.ByAmount"/> (DeathBenefit for face-amount requests,
 /// Budget for monthly-budget requests); the shape never changes with the
 /// amount count.
 /// </summary>
@@ -163,7 +163,7 @@ public sealed record QuoteV3Result(
 );
 
 /// <summary>Client-side grouping helpers for a flat v3 <c>plans[]</c> list.</summary>
-public static class V3Grouping
+public static class Grouping
 {
     /// <summary>
     /// Group a flat plans list by the requested coverage dimension. When any
@@ -234,7 +234,7 @@ public static class V3Grouping
 }
 
 /// <summary>Options layered on top of the v3 prequalify / quote request.</summary>
-public sealed record PrequalifyV3Options(
+public record PrequalifyOptions(
     string? OnlyProductClass = null,
     IReadOnlyList<string>? IncludeProductClass = null,
     string? MinRank = null,
@@ -244,15 +244,15 @@ public sealed record PrequalifyV3Options(
 );
 
 /// <summary>Inputs accepted by <c>PrequalifyV3SubClient.RunAsync</c>.</summary>
-public sealed record PrequalifyV3Request(
+public record PrequalifyRequest(
     Applicant Applicant,
     Coverage Coverage,
     IReadOnlyList<Product> Products,
-    PrequalifyV3Options? Options = null
+    PrequalifyOptions? Options = null
 );
 
 /// <summary>Options for the v3 quote endpoint. Same shape as the prequalify options.</summary>
-public sealed record QuoteV3Options(
+public record QuoteOptions(
     string? OnlyProductClass = null,
     IReadOnlyList<string>? IncludeProductClass = null,
     string? MinRank = null,
@@ -262,11 +262,11 @@ public sealed record QuoteV3Options(
 );
 
 /// <summary>Inputs accepted by <c>QuoteV3SubClient.RunAsync</c>.</summary>
-public sealed record QuoteV3Request(
+public record QuoteRequest(
     Applicant Applicant,
     Coverage Coverage,
     IReadOnlyList<Product> Products,
-    QuoteV3Options? Options = null
+    QuoteOptions? Options = null
 );
 
 // ── Sub-client surface contracts ──────────────────────────────────────────────
@@ -275,14 +275,14 @@ public sealed record QuoteV3Request(
 public interface IPrequalifyV3Service
 {
     /// <summary>Run a v3 prequalify call.</summary>
-    Task<PrequalifyV3Result> RunAsync(PrequalifyV3Request input, CancellationToken ct = default);
+    Task<PrequalifyV3Result> RunAsync(PrequalifyRequest input, CancellationToken ct = default);
 }
 
 /// <summary>Surface for <c>POST /v3/quote</c>.</summary>
 public interface IQuoteV3Service
 {
     /// <summary>Run a v3 quote call.</summary>
-    Task<QuoteV3Result> RunAsync(QuoteV3Request input, CancellationToken ct = default);
+    Task<QuoteV3Result> RunAsync(QuoteRequest input, CancellationToken ct = default);
 }
 
 // ── Implementation ────────────────────────────────────────────────────────────
@@ -302,15 +302,15 @@ public sealed class PrequalifyV3SubClient : IPrequalifyV3Service
     }
 
     /// <inheritdoc/>
-    public Task<PrequalifyV3Result> RunAsync(PrequalifyV3Request input, CancellationToken ct = default) =>
+    public Task<PrequalifyV3Result> RunAsync(PrequalifyRequest input, CancellationToken ct = default) =>
         RunAsync(input, idempotencyKey: null, ct);
 
     /// <summary>Run a v3 prequalify call with an explicit idempotency key (UUID v4 expected).</summary>
-    public async Task<PrequalifyV3Result> RunAsync(PrequalifyV3Request input, string? idempotencyKey, CancellationToken ct = default)
+    public async Task<PrequalifyV3Result> RunAsync(PrequalifyRequest input, string? idempotencyKey, CancellationToken ct = default)
     {
         if (input is null) throw new ArgumentNullException(nameof(input));
         var key = ResolveIdempotencyKey(idempotencyKey);
-        // v3 prequalify takes the `PrequalifyV3Request` envelope shape
+        // v3 prequalify takes the `PrequalifyRequest` envelope shape
         // (applicant + coverage + products[]) — NOT the v2 flat shape
         // /v3/quote still consumes via `SerializeRequest`. Send
         // `Api-Version: v3` so server routing is unambiguous even when

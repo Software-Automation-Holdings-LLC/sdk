@@ -47,7 +47,7 @@ var isa = await IsaClient.WithKeycodeAsync(new LicenseOptions
     Email   = "john.doe@acme-agency.com",
 });
 
-var result = await isa.Zyins.PrequalifyAsync(new PrequalifyV3Request(
+var result = await isa.Zyins.PrequalifyAsync(new PrequalifyRequest(
     Applicant: new Applicant
     {
         Dob = "1962-04-18", Sex = Sex.Male, State = "NC",
@@ -58,7 +58,7 @@ var result = await isa.Zyins.PrequalifyAsync(new PrequalifyV3Request(
 
 foreach (var offer in result.Plans)
 {
-    var headline = V3Grouping.OfferPremium(offer);
+    var headline = Grouping.OfferPremium(offer);
     Console.WriteLine($"{offer.Carrier.Name} {offer.Product.Name}: {headline?.Amount.Display}");
 }
 ```
@@ -89,13 +89,13 @@ Pin individual surfaces with an `ApiVersion` override dictionary. There is
 **no** `default` key and **no** string shorthand — resolution is
 `ApiVersion.TryGetValue(surface, …) ?? BundledApiVersions.Map[surface]`:
 
-The per-surface `ApiVersion` override map lives on `ZyInsClientOptions`:
+The per-surface `ApiVersion` override map lives on `IsaClientOptions`:
 
 ```csharp
 using Isa.Sdk.Zyins;
 using Isa.Sdk.Zyins.Options;
 
-var zyins = new ZyInsClient(new ZyInsClientOptions
+var zyins = new ZyInsClient(new IsaClientOptions
 {
     Token = Environment.GetEnvironmentVariable("ISA_TOKEN")!,
     ApiVersion = new Dictionary<string, IsaApiVersion>
@@ -147,7 +147,7 @@ ID. To plug a carrier-controlled store, pass your adapter at construction:
 ```csharp @no-compile
 using Isa.Sdk.Zyins;
 
-var zyins = new ZyInsClient(new ZyInsClientOptions
+var zyins = new ZyInsClient(new IsaClientOptions
 {
     Token = Environment.GetEnvironmentVariable("ISA_TOKEN")!,
     CaseStorage = new CarrierCaseStorage(),  // optional; default = ZeroKnowledgeCaseStorage

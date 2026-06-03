@@ -27,11 +27,11 @@ public sealed class QuoteV3SubClient : IQuoteV3Service
     }
 
     /// <inheritdoc/>
-    public Task<QuoteV3Result> RunAsync(QuoteV3Request input, CancellationToken ct = default) =>
+    public Task<QuoteV3Result> RunAsync(QuoteRequest input, CancellationToken ct = default) =>
         RunAsync(input, idempotencyKey: null, ct);
 
     /// <summary>Run a v3 quote call with an explicit idempotency key (UUID v4 expected).</summary>
-    public async Task<QuoteV3Result> RunAsync(QuoteV3Request input, string? idempotencyKey, CancellationToken ct = default)
+    public async Task<QuoteV3Result> RunAsync(QuoteRequest input, string? idempotencyKey, CancellationToken ct = default)
     {
         if (input is null) throw new ArgumentNullException(nameof(input));
         var key = ResolveIdempotencyKey(idempotencyKey);

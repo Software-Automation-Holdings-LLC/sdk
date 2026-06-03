@@ -79,19 +79,19 @@ internal static class V3WireBuilder
 
     // ── Options mapping ──────────────────────────────────────────────────────
 
-    internal static V3CommonOptions? OptionsToCommon(PrequalifyV3Options? o) =>
+    internal static V3CommonOptions? OptionsToCommon(PrequalifyOptions? o) =>
         o is null ? null : new V3CommonOptions(
             o.OnlyProductClass, o.IncludeProductClass, o.MinRank,
             o.ShowUnreleased, o.SkipHealthBasedUnderwriting, o.IncludeIneligible);
 
-    internal static V3CommonOptions? OptionsToCommon(QuoteV3Options? o) =>
+    internal static V3CommonOptions? OptionsToCommon(QuoteOptions? o) =>
         o is null ? null : new V3CommonOptions(
             o.OnlyProductClass, o.IncludeProductClass, o.MinRank,
             o.ShowUnreleased, o.SkipHealthBasedUnderwriting, o.IncludeIneligible);
 
     // ── Request body serialization ───────────────────────────────────────────
     //
-    // The v3 prequalify endpoint accepts the envelope `PrequalifyV3Request`
+    // The v3 prequalify endpoint accepts the envelope `PrequalifyRequest`
     // shape (`applicant` + `coverage` + `products[]`) per the OpenAPI spec;
     // `/v3/quote` continues to consume the v2 flat shape. Emitting the
     // flat shape against `/v3/prequalify` produces `unknown field
@@ -102,7 +102,7 @@ internal static class V3WireBuilder
     private const int CentsPerDollar = 100;
 
     /// <summary>
-    /// Serialize the v3 prequalify envelope body per <c>PrequalifyV3Request</c>
+    /// Serialize the v3 prequalify envelope body per <c>PrequalifyRequest</c>
     /// in <c>go/zyins/api/openapi.yaml</c>. Coverage serialization is
     /// shape-driven (see <see cref="WriteV3Coverage"/>): a single face amount
     /// sends <c>coverage.face_amount_cents</c> (integer cents, dollar input ×
@@ -566,7 +566,7 @@ internal static class V3ResponseParser
         var (root, requestId, idempotencyKey, livemode) = ParseEnvelope(body, fallbackIdempotencyKey, "/v3/prequalify");
         var data = ExtractData(root);
         // The v3 response is always a flat `plans[]` array — single amount and
-        // multi-amount alike. Group client-side with V3Grouping.ByAmount on the
+        // multi-amount alike. Group client-side with Grouping.ByAmount on the
         // requested dimension (DeathBenefit for face amounts, Budget for
         // monthly budgets).
         return new PrequalifyV3Result(CoercePlans(data), requestId, idempotencyKey, livemode, retryAttempts);

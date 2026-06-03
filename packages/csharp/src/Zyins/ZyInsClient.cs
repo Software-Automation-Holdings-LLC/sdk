@@ -117,7 +117,7 @@ internal sealed class SessionRequestSigner : IRequestSigner
 }
 
 /// <summary>Construction options for <see cref="ZyInsClient"/>.</summary>
-public sealed record ZyInsClientOptions
+public record IsaClientOptions
 {
     /// <summary>API token (required for the bearer-mode constructor; ignored when a
     /// <see cref="IRequestSigner"/> is supplied internally for License/Session modes).
@@ -170,11 +170,25 @@ public sealed partial class ZyInsClient
 
     internal OperationContext Context => _ctx;
 
-    /// <summary>Prequalification operations.</summary>
-    public PrequalifySubClient Prequalify { get; }
+    /// <summary>Prequalification operations. Canonical, unversioned surface:
+    /// routes to whichever /vN the bundled version table (or a per-instance
+    /// pin) selects for the prequalify surface. See
+    /// api/guides/api-version-pinning.md.</summary>
+    public PrequalifyV3SubClient Prequalify { get; }
 
-    /// <summary>Quoting operations.</summary>
-    public QuoteSubClient Quote { get; }
+    /// <summary>Quoting operations. Canonical, unversioned surface; routes
+    /// per the bundled version table.</summary>
+    public QuoteV3SubClient Quote { get; }
+
+    /// <summary>Legacy v1/v2-shaped prequalify entrypoint taking
+    /// <see cref="PrequalifyInput"/>.</summary>
+    [Obsolete("Use Prequalify with PrequalifyRequest; the unversioned surface routes per the bundled version table.")]
+    public PrequalifySubClient PrequalifyV1 { get; }
+
+    /// <summary>Legacy v1/v2-shaped quote entrypoint taking
+    /// <see cref="QuoteInput"/>.</summary>
+    [Obsolete("Use Quote with QuoteRequest; the unversioned surface routes per the bundled version table.")]
+    public QuoteSubClient QuoteV1 { get; }
 
     /// <summary>Dataset listing and retrieval.</summary>
     public DatasetsSubClient Datasets { get; }
@@ -216,10 +230,12 @@ public sealed partial class ZyInsClient
 
     /// <summary>v3 prequalify (<c>POST /v3/prequalify</c>) with the uniform
     /// pricing[] table. Idempotency keys auto-mint as UUID v4.</summary>
+    [Obsolete("Use Prequalify. PrequalifyV3 is retained for source compatibility and points at the same sub-client.")]
     public PrequalifyV3SubClient PrequalifyV3 { get; }
 
     /// <summary>v3 quote (<c>POST /v3/quote</c>) with the uniform pricing[]
     /// table, grouped by requested face amount.</summary>
+    [Obsolete("Use Quote. QuoteV3 is retained for source compatibility and points at the same sub-client.")]
     public QuoteV3SubClient QuoteV3 { get; }
 
     /// <summary>v3 reference catalog GET (<c>GET /v3/datasets</c>). Supports
@@ -260,7 +276,7 @@ public sealed partial class ZyInsClient
 
     /// <summary>
     /// Resolved per-surface API version map for this client. Caller overrides
-    /// from <see cref="ZyInsClientOptions.ApiVersion"/> shadow the bundled
+    /// from <see cref="IsaClientOptions.ApiVersion"/> shadow the bundled
     /// defaults from <see cref="BundledApiVersions.Map"/>. Surfaces not in
     /// either source resolve to the bundled default at lookup time and throw
     /// on unknown surface ids (caller bug).
@@ -294,12 +310,12 @@ public sealed partial class ZyInsClient
 
     /// <summary>One-line construction: <c>new ZyInsClient(token)</c>.</summary>
     public ZyInsClient(string token, string? baseUrl = null, TimeSpan? timeout = null)
-        : this(new ZyInsClientOptions { Token = token, BaseUrl = baseUrl, Timeout = timeout })
+        : this(new IsaClientOptions { Token = token, BaseUrl = baseUrl, Timeout = timeout })
     {
     }
 
     /// <summary>Advanced construction with the full options record.</summary>
-    public ZyInsClient(ZyInsClientOptions options)
+    public ZyInsClient(IsaClientOptions options)
     {
         if (options is null) throw new ArgumentNullException(nameof(options));
         if (string.IsNullOrWhiteSpace(options.Token))
@@ -313,8 +329,10 @@ public sealed partial class ZyInsClient
         _ctx = new OperationContext(new Uri(baseUrl), signer, transport, clock, options.Logger ?? DebugLogger.Default);
         ApiVersion = ResolveApiVersionMap(options.ApiVersion);
 
-        Prequalify = new PrequalifySubClient(_ctx);
-        Quote = new QuoteSubClient(_ctx);
+#pragma warning disable CS0618 // Obsolete PrequalifyV1/QuoteV1 set by the SDK; legacy escape hatch.
+        PrequalifyV1 = new PrequalifySubClient(_ctx);
+        QuoteV1 = new QuoteSubClient(_ctx);
+#pragma warning restore CS0618
         Datasets = new DatasetsSubClient(_ctx);
         ReferenceData = new ReferenceDataSubClient(_ctx);
         Usage = new UsageSubClient(_ctx);
@@ -324,8 +342,14 @@ public sealed partial class ZyInsClient
         Preferences = new PreferencesSubClient(_ctx);
         Email = new EmailSubClient(_ctx);
         Logos = new LogosSubClient(_ctx);
-        PrequalifyV3 = new PrequalifyV3SubClient(_ctx);
-        QuoteV3 = new QuoteV3SubClient(_ctx);
+        var prequalifyV3 = new PrequalifyV3SubClient(_ctx);
+        var quoteV3 = new QuoteV3SubClient(_ctx);
+        Prequalify = prequalifyV3;
+        Quote = quoteV3;
+#pragma warning disable CS0618 // Obsolete PrequalifyV3/QuoteV3 retained as forwarders.
+        PrequalifyV3 = prequalifyV3;
+        QuoteV3 = quoteV3;
+#pragma warning restore CS0618
         DatasetsV3 = new DatasetsV3SubClient(_ctx);
         // Cache-backed reference namespaces share a single bundle
         // resolver — fetching the catalog once per client serves all
@@ -339,14 +363,14 @@ public sealed partial class ZyInsClient
     }
 
     /// <summary>Internal constructor that accepts a pre-built signer (used by the License/Session factories).</summary>
-    internal ZyInsClient(ZyInsClientOptions options, IRequestSigner signer)
+    internal ZyInsClient(IsaClientOptions options, IRequestSigner signer)
         : this(options, signer, state: null) { }
 
     /// <summary>Internal constructor accepting a signer plus an optional credential
     /// state. License-mode factories pass the shared state so the
     /// <see cref="LicenseSubClient"/> can auto-stash the license key on
     /// successful activation.</summary>
-    internal ZyInsClient(ZyInsClientOptions options, IRequestSigner signer, IsaCredentialState? state)
+    internal ZyInsClient(IsaClientOptions options, IRequestSigner signer, IsaCredentialState? state)
     {
         if (options is null) throw new ArgumentNullException(nameof(options));
         if (signer is null) throw new ArgumentNullException(nameof(signer));
@@ -358,8 +382,10 @@ public sealed partial class ZyInsClient
         CredentialState = state;
         ApiVersion = ResolveApiVersionMap(options.ApiVersion);
 
-        Prequalify = new PrequalifySubClient(_ctx);
-        Quote = new QuoteSubClient(_ctx);
+#pragma warning disable CS0618 // Obsolete PrequalifyV1/QuoteV1 set by the SDK; legacy escape hatch.
+        PrequalifyV1 = new PrequalifySubClient(_ctx);
+        QuoteV1 = new QuoteSubClient(_ctx);
+#pragma warning restore CS0618
         Datasets = new DatasetsSubClient(_ctx);
         ReferenceData = new ReferenceDataSubClient(_ctx);
         Usage = new UsageSubClient(_ctx);
@@ -369,8 +395,14 @@ public sealed partial class ZyInsClient
         Preferences = new PreferencesSubClient(_ctx);
         Email = new EmailSubClient(_ctx);
         Logos = new LogosSubClient(_ctx);
-        PrequalifyV3 = new PrequalifyV3SubClient(_ctx);
-        QuoteV3 = new QuoteV3SubClient(_ctx);
+        var prequalifyV3 = new PrequalifyV3SubClient(_ctx);
+        var quoteV3 = new QuoteV3SubClient(_ctx);
+        Prequalify = prequalifyV3;
+        Quote = quoteV3;
+#pragma warning disable CS0618 // Obsolete PrequalifyV3/QuoteV3 retained as forwarders.
+        PrequalifyV3 = prequalifyV3;
+        QuoteV3 = quoteV3;
+#pragma warning restore CS0618
         DatasetsV3 = new DatasetsV3SubClient(_ctx);
         // Cache-backed reference namespaces share a single bundle
         // resolver — fetching the catalog once per client serves all
@@ -404,13 +436,13 @@ public sealed partial class ZyInsClient
     /// IsaApiVersion.V3</c> before delegating to <see cref="PrequalifyV3"/>.
     /// Throws <see cref="IsaConfigException"/> when the pinned version is
     /// anything else; consumers opt in via
-    /// <c>new ZyInsClientOptions { ApiVersion = { [&quot;prequalify&quot;] =
+    /// <c>new IsaClientOptions { ApiVersion = { [&quot;prequalify&quot;] =
     /// IsaApiVersion.V3 } }</c>.
     /// </summary>
-    public Task<PrequalifyV3Result> PrequalifyV3Async(PrequalifyV3Request input, CancellationToken ct = default)
+    public Task<PrequalifyV3Result> PrequalifyV3Async(PrequalifyRequest input, CancellationToken ct = default)
     {
         AssertSurfaceVersion(PrequalifySurface, IsaApiVersion.V3, nameof(PrequalifyV3Async));
-        return PrequalifyV3.RunAsync(input, ct);
+        return Prequalify.RunAsync(input, ct);
     }
 
     /// <summary>
@@ -418,23 +450,23 @@ public sealed partial class ZyInsClient
     /// asserts <c>ApiVersion[&quot;quote&quot;] == IsaApiVersion.V3</c>
     /// before delegating to <see cref="QuoteV3"/>.
     /// </summary>
-    public Task<QuoteV3Result> QuoteV3Async(QuoteV3Request input, CancellationToken ct = default)
+    public Task<QuoteV3Result> QuoteV3Async(QuoteRequest input, CancellationToken ct = default)
     {
         AssertSurfaceVersion(QuoteSurface, IsaApiVersion.V3, nameof(QuoteV3Async));
-        return QuoteV3.RunAsync(input, ct);
+        return Quote.RunAsync(input, ct);
     }
 
     /// <summary>
     /// Polymorphic prequalify selector that routes to the v3 sub-client when
     /// <c>ApiVersion[&quot;prequalify&quot;] == IsaApiVersion.V3</c>. Mirrors
     /// the TS SDK's <c>isa.zyins.prequalify</c> callable: pin v3 once at
-    /// construction time and call <see cref="PrequalifyAsync(PrequalifyV3Request, CancellationToken)"/>
+    /// construction time and call <see cref="PrequalifyAsync(PrequalifyRequest, CancellationToken)"/>
     /// without thinking about versions per call site. The v3 wire shape is
     /// distinct from v1/v2 — typed return is <see cref="PrequalifyV3Result"/>.
     /// </summary>
     /// <exception cref="IsaConfigException">When the pinned prequalify
     /// version is not v3; use <see cref="Prequalify"/> for v1.</exception>
-    public Task<PrequalifyV3Result> PrequalifyAsync(PrequalifyV3Request input, CancellationToken ct = default)
+    public Task<PrequalifyV3Result> PrequalifyAsync(PrequalifyRequest input, CancellationToken ct = default)
         => PrequalifyV3Async(input, ct);
 
     /// <summary>
@@ -445,7 +477,7 @@ public sealed partial class ZyInsClient
     /// </summary>
     /// <exception cref="IsaConfigException">When the pinned quote version
     /// is not v3.</exception>
-    public Task<QuoteV3Result> QuoteAsync(QuoteV3Request input, CancellationToken ct = default)
+    public Task<QuoteV3Result> QuoteAsync(QuoteRequest input, CancellationToken ct = default)
         => QuoteV3Async(input, ct);
 
     private void AssertSurfaceVersion(string surface, IsaApiVersion expected, string methodName)
@@ -466,7 +498,7 @@ public sealed partial class ZyInsClient
         if (overrides.ContainsKey("default"))
         {
             throw new ArgumentException(
-                "ZyInsClientOptions.ApiVersion: 'default' is not a valid key (locked by PR #360 §2.7)",
+                "IsaClientOptions.ApiVersion: 'default' is not a valid key (locked by PR #360 §2.7)",
                 nameof(overrides));
         }
         return overrides;
@@ -476,11 +508,11 @@ public sealed partial class ZyInsClient
 /// <summary>Fluent builder for the advanced configuration path.</summary>
 public sealed class ZyInsClientBuilder
 {
-    private readonly ZyInsClientOptions _options;
+    private readonly IsaClientOptions _options;
 
     internal ZyInsClientBuilder(string token)
     {
-        _options = new ZyInsClientOptions { Token = token };
+        _options = new IsaClientOptions { Token = token };
     }
 
     /// <summary>Override the base URL (default: production).</summary>
@@ -504,7 +536,7 @@ public sealed class ZyInsClientBuilder
     public ZyInsClientBuilder WithApiVersion(IReadOnlyDictionary<string, IsaApiVersion> apiVersion) =>
         new(_options with { ApiVersion = apiVersion });
 
-    private ZyInsClientBuilder(ZyInsClientOptions options) => _options = options;
+    private ZyInsClientBuilder(IsaClientOptions options) => _options = options;
 
     /// <summary>Build the client.</summary>
     public ZyInsClient Build() => new(_options);

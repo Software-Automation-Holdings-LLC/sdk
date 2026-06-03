@@ -7,7 +7,7 @@ using System;
 using System.Collections.Generic;
 using System.Text.Json.Serialization;
 // Re-export the catalog Product so callers can use Products.Fex.* constants
-// directly with PrequalifyV3Request and QuoteV3Request without an extra using.
+// directly with PrequalifyRequest and QuoteRequest without an extra using.
 using Product = global::Isa.Sdk.Catalog.Product;
 using Products = global::Isa.Sdk.Catalog.Products;
 

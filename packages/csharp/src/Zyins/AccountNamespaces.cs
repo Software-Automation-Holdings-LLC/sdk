@@ -195,7 +195,7 @@ public sealed class CasesSubClient
     /// <see cref="global::Isa.Sdk.Zyins.Cases.ICaseStorage"/> adapter.
     /// Defaults to the unwired
     /// <see cref="global::Isa.Sdk.Zyins.Cases.ZeroKnowledgeCaseStorage"/>
-    /// singleton — pass <c>ZyInsClientOptions.CaseStorage</c> to wire a
+    /// singleton — pass <c>IsaClientOptions.CaseStorage</c> to wire a
     /// transport.</summary>
     public Task<PutResult> SaveAsync(
         CaseRecord record,

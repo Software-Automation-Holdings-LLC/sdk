@@ -617,6 +617,17 @@ public class DatasetsV3SubClient : IDatasetsV3Service
     public bool IsNotModified { ... }
     public Task<DatasetsV3Response> GetAsync(...)
 
+=== Zyins/Deversioned.cs ===
+namespace Isa.Sdk.Zyins;
+public record PrequalifyV3Request
+public record QuoteV3Request
+public record PrequalifyV3Options
+public record QuoteV3Options
+public class V3Grouping
+public record ZyInsClientOptions : IsaClientOptions;
+    public IReadOnlyDictionary<long, IReadOnlyList<V3Offer>> ByAmount(...)
+    public V3Premium? OfferPremium(...)
+
 === Zyins/EnumWireValues.cs ===
 namespace Isa.Sdk.Zyins;
 public class EnumWireValues
@@ -879,11 +890,11 @@ public record V3OfferProduct
 public record V3Offer
 public record PrequalifyV3Result
 public record QuoteV3Result
-public class V3Grouping
-public record PrequalifyV3Options
-public record PrequalifyV3Request
-public record QuoteV3Options
-public record QuoteV3Request
+public class Grouping
+public record PrequalifyOptions
+public record PrequalifyRequest
+public record QuoteOptions
+public record QuoteRequest
 public interface IPrequalifyV3Service
 public interface IQuoteV3Service
 public class PrequalifyV3SubClient : IPrequalifyV3Service
@@ -1086,7 +1097,7 @@ public class ZyInsClient
 
 === Zyins/ZyInsClient.cs ===
 namespace Isa.Sdk.Zyins;
-public record ZyInsClientOptions
+public record IsaClientOptions
 public class ZyInsClient
 public class ZyInsClientBuilder
     public TransportRequest Sign(...)
@@ -1102,8 +1113,10 @@ public class ZyInsClientBuilder
     public IReadOnlyDictionary<string, IsaApiVersion>? ApiVersion { ... }
     public partial class ZyInsClient { ... }
     public string DefaultBaseUrl
-    public PrequalifySubClient Prequalify { ... }
-    public QuoteSubClient Quote { ... }
+    public PrequalifyV3SubClient Prequalify { ... }
+    public QuoteV3SubClient Quote { ... }
+    public PrequalifySubClient PrequalifyV1 { ... }
+    public QuoteSubClient QuoteV1 { ... }
     public DatasetsSubClient Datasets { ... }
     public ReferenceDataSubClient ReferenceData { ... }
     public UsageSubClient Usage { ... }
