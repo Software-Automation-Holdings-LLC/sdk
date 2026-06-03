@@ -48,7 +48,7 @@ const isa = await Isa.withKeycode({
 
 // The bare `isa.zyins.prequalify` facade routes to v3 by default and
 // resolves to an envelope; destructure `data` to read the flat plans[].
-const { data } = await isa.zyins.prequalifyV3({
+const { data } = await isa.zyins.prequalify({
   applicant: {
     dob:         '1962-04-18',
     sex:         Sex.Male,
