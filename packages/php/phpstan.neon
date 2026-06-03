@@ -6,6 +6,14 @@ parameters:
     treatPhpDocTypesAsCertain: false
     reportUnmatchedIgnoredErrors: false
     ignoreErrors:
+        # DoubleMetaphone is a branch-for-branch port of the canonical TS
+        # encoder (packages/ts/src/zyins/reference/_doubleMetaphone.ts). The
+        # `J` step repeats a `!contains(JOSE)` guard the early return above
+        # already proves true; it is kept verbatim so the port stays line-
+        # aligned with the reference for the cross-language vector contract.
+        -
+            message: '#Negated boolean expression is always true\.#'
+            path: src/Zyins/Reference/Internal/DoubleMetaphone.php
         # Tests intentionally pass loosely-typed fixture arrays; production
         # src/ paths remain bound by the level: max iterable-type check.
         -

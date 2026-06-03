@@ -20,6 +20,8 @@
     "ext-json": "*",
     "ext-hash": "*",
     "ext-zlib": "*",
+    "ext-intl": "*",
+    "ext-mbstring": "*",
     "psr/http-client": "^1.0",
     "psr/http-factory": "^1.0",
     "psr/http-message": "^1.0 || ^2.0",
@@ -59,5 +61,5 @@
     "gen:catalog": "php -d memory_limit=2G scripts/gen-catalog.php"
   },
   "minimum-stability": "RC",
-  "version": "1.0.6"
+  "version": "1.0.7"
 }

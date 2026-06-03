@@ -1550,6 +1550,13 @@ class DefaultMatchAlgorithm implements MatchAlgorithmInterface
     public function match(string $query, array $candidates) : ConceptInterface
     public function clone(?string $versionTag = null) : self
 
+=== Zyins/Reference/FuzzyMatchAlgorithm.php ===
+namespace Isa\Sdk\Zyins\Reference;
+class FuzzyMatchAlgorithm implements MatchAlgorithmInterface
+    public function __construct(array $frequencies = [], public readonly ?string $versionTag = null,)
+    public function match(string $query, array $candidates) : ConceptInterface
+    public function clone(?array $frequencies = null, ?string $versionTag = null) : self
+
 === Zyins/Reference/Internal/ConceptHandle.php ===
 namespace Isa\Sdk\Zyins\Reference\Internal;
 class ConceptHandle implements ConceptInterface
@@ -1565,6 +1572,21 @@ class ConceptHandle implements ConceptInterface
     public function knownMedication(ReferenceIndex $index, string $id, string $inputText) : KnownMedicationConcept
     public function knownCondition(ReferenceIndex $index, string $id, string $inputText) : KnownConditionConcept
     public function unknown(string $inputText) : UnknownConcept
+
+=== Zyins/Reference/Internal/DamerauOsa.php ===
+namespace Isa\Sdk\Zyins\Reference\Internal;
+class DamerauOsa
+    public function thresholdForLength(int $queryLength) : int
+    public function distance(string $a, string $b, int $maxDistance = self::MAX_EDIT_DISTANCE) : int
+    public const FUZZY_SHORT_LEN
+    public const FUZZY_MEDIUM_LEN
+    public const MAX_EDIT_DISTANCE
+
+=== Zyins/Reference/Internal/DoubleMetaphone.php ===
+namespace Isa\Sdk\Zyins\Reference\Internal;
+class DoubleMetaphone
+    public function encode(string $input, int $maxLength = self::DEFAULT_MAX_CODE_LEN) : array
+    public const DEFAULT_MAX_CODE_LEN
 
 === Zyins/Reference/Internal/KnownConditionConcept.php ===
 namespace Isa\Sdk\Zyins\Reference\Internal;
