@@ -325,6 +325,7 @@ const DEFAULT_LIMIT = 25;
 export { Sort } from './Sort.js';
 export { DefaultAutocorrector } from './Autocorrector.js';
 export { DefaultMatchAlgorithm } from './MatchAlgorithm.js';
+export { FuzzyMatchAlgorithm } from './FuzzyMatchAlgorithm.js';
 export { DefaultAutocompleteAlgorithm } from './AutocompleteAlgorithm.js';
 export { buildSuggestion } from './Suggestion.js';
 //# sourceMappingURL=index.js.map

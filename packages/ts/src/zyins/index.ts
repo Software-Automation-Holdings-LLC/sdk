@@ -138,6 +138,7 @@ export {
 export {
   DefaultAutocorrector,
   DefaultMatchAlgorithm,
+  FuzzyMatchAlgorithm,
   DefaultAutocompleteAlgorithm,
   buildSuggestion,
   type Autocorrector,
@@ -146,6 +147,7 @@ export {
   type DefaultAutocorrectorOptions,
   type MatchAlgorithm,
   type DefaultMatchAlgorithmOptions,
+  type FuzzyMatchAlgorithmOptions,
   type AutocompleteAlgorithm,
   type AutocompleteOptions,
   type DefaultAutocompleteAlgorithmOptions,

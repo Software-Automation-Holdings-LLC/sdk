@@ -12,8 +12,15 @@
  */
 
 import { describe, expect, expectTypeOf, it } from 'vitest';
-import { ReferenceSort } from '../../src';
-import type { AutocompleteOptions, Concept, DatasetBundleV3, ReferenceAdapters } from '../../src';
+import { FuzzyMatchAlgorithm, ReferenceSort } from '../../src';
+import type {
+    AutocompleteOptions,
+    Concept,
+    DatasetBundleV3,
+    FuzzyMatchAlgorithmOptions,
+    MatchAlgorithm,
+    ReferenceAdapters,
+} from '../../src';
 
 describe('root barrel re-exports the reference surface (B1)', () => {
     it('ReferenceSort is a defined runtime value with both sort members', () => {
@@ -31,5 +38,17 @@ describe('root barrel re-exports the reference surface (B1)', () => {
         expectTypeOf<DatasetBundleV3>().not.toBeAny();
         expectTypeOf<ReferenceAdapters>().not.toBeAny();
         expectTypeOf<AutocompleteOptions>().toHaveProperty('sort');
+        expectTypeOf<FuzzyMatchAlgorithmOptions>().not.toBeAny();
+    });
+
+    it('FuzzyMatchAlgorithm is constructible from the root and satisfies MatchAlgorithm', () => {
+        const matcher = new FuzzyMatchAlgorithm();
+        expect(matcher).toBeInstanceOf(FuzzyMatchAlgorithm);
+        // The opt-in matcher is a drop-in for the adapter slot.
+        expectTypeOf<FuzzyMatchAlgorithm>().toMatchTypeOf<MatchAlgorithm>();
+        // Never rejects: an empty candidate pool yields an Unknown handle.
+        const result = matcher.match('lisinopril', []);
+        expect(result.isKnown).toBe(false);
+        expect(result.inputText).toBe('lisinopril');
     });
 });

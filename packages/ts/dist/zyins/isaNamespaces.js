@@ -7,7 +7,7 @@
  * module owns only the facade shape, not the unified `Isa` class itself.
  */
 import { assembleLink } from '../account/caseWire.js';
-export { ReferenceFacade, ReferenceMedicationsFacade, ReferenceConditionsFacade, ReferenceConceptsFacade, ReferenceBundleCache, DefaultAutocorrector, DefaultMatchAlgorithm, DefaultAutocompleteAlgorithm, buildSuggestion, } from './reference/index.js';
+export { ReferenceFacade, ReferenceMedicationsFacade, ReferenceConditionsFacade, ReferenceConceptsFacade, ReferenceBundleCache, DefaultAutocorrector, DefaultMatchAlgorithm, FuzzyMatchAlgorithm, DefaultAutocompleteAlgorithm, buildSuggestion, } from './reference/index.js';
 import { activate as licenseActivate, check as licenseCheck, deactivate as licenseDeactivate, } from './license.js';
 import { systemClock } from '../core/index.js';
 import { LogosSubClient, } from './logos.js';

@@ -338,5 +338,6 @@ export { Sort } from './Sort.js';
 export type { Concept, ConceptKind, ConditionConcept, MedicationConcept, UnknownConcept } from './Concept.js';
 export { type Autocorrector, type AutocorrectOptions, type AutocorrectAppliedEvent, type DefaultAutocorrectorOptions, DefaultAutocorrector } from './Autocorrector.js';
 export { type MatchAlgorithm, type DefaultMatchAlgorithmOptions, DefaultMatchAlgorithm } from './MatchAlgorithm.js';
+export { type FuzzyMatchAlgorithmOptions, FuzzyMatchAlgorithm } from './FuzzyMatchAlgorithm.js';
 export { type AutocompleteAlgorithm, type AutocompleteOptions, type DefaultAutocompleteAlgorithmOptions, DefaultAutocompleteAlgorithm } from './AutocompleteAlgorithm.js';
 export { type Suggestion, buildSuggestion } from './Suggestion.js';

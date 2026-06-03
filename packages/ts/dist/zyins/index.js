@@ -19,7 +19,7 @@ export { prequalifyV3, byAmount, offerPremium, } from './prequalify-v3.js';
 export { quoteV3, } from './quote-v3.js';
 export { getDatasetsV3, isNotModified, buildTypoMap, buildFrequencyMap, DatasetsV3SubClient, } from './datasets-v3.js';
 export { Sort as ReferenceSort, matchCondition, matchConcept, matchMedication, } from './reference.js';
-export { DefaultAutocorrector, DefaultMatchAlgorithm, DefaultAutocompleteAlgorithm, buildSuggestion, } from './reference/index.js';
+export { DefaultAutocorrector, DefaultMatchAlgorithm, FuzzyMatchAlgorithm, DefaultAutocompleteAlgorithm, buildSuggestion, } from './reference/index.js';
 export { BearerAuth, LicenseAuth, FormAuth, RemoteEngine, LocalEngine, ProxyEngine, InMemoryEngine, inMemoryEngineWith, resolveIsaOptions, DEFAULT_TIMEOUT_MS, BundledApiVersions, resolveApiVersions, } from './isaOptions.js';
 export { ZeroKnowledgeCaseStorage } from './cases/ZeroKnowledgeCaseStorage.js';
 export { getReadiness, } from './health.js';

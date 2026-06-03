@@ -38,6 +38,7 @@ export {
   ReferenceBundleCache,
   DefaultAutocorrector,
   DefaultMatchAlgorithm,
+  FuzzyMatchAlgorithm,
   DefaultAutocompleteAlgorithm,
   buildSuggestion,
 } from './reference/index.js';
@@ -48,6 +49,7 @@ export type {
   DefaultAutocorrectorOptions,
   MatchAlgorithm,
   DefaultMatchAlgorithmOptions,
+  FuzzyMatchAlgorithmOptions,
   AutocompleteAlgorithm,
   AutocompleteOptions,
   DefaultAutocompleteAlgorithmOptions,

@@ -114,6 +114,13 @@ export {
     type Autocorrector,
     type AutocorrectOptions,
     type MatchAlgorithm,
+    // `FuzzyMatchAlgorithm` is the opt-in typo-tolerant matcher. The class
+    // (not just its type) is re-exported here so integrators can construct
+    // it from the package root — `new FuzzyMatchAlgorithm({ frequencies })`
+    // — and pass it to `Isa.withKeycode({ matchAlgorithm })`. The default
+    // matcher stays `DefaultMatchAlgorithm`; this is purely additive.
+    FuzzyMatchAlgorithm,
+    type FuzzyMatchAlgorithmOptions,
     type AutocompleteAlgorithm,
     type AutocompleteOptions,
     type ReferenceAdapters,
@@ -137,6 +144,20 @@ export {
     type OfferPremium,
     type OfferMoney,
 } from './zyins/prequalify-v2.js';
+
+// --- Prequalify (canonical, de-versioned) ------------------------------
+// The unversioned surface integrators import from the package root. The SDK
+// routes these to the active /vN internally; the call site never changes.
+export {
+    type PrequalifyRequest,
+    type PrequalifyResult,
+    type PrequalifyPlan,
+    type Plan,
+    type PrequalifyOptions,
+    type PrequalifyResultMeta,
+    type SinglePrequalifyResult,
+    type MultiPrequalifyResult,
+} from './zyins/prequalify.js';
 
 // --- Prequalify v3 (request + pricing surface) -------------------------
 // The v3 surface integrators import from the package root: the request type

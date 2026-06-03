@@ -47,7 +47,13 @@ export { ProductSelection, ProductClass, ProductType, Products } from './zyins/p
 // so `import { ReferenceSort } from '@software-automation-holdings-llc/sdk'`
 // resolves without a per-consumer shim; the `./zyins` subpath in
 // `package.json#exports` exposes the same names under a namespaced path.
-export { ReferenceSort, } from './zyins/index.js';
+export { ReferenceSort, 
+// `FuzzyMatchAlgorithm` is the opt-in typo-tolerant matcher. The class
+// (not just its type) is re-exported here so integrators can construct
+// it from the package root — `new FuzzyMatchAlgorithm({ frequencies })`
+// — and pass it to `Isa.withKeycode({ matchAlgorithm })`. The default
+// matcher stays `DefaultMatchAlgorithm`; this is purely additive.
+FuzzyMatchAlgorithm, } from './zyins/index.js';
 // --- Prequalify v3 (request + pricing surface) -------------------------
 // The v3 surface integrators import from the package root: the request type
 // they construct and the result/pricing types they read.

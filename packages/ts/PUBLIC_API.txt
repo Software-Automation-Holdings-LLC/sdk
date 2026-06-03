@@ -1980,8 +1980,9 @@ export { canonicalString, formatTimestamp, signRequest, type SignClock, type Sig
 export { Sex, NicotineUsage, NicotineDuration, Height, Weight, type Applicant, type Medication, type Condition, type NicotineUsageInput, type NicotineProductUsage } from './zyins/applicant.js';
 export { Coverage, QuoteType, isMulti, type CoverageInput, type CoverageType, type SingleCoverage, type MultiCoverage, type FaceValueCoverage, type MonthlyBudgetCoverage } from './zyins/coverage.js';
 export { ProductSelection, ProductClass, ProductType, Products, type Product, type ProductClassValue } from './zyins/product.js';
-export { ReferenceSort, type DatasetBundleV3, type DatasetCategory, type DatasetEntry, type ReferenceEntity, type ConditionEntity, type ConditionTreatedWith, type MedicationEntity, type MedicationUsedFor, type NicotineOptionEntity, type SpellingCorrectionEntity, type Concept, type ConceptKind, type ConditionConcept, type MedicationConcept, type UnknownConcept, type Suggestion, type Autocorrector, type AutocorrectOptions, type MatchAlgorithm, type AutocompleteAlgorithm, type AutocompleteOptions, type ReferenceAdapters, } from './zyins/index.js';
+export { ReferenceSort, type DatasetBundleV3, type DatasetCategory, type DatasetEntry, type ReferenceEntity, type ConditionEntity, type ConditionTreatedWith, type MedicationEntity, type MedicationUsedFor, type NicotineOptionEntity, type SpellingCorrectionEntity, type Concept, type ConceptKind, type ConditionConcept, type MedicationConcept, type UnknownConcept, type Suggestion, type Autocorrector, type AutocorrectOptions, type MatchAlgorithm, FuzzyMatchAlgorithm, type FuzzyMatchAlgorithmOptions, type AutocompleteAlgorithm, type AutocompleteOptions, type ReferenceAdapters, } from './zyins/index.js';
 export { type PrequalifyV2Request, type PrequalifyV2Result, type PrequalifyV2Options, type PlanOffer, type OtherOffer, type OfferEligibility, type OfferCategory, type OfferCarrier, type OfferProduct, type OfferPlanInfo, type OfferPlanInfoItem, type OfferPlanInfoLegacy, type OfferDeathBenefit, type OfferPremium, type OfferMoney, } from './zyins/prequalify-v2.js';
+export { type PrequalifyRequest, type PrequalifyResult, type PrequalifyPlan, type Plan, type PrequalifyOptions, type PrequalifyResultMeta, type SinglePrequalifyResult, type MultiPrequalifyResult, } from './zyins/prequalify.js';
 export { byAmount, offerPremium, type PrequalifyV3Request, type PrequalifyV3Result, type PrequalifyV3Options, type V3Offer, type V3Eligibility, type V3EligibilityCategory, type V3Amount, type V3Money, type V3Period, type V3Premium, type V3PricingRow, } from './zyins/prequalify-v3.js';
 export { BearerAuth, LicenseAuth, FormAuth, RemoteEngine, LocalEngine, ProxyEngine, InMemoryEngine, inMemoryEngineWith, resolveIsaOptions, DEFAULT_TIMEOUT_MS, BundledApiVersions, resolveApiVersions, type IsaApiVersion, type IsaApiVersionOverride, type IsaApiSurface, type IsaAuthSupplier, type IsaEngine, type IsaCreateOptions, type ResolvedIsaOptions, } from './zyins/isaOptions.js';
 export type { CaseStorage, CaseRecord, CaseStoragePutResult } from './zyins/cases/CaseStorage.js';
@@ -4420,7 +4421,7 @@ export { prequalifyV3, byAmount, offerPremium, type PrequalifyV3Request, type Pr
 export { quoteV3, type QuoteV3Request, type QuoteV3Result, type QuoteV3Options, type QuoteV3Context, } from './quote-v3.js';
 export { getDatasetsV3, isNotModified, buildTypoMap, buildFrequencyMap, DatasetsV3SubClient, type DatasetBundleV3, type DatasetCategory, type DatasetEntry, type DatasetsV3GetOptions, type DatasetsV3NotModified, type ReferenceEntity, type ConditionEntity, type ConditionTreatedWith, type MedicationEntity, type MedicationUsedFor, type NicotineOptionEntity, type SpellingCorrectionEntity, } from './datasets-v3.js';
 export { Sort as ReferenceSort, matchCondition, matchConcept, matchMedication, type Concept, type ConceptKind, type ConditionConcept, type MedicationConcept, type UnknownConcept, } from './reference.js';
-export { DefaultAutocorrector, DefaultMatchAlgorithm, DefaultAutocompleteAlgorithm, buildSuggestion, type Autocorrector, type AutocorrectOptions, type AutocorrectAppliedEvent, type DefaultAutocorrectorOptions, type MatchAlgorithm, type DefaultMatchAlgorithmOptions, type AutocompleteAlgorithm, type AutocompleteOptions, type DefaultAutocompleteAlgorithmOptions, type Suggestion, type ReferenceAdapters, } from './reference/index.js';
+export { DefaultAutocorrector, DefaultMatchAlgorithm, FuzzyMatchAlgorithm, DefaultAutocompleteAlgorithm, buildSuggestion, type Autocorrector, type AutocorrectOptions, type AutocorrectAppliedEvent, type DefaultAutocorrectorOptions, type MatchAlgorithm, type DefaultMatchAlgorithmOptions, type FuzzyMatchAlgorithmOptions, type AutocompleteAlgorithm, type AutocompleteOptions, type DefaultAutocompleteAlgorithmOptions, type Suggestion, type ReferenceAdapters, } from './reference/index.js';
 export { BearerAuth, LicenseAuth, FormAuth, RemoteEngine, LocalEngine, ProxyEngine, InMemoryEngine, inMemoryEngineWith, resolveIsaOptions, DEFAULT_TIMEOUT_MS, BundledApiVersions, resolveApiVersions, type IsaApiVersion, type IsaApiVersionOverride, type IsaApiSurface, type IsaAuthSupplier, type IsaEngine, type IsaCreateOptions, type ResolvedIsaOptions, } from './isaOptions.js';
 export type { CaseStorage, CaseRecord, CaseStoragePutResult, } from './cases/CaseStorage.js';
 export { ZeroKnowledgeCaseStorage } from './cases/ZeroKnowledgeCaseStorage.js';
@@ -5096,8 +5097,8 @@ import type { CaseRecord, CaseStorage, CaseStoragePutResult } from './cases/Case
 import { type DatasetBundle, type DatasetsGetOptions } from './datasets.js';
 import { type DatasetBundleV3, type DatasetsV3GetOptions, type DatasetsV3NotModified } from './datasets-v3.js';
 import { type Concept, type ConditionConcept, type MedicationConcept, type UnknownConcept } from './reference.js';
-export { ReferenceFacade, ReferenceMedicationsFacade, ReferenceConditionsFacade, ReferenceConceptsFacade, ReferenceBundleCache, DefaultAutocorrector, DefaultMatchAlgorithm, DefaultAutocompleteAlgorithm, buildSuggestion, } from './reference/index.js';
-export type { Autocorrector, AutocorrectOptions, AutocorrectAppliedEvent, DefaultAutocorrectorOptions, MatchAlgorithm, DefaultMatchAlgorithmOptions, AutocompleteAlgorithm, AutocompleteOptions, DefaultAutocompleteAlgorithmOptions, Suggestion, ReferenceAdapters, } from './reference/index.js';
+export { ReferenceFacade, ReferenceMedicationsFacade, ReferenceConditionsFacade, ReferenceConceptsFacade, ReferenceBundleCache, DefaultAutocorrector, DefaultMatchAlgorithm, FuzzyMatchAlgorithm, DefaultAutocompleteAlgorithm, buildSuggestion, } from './reference/index.js';
+export type { Autocorrector, AutocorrectOptions, AutocorrectAppliedEvent, DefaultAutocorrectorOptions, MatchAlgorithm, DefaultMatchAlgorithmOptions, FuzzyMatchAlgorithmOptions, AutocompleteAlgorithm, AutocompleteOptions, DefaultAutocompleteAlgorithmOptions, Suggestion, ReferenceAdapters, } from './reference/index.js';
 import { type LicenseActivateRequest, type LicenseActivateResult, type LicenseCheckRequest, type LicenseCheckResult, type LicenseDeactivateRequest, type LicenseDeactivateResult } from './license.js';
 import { type IsaCredentialState } from './credentialState.js';
 import { type Transport } from './transport.js';
@@ -7093,6 +7094,134 @@ export interface UnknownConcept extends Concept {
     readonly id: null;
 }
 //# sourceMappingURL=Concept.d.ts.map
+=== dist/zyins/reference/doubleMetaphone.vectors.d.ts ===
+/**
+ * Double Metaphone test-vector fixture — the cross-language contract.
+ *
+ * Each entry pins the primary + alternate code (6-symbol length; see
+ * `_doubleMetaphone.ts`) for a medical / drug term. The TS implementation
+ * is asserted against every vector in `FuzzyMatchAlgorithm.test.ts`; the
+ * Go / PHP / C# / Python ports MUST reproduce the same fixture exactly.
+ * This file is the artifact the 4-language fan-out validates against —
+ * keep it framework-free so it can be parsed as plain data by any port
+ * (it is a const array of plain objects, no TS-only constructs beyond the
+ * type annotation).
+ *
+ * Vectors were generated by the reference encoder and hand-reviewed for
+ * the phonetically-load-bearing cases:
+ *   - `tylenol` and `tylonol` both encode `TLNL` (vowel swap, identical
+ *     consonant skeleton) — the canonical phonetic-recall win.
+ *   - `sertraline` and `sertralin` both encode `SRTRLN` (truncated
+ *     suffix, same skeleton).
+ *   - `sertaline` encodes `SRTLN`, which DIFFERS from `sertraline`'s
+ *     `SRTRLN`: the dropped `r` is a real consonant loss, so the phonetic
+ *     codes legitimately diverge. That misspelling is recovered by the
+ *     Damerau tier (one insertion), NOT the phonetic tier — exactly the
+ *     tier each error class belongs to.
+ */
+/** One pinned phonetic vector: term → expected `{ primary, alternate }`. */
+export interface DoubleMetaphoneVector {
+    readonly term: string;
+    readonly primary: string;
+    readonly alternate: string;
+}
+export declare const DOUBLE_METAPHONE_VECTORS: readonly DoubleMetaphoneVector[];
+//# sourceMappingURL=doubleMetaphone.vectors.d.ts.map
+=== dist/zyins/reference/FuzzyMatchAlgorithm.d.ts ===
+/**
+ * `FuzzyMatchAlgorithm` — typo-tolerant text → single Concept resolution.
+ *
+ * An opt-in {@link MatchAlgorithm} that recovers misspellings the
+ * {@link DefaultMatchAlgorithm} (exact `make_key` + word-order-invariant
+ * `check_key`) cannot. The default stays the default; pass this to
+ * `Isa.withKeycode({ matchAlgorithm: new FuzzyMatchAlgorithm() })` to opt in.
+ *
+ * Pipeline — a tiered cascade, ranked by TIER FIRST, then by candidate
+ * frequency (Algolia-style successive tie-break, NOT one blended score):
+ *
+ *   1. exact      — `make_key` id/name equality (identity-preserving)
+ *   2. prefix     — candidate key starts with the query key (or vice versa)
+ *   3. damerau    — OSA edit distance within a length-scaled band
+ *                   (`sertaline` → `sertraline`, `chrons` → `crohns`)
+ *   4. phonetic   — Double Metaphone primary-code equality
+ *                   (`tylonol` → `tylenol`, both encode `TLNL`)
+ *   5. synonym    — alias equality, only if the Concept exposes `aliases`
+ *                   (today's {@link Concept} does NOT — tier is skipped)
+ *
+ * The first non-empty tier wins; within it the best candidate is chosen by
+ * frequency (higher first), then a deterministic name/id tie-break so the
+ * result is reproducible across the Go / PHP / C# / Python ports.
+ *
+ * Frequency is NOT a field on {@link Concept} — it lives in a separate
+ * per-id map the catalog builds (`buildFrequencyMap`). Supply it via
+ * {@link FuzzyMatchAlgorithmOptions.frequencies}; omit it and the frequency
+ * tie-break is skipped (tier + edit-distance + name/id still order the
+ * result deterministically).
+ *
+ * Parity-hardening rules (the cross-language determinism contract):
+ *   1. Both query and every candidate string are NFC-normalized before any
+ *      comparison.
+ *   2. Lowercasing is locale-invariant. JS `toLowerCase()` is already
+ *      locale-independent; the Go/PHP/C#/Python ports MUST use invariant
+ *      culture (Go `strings.ToLower`, C# `ToLowerInvariant`, etc.).
+ *   3. When tier + edit distance + frequency are all equal, ties break by
+ *      normalized candidate name, then `id` — stable, reproducible output.
+ *   4. The Double Metaphone encoder is validated against a shared vector
+ *      fixture (`doubleMetaphone.vectors.ts`) reused by every port.
+ *
+ * Synchronous, pure, dependency-free, and safe to share across concurrent
+ * calls — the instance holds no mutable per-call state. Candidate metaphone
+ * codes are pre-computed lazily per candidate-pool identity for speed.
+ *
+ * @example
+ * ```ts
+ * const matcher = new FuzzyMatchAlgorithm({ frequencies });
+ * matcher.match('sertaline', medications).id; // 'SERTRALINE'
+ * matcher.match('tylonol', medications).id;    // 'TYLENOL'
+ * ```
+ */
+import type { Concept, UnknownConcept } from './Concept.js';
+import type { MatchAlgorithm } from './MatchAlgorithm.js';
+/** Constructor options for {@link FuzzyMatchAlgorithm}. */
+export interface FuzzyMatchAlgorithmOptions {
+    /**
+     * Per-id popularity map (concept `id` → aggregate count). Drives the
+     * intra-tier frequency tie-break. Conventionally sourced from
+     * `isa.zyins.datasets`' `buildFrequencyMap`. Omit to disable frequency
+     * ranking; ties then fall through to the deterministic name/id order.
+     */
+    readonly frequencies?: ReadonlyMap<string, number>;
+    /** Optional version stamp surfaced via {@link FuzzyMatchAlgorithm.versionTag}. */
+    readonly versionTag?: string;
+}
+export declare class FuzzyMatchAlgorithm implements MatchAlgorithm {
+    private readonly frequencies;
+    private readonly _versionTag;
+    /** Cache of candidate primary metaphone codes, keyed by candidate-pool identity. */
+    private metaphoneCache;
+    constructor(opts?: FuzzyMatchAlgorithmOptions);
+    /** Opaque tag tracking the version of this matcher / its frequency map. */
+    get versionTag(): string | undefined;
+    match(query: string, candidates: readonly Concept[]): Concept | UnknownConcept;
+    /** Return a new matcher with selected fields overridden. */
+    clone(overrides?: Partial<FuzzyMatchAlgorithmOptions>): FuzzyMatchAlgorithm;
+    /**
+     * Evaluate tiers in order; return the candidates of the first tier with
+     * any hit, or `undefined` if every tier is empty.
+     */
+    private firstNonEmptyTier;
+    /**
+     * Pick the single winner within a tier: lowest edit distance, then
+     * highest frequency, then the deterministic name/id tie-break.
+     */
+    private bestInTier;
+    private outranks;
+    private frequencyOf;
+    private collectPhonetic;
+    /** Lazily pre-compute (and cache) each candidate's primary metaphone code. */
+    private candidateCodes;
+}
+//# sourceMappingURL=FuzzyMatchAlgorithm.d.ts.map
 === dist/zyins/reference/index.d.ts ===
 /**
  * `isa.zyins.reference` — typed reference catalog access.
@@ -7243,6 +7372,7 @@ export { Sort } from './Sort.js';
 export type { Concept, ConceptKind, ConditionConcept, MedicationConcept, UnknownConcept } from './Concept.js';
 export { type Autocorrector, type AutocorrectOptions, type AutocorrectAppliedEvent, type DefaultAutocorrectorOptions, DefaultAutocorrector } from './Autocorrector.js';
 export { type MatchAlgorithm, type DefaultMatchAlgorithmOptions, DefaultMatchAlgorithm } from './MatchAlgorithm.js';
+export { type FuzzyMatchAlgorithmOptions, FuzzyMatchAlgorithm } from './FuzzyMatchAlgorithm.js';
 export { type AutocompleteAlgorithm, type AutocompleteOptions, type DefaultAutocompleteAlgorithmOptions, DefaultAutocompleteAlgorithm } from './AutocompleteAlgorithm.js';
 export { type Suggestion, buildSuggestion } from './Suggestion.js';
 //# sourceMappingURL=index.d.ts.map
@@ -7466,6 +7596,81 @@ export declare function buildSuggestion(concept: Concept, meta: {
  */
 export declare function _checkKey(text: string): string;
 //# sourceMappingURL=_checkKey.d.ts.map
+=== dist/zyins/reference/_damerauOsa.d.ts ===
+/**
+ * Optimal String Alignment distance (Damerau-Levenshtein restricted to
+ * adjacent transpositions). Counts insertions, deletions, substitutions,
+ * and swaps of two adjacent characters — so `chrons` → `crohns` costs 1,
+ * not 2. The restriction (no substring edited more than once) is the
+ * variant Elasticsearch and Algolia use; full Damerau is unnecessary for
+ * typo recovery and costs more.
+ *
+ * Pure integer DP over two rolling rows plus the row before for the
+ * transposition lookback — O(n·m) time, O(min(n,m)) space. Dependency-free
+ * and identical across the language ports.
+ */
+/**
+ * Length-scaled edit-distance ceiling, matching Elasticsearch AUTO /
+ * Algolia, widened by one for the longer compound terms common in the
+ * medical catalog (`hydrochlorothiazide`, `levothyroxine`):
+ *   - queries shorter than {@link FUZZY_SHORT_LEN}: exact only (≤ 0... see note)
+ *   - {@link FUZZY_SHORT_LEN}–{@link FUZZY_MEDIUM_LEN}: ≤ 1
+ *   - longer: ≤ 2 (the cap)
+ *
+ * The brief specifies ≤ 1 for queries under 6 chars; the band table below
+ * encodes exactly that (1 for [1,6), 1 for [6,12], 2 beyond), capped at 2.
+ */
+export declare const FUZZY_SHORT_LEN = 6;
+export declare const FUZZY_MEDIUM_LEN = 12;
+/**
+ * Maximum edit distance tolerated for a query of the given length. Drives
+ * the Damerau tier's accept/reject decision; never exceeds
+ * {@link MAX_EDIT_DISTANCE}.
+ */
+export declare function fuzzyThresholdForLength(queryLength: number): number;
+/**
+ * Compute the OSA distance between `a` and `b`. Returns early once every
+ * cell in the active row exceeds `maxDistance`, so a far-apart pair costs
+ * far less than the full matrix.
+ */
+export declare function optimalStringAlignmentDistance(a: string, b: string, maxDistance?: number): number;
+//# sourceMappingURL=_damerauOsa.d.ts.map
+=== dist/zyins/reference/_doubleMetaphone.d.ts ===
+/**
+ * Double Metaphone phonetic encoder — Lawrence Philips' algorithm, ported
+ * from the Apache Commons Codec reference implementation
+ * (`org.apache.commons.codec.language.DoubleMetaphone`).
+ *
+ * Returns a `{ primary, alternate }` pair of phonetic codes. Two strings
+ * that sound alike share a code (`sertaline` and `sertraline` both encode
+ * to `SRTRLN`; `tylonol` and `tylenol` both to `TLNL`), which lets the
+ * fuzzy matcher recover misspellings that edit distance alone misses.
+ *
+ * This file is the cross-language contract surface: the Go / PHP / C# /
+ * Python ports MUST reproduce the same codes for the vector fixture in
+ * `doubleMetaphone.vectors.ts`. Keep the branch structure identical when
+ * porting — the table below is the canonical reference.
+ *
+ * Determinism notes for the ports:
+ *   - Input is upper-cased with a locale-invariant fold before encoding.
+ *     JS `toUpperCase()` is locale-independent; Go must use
+ *     `strings.ToUpper`, PHP `mb_strtoupper(..., 'ASCII')` semantics,
+ *     C# `ToUpperInvariant`, Python `str.upper()` (already invariant).
+ *   - Only ASCII A–Z is processed; any other character is skipped, so the
+ *     caller is responsible for NFC-normalizing before calling.
+ */
+/** Phonetic code pair: identical when the word has no alternate reading. */
+export interface DoubleMetaphoneCode {
+    readonly primary: string;
+    readonly alternate: string;
+}
+/**
+ * Encode `input` into its Double Metaphone primary + alternate codes.
+ * Non-letters are dropped before encoding; an empty or letter-free input
+ * yields empty codes.
+ */
+export declare function doubleMetaphone(input: string, maxLength?: number): DoubleMetaphoneCode;
+//# sourceMappingURL=_doubleMetaphone.d.ts.map
 === dist/zyins/reference/_makeKey.d.ts ===
 /**
  * Internal text→key normalizer.

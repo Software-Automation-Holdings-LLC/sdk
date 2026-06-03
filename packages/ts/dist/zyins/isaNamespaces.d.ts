@@ -15,8 +15,8 @@ import type { CaseRecord, CaseStorage, CaseStoragePutResult } from './cases/Case
 import { type DatasetBundle, type DatasetsGetOptions } from './datasets.js';
 import { type DatasetBundleV3, type DatasetsV3GetOptions, type DatasetsV3NotModified } from './datasets-v3.js';
 import { type Concept, type ConditionConcept, type MedicationConcept, type UnknownConcept } from './reference.js';
-export { ReferenceFacade, ReferenceMedicationsFacade, ReferenceConditionsFacade, ReferenceConceptsFacade, ReferenceBundleCache, DefaultAutocorrector, DefaultMatchAlgorithm, DefaultAutocompleteAlgorithm, buildSuggestion, } from './reference/index.js';
-export type { Autocorrector, AutocorrectOptions, AutocorrectAppliedEvent, DefaultAutocorrectorOptions, MatchAlgorithm, DefaultMatchAlgorithmOptions, AutocompleteAlgorithm, AutocompleteOptions, DefaultAutocompleteAlgorithmOptions, Suggestion, ReferenceAdapters, } from './reference/index.js';
+export { ReferenceFacade, ReferenceMedicationsFacade, ReferenceConditionsFacade, ReferenceConceptsFacade, ReferenceBundleCache, DefaultAutocorrector, DefaultMatchAlgorithm, FuzzyMatchAlgorithm, DefaultAutocompleteAlgorithm, buildSuggestion, } from './reference/index.js';
+export type { Autocorrector, AutocorrectOptions, AutocorrectAppliedEvent, DefaultAutocorrectorOptions, MatchAlgorithm, DefaultMatchAlgorithmOptions, FuzzyMatchAlgorithmOptions, AutocompleteAlgorithm, AutocompleteOptions, DefaultAutocompleteAlgorithmOptions, Suggestion, ReferenceAdapters, } from './reference/index.js';
 import { type LicenseActivateRequest, type LicenseActivateResult, type LicenseCheckRequest, type LicenseCheckResult, type LicenseDeactivateRequest, type LicenseDeactivateResult } from './license.js';
 import { type IsaCredentialState } from './credentialState.js';
 import { type Transport } from './transport.js';
