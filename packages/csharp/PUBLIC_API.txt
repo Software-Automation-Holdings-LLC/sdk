@@ -934,6 +934,13 @@ public class ConceptsNamespace : IAnyConceptMatcher
 namespace Isa.Sdk.Zyins.Reference;
     public string Normalize(...)
 
+=== Zyins/Reference/DamerauOsa.cs ===
+namespace Isa.Sdk.Zyins.Reference;
+    public int FuzzyShortLen
+    public int FuzzyMediumLen
+    public int ThresholdForLength(...)
+    public int Distance(...)
+
 === Zyins/Reference/DefaultAutocompleteAlgorithm.Buckets.cs ===
 namespace Isa.Sdk.Zyins.Reference;
     public List<IConcept> Filter(...)
@@ -972,6 +979,35 @@ public class DefaultMatchAlgorithm : IMatchAlgorithm
     public string? VersionTag { ... }
     public DefaultMatchAlgorithm Clone(...)
     public IConcept Match(...)
+
+=== Zyins/Reference/DoubleMetaphone.cs ===
+namespace Isa.Sdk.Zyins.Reference;
+    public string Primary { ... }
+    public string Alternate { ... }
+    public DoubleMetaphoneCode Encode(...)
+    public void Append(...)
+    public bool Done(...)
+    public DoubleMetaphoneCode Build(...)
+    public int Length { ... }
+    public char At(...)
+    public string Slice(...)
+    public bool IsVowel(...)
+    public bool IsSlavoGermanic(...)
+    public bool Contains(...)
+    public bool ContainsAny(...)
+    public bool ContainsAnyChar(...)
+
+=== Zyins/Reference/FuzzyMatchAlgorithm.cs ===
+namespace Isa.Sdk.Zyins.Reference;
+public class FuzzyMatchAlgorithm : IMatchAlgorithm
+    public string? VersionTag { ... }
+    public FuzzyMatchAlgorithm Clone(...)
+    public IConcept Match(...)
+    public ConceptReferenceComparer Instance
+    public bool Equals(...)
+    public int GetHashCode(...)
+    public IConcept Concept { ... }
+    public int Distance { ... }
 
 === Zyins/Reference/IAutocompleteAlgorithm.cs ===
 namespace Isa.Sdk.Zyins.Reference;
