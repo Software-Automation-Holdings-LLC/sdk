@@ -232,6 +232,9 @@ from sah_sdk.zyins.reference.autocorrector import (  # noqa: E402
 from sah_sdk.zyins.reference.autocorrector import (  # noqa: E402
     DefaultAutocorrector as _DefaultAutocorrector,
 )
+from sah_sdk.zyins.reference.fuzzy_match_algorithm import (  # noqa: E402
+    FuzzyMatchAlgorithm as _FuzzyMatchAlgorithm,
+)
 from sah_sdk.zyins.reference.match_algorithm import (  # noqa: E402
     DefaultMatchAlgorithm as _DefaultMatchAlgorithm,
 )
@@ -248,6 +251,8 @@ _autocomplete_algorithm_protocol_module: Any = _AutocompleteAlgorithm
 # Default impls are concrete — assignment locks their constructibility.
 _default_autocorrector: type[_DefaultAutocorrector] = _DefaultAutocorrector
 _default_match_algorithm: type[_DefaultMatchAlgorithm] = _DefaultMatchAlgorithm
+# Opt-in typo-tolerant matcher — additive sibling of the default impl.
+_fuzzy_match_algorithm: type[_FuzzyMatchAlgorithm] = _FuzzyMatchAlgorithm
 _default_autocomplete_algorithm: type[_DefaultAutocompleteAlgorithm] = (
     _DefaultAutocompleteAlgorithm
 )

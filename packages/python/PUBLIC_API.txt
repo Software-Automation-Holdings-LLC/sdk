@@ -1048,6 +1048,12 @@ class ConditionConcept(Protocol)
     def medications(self, sort: Sort) -> Sequence[Concept]
     def equals(self, other: object) -> bool
 
+=== zyins/reference/fuzzy_match_algorithm.py ===
+class FuzzyMatchAlgorithm
+    def version_tag(self) -> str | None
+    def clone(self, **overrides) -> FuzzyMatchAlgorithm
+    def match(self, query: str, candidates: Sequence[Concept]) -> Concept
+
 === zyins/reference/index.py ===
 class ReferenceIndex
     version: str

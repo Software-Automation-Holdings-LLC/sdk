@@ -71,6 +71,7 @@ from .concept import (
     ConditionConcept,
     MedicationConcept,
 )
+from .fuzzy_match_algorithm import FuzzyMatchAlgorithm
 from .index import ReferenceIndex
 from .match_algorithm import DefaultMatchAlgorithm, MatchAlgorithm
 from .reference_index import ReferenceIndex as AdapterReferenceIndex
@@ -420,6 +421,7 @@ __all__ = [
     "DefaultAutocompleteAlgorithm",
     "DefaultAutocorrector",
     "DefaultMatchAlgorithm",
+    "FuzzyMatchAlgorithm",
     "MatchAlgorithm",
     "MedicationConcept",
     "ReferenceFacade",

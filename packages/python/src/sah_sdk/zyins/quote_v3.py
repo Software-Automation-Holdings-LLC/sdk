@@ -144,7 +144,14 @@ def parse_quote_v3_envelope(
     )
 
 
+# De-versioned canonical names; the quote call site is unversioned. See
+# api/guides/api-version-pinning.md.
+QuoteRequest = QuoteV3Request
+QuoteOptions = QuoteV3Options
+
 __all__ = [
+    "QuoteOptions",
+    "QuoteRequest",
     "QuoteV3Options",
     "QuoteV3Request",
     "QuoteV3Result",

@@ -877,7 +877,16 @@ def _retry_attempts_from_headers(headers: Mapping[str, str]) -> int:
     return 0
 
 
+# De-versioned canonical names. The public call site is unversioned
+# (``isa.zyins.prequalify`` routes to the bundled /vN), so the request and
+# options types it accepts carry no version suffix. See
+# api/guides/api-version-pinning.md.
+PrequalifyRequest = PrequalifyV3Request
+PrequalifyOptions = PrequalifyV3Options
+
 __all__ = [
+    "PrequalifyOptions",
+    "PrequalifyRequest",
     "PrequalifyV3Options",
     "PrequalifyV3Request",
     "PrequalifyV3Result",

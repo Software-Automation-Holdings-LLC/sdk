@@ -85,6 +85,7 @@ from .prequalify import (
     PrequalifyResult,
 )
 from .prequalify_v3 import (
+    PrequalifyV3Options,
     PrequalifyV3Request,
     PrequalifyV3Result,
     V3Offer,
@@ -92,6 +93,7 @@ from .prequalify_v3 import (
 )
 from .product import Product, ProductSelection, ProductType
 from .quote import QuotedPlan, QuoteInput, QuoteResult
+from .quote_v3 import QuoteV3Options, QuoteV3Request
 from .reference_data import ReferenceDataResponse
 from .usage import UsageSummary
 
@@ -102,6 +104,16 @@ ZyInsError = ISAError
 # resolve to the same exception type so docs that import either form
 # work uniformly.
 IsaRateLimitError = RateLimitError
+
+# De-versioned canonical request types. The public call site is
+# unversioned (``isa.zyins.prequalify`` routes to the bundled /vN), so the
+# request types it accepts carry no version suffix either. These aliases
+# are the v3 request shapes under their canonical names; see
+# api/guides/api-version-pinning.md.
+PrequalifyRequest = PrequalifyV3Request
+PrequalifyOptions = PrequalifyV3Options
+QuoteRequest = QuoteV3Request
+QuoteOptions = QuoteV3Options
 
 
 if TYPE_CHECKING:
@@ -182,8 +194,11 @@ __all__ = [
     "Premium",
     "PrequalifyError",
     "PrequalifyInput",
+    "PrequalifyOptions",
     "PrequalifyPlan",
+    "PrequalifyRequest",
     "PrequalifyResult",
+    "PrequalifyV3Options",
     "PrequalifyV3Request",
     "PrequalifyV3Result",
     "ProbeResult",
@@ -192,8 +207,12 @@ __all__ = [
     "ProductType",
     "ProxyEngine",
     "QuoteInput",
+    "QuoteOptions",
+    "QuoteRequest",
     "QuoteResult",
     "QuoteType",
+    "QuoteV3Options",
+    "QuoteV3Request",
     "QuotedPlan",
     "RateLimitError",
     "RawResponse",

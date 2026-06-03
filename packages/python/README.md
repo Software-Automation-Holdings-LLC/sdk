@@ -17,7 +17,7 @@ from isa_sdk.zyins import (
     Isa, Applicant, Coverage, Sex,
     NicotineUsageInput, NicotineDuration,
 )
-from isa_sdk.zyins.prequalify_v3 import PrequalifyV3Request
+from isa_sdk.zyins.prequalify_v3 import PrequalifyRequest
 from isa_sdk.zyins.product import Product, ProductSelection, ProductType
 
 # Reads ISA_TOKEN from the environment — no explicit token needed. The bare
@@ -25,7 +25,7 @@ from isa_sdk.zyins.product import Product, ProductSelection, ProductType
 # the explicit, typed entry point. Both resolve to an envelope.
 isa = Isa.with_bearer()
 
-result = isa.zyins.prequalify_v3(PrequalifyV3Request(
+result = isa.zyins.prequalify(PrequalifyRequest(
     applicant=Applicant(
         dob="1962-04-18",
         sex=Sex.MALE,
@@ -56,14 +56,14 @@ for offer in result.data.plans:
 
 ```python
 from isa_sdk.zyins import Isa, Applicant, Coverage, Sex
-from isa_sdk.zyins.prequalify_v3 import PrequalifyV3Request, offer_premium
+from isa_sdk.zyins.prequalify_v3 import PrequalifyRequest, offer_premium
 from isa_sdk.zyins.product import Product, ProductSelection, ProductType
 
 isa = Isa.with_keycode(
     keycode="ABC-123-XYZ",
     email="john.doe@acme-agency.com",
 )
-result = isa.zyins.prequalify_v3(PrequalifyV3Request(
+result = isa.zyins.prequalify(PrequalifyRequest(
     applicant=Applicant(
         dob="1962-04-18", sex=Sex.MALE,
         height_inches=70, weight_pounds=195, state="NC",
