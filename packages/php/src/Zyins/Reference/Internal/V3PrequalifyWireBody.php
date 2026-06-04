@@ -31,10 +31,11 @@ use Isa\Sdk\Zyins\Reference\PrequalifyV3Options;
  *
  * `applicant.zip` rides the coverage envelope (required for medsup
  * quotes; the server zip-gates and silently filters medsup products
- * when it is absent). Every {@see PrequalifyV3Options} field except
- * `includeIneligible` is dropped here rather than sent through and
- * rejected; callers needing those affordances must use `/v3/quote`
- * (legacy flat body).
+ * when it is absent). `minRank`, `showUnreleased`,
+ * `skipHealthBasedUnderwriting`, and `onlyProductClass` ride the same
+ * wire keys `/v3/quote` uses; the server (zyins #439) honors them on
+ * `/v3/prequalify` (see {@see V3SharedOptions}). `includeProductClass`
+ * has no place in the explicit-products envelope and is not serialized.
  *
  * @see PrequalifyV3Request OpenAPI schema (go/zyins/api/openapi.yaml).
  */
@@ -102,6 +103,8 @@ final class V3PrequalifyWireBody
             'coverage' => self::buildCoverage($coverage, $applicant->state, $applicant->zip),
             'products' => array_values(array_map(static fn ($p): string => $p->id, $products)),
         ];
+
+        $payload = V3SharedOptions::apply($payload, $options);
 
         // v3 prequalify defaults `include_ineligible` to true: rows the
         // applicant does not qualify for surface with

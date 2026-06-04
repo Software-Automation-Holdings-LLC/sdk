@@ -61,5 +61,5 @@
     "gen:catalog": "php -d memory_limit=2G scripts/gen-catalog.php"
   },
   "minimum-stability": "RC",
-  "version": "1.0.7"
+  "version": "1.0.8"
 }

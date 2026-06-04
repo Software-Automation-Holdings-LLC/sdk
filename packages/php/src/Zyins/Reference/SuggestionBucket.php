@@ -28,6 +28,13 @@ final class SuggestionBucket
     public const SAME_NUM_WITH_TOLERANCE = 'same_num_with_tolerance';
     public const WORD_COUNT_WITH_TOLERANCE = 'word_count_with_tolerance';
 
+    /**
+     * Typo-recovery bucket — the candidate matched only via the fuzzy
+     * fallback (Damerau-OSA within the length band OR Double-Metaphone
+     * equality). Ranks strictly below every literal bucket.
+     */
+    public const FUZZY = 'fuzzy';
+
     private function __construct()
     {
     }

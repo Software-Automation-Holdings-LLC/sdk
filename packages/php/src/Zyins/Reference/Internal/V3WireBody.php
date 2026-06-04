@@ -71,10 +71,8 @@ final class V3WireBody
             $payload['zip'] = $applicant->zip;
         }
 
+        $payload = V3SharedOptions::apply($payload, $options);
         if ($options !== null) {
-            if ($options->onlyProductClass !== null) {
-                $payload['only_product_class'] = $options->onlyProductClass;
-            }
             if ($options->includeProductClass !== null && $options->includeProductClass !== []) {
                 // `products` (typed selection) carries product wire
                 // tokens; `include_product_class` is the layered
@@ -83,15 +81,6 @@ final class V3WireBody
                 // future-proof against the day a class token leaks in.
                 $merged = array_values(array_unique($options->includeProductClass));
                 $payload['include_product_class'] = $merged;
-            }
-            if ($options->minRank !== null) {
-                $payload['min_rank'] = $options->minRank;
-            }
-            if ($options->showUnreleased !== null) {
-                $payload['show_unreleased'] = $options->showUnreleased;
-            }
-            if ($options->skipHealthBasedUnderwriting !== null) {
-                $payload['skip_health_based_underwriting'] = $options->skipHealthBasedUnderwriting;
             }
             if ($options->includeIneligible !== null) {
                 $payload['include_ineligible'] = $options->includeIneligible;

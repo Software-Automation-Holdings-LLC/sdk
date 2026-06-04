@@ -11,7 +11,9 @@ namespace Isa\Sdk\Zyins\Reference;
  *    class (the wire token, e.g. `"term"`).
  *  - `includeProductClass` adds classes to the response that the caller
  *    wants visible even if not part of the typed selection.
- *  - `minRank` is the carrier-defined rank floor.
+ *  - `minRank` is the minimum guaranteed-issue rank; pass a
+ *    {@see \Isa\Sdk\Zyins\MinRank} constant (canonical `GUARANTEED` / `ROP`,
+ *    or a synonym) or a plain string.
  *  - `showUnreleased` opts into unreleased products (development mode).
  *  - `skipHealthBasedUnderwriting` short-circuits health checks.
  *  - `includeIneligible` (default `true`) keeps ineligible products and

@@ -1174,6 +1174,17 @@ namespace Isa\Sdk\Zyins;
 class Medication
     public function __construct(public string $name, public string $use, public string $firstFill, public string $lastFill,)
 
+=== Zyins/MinRank.php ===
+namespace Isa\Sdk\Zyins;
+class MinRank
+    public const IMMEDIATE
+    public const GRADED
+    public const ROP
+    public const RETURN_OF_PREMIUM
+    public const GUARANTEED
+    public const GUARANTEED_ISSUE
+    public const GI
+
 === Zyins/NicotineDuration.php ===
 namespace Isa\Sdk\Zyins;
 enum NicotineDuration : string
@@ -1532,9 +1543,9 @@ class DatasetsV3NotModified
 === Zyins/Reference/DefaultAutocompleteAlgorithm.php ===
 namespace Isa\Sdk\Zyins\Reference;
 class DefaultAutocompleteAlgorithm implements AutocompleteAlgorithmInterface
-    public function __construct(public readonly ?string $versionTag = null)
+    public function __construct(public readonly ?string $versionTag = null, public readonly bool $fuzzy = true,)
     public function rank(string $query, array $candidates, AutocompleteOptions $options) : array
-    public function clone(?string $versionTag = null) : self
+    public function clone(?string $versionTag = null, ?bool $fuzzy = null) : self
 
 === Zyins/Reference/DefaultAutocorrector.php ===
 namespace Isa\Sdk\Zyins\Reference;
@@ -1628,6 +1639,11 @@ class V3Coercion
 namespace Isa\Sdk\Zyins\Reference\Internal;
 class V3PrequalifyWireBody
     public function build(Applicant $applicant, Coverage $coverage, array $products, ?PrequalifyV3Options $options,) : array
+
+=== Zyins/Reference/Internal/V3SharedOptions.php ===
+namespace Isa\Sdk\Zyins\Reference\Internal;
+class V3SharedOptions
+    public function apply(array $payload, ?PrequalifyV3Options $options) : array
 
 === Zyins/Reference/Internal/V3WireBody.php ===
 namespace Isa\Sdk\Zyins\Reference\Internal;
@@ -1808,6 +1824,7 @@ class SuggestionBucket
     public const WORD_COUNT_NO_TOLERANCE
     public const SAME_NUM_WITH_TOLERANCE
     public const WORD_COUNT_WITH_TOLERANCE
+    public const FUZZY
 
 === Zyins/Reference/V3Amount.php ===
 namespace Isa\Sdk\Zyins\Reference;

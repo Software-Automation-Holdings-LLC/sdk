@@ -260,4 +260,111 @@ final class AdaptersTest extends TestCase
             datasets: [],
         );
     }
+
+    public function testAutocompleteMakeKeySurfacesPossessiveCondition(): void
+    {
+        // FIX #1 — the single-word substring filter compares on the make_key
+        // form, so an apostrophe-free query reaches a possessive-named
+        // condition.
+        $bundle = self::possessiveBundle();
+        $reference = new Reference();
+        foreach ([['crohns', 'CROHNSDISEASE'], ['alzheimers', 'ALZHEIMERSDISEASE'], ['parkinsons', 'PARKINSONSDISEASE'], ['graves', 'GRAVESDISEASE'], ['hashimotos', 'HASHIMOTOSTHYROIDITIS']] as [$query, $expectedId]) {
+            $suggestions = $reference->conditions->autocomplete($query, new AutocompleteOptions(limit: 10), $bundle);
+            $ids = array_map(static fn (Suggestion $s): ?string => $s->id(), $suggestions);
+            self::assertContains($expectedId, $ids, "query '$query' should surface $expectedId");
+        }
+    }
+
+    public function testAutocompleteFuzzyRecoversTransposition(): void
+    {
+        // FIX #2 — default-on fuzzy fallback recovers a transposition typo.
+        $bundle = self::possessiveBundle();
+        $reference = new Reference();
+        foreach (['chrons', 'corhns'] as $query) {
+            $suggestions = $reference->conditions->autocomplete($query, new AutocompleteOptions(limit: 10), $bundle);
+            $ids = array_map(static fn (Suggestion $s): ?string => $s->id(), $suggestions);
+            self::assertContains('CROHNSDISEASE', $ids, "query '$query' should recover Crohn's");
+        }
+        $diabetis = $reference->conditions->autocomplete('diabetis', new AutocompleteOptions(limit: 10), $bundle);
+        self::assertContains('DIABETES', array_map(static fn (Suggestion $s): ?string => $s->id(), $diabetis));
+    }
+
+    public function testAutocompleteFuzzyRecoversPhoneticTypo(): void
+    {
+        // FIX #2 — Double Metaphone recovers a phonetic miss (tylonol -> Tylenol).
+        $medications = [
+            new MedicationRow(id: 'TYLENOL', name: 'Tylenol', usedFor: []),
+            new MedicationRow(id: 'LISINOPRIL', name: 'Lisinopril', usedFor: []),
+        ];
+        $bundle = new DatasetBundleV3(
+            version: '3.0',
+            medications: $medications,
+            conditions: [],
+            products: [],
+            nicotineOptions: [],
+            spellingCorrections: [],
+            datasets: [],
+        );
+        $reference = new Reference();
+        $suggestions = $reference->medications->autocomplete('tylonol', new AutocompleteOptions(limit: 10), $bundle);
+        self::assertContains('TYLENOL', array_map(static fn (Suggestion $s): ?string => $s->id(), $suggestions));
+    }
+
+    public function testAutocompleteExactPrefixOutranksFuzzy(): void
+    {
+        // FIX #2 — a literal prefix hit fires the substring path, not fuzzy,
+        // and ranks first.
+        $bundle = self::possessiveBundle();
+        $reference = new Reference();
+        $suggestions = $reference->conditions->autocomplete('diabe', new AutocompleteOptions(limit: 10), $bundle);
+        self::assertNotEmpty($suggestions);
+        self::assertSame('DIABETES', $suggestions[0]->id());
+        self::assertSame(SuggestionBucket::STARTS_WITH, $suggestions[0]->bucket);
+    }
+
+    public function testAutocompleteFuzzyOptOutIsSubstringOnly(): void
+    {
+        // FIX #2 — fuzzy: false reverts to substring-only; the make_key fix
+        // (FIX #1) persists independently.
+        $bundle = self::possessiveBundle();
+        $reference = new Reference();
+        $cands = $reference->conditions->list($bundle);
+        $algo = new DefaultAutocompleteAlgorithm(fuzzy: false);
+        // A transposition has no substring match → empty.
+        self::assertSame([], $algo->rank('chrons', $cands, new AutocompleteOptions(limit: 10)));
+        // The make_key fix is independent of fuzzy and still applies.
+        $crohns = $algo->rank('crohns', $cands, new AutocompleteOptions(limit: 10));
+        self::assertContains('CROHNSDISEASE', array_map(static fn (Suggestion $s): ?string => $s->id(), $crohns));
+    }
+
+    public function testAutocompleteRejectsGenuineNonMatch(): void
+    {
+        // Default-on fuzzy must NOT leak noise: garbage tokens beyond the
+        // edit-distance / phonetic band return nothing.
+        $bundle = self::possessiveBundle();
+        $reference = new Reference();
+        $suggestions = $reference->conditions->autocomplete('xqzzv wbbtk', new AutocompleteOptions(limit: 10), $bundle);
+        self::assertSame([], $suggestions);
+    }
+
+    private static function possessiveBundle(): DatasetBundleV3
+    {
+        $conditions = [
+            new ConditionRow(id: 'CROHNSDISEASE', name: "Crohn's Disease", treatedWith: []),
+            new ConditionRow(id: 'ALZHEIMERSDISEASE', name: "Alzheimer's Disease", treatedWith: []),
+            new ConditionRow(id: 'PARKINSONSDISEASE', name: "Parkinson's Disease", treatedWith: []),
+            new ConditionRow(id: 'GRAVESDISEASE', name: "Graves' Disease", treatedWith: []),
+            new ConditionRow(id: 'HASHIMOTOSTHYROIDITIS', name: "Hashimoto's Thyroiditis", treatedWith: []),
+            new ConditionRow(id: 'DIABETES', name: 'Diabetes', treatedWith: []),
+        ];
+        return new DatasetBundleV3(
+            version: '3.0',
+            medications: [],
+            conditions: $conditions,
+            products: [],
+            nicotineOptions: [],
+            spellingCorrections: [],
+            datasets: [],
+        );
+    }
 }

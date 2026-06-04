@@ -8,12 +8,14 @@ use Isa\Sdk\Tests\Zyins\Support\MockHttpClient;
 use Isa\Sdk\Zyins\Applicant;
 use Isa\Sdk\Zyins\Coverage;
 use Isa\Sdk\Zyins\Height;
+use Isa\Sdk\Zyins\MinRank;
 use Isa\Sdk\Zyins\NicotineUsage;
 use Isa\Sdk\Zyins\Product;
 use Isa\Sdk\Zyins\Reference\PrequalifyV3;
-use Isa\Sdk\Zyins\Reference\V3Offer;
+use Isa\Sdk\Zyins\Reference\PrequalifyV3Options;
 use Isa\Sdk\Zyins\Reference\PrequalifyV3Request;
 use Isa\Sdk\Zyins\Reference\V3EligibilityCategory;
+use Isa\Sdk\Zyins\Reference\V3Offer;
 use Isa\Sdk\Zyins\Reference\V3PricingRow;
 use Isa\Sdk\Zyins\RequestOptions;
 use Isa\Sdk\Zyins\Sex;
@@ -189,6 +191,81 @@ final class PrequalifyV3Test extends TestCase
 
         self::assertSame(['prod_p_fixture'], $decoded['products']);
         self::assertTrue($decoded['include_ineligible']);
+    }
+
+    public function testEmitsSharedUnderwritingOptions(): void
+    {
+        $http = new MockHttpClient();
+        $http->queue(200, '{"data":{"plans":[]},"request_id":"req_x"}');
+
+        $client = new ZyInsClient(token: self::TOKEN, httpClient: $http);
+        $client->prequalifyV3->run(
+            new PrequalifyV3Request(
+                applicant: new Applicant(
+                    dob: '1962-04-18',
+                    sex: Sex::Male,
+                    height: Height::fromFeetInches(5, 10),
+                    weight: Weight::fromPounds(195),
+                    state: 'NC',
+                    nicotineUse: NicotineUsage::None,
+                ),
+                coverage: Coverage::faceValue(25000),
+                products: [new Product(id: 'prod_p_fixture', name: 'Product', class: 'term', carrier: 'Carrier')],
+                options: new PrequalifyV3Options(
+                    onlyProductClass: 'fex',
+                    minRank: MinRank::GRADED,
+                    showUnreleased: true,
+                    skipHealthBasedUnderwriting: true,
+                ),
+            ),
+        );
+
+        $body = (string) $http->lastRequest()->getBody();
+        /** @var array<string,mixed> $decoded */
+        $decoded = json_decode($body, true, flags: JSON_THROW_ON_ERROR);
+        // The four options the /v3/prequalify envelope now shares with
+        // /v3/quote. The server (zyins #439) honors them; this guards
+        // against the serializer silently dropping them again (the bug
+        // that left "Quote Type = Graded" with no wire effect).
+        self::assertSame('graded', $decoded['min_rank']);
+        self::assertSame('fex', $decoded['only_product_class']);
+        self::assertTrue($decoded['show_unreleased']);
+        self::assertTrue($decoded['skip_health_based_underwriting']);
+        // include_product_class is never serialized on the explicit-products
+        // prequalify envelope.
+        self::assertArrayNotHasKey('include_product_class', $decoded);
+    }
+
+    public function testOmitsEmptyStringSharedOptions(): void
+    {
+        $http = new MockHttpClient();
+        $http->queue(200, '{"data":{"plans":[]},"request_id":"req_x"}');
+
+        $client = new ZyInsClient(token: self::TOKEN, httpClient: $http);
+        $client->prequalifyV3->run(
+            new PrequalifyV3Request(
+                applicant: new Applicant(
+                    dob: '1962-04-18',
+                    sex: Sex::Male,
+                    height: Height::fromFeetInches(5, 10),
+                    weight: Weight::fromPounds(195),
+                    state: 'NC',
+                    nicotineUse: NicotineUsage::None,
+                ),
+                coverage: Coverage::faceValue(25000),
+                products: [new Product(id: 'prod_p_fixture', name: 'Product', class: 'term', carrier: 'Carrier')],
+                options: new PrequalifyV3Options(
+                    onlyProductClass: '',
+                    minRank: '',
+                ),
+            ),
+        );
+
+        $body = (string) $http->lastRequest()->getBody();
+        /** @var array<string,mixed> $decoded */
+        $decoded = json_decode($body, true, flags: JSON_THROW_ON_ERROR);
+        self::assertArrayNotHasKey('only_product_class', $decoded);
+        self::assertArrayNotHasKey('min_rank', $decoded);
     }
 
     public function testThreadsApplicantZipIntoCoverage(): void
