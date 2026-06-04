@@ -17,6 +17,7 @@
 import { type Applicant } from './applicant.js';
 import { type CoverageInput, type CoverageType } from './coverage.js';
 import { type ProductSelection, type Product, type ProductClassValue } from './product.js';
+import { type MinRankValue } from './minRank.js';
 import { type AuthContext } from './auth.js';
 import { type Transport } from './transport.js';
 import { type Clock } from '../core/index.js';
@@ -27,8 +28,8 @@ export interface PrequalifyOptions {
     onlyProductClass?: ProductClassValue;
     /** Include one or more product classes (server `include_product_class`). */
     includeProductClass?: readonly ProductClassValue[];
-    /** Server-side `min_rank` filter (string per server contract). */
-    minRank?: string;
+    /** Minimum guaranteed-issue rank (server `min_rank`); use {@link MinRank}. */
+    minRank?: MinRankValue | (string & {});
     /** Include products flagged unreleased. */
     showUnreleased?: boolean;
     /** Skip the health-based underwriting layer (preview rates without HBU). */

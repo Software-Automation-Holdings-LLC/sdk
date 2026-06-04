@@ -401,4 +401,74 @@ describe('DefaultAutocompleteAlgorithm', () => {
         });
         expect(out.every((s) => s.name.toUpperCase().startsWith('LIS'))).toBe(true);
     });
+
+    // FIX #1 — make_key normalization in the single-word substring filter.
+    const possessiveConds: Concept[] = [makeCandidate('CROHNSDISEASE', "Crohn's Disease", 'condition'), makeCandidate('ALZHEIMERSDISEASE', "Alzheimer's Disease", 'condition'), makeCandidate('PARKINSONSDISEASE', "Parkinson's Disease", 'condition'), makeCandidate('GRAVESDISEASE', "Graves' Disease", 'condition'), makeCandidate('HASHIMOTOSTHYROIDITIS', "Hashimoto's Thyroiditis", 'condition'), makeCandidate('DIABETES', 'Diabetes', 'condition')];
+
+    it('surfaces possessive-named conditions for an apostrophe-free query (make_key parity)', async () => {
+        const algo = new DefaultAutocompleteAlgorithm();
+        const opts = { limit: 10, kinds: ['condition'] as const, frequencies: new Map<string, number>() };
+        for (const [query, expectedId] of [
+            ['crohns', 'CROHNSDISEASE'],
+            ['alzheimers', 'ALZHEIMERSDISEASE'],
+            ['parkinsons', 'PARKINSONSDISEASE'],
+            ['graves', 'GRAVESDISEASE'],
+            ['hashimotos', 'HASHIMOTOSTHYROIDITIS'],
+        ] as const) {
+            const out = await algo.rank(query, possessiveConds, opts);
+            expect(out.map((s) => s.id)).toContain(expectedId);
+        }
+    });
+
+    it('highlights the matched run across an apostrophe', async () => {
+        const algo = new DefaultAutocompleteAlgorithm();
+        const out = await algo.rank('crohns', [makeCandidate('CROHNSDISEASE', "Crohn's Disease", 'condition')], { limit: 10, kinds: ['condition'], frequencies: new Map() });
+        // "Crohn's" — the matched span covers C..s, spanning the apostrophe at index 5.
+        expect(out[0]?.matchedSpan).toEqual([0, "Crohn's".length]);
+    });
+
+    // FIX #2 — typo-tolerant fuzzy fallback, default ON with an opt-out.
+    it('recovers transposition typos via the default fuzzy fallback', async () => {
+        const algo = new DefaultAutocompleteAlgorithm();
+        const opts = { limit: 10, kinds: ['condition'] as const, frequencies: new Map<string, number>() };
+        for (const query of ['chrons', 'corhns']) {
+            const out = await algo.rank(query, possessiveConds, opts);
+            expect(out.map((s) => s.id)).toContain('CROHNSDISEASE');
+        }
+        const diabetis = await algo.rank('diabetis', possessiveConds, opts);
+        expect(diabetis.map((s) => s.id)).toContain('DIABETES');
+    });
+
+    it('recovers phonetic typos via Double Metaphone', async () => {
+        const algo = new DefaultAutocompleteAlgorithm();
+        const meds: Concept[] = [makeCandidate('TYLENOL', 'Tylenol', 'medication'), makeCandidate('LISINOPRIL', 'Lisinopril', 'medication')];
+        const out = await algo.rank('tylonol', meds, { limit: 10, kinds: ['medication'], frequencies: new Map() });
+        expect(out.map((s) => s.id)).toContain('TYLENOL');
+    });
+
+    it('ranks exact and prefix hits above fuzzy recoveries', async () => {
+        const algo = new DefaultAutocompleteAlgorithm();
+        // 'diabe' is a literal prefix of Diabetes (bucket 1) and within edit
+        // distance of nothing else; the fuzzy fallback must not fire, and
+        // Diabetes ranks first.
+        const out = await algo.rank('diabe', possessiveConds, { limit: 10, kinds: ['condition'], frequencies: new Map() });
+        expect(out[0]?.id).toBe('DIABETES');
+    });
+
+    it('opts out of fuzzy with { fuzzy: false } — substring-only', async () => {
+        const algo = new DefaultAutocompleteAlgorithm({ fuzzy: false });
+        const opts = { limit: 10, kinds: ['condition'] as const, frequencies: new Map<string, number>() };
+        // A transposition has no substring match, so the opt-out returns nothing.
+        const chrons = await algo.rank('chrons', possessiveConds, opts);
+        expect(chrons).toEqual([]);
+        // The make_key fix (FIX #1) is independent of fuzzy and still applies.
+        const crohns = await algo.rank('crohns', possessiveConds, opts);
+        expect(crohns.map((s) => s.id)).toContain('CROHNSDISEASE');
+    });
+
+    it('empty query still returns [] with fuzzy on', async () => {
+        const algo = new DefaultAutocompleteAlgorithm();
+        const out = await algo.rank('', possessiveConds, { limit: 10, kinds: ['condition'], frequencies: new Map() });
+        expect(out).toEqual([]);
+    });
 });

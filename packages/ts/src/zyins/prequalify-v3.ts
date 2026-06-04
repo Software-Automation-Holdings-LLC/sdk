@@ -39,6 +39,7 @@ import {
 } from './v3Coercion.js';
 import {
   type PrequalifyV3Context,
+  type PrequalifyV3Options,
   type PrequalifyV3Request,
   type PrequalifyV3Result,
   type V3Amount,
@@ -287,6 +288,30 @@ function serializeV3Coverage(
 }
 
 /**
+ * Apply the scalar underwriting options shared by the v3 prequalify and v3
+ * quote wire bodies onto {@link payload}, mutating it in place. Each key is
+ * emitted only when its option is set; an undefined or empty string option
+ * leaves the key absent (the server treats absent and default-valued
+ * identically, and a `null` would be rejected). `includeProductClass` is
+ * intentionally excluded: it is a quote-only flat-body concern, not a shared
+ * scalar.
+ */
+function applySharedV3Options(
+  payload: Record<string, unknown>,
+  options: PrequalifyV3Options,
+): void {
+  if (options.onlyProductClass !== undefined) {
+    const wireToken: string = options.onlyProductClass.wireToken;
+    if (wireToken !== '') payload['only_product_class'] = wireToken;
+  }
+  if (options.minRank !== undefined && options.minRank !== '') payload['min_rank'] = options.minRank;
+  if (options.showUnreleased !== undefined) payload['show_unreleased'] = options.showUnreleased;
+  if (options.skipHealthBasedUnderwriting !== undefined) {
+    payload['skip_health_based_underwriting'] = options.skipHealthBasedUnderwriting;
+  }
+}
+
+/**
  * Build the `PrequalifyV3Request` wire body — the envelope shape with
  * `applicant`, `coverage`, `products[]` per the OpenAPI spec.
  *
@@ -299,10 +324,11 @@ function serializeV3Coverage(
  * envelope per the v3 schema (`zip` is required for medsup quotes; the
  * server zip-gates and silently filters medsup products when it is
  * absent). `options.minRank`, `options.showUnreleased`,
- * `options.skipHealthBasedUnderwriting`, `options.onlyProductClass`,
- * `options.includeProductClass` are not part of the v3 prequalify
- * envelope and are silently dropped — they survive on `/v3/quote` via
- * the legacy flat body.
+ * `options.skipHealthBasedUnderwriting`, and `options.onlyProductClass`
+ * ride the same wire keys the `/v3/quote` flat body uses; the server
+ * (zyins #439) honors them on `/v3/prequalify`. `options.includeProductClass`
+ * has no place in the explicit-products envelope — a type-based selection
+ * is rejected loudly below rather than serialized.
  */
 export function serializeV3PrequalifyBody(request: PrequalifyV3Request): string {
   const { applicant, coverage, products, options } = request;
@@ -344,6 +370,9 @@ export function serializeV3PrequalifyBody(request: PrequalifyV3Request): string 
     coverage: serializeV3Coverage(coverage, applicant.state, applicant.zip),
     products: productsList,
   };
+  if (options !== undefined) {
+    applySharedV3Options(payload, options);
+  }
   if (options?.includeIneligible !== undefined) {
     payload['include_ineligible'] = options.includeIneligible;
   } else {
@@ -386,18 +415,11 @@ export function serializeWireBody(request: {
     payload['zip'] = applicant.zip;
   }
   if (options) {
-    if (options.onlyProductClass !== undefined) {
-      payload['only_product_class'] = options.onlyProductClass.wireToken;
-    }
+    applySharedV3Options(payload, options);
     if (options.includeProductClass !== undefined && options.includeProductClass.length > 0) {
       const fromSelection = payload['include_product_class'] as string[] | undefined;
       const extra = options.includeProductClass.map((t) => t.wireToken);
       payload['include_product_class'] = [...new Set([...(fromSelection ?? []), ...extra])];
-    }
-    if (options.minRank !== undefined) payload['min_rank'] = options.minRank;
-    if (options.showUnreleased !== undefined) payload['show_unreleased'] = options.showUnreleased;
-    if (options.skipHealthBasedUnderwriting !== undefined) {
-      payload['skip_health_based_underwriting'] = options.skipHealthBasedUnderwriting;
     }
     if (options.includeIneligible !== undefined) {
       payload['include_ineligible'] = options.includeIneligible;

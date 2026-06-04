@@ -86,6 +86,7 @@ export { canonicalString, formatTimestamp, signRequest, type SignClock, type Sig
 export { Sex, NicotineUsage, NicotineDuration, Height, Weight, type Applicant, type Medication, type Condition, type NicotineUsageInput, type NicotineProductUsage } from './zyins/applicant.js';
 export { Coverage, QuoteType, isMulti, type CoverageInput, type CoverageType, type SingleCoverage, type MultiCoverage, type FaceValueCoverage, type MonthlyBudgetCoverage } from './zyins/coverage.js';
 export { ProductSelection, ProductClass, ProductType, Products, type Product, type ProductClassValue } from './zyins/product.js';
+export { MinRank, type MinRankValue } from './zyins/minRank.js';
 
 // --- Reference catalog (typed concepts, sort, adapters) ----------------
 // `ReferenceSort` + the concept/adapter types are the surface bpp2.0 (and

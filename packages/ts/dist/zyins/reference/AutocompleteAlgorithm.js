@@ -30,6 +30,9 @@
  */
 import { Sort } from './Sort.js';
 import { buildSuggestion } from './Suggestion.js';
+import { _makeKey } from './_makeKey.js';
+import { doubleMetaphone } from './_doubleMetaphone.js';
+import { FUZZY_MEDIUM_LEN, FUZZY_SHORT_LEN, optimalStringAlignmentDistance } from './_damerauOsa.js';
 /**
  * Default ranker. Bucket + frequency-boost algorithm ported from the
  * bpp2.0 picker hook.
@@ -46,9 +49,11 @@ import { buildSuggestion } from './Suggestion.js';
  */
 export class DefaultAutocompleteAlgorithm {
     startOnly;
+    fuzzy;
     _versionTag;
     constructor(opts = {}) {
         this.startOnly = opts.startOnly ?? false;
+        this.fuzzy = opts.fuzzy ?? true;
         this._versionTag = opts.versionTag;
     }
     /** Opaque tag tracking the version of this ranker. */
@@ -56,7 +61,7 @@ export class DefaultAutocompleteAlgorithm {
         return this._versionTag;
     }
     async rank(query, candidates, options) {
-        const ranked = rankSync(query, candidates, options, this.startOnly);
+        const ranked = rankSync(query, candidates, options, this.startOnly, this.fuzzy);
         return ranked;
     }
     /** Return a new ranker with selected fields overridden. */
@@ -64,6 +69,7 @@ export class DefaultAutocompleteAlgorithm {
         const nextVersionTag = overrides.versionTag ?? this._versionTag;
         return new DefaultAutocompleteAlgorithm({
             startOnly: overrides.startOnly ?? this.startOnly,
+            fuzzy: overrides.fuzzy ?? this.fuzzy,
             ...(nextVersionTag !== undefined && { versionTag: nextVersionTag }),
         });
     }
@@ -80,7 +86,33 @@ function tokenize(s) {
         .filter(Boolean);
 }
 const MAX_LIMIT = 250;
-function rankSync(query, candidates, options, startOnly) {
+/**
+ * The substring filter is considered to have "enough" hits — and the fuzzy
+ * fallback is skipped — once it produces this many candidates. Mirrors the
+ * intuition that a typo-recovery pass only earns its keep when literal
+ * matching comes up nearly empty; a healthy substring hit list is already
+ * the better answer.
+ */
+const FUZZY_FALLBACK_THRESHOLD = 1;
+/**
+ * Edit-distance ceiling for the autocomplete fuzzy band, by query-unit
+ * length. Deliberately one wider than {@link FuzzyMatchAlgorithm}'s
+ * single-result band in the medium range: autocomplete shows a RANKED LIST
+ * with fuzzy hits in the strict lowest bucket, so a slightly looser net is
+ * safe and catches double-edit transpositions the match path rejects
+ * (`chrons` → `crohns` is OSA distance 2). The bands:
+ *   - shorter than {@link FUZZY_SHORT_LEN}: ≤ 1
+ *   - {@link FUZZY_SHORT_LEN}–{@link FUZZY_MEDIUM_LEN}: ≤ 2
+ *   - longer: ≤ 2 (the cap)
+ */
+function autocompleteFuzzyThreshold(unitLength) {
+    if (unitLength < FUZZY_SHORT_LEN)
+        return 1;
+    if (unitLength <= FUZZY_MEDIUM_LEN)
+        return 2;
+    return 2;
+}
+function rankSync(query, candidates, options, startOnly, fuzzy) {
     const limit = Math.min(options.limit, MAX_LIMIT);
     if (limit <= 0)
         return [];
@@ -93,11 +125,16 @@ function rankSync(query, candidates, options, startOnly) {
     const queryUpper = query.toUpperCase();
     const queryClean = queryUpper.replace(/\(/g, '');
     const queryTokens = tokenize(query);
+    // make_key form: uppercase, strip ALL non-alphanumeric. This is what the
+    // engine matches on server-side, so `crohns` must reach `Crohn's Disease`
+    // — the literal `(`-only strip above leaves the apostrophe in and breaks it.
+    const queryKey = _makeKey(query);
     const kindFilter = options.kinds.length > 0 ? new Set(options.kinds) : undefined;
+    const inKind = (c) => !kindFilter || kindFilter.has(c.kind);
     // 1. Filter to plausible candidates.
     const filtered = [];
     for (const c of candidates) {
-        if (kindFilter && !kindFilter.has(c.kind))
+        if (!inKind(c))
             continue;
         const nameUpper = c.name.toUpperCase().replace(/\(/g, '');
         if (startOnly) {
@@ -106,7 +143,10 @@ function rankSync(query, candidates, options, startOnly) {
             continue;
         }
         if (queryTokens.length < 2) {
-            if (nameUpper.includes(queryClean))
+            // Compare on the make_key form (apostrophes, hyphens, etc. stripped
+            // from BOTH sides) so a correctly-spelled `crohns` matches
+            // `Crohn's Disease`, mirroring the server-side make_key match.
+            if (_makeKey(c.name).includes(queryKey))
                 filtered.push(c);
             continue;
         }
@@ -120,6 +160,12 @@ function rankSync(query, candidates, options, startOnly) {
         if (missing <= 1)
             filtered.push(c);
     }
+    // 1b. Typo-tolerant fallback. When the literal filter comes up nearly
+    // empty, recover transpositions/phonetic misses (`chrons` → Crohn's,
+    // `diabetis` → Diabetes, `tylonol` → Tylenol). Default ON; the
+    // `{ fuzzy: false }` opt-out and `startOnly` mode both skip it.
+    const filteredKeys = new Set(filtered.map((c) => c.id ?? `__unknown:${c.inputText}:${c.name}`));
+    const fuzzyMatches = fuzzy && !startOnly && filtered.length <= FUZZY_FALLBACK_THRESHOLD ? collectFuzzy(queryKey, queryTokens, candidates, inKind, filteredKeys) : [];
     // 2. Bucket.
     const buckets = {
         startsWith: [],
@@ -128,6 +174,7 @@ function rankSync(query, candidates, options, startOnly) {
         wordCountNoTolerance: new Map(),
         sameNumWithTolerance: [],
         wordCountWithTolerance: new Map(),
+        fuzzy: fuzzyMatches,
     };
     for (const c of filtered) {
         const cleanedName = c.name.replace(/\(/g, '');
@@ -165,7 +212,9 @@ function rankSync(query, candidates, options, startOnly) {
     const noTol = noTolKeys.flatMap((k) => buckets.wordCountNoTolerance.get(k) ?? []);
     const withTolKeys = [...buckets.wordCountWithTolerance.keys()].sort((a, b) => a - b);
     const withTol = withTolKeys.flatMap((k) => buckets.wordCountWithTolerance.get(k) ?? []);
-    let groups = [startsWithSorted, buckets.sameWords, buckets.independentWordIntersection, noTol, buckets.sameNumWithTolerance, withTol];
+    // Fuzzy hits occupy the strict lowest bucket — always below every literal
+    // (exact / prefix / substring / word-tolerance) match.
+    let groups = [startsWithSorted, buckets.sameWords, buckets.independentWordIntersection, noTol, buckets.sameNumWithTolerance, withTol, buckets.fuzzy];
     // 4. Order within the matched set. Alphabetical flattens every bucket into
     // one A→Z group (the relevance filter already decided membership); the
     // default boosts by frequency within each bucket and keeps bucket priority.
@@ -186,7 +235,7 @@ function rankSync(query, candidates, options, startOnly) {
             if (seen.has(key))
                 continue;
             seen.add(key);
-            const matchedSpan = computeSpan(c.name, queryClean);
+            const matchedSpan = computeSpan(c.name, queryKey);
             result.push(buildSuggestion(c, {
                 score: scoreOf.get(key) ?? 0,
                 matchedSpan,
@@ -232,6 +281,56 @@ function flattenAlphabetical(groups) {
         return (a.id ?? '') < (b.id ?? '') ? -1 : (a.id ?? '') > (b.id ?? '') ? 1 : 0;
     });
     return flat;
+}
+/**
+ * Token-aware typo recovery. For each in-kind candidate not already placed
+ * by the literal filter, the query matches when ANY candidate token clears
+ * the bar against the corresponding query unit:
+ *   - Damerau-OSA distance within the shipped length band, OR
+ *   - Double-Metaphone primary-code equality.
+ *
+ * Matching per-token (not against the whole concatenated name) keeps a short
+ * query like `chrons` from being swamped by the edit distance of the rest of
+ * a long name (`CROHNSDISEASE`). The query is itself tokenized so a fuzzy
+ * multi-word query degrades gracefully. Reuses the same primitives as
+ * {@link FuzzyMatchAlgorithm} for cross-language and intra-SDK parity.
+ */
+function collectFuzzy(queryKey, queryTokens, candidates, inKind, alreadyMatched) {
+    if (queryKey.length === 0)
+        return [];
+    // A single-token query fuzzes on its make_key form; a multi-word query
+    // fuzzes each word independently and accepts on any single word hit.
+    const queryUnits = queryTokens.length > 1 ? queryTokens : [queryKey];
+    const queryCodes = queryUnits.map((u) => doubleMetaphone(u).primary);
+    const hits = [];
+    for (const c of candidates) {
+        if (!inKind(c))
+            continue;
+        const key = c.id ?? `__unknown:${c.inputText}:${c.name}`;
+        if (alreadyMatched.has(key))
+            continue;
+        if (fuzzyMatchesAnyToken(queryUnits, queryCodes, tokenize(c.name)))
+            hits.push(c);
+    }
+    return hits;
+}
+function fuzzyMatchesAnyToken(queryUnits, queryCodes, candidateTokens) {
+    for (let u = 0; u < queryUnits.length; u++) {
+        const unit = queryUnits[u] ?? '';
+        if (unit.length === 0)
+            continue;
+        const threshold = autocompleteFuzzyThreshold(unit.length);
+        const code = queryCodes[u] ?? '';
+        for (const token of candidateTokens) {
+            if (token.length === 0)
+                continue;
+            if (optimalStringAlignmentDistance(unit, token, threshold) <= threshold)
+                return true;
+            if (code.length > 0 && doubleMetaphone(token).primary === code)
+                return true;
+        }
+    }
+    return false;
 }
 function pushToBucket(map, key, c) {
     const existing = map.get(key);
@@ -286,21 +385,28 @@ function computeScoreLookup(groups, frequencies) {
     });
     return out;
 }
-function computeSpan(name, queryClean) {
-    if (!queryClean)
+function computeSpan(name, queryKey) {
+    if (!queryKey)
         return [0, 0];
+    // Normalize to the make_key form (uppercase, alphanumeric only) while
+    // tracking each surviving char's source index, so a query like `crohns`
+    // highlights the right run in `Crohn's Disease` even though the
+    // apostrophe sits between the matched characters.
     const normalized = [];
     const sourceIndices = [];
     for (let i = 0; i < name.length; i++) {
-        if (name[i] === '(')
+        const ch = name[i]?.toUpperCase() ?? '';
+        const code = ch.charCodeAt(0);
+        const isAlnum = (code >= 0x30 && code <= 0x39) || (code >= 0x41 && code <= 0x5a);
+        if (!isAlnum)
             continue;
-        normalized.push(name[i]?.toUpperCase() ?? '');
+        normalized.push(ch);
         sourceIndices.push(i);
     }
-    const idx = normalized.join('').indexOf(queryClean);
+    const idx = normalized.join('').indexOf(queryKey);
     if (idx < 0)
         return [0, 0];
-    const endSourceIndex = sourceIndices[idx + queryClean.length - 1];
+    const endSourceIndex = sourceIndices[idx + queryKey.length - 1];
     if (endSourceIndex === undefined)
         return [0, 0];
     return [sourceIndices[idx] ?? 0, endSourceIndex + 1];

@@ -41,6 +41,7 @@ export { canonicalString, formatTimestamp, signRequest } from './core/auth/signR
 export { Sex, NicotineUsage, NicotineDuration, Height, Weight } from './zyins/applicant.js';
 export { Coverage, QuoteType, isMulti } from './zyins/coverage.js';
 export { ProductSelection, ProductClass, ProductType, Products } from './zyins/product.js';
+export { MinRank } from './zyins/minRank.js';
 // --- Reference catalog (typed concepts, sort, adapters) ----------------
 // `ReferenceSort` + the concept/adapter types are the surface bpp2.0 (and
 // any reference consumer) imports from the package root. Re-exported here

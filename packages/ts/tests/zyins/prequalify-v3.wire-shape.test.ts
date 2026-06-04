@@ -32,6 +32,8 @@ import {
   Sex,
   Weight,
 } from '../../src/zyins/applicant';
+import { MinRank } from '../../src/zyins/minRank';
+import { ProductClass, type ProductClassValue } from '../../src/zyins/product';
 
 function isRecord(v: unknown): v is Record<string, unknown> {
   return v !== null && typeof v === 'object' && !Array.isArray(v);
@@ -222,6 +224,112 @@ describe('prequalifyV3 wire shape', () => {
       last_used: 'within_12_months',
       specificity: [{ text: 'CIGARETTE', frequency: 'daily' }],
     });
+  });
+
+  it('emits the four shared underwriting options on the prequalify envelope', async () => {
+    // min_rank, only_product_class, show_unreleased, and
+    // skip_health_based_underwriting ride the same wire keys /v3/quote uses;
+    // the server (zyins #439) honors them on /v3/prequalify. This guards
+    // against the serializer silently dropping them again (the bug that left
+    // "Quote Type = Graded" with no wire effect). include_product_class is
+    // never serialized on the explicit-products prequalify envelope.
+    const { transport, captured } = captureTransport();
+    const client = new ZyInsClient({
+      auth: TEST_AUTH,
+      baseUrl: 'https://test.example',
+      transport,
+      clock: FIXED_CLOCK,
+    });
+    await client.prequalifyV3({
+      applicant: TEST_APPLICANT,
+      coverage: TEST_COVERAGE,
+      products: TEST_PRODUCTS,
+      options: {
+        minRank: MinRank.Graded,
+        onlyProductClass: ProductClass.FinalExpense,
+        showUnreleased: true,
+        skipHealthBasedUnderwriting: true,
+      },
+    });
+
+    const body = parseBody(captured.req?.body);
+    expect(body['min_rank']).toBe('graded');
+    expect(body['only_product_class']).toBe('fex');
+    expect(body['show_unreleased']).toBe(true);
+    expect(body['skip_health_based_underwriting']).toBe(true);
+    expect(body).not.toHaveProperty('include_product_class');
+  });
+
+  it('omits empty string min_rank on the prequalify envelope', async () => {
+    const { transport, captured } = captureTransport();
+    const client = new ZyInsClient({
+      auth: TEST_AUTH,
+      baseUrl: 'https://test.example',
+      transport,
+      clock: FIXED_CLOCK,
+    });
+    await client.prequalifyV3({
+      applicant: TEST_APPLICANT,
+      coverage: TEST_COVERAGE,
+      products: TEST_PRODUCTS,
+      options: { minRank: '' },
+    });
+
+    expect(parseBody(captured.req?.body)).not.toHaveProperty('min_rank');
+  });
+
+  it('omits empty product-class wire token on the prequalify envelope', async () => {
+    const { transport, captured } = captureTransport();
+    const client = new ZyInsClient({
+      auth: TEST_AUTH,
+      baseUrl: 'https://test.example',
+      transport,
+      clock: FIXED_CLOCK,
+    });
+    await client.prequalifyV3({
+      applicant: TEST_APPLICANT,
+      coverage: TEST_COVERAGE,
+      products: TEST_PRODUCTS,
+      options: {
+        onlyProductClass: {
+          wireToken: '',
+          displayName: 'Empty',
+          namespaceKey: 'Empty',
+        } as unknown as ProductClassValue,
+      },
+    });
+
+    expect(parseBody(captured.req?.body)).not.toHaveProperty('only_product_class');
+  });
+
+  // Each canonical MinRank member and synonym serializes to its lowercase
+  // wire token under `min_rank`. Driven through quoteV3 (the /v3/quote path,
+  // which carries min_rank). Mirrors the Go/Python/PHP/C# wire-shape suites
+  // so a divergence fails TS CI.
+  it.each([
+    [MinRank.Immediate, 'immediate'],
+    [MinRank.Graded, 'graded'],
+    [MinRank.Rop, 'rop'],
+    [MinRank.Guaranteed, 'guaranteed'],
+    [MinRank.ReturnOfPremium, 'rop'],
+    [MinRank.GuaranteedIssue, 'guaranteed'],
+    [MinRank.Gi, 'guaranteed'],
+  ])('serializes min_rank %s to wire token %s', async (option, wireToken) => {
+    const { transport, captured } = captureTransport();
+    const client = new ZyInsClient({
+      auth: TEST_AUTH,
+      baseUrl: 'https://test.example',
+      transport,
+      clock: FIXED_CLOCK,
+    });
+    await client.quoteV3({
+      applicant: TEST_APPLICANT,
+      coverage: TEST_COVERAGE,
+      products: TEST_PRODUCTS,
+      options: { minRank: option },
+    });
+
+    expect(parseBody(captured.req?.body)['min_rank']).toBe(wireToken);
   });
 });
 

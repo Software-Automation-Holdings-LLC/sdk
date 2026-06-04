@@ -70,6 +70,18 @@ export interface DefaultAutocompleteAlgorithmOptions {
      * Default `false` — populate all six buckets.
      */
     readonly startOnly?: boolean;
+    /**
+     * Typo tolerance. When `true` (default), a query that the substring
+     * filter cannot place against any candidate falls back to a
+     * token-aware fuzzy pass — Damerau-OSA within the shipped length band
+     * OR Double-Metaphone equality, per candidate token. Fuzzy hits rank
+     * strictly below every exact/prefix/substring bucket.
+     *
+     * Set `false` to restore the legacy substring-only behaviour
+     * (`new DefaultAutocompleteAlgorithm({ fuzzy: false })`). Ignored when
+     * `startOnly` is `true` — inline completion is prefix-only by design.
+     */
+    readonly fuzzy?: boolean;
     /** Optional version stamp surfaced via {@link DefaultAutocompleteAlgorithm.versionTag}. */
     readonly versionTag?: string;
 }
@@ -89,6 +101,7 @@ export interface DefaultAutocompleteAlgorithmOptions {
  */
 export declare class DefaultAutocompleteAlgorithm implements AutocompleteAlgorithm {
     private readonly startOnly;
+    private readonly fuzzy;
     private readonly _versionTag;
     constructor(opts?: DefaultAutocompleteAlgorithmOptions);
     /** Opaque tag tracking the version of this ranker. */

@@ -1980,6 +1980,7 @@ export { canonicalString, formatTimestamp, signRequest, type SignClock, type Sig
 export { Sex, NicotineUsage, NicotineDuration, Height, Weight, type Applicant, type Medication, type Condition, type NicotineUsageInput, type NicotineProductUsage } from './zyins/applicant.js';
 export { Coverage, QuoteType, isMulti, type CoverageInput, type CoverageType, type SingleCoverage, type MultiCoverage, type FaceValueCoverage, type MonthlyBudgetCoverage } from './zyins/coverage.js';
 export { ProductSelection, ProductClass, ProductType, Products, type Product, type ProductClassValue } from './zyins/product.js';
+export { MinRank, type MinRankValue } from './zyins/minRank.js';
 export { ReferenceSort, type DatasetBundleV3, type DatasetCategory, type DatasetEntry, type ReferenceEntity, type ConditionEntity, type ConditionTreatedWith, type MedicationEntity, type MedicationUsedFor, type NicotineOptionEntity, type SpellingCorrectionEntity, type Concept, type ConceptKind, type ConditionConcept, type MedicationConcept, type UnknownConcept, type Suggestion, type Autocorrector, type AutocorrectOptions, type MatchAlgorithm, FuzzyMatchAlgorithm, type FuzzyMatchAlgorithmOptions, type AutocompleteAlgorithm, type AutocompleteOptions, type ReferenceAdapters, } from './zyins/index.js';
 export { type PrequalifyV2Request, type PrequalifyV2Result, type PrequalifyV2Options, type PlanOffer, type OtherOffer, type OfferEligibility, type OfferCategory, type OfferCarrier, type OfferProduct, type OfferPlanInfo, type OfferPlanInfoItem, type OfferPlanInfoLegacy, type OfferDeathBenefit, type OfferPremium, type OfferMoney, } from './zyins/prequalify-v2.js';
 export { type PrequalifyRequest, type PrequalifyResult, type PrequalifyPlan, type Plan, type PrequalifyOptions, type PrequalifyResultMeta, type SinglePrequalifyResult, type MultiPrequalifyResult, } from './zyins/prequalify.js';
@@ -4413,6 +4414,7 @@ export { isAuthContext, type AuthContext } from './auth.js';
 export { Sex, NicotineUsage, NicotineDuration, Height, Weight, type Applicant, type Medication, type Condition, type NicotineUsageInput, type NicotineProductUsage, } from './applicant.js';
 export { Coverage, QuoteType, isMulti, type CoverageInput, type CoverageType, type SingleCoverage, type MultiCoverage, type FaceValueCoverage, type MonthlyBudgetCoverage, } from './coverage.js';
 export { ProductSelection, ProductClass, ProductType, Products, type Product, type ProductClassValue, } from './product.js';
+export { MinRank, type MinRankValue } from './minRank.js';
 export { ProductsFacade } from './products.js';
 export { fromHttpResponse, fromProblemDetails } from './errors.js';
 export { type PrequalifyRequest, type PrequalifyResult, type PrequalifyPlan, type Plan, type PrequalifyOptions, type PrequalifyResultMeta, type SinglePrequalifyResult, type MultiPrequalifyResult, } from './prequalify.js';
@@ -5767,6 +5769,32 @@ export declare class LogosSubClient {
     get(carrier: string, opts?: LogosGetOptions): Promise<Blob | string>;
 }
 //# sourceMappingURL=logos.d.ts.map
+=== dist/zyins/minRank.d.ts ===
+/**
+ * Minimum guaranteed-issue rank accepted by the server's `min_rank` filter on
+ * prequalify and quote.
+ *
+ * The canonical identifiers are `Immediate`, `Graded`, `Rop`, and `Guaranteed`;
+ * `ReturnOfPremium`, `GuaranteedIssue`, and `Gi` are synonyms that serialize to
+ * the same lowercase wire token. The server compares case-insensitively and also
+ * tolerates numeric strings, so {@link MinRankValue} is paired with an open
+ * `string` escape hatch on the option types rather than narrowing the field.
+ */
+export declare const MinRank: {
+    readonly Immediate: "immediate";
+    readonly Graded: "graded";
+    readonly Rop: "rop";
+    /** Synonym for {@link MinRank.Rop}. */
+    readonly ReturnOfPremium: "rop";
+    readonly Guaranteed: "guaranteed";
+    /** Synonym for {@link MinRank.Guaranteed}. */
+    readonly GuaranteedIssue: "guaranteed";
+    /** Synonym for {@link MinRank.Guaranteed}. */
+    readonly Gi: "guaranteed";
+};
+/** The lowercase wire tokens the server accepts for `min_rank`. */
+export type MinRankValue = (typeof MinRank)[keyof typeof MinRank];
+//# sourceMappingURL=minRank.d.ts.map
 === dist/zyins/planInfo.d.ts ===
 import type { OfferPlanInfo, OfferPlanInfoLegacy } from './prequalify-v2-types.js';
 type PlanInfoCoercion = {
@@ -5851,6 +5879,7 @@ export declare function set(request: PreferencesSetRequest, ctx: PreferencesCont
 import { type Applicant } from './applicant.js';
 import { type CoverageInput } from './coverage.js';
 import { type ProductSelection, type ProductClassValue } from './product.js';
+import { type MinRankValue } from './minRank.js';
 import { type AuthContext } from './auth.js';
 import { type Transport } from './transport.js';
 import { type Clock } from '../core/index.js';
@@ -5997,8 +6026,8 @@ export interface PrequalifyV2Options {
     onlyProductClass?: ProductClassValue;
     /** Include one or more product classes (server `include_product_class`). */
     includeProductClass?: readonly ProductClassValue[];
-    /** Server-side `min_rank` filter (string per server contract). */
-    minRank?: string;
+    /** Minimum guaranteed-issue rank (server `min_rank`); use {@link MinRank}. */
+    minRank?: MinRankValue | (string & {});
     /** Include products flagged unreleased. */
     showUnreleased?: boolean;
     /** Skip the health-based underwriting layer. */
@@ -6086,6 +6115,7 @@ export declare function prequalifyV2(request: PrequalifyV2Request, ctx: Prequali
 import type { Applicant } from './applicant.js';
 import type { CoverageInput } from './coverage.js';
 import type { ProductSelection, ProductClassValue } from './product.js';
+import type { MinRankValue } from './minRank.js';
 import type { AuthContext } from './auth.js';
 import type { RequestSigner } from './requestSigner.js';
 import type { Transport } from './transport.js';
@@ -6273,7 +6303,8 @@ export declare function offerPremium(offer: V3Offer): V3Premium | null;
 export interface PrequalifyV3Options {
     readonly onlyProductClass?: ProductClassValue;
     readonly includeProductClass?: readonly ProductClassValue[];
-    readonly minRank?: string;
+    /** Minimum guaranteed-issue rank (server `min_rank`); use {@link MinRank}. */
+    readonly minRank?: MinRankValue | (string & {});
     readonly showUnreleased?: boolean;
     readonly skipHealthBasedUnderwriting?: boolean;
     /**
@@ -6364,10 +6395,11 @@ export declare function prequalifyV3(request: PrequalifyV3Request, ctx: Prequali
  * envelope per the v3 schema (`zip` is required for medsup quotes; the
  * server zip-gates and silently filters medsup products when it is
  * absent). `options.minRank`, `options.showUnreleased`,
- * `options.skipHealthBasedUnderwriting`, `options.onlyProductClass`,
- * `options.includeProductClass` are not part of the v3 prequalify
- * envelope and are silently dropped — they survive on `/v3/quote` via
- * the legacy flat body.
+ * `options.skipHealthBasedUnderwriting`, and `options.onlyProductClass`
+ * ride the same wire keys the `/v3/quote` flat body uses; the server
+ * (zyins #439) honors them on `/v3/prequalify`. `options.includeProductClass`
+ * has no place in the explicit-products envelope — a type-based selection
+ * is rejected loudly below rather than serialized.
  */
 export declare function serializeV3PrequalifyBody(request: PrequalifyV3Request): string;
 export declare function serializeWireBody(request: {
@@ -6424,6 +6456,7 @@ export declare function coerceV3Offer(raw: unknown): V3Offer;
 import { type Applicant } from './applicant.js';
 import { type CoverageInput, type CoverageType } from './coverage.js';
 import { type ProductSelection, type Product, type ProductClassValue } from './product.js';
+import { type MinRankValue } from './minRank.js';
 import { type AuthContext } from './auth.js';
 import { type Transport } from './transport.js';
 import { type Clock } from '../core/index.js';
@@ -6434,8 +6467,8 @@ export interface PrequalifyOptions {
     onlyProductClass?: ProductClassValue;
     /** Include one or more product classes (server `include_product_class`). */
     includeProductClass?: readonly ProductClassValue[];
-    /** Server-side `min_rank` filter (string per server contract). */
-    minRank?: string;
+    /** Minimum guaranteed-issue rank (server `min_rank`); use {@link MinRank}. */
+    minRank?: MinRankValue | (string & {});
     /** Include products flagged unreleased. */
     showUnreleased?: boolean;
     /** Skip the health-based underwriting layer (preview rates without HBU). */
@@ -6854,6 +6887,18 @@ export interface DefaultAutocompleteAlgorithmOptions {
      * Default `false` — populate all six buckets.
      */
     readonly startOnly?: boolean;
+    /**
+     * Typo tolerance. When `true` (default), a query that the substring
+     * filter cannot place against any candidate falls back to a
+     * token-aware fuzzy pass — Damerau-OSA within the shipped length band
+     * OR Double-Metaphone equality, per candidate token. Fuzzy hits rank
+     * strictly below every exact/prefix/substring bucket.
+     *
+     * Set `false` to restore the legacy substring-only behaviour
+     * (`new DefaultAutocompleteAlgorithm({ fuzzy: false })`). Ignored when
+     * `startOnly` is `true` — inline completion is prefix-only by design.
+     */
+    readonly fuzzy?: boolean;
     /** Optional version stamp surfaced via {@link DefaultAutocompleteAlgorithm.versionTag}. */
     readonly versionTag?: string;
 }
@@ -6873,6 +6918,7 @@ export interface DefaultAutocompleteAlgorithmOptions {
  */
 export declare class DefaultAutocompleteAlgorithm implements AutocompleteAlgorithm {
     private readonly startOnly;
+    private readonly fuzzy;
     private readonly _versionTag;
     constructor(opts?: DefaultAutocompleteAlgorithmOptions);
     /** Opaque tag tracking the version of this ranker. */

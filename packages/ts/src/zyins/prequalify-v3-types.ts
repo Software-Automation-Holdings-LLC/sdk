@@ -17,6 +17,7 @@
 import type { Applicant } from './applicant.js';
 import type { CoverageInput } from './coverage.js';
 import type { ProductSelection, ProductClassValue } from './product.js';
+import type { MinRankValue } from './minRank.js';
 import type { AuthContext } from './auth.js';
 import type { RequestSigner } from './requestSigner.js';
 import type { Transport } from './transport.js';
@@ -241,7 +242,8 @@ export function offerPremium(offer: V3Offer): V3Premium | null {
 export interface PrequalifyV3Options {
   readonly onlyProductClass?: ProductClassValue;
   readonly includeProductClass?: readonly ProductClassValue[];
-  readonly minRank?: string;
+  /** Minimum guaranteed-issue rank (server `min_rank`); use {@link MinRank}. */
+  readonly minRank?: MinRankValue | (string & {});
   readonly showUnreleased?: boolean;
   readonly skipHealthBasedUnderwriting?: boolean;
   /**

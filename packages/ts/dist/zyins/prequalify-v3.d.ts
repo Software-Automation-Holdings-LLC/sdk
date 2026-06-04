@@ -36,10 +36,11 @@ export declare function prequalifyV3(request: PrequalifyV3Request, ctx: Prequali
  * envelope per the v3 schema (`zip` is required for medsup quotes; the
  * server zip-gates and silently filters medsup products when it is
  * absent). `options.minRank`, `options.showUnreleased`,
- * `options.skipHealthBasedUnderwriting`, `options.onlyProductClass`,
- * `options.includeProductClass` are not part of the v3 prequalify
- * envelope and are silently dropped — they survive on `/v3/quote` via
- * the legacy flat body.
+ * `options.skipHealthBasedUnderwriting`, and `options.onlyProductClass`
+ * ride the same wire keys the `/v3/quote` flat body uses; the server
+ * (zyins #439) honors them on `/v3/prequalify`. `options.includeProductClass`
+ * has no place in the explicit-products envelope — a type-based selection
+ * is rejected loudly below rather than serialized.
  */
 export declare function serializeV3PrequalifyBody(request: PrequalifyV3Request): string;
 export declare function serializeWireBody(request: {

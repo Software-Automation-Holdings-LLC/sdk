@@ -11,6 +11,7 @@ export { isAuthContext, type AuthContext } from './auth.js';
 export { Sex, NicotineUsage, NicotineDuration, Height, Weight, type Applicant, type Medication, type Condition, type NicotineUsageInput, type NicotineProductUsage, } from './applicant.js';
 export { Coverage, QuoteType, isMulti, type CoverageInput, type CoverageType, type SingleCoverage, type MultiCoverage, type FaceValueCoverage, type MonthlyBudgetCoverage, } from './coverage.js';
 export { ProductSelection, ProductClass, ProductType, Products, type Product, type ProductClassValue, } from './product.js';
+export { MinRank, type MinRankValue } from './minRank.js';
 export { ProductsFacade } from './products.js';
 export { fromHttpResponse, fromProblemDetails } from './errors.js';
 export { type PrequalifyRequest, type PrequalifyResult, type PrequalifyPlan, type Plan, type PrequalifyOptions, type PrequalifyResultMeta, type SinglePrequalifyResult, type MultiPrequalifyResult, } from './prequalify.js';

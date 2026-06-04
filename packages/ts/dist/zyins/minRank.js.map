@@ -1,0 +1,1 @@
+{"version":3,"file":"minRank.js","sourceRoot":"","sources":["../../src/zyins/minRank.ts"],"names":[],"mappings":"AAAA;;;;;;;;;GASG;AACH,MAAM,CAAC,MAAM,OAAO,GAAG;IACrB,SAAS,EAAE,WAAW;IACtB,MAAM,EAAE,QAAQ;IAChB,GAAG,EAAE,KAAK;IACV,uCAAuC;IACvC,eAAe,EAAE,KAAK;IACtB,UAAU,EAAE,YAAY;IACxB,8CAA8C;IAC9C,eAAe,EAAE,YAAY;IAC7B,8CAA8C;IAC9C,EAAE,EAAE,YAAY;CACR,CAAC"}

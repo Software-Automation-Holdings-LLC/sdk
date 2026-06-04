@@ -45,6 +45,8 @@ export {
   type ProductClassValue,
 } from './product.js';
 
+export { MinRank, type MinRankValue } from './minRank.js';
+
 export { ProductsFacade } from './products.js';
 
 export { fromHttpResponse, fromProblemDetails } from './errors.js';

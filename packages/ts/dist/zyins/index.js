@@ -11,6 +11,7 @@ export { isAuthContext } from './auth.js';
 export { Sex, NicotineUsage, NicotineDuration, Height, Weight, } from './applicant.js';
 export { Coverage, QuoteType, isMulti, } from './coverage.js';
 export { ProductSelection, ProductClass, ProductType, Products, } from './product.js';
+export { MinRank } from './minRank.js';
 export { ProductsFacade } from './products.js';
 export { fromHttpResponse, fromProblemDetails } from './errors.js';
 export { prequalifyV2, } from './prequalify-v2.js';
