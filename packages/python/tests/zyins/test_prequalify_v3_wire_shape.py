@@ -21,6 +21,8 @@ import json
 from dataclasses import dataclass, field
 from typing import Any
 
+import pytest
+
 from sah_sdk.catalog.products import Products
 from sah_sdk.core.transport import TransportResponse
 from sah_sdk.zyins.applicant import (
@@ -33,10 +35,13 @@ from sah_sdk.zyins.applicant import (
     Sex,
 )
 from sah_sdk.zyins.coverage import Coverage
+from sah_sdk.zyins.min_rank import MinRank
 from sah_sdk.zyins.prequalify_v3 import (
+    PrequalifyV3Options,
     PrequalifyV3Request,
     prequalify_v3,
     serialize_v3_prequalify_body,
+    serialize_wire_body,
 )
 from sah_sdk.zyins.product import ProductSelection
 
@@ -360,3 +365,116 @@ def test_prequalify_v3_parse_empty_plans_array_returns_empty() -> None:
 
     result = parse_prequalify_v3_envelope(body_with_empty_plans, idempotency_key="")
     assert len(result.plans) == 0, "expected empty plans tuple, not an error"
+
+
+# ---------------------------------------------------------------------------
+# min_rank wire-token conformance — cross-language value-set parity.
+#
+# Each canonical MinRank member, and each synonym, MUST serialize to its
+# lowercase wire token under `min_rank`. Driven through serialize_wire_body
+# (the /v3/quote path, which carries min_rank). Mirrors the Go/TS/PHP/C#
+# wire-shape suites so a divergence in any one language fails that language's
+# own CI.
+# ---------------------------------------------------------------------------
+
+
+def _min_rank_of(option_value: str) -> str:
+    body = serialize_wire_body(
+        applicant=_basic_applicant(),
+        coverage=Coverage.face_value(100_000),
+        products=_product_selection(),
+        options=PrequalifyV3Options(min_rank=option_value),
+    )
+    payload = json.loads(body)
+    assert isinstance(payload, dict)
+    token = payload["min_rank"]
+    assert isinstance(token, str)
+    return token
+
+
+@pytest.mark.parametrize(
+    ("member", "wire_token"),
+    [
+        (MinRank.IMMEDIATE, "immediate"),
+        (MinRank.GRADED, "graded"),
+        (MinRank.ROP, "rop"),
+        (MinRank.GUARANTEED, "guaranteed"),
+    ],
+)
+def test_prequalify_v3_serializes_canonical_min_rank_token(
+    member: MinRank, wire_token: str
+) -> None:
+    assert _min_rank_of(member) == wire_token
+
+
+@pytest.mark.parametrize(
+    ("synonym", "wire_token"),
+    [
+        (MinRank.RETURN_OF_PREMIUM, "rop"),
+        (MinRank.GUARANTEED_ISSUE, "guaranteed"),
+        (MinRank.GI, "guaranteed"),
+    ],
+)
+def test_prequalify_v3_serializes_min_rank_synonym_to_canonical_token(
+    synonym: MinRank, wire_token: str
+) -> None:
+    assert _min_rank_of(synonym) == wire_token
+
+
+def test_prequalify_v3_emits_shared_underwriting_options() -> None:
+    """The four options the /v3/prequalify envelope shares with /v3/quote —
+    ``min_rank``, ``only_product_class``, ``skip_health_based_underwriting``,
+    ``show_unreleased`` — MUST surface on the prequalify wire body. The server
+    (zyins #439) honors them; this guards against the serializer silently
+    dropping them again (the bug that left "Quote Type = Graded" with no wire
+    effect). Mirrors the canonical min_rank tests on the prequalify path.
+    """
+    body = serialize_v3_prequalify_body(
+        applicant=_basic_applicant(),
+        coverage=Coverage.face_value(100_000),
+        products=_product_selection(),
+        options=PrequalifyV3Options(
+            min_rank=MinRank.GRADED,
+            only_product_class="fex",
+            show_unreleased=True,
+            skip_health_based_underwriting=True,
+        ),
+    )
+    payload = json.loads(body)
+    assert payload["min_rank"] == "graded"
+    assert payload["only_product_class"] == "fex"
+    assert payload["show_unreleased"] is True
+    assert payload["skip_health_based_underwriting"] is True
+
+
+def test_prequalify_v3_omits_shared_options_when_unset() -> None:
+    """An unset option leaves its wire key absent — never ``null`` or an empty
+    string. ``include_product_class`` is never serialized on the explicit-
+    products prequalify envelope."""
+    body = serialize_v3_prequalify_body(
+        applicant=_basic_applicant(),
+        coverage=Coverage.face_value(100_000),
+        products=_product_selection(),
+        options=PrequalifyV3Options(min_rank=MinRank.GRADED),
+    )
+    payload = json.loads(body)
+    assert payload["min_rank"] == "graded"
+    for absent in (
+        "only_product_class",
+        "show_unreleased",
+        "skip_health_based_underwriting",
+        "include_product_class",
+    ):
+        assert absent not in payload
+
+
+def test_prequalify_v3_omits_empty_string_shared_options() -> None:
+    body = serialize_v3_prequalify_body(
+        applicant=_basic_applicant(),
+        coverage=Coverage.face_value(100_000),
+        products=_product_selection(),
+        options=PrequalifyV3Options(only_product_class="", min_rank=""),
+    )
+    payload = json.loads(body)
+    assert "only_product_class" not in payload
+    assert "min_rank" not in payload

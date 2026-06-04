@@ -43,12 +43,26 @@ from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field, replace
 from typing import Any, Protocol, runtime_checkable
 
+from ._damerau_osa import FUZZY_SHORT_LEN, optimal_string_alignment_distance
+from ._double_metaphone import double_metaphone
+from ._make_key import _make_key
 from .concept import Concept, ConceptKind
 from .sort import Sort
 from .suggestion import Suggestion
 
 _WHITESPACE_RE = re.compile(r"\s+")
 _NON_ALNUM_RE = re.compile(r"[^A-Z0-9]")
+
+# Substring-hit count at or below which the typo-tolerant fallback fires.
+# Mirrors the TS reference: a typo-recovery pass only earns its keep when
+# literal matching comes up nearly empty.
+_FUZZY_FALLBACK_THRESHOLD = 1
+# Edit-distance ceiling for the autocomplete fuzzy band, one wider than the
+# FuzzyMatchAlgorithm single-result band in the medium range: autocomplete
+# shows a RANKED list with fuzzy hits in the strict lowest bucket, so a
+# slightly looser net is safe and catches double-edit transpositions the
+# match path rejects ("chrons" -> "crohns" is OSA distance 2).
+_AUTOCOMPLETE_FUZZY_MAX_DISTANCE = 2
 
 
 def _tokenize(text: str) -> list[str]:
@@ -125,6 +139,7 @@ class AutocompleteAlgorithm(Protocol):
 @dataclass(frozen=True, slots=True)
 class _AutocompleteConfig:
     version_tag: str | None = None
+    fuzzy: bool = True
 
 
 class DefaultAutocompleteAlgorithm:
@@ -140,12 +155,21 @@ class DefaultAutocompleteAlgorithm:
 
     _config: _AutocompleteConfig
 
-    def __init__(self, *, version_tag: str | None = None) -> None:
-        self._config = _AutocompleteConfig(version_tag=version_tag)
+    def __init__(self, *, version_tag: str | None = None, fuzzy: bool = True) -> None:
+        """Construct the default ranker.
+
+        ``fuzzy`` toggles the typo-tolerant fallback (default ``True``).
+        Pass ``fuzzy=False`` to restore substring-only behaviour.
+        """
+        self._config = _AutocompleteConfig(version_tag=version_tag, fuzzy=fuzzy)
 
     @property
     def version_tag(self) -> str | None:
         return self._config.version_tag
+
+    @property
+    def fuzzy(self) -> bool:
+        return self._config.fuzzy
 
     def clone(self, **overrides: Any) -> DefaultAutocompleteAlgorithm:
         """Return a fresh instance with selected fields overridden.
@@ -153,9 +177,13 @@ class DefaultAutocompleteAlgorithm:
         >>> a = DefaultAutocompleteAlgorithm()
         >>> a.clone(version_tag='2026.05.29').version_tag
         '2026.05.29'
+        >>> a.clone(fuzzy=False).fuzzy
+        False
         """
         new_config = replace(self._config, **overrides)
-        return DefaultAutocompleteAlgorithm(version_tag=new_config.version_tag)
+        return DefaultAutocompleteAlgorithm(
+            version_tag=new_config.version_tag, fuzzy=new_config.fuzzy
+        )
 
     async def rank(
         self,
@@ -184,8 +212,12 @@ class DefaultAutocompleteAlgorithm:
         words_in_input = _tokenize(query)
         if not words_in_input:
             return []
-        upper_input = query.upper()
         start_input = " ".join(words_in_input)
+        # make_key form: uppercase, strip ALL non-alphanumeric. This is what
+        # the engine matches on server-side, so a correctly-spelled "crohns"
+        # must reach "Crohn's Disease" — the literal "("-only strip leaves the
+        # apostrophe in and breaks it.
+        query_key = _make_key(query)
 
         # 1. Filter — the JS algorithm applies a coarse pre-filter before
         # categorizing. Replicate it so the bucket walker only sees
@@ -196,11 +228,12 @@ class DefaultAutocompleteAlgorithm:
                 if candidate.name.upper().replace("(", "").startswith(start_input):
                     pre_filtered.append(candidate)
         else:
-            cleaned_input = " ".join(words_in_input)
             for candidate in filtered:
-                cleaned_name = candidate.name.upper().replace("(", "")
                 if len(words_in_input) < 2:
-                    if cleaned_input in cleaned_name:
+                    # Compare on the make_key form (apostrophes, hyphens,
+                    # etc. stripped from BOTH sides) — mirrors the server-side
+                    # make_key match.
+                    if query_key in _make_key(candidate.name):
                         pre_filtered.append(candidate)
                     continue
                 # Multi-word query: keep candidates where at most one input
@@ -213,7 +246,19 @@ class DefaultAutocompleteAlgorithm:
                 if missing <= 1:
                     pre_filtered.append(candidate)
 
-        if not pre_filtered:
+        # 1b. Typo-tolerant fallback. When the literal filter comes up nearly
+        # empty, recover transpositions/phonetic misses ("chrons" -> Crohn's,
+        # "diabetis" -> Diabetes, "tylonol" -> Tylenol). Default ON; the
+        # ``fuzzy=False`` opt-out and ``starts_with_only`` mode both skip it.
+        fuzzy_matches: list[Concept] = []
+        if (
+            self._config.fuzzy
+            and not options.starts_with_only
+            and len(pre_filtered) <= _FUZZY_FALLBACK_THRESHOLD
+        ):
+            fuzzy_matches = _collect_fuzzy(query_key, words_in_input, filtered, pre_filtered)
+
+        if not pre_filtered and not fuzzy_matches:
             return []
 
         # 2. Bucket.
@@ -265,6 +310,9 @@ class DefaultAutocompleteAlgorithm:
             no_tol_flat,  # wordCountNoTolerance flattened
             buckets[4],  # sameNumWithTolerance
             with_tol_flat,  # wordCountWithTolerance flattened
+            # Fuzzy hits occupy the strict lowest bucket — always below every
+            # literal (exact / prefix / substring / word-tolerance) match.
+            fuzzy_matches,
         ]
 
         # 3. Order within the matched set. Alphabetical flattens every
@@ -292,14 +340,10 @@ class DefaultAutocompleteAlgorithm:
                     continue
                 seen.add(dedupe_key)
                 score = score_lookup.get(dedupe_key, 0.0)
-                # Locate the matched span (best-effort): position of the
-                # uppercase query in the uppercase candidate name.
-                upper_name = candidate.name.upper()
-                if upper_input and upper_input in upper_name:
-                    start = upper_name.index(upper_input)
-                    span = (start, start + len(upper_input))
-                else:
-                    span = (0, 0)
+                # Locate the matched span on the make_key form (uppercase,
+                # alphanumeric only) so a query like "crohns" highlights the
+                # right run in "Crohn's Disease" across the apostrophe.
+                span = _compute_span(candidate.name, query_key)
                 out_suggestions.append(
                     Suggestion(
                         concept=Concept(
@@ -397,6 +441,94 @@ def _compute_score_lookup(
             freq = frequencies.get(c.id or "", 0) + 1
             out[key] = float(freq * scale)
     return out
+
+
+def _autocomplete_fuzzy_threshold(unit_length: int) -> int:
+    """Edit-distance ceiling for a query unit of ``unit_length`` chars.
+
+    One wider than :data:`FUZZY_SHORT_LEN`\'s short band so the autocomplete
+    list (fuzzy hits in the strict lowest bucket) catches double-edit
+    transpositions the single-result match path rejects.
+    """
+    if unit_length < FUZZY_SHORT_LEN:
+        return 1
+    return _AUTOCOMPLETE_FUZZY_MAX_DISTANCE
+
+
+def _fuzzy_matches_any_token(
+    query_units: Sequence[str],
+    query_codes: Sequence[str],
+    candidate_tokens: Sequence[str],
+) -> bool:
+    """True when any candidate token clears the fuzzy bar for any query unit.
+
+    A unit matches a token by Damerau-OSA distance within its length band OR
+    Double-Metaphone primary-code equality. Per-token matching keeps a short
+    query ("chrons") from being swamped by the edit distance of a long name.
+    """
+    for unit, code in zip(query_units, query_codes, strict=True):
+        if not unit:
+            continue
+        threshold = _autocomplete_fuzzy_threshold(len(unit))
+        for token in candidate_tokens:
+            if not token:
+                continue
+            if optimal_string_alignment_distance(unit, token, threshold) <= threshold:
+                return True
+            if code and double_metaphone(token).primary == code:
+                return True
+    return False
+
+
+def _collect_fuzzy(
+    query_key: str,
+    words_in_input: Sequence[str],
+    candidates: Sequence[Concept],
+    already_matched: Sequence[Concept],
+) -> list[Concept]:
+    """Recover typo'd queries the literal pre-filter could not place.
+
+    For each candidate not already matched, accept it when any candidate token
+    fuzzy-matches the query. A single-token query fuzzes on its make_key form;
+    a multi-word query fuzzes each word independently. Reuses the same
+    primitives as :class:`FuzzyMatchAlgorithm` for cross-language parity.
+    """
+    if not query_key:
+        return []
+    matched = {c.id or f"_unk:{c.name}" for c in already_matched}
+    query_units = list(words_in_input) if len(words_in_input) > 1 else [query_key]
+    query_codes = [double_metaphone(u).primary for u in query_units]
+    hits: list[Concept] = []
+    for candidate in candidates:
+        if (candidate.id or f"_unk:{candidate.name}") in matched:
+            continue
+        if _fuzzy_matches_any_token(query_units, query_codes, _tokenize(candidate.name)):
+            hits.append(candidate)
+    return hits
+
+
+def _compute_span(name: str, query_key: str) -> tuple[int, int]:
+    """Locate ``query_key`` inside ``name`` on the make_key form.
+
+    Tracks each surviving char\'s source index so the returned [start, end)
+    range maps back onto the original display name even when stripped
+    punctuation (an apostrophe in "Crohn\'s") sits inside the matched run.
+    Returns ``(0, 0)`` when there is no match.
+    """
+    if not query_key:
+        return (0, 0)
+    normalized: list[str] = []
+    source_indices: list[int] = []
+    for i, ch in enumerate(name):
+        up = ch.upper()
+        if up.isalnum() and up.isascii():
+            normalized.append(up)
+            source_indices.append(i)
+    idx = "".join(normalized).find(query_key)
+    if idx < 0:
+        return (0, 0)
+    end_source = source_indices[idx + len(query_key) - 1]
+    return (source_indices[idx], end_source + 1)
 
 
 __all__ = [

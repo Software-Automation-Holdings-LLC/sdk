@@ -73,6 +73,7 @@ from .licenses import (
 )
 from .licenses_facade import LicenseActivateResult
 from .measurements import Height, HeightParseError, Weight, WeightParseError
+from .min_rank import MinRank
 from .plan_info_label import PlanInfoItem, coerce_plan_info, title_case_label
 from .preferences import PreferencesResult, PreferencesSetInput
 from .prequalify import (
@@ -183,6 +184,7 @@ __all__ = [
     "LicenseError",
     "LocalEngine",
     "Medication",
+    "MinRank",
     "NicotineDuration",
     "NicotineProductUsage",
     "NicotineUsage",

@@ -251,6 +251,8 @@ class PrequalifyV3Options:
 
     only_product_class: str | None = None
     include_product_class: Sequence[str] = ()
+    # Minimum guaranteed-issue rank; pass a :class:`MinRank` member (canonical
+    # ``GUARANTEED`` / ``ROP``, or a synonym) or a plain ``str``.
     min_rank: str | None = None
     show_unreleased: bool | None = None
     skip_health_based_underwriting: bool | None = None
@@ -507,10 +509,10 @@ def serialize_v3_prequalify_body(
     products when it is absent).
 
     ``options.min_rank``, ``options.show_unreleased``,
-    ``options.skip_health_based_underwriting``, ``options.only_product_class``,
-    ``options.include_product_class`` are NOT part of the v3 prequalify
-    envelope and are silently dropped — they survive on ``/v3/quote``
-    via :func:`serialize_wire_body`.
+    ``options.skip_health_based_underwriting``, and ``options.only_product_class``
+    ride the same wire keys ``/v3/quote`` uses; the server (zyins #439)
+    honors them on ``/v3/prequalify``. ``options.include_product_class``
+    has no place in the explicit-products envelope and is not serialized.
     """
     applicant_wire: dict[str, Any] = {
         "sex": applicant.sex.value,
@@ -528,11 +530,35 @@ def serialize_v3_prequalify_body(
         "coverage": _serialize_v3_coverage(coverage, applicant.state, applicant.zip),
         "products": list(products.to_wire_array()),
     }
+    _apply_v3_shared_options(payload, options)
     if options is not None and options.include_ineligible is not None:
         payload["include_ineligible"] = options.include_ineligible
     else:
         payload["include_ineligible"] = True
     return json.dumps(payload, separators=(",", ":"))
+
+
+def _apply_v3_shared_options(
+    payload: dict[str, Any],
+    options: PrequalifyV3Options | None,
+) -> None:
+    """Write the scalar options shared by the v3 prequalify and quote bodies.
+
+    Each key is emitted only when its option is set; an unset option leaves
+    the key absent so the server sees no key rather than ``null`` or an empty
+    string. ``include_product_class`` (a quote-only flat-body concern) and
+    ``include_ineligible`` (builder-specific defaulting) are excluded.
+    """
+    if options is None:
+        return
+    if options.only_product_class:
+        payload["only_product_class"] = options.only_product_class
+    if options.min_rank:
+        payload["min_rank"] = options.min_rank
+    if options.show_unreleased is not None:
+        payload["show_unreleased"] = options.show_unreleased
+    if options.skip_health_based_underwriting is not None:
+        payload["skip_health_based_underwriting"] = options.skip_health_based_underwriting
 
 
 # ---------------------------------------------------------------------------
@@ -575,9 +601,8 @@ def serialize_wire_body(
     }
     if applicant.zip is not None:
         payload["zip"] = applicant.zip
+    _apply_v3_shared_options(payload, options)
     if options is not None:
-        if options.only_product_class is not None:
-            payload["only_product_class"] = options.only_product_class
         if options.include_product_class:
             existing = payload.get("include_product_class")
             base = list(existing) if isinstance(existing, list) else []
@@ -587,12 +612,6 @@ def serialize_wire_body(
                     base.append(token)
                     seen.add(token)
             payload["include_product_class"] = base
-        if options.min_rank is not None:
-            payload["min_rank"] = options.min_rank
-        if options.show_unreleased is not None:
-            payload["show_unreleased"] = options.show_unreleased
-        if options.skip_health_based_underwriting is not None:
-            payload["skip_health_based_underwriting"] = options.skip_health_based_underwriting
         if options.include_ineligible is not None:
             payload["include_ineligible"] = options.include_ineligible
     payload.setdefault("include_ineligible", True)

@@ -481,6 +481,136 @@ def test_autocomplete_superset_uses_word_count_bucket() -> None:
     assert [s.id for s in result] == ["independent", "superset"]
 
 
+_POSSESSIVE_CONDS = (
+    ("CROHNSDISEASE", "Crohn's Disease", ConceptKind.CONDITION),
+    ("ALZHEIMERSDISEASE", "Alzheimer's Disease", ConceptKind.CONDITION),
+    ("PARKINSONSDISEASE", "Parkinson's Disease", ConceptKind.CONDITION),
+    ("GRAVESDISEASE", "Graves' Disease", ConceptKind.CONDITION),
+    ("HASHIMOTOSTHYROIDITIS", "Hashimoto's Thyroiditis", ConceptKind.CONDITION),
+    ("DIABETES", "Diabetes", ConceptKind.CONDITION),
+)
+
+
+@pytest.mark.parametrize(
+    ("query", "expected_id"),
+    [
+        ("crohns", "CROHNSDISEASE"),
+        ("alzheimers", "ALZHEIMERSDISEASE"),
+        ("parkinsons", "PARKINSONSDISEASE"),
+        ("graves", "GRAVESDISEASE"),
+        ("hashimotos", "HASHIMOTOSTHYROIDITIS"),
+    ],
+)
+def test_autocomplete_make_key_surfaces_possessive_conditions(
+    query: str, expected_id: str
+) -> None:
+    # FIX #1 — the single-word substring filter compares on the make_key form,
+    # so an apostrophe-free query reaches a possessive-named condition.
+    algo = DefaultAutocompleteAlgorithm()
+    result = asyncio.run(
+        algo.rank(
+            query,
+            _concepts(*_POSSESSIVE_CONDS),
+            AutocompleteOptions(limit=10, kinds=(ConceptKind.CONDITION,)),
+        )
+    )
+    assert expected_id in [s.id for s in result]
+
+
+def test_autocomplete_span_crosses_apostrophe() -> None:
+    # FIX #1 — the matched span maps back onto the display name across the
+    # stripped apostrophe: "Crohn's" is indices 0..7.
+    algo = DefaultAutocompleteAlgorithm()
+    result = asyncio.run(
+        algo.rank(
+            "crohns",
+            _concepts(("CROHNSDISEASE", "Crohn's Disease", ConceptKind.CONDITION)),
+            AutocompleteOptions(limit=10, kinds=(ConceptKind.CONDITION,)),
+        )
+    )
+    assert result[0].matched_span == (0, len("Crohn's"))
+
+
+@pytest.mark.parametrize("query", ["chrons", "corhns"])
+def test_autocomplete_fuzzy_recovers_transposition(query: str) -> None:
+    # FIX #2 — default-on fuzzy fallback recovers a transposition typo.
+    algo = DefaultAutocompleteAlgorithm()
+    result = asyncio.run(
+        algo.rank(
+            query,
+            _concepts(*_POSSESSIVE_CONDS),
+            AutocompleteOptions(limit=10, kinds=(ConceptKind.CONDITION,)),
+        )
+    )
+    assert "CROHNSDISEASE" in [s.id for s in result]
+
+
+def test_autocomplete_fuzzy_recovers_diabetis() -> None:
+    algo = DefaultAutocompleteAlgorithm()
+    result = asyncio.run(
+        algo.rank(
+            "diabetis",
+            _concepts(*_POSSESSIVE_CONDS),
+            AutocompleteOptions(limit=10, kinds=(ConceptKind.CONDITION,)),
+        )
+    )
+    assert "DIABETES" in [s.id for s in result]
+
+
+def test_autocomplete_fuzzy_recovers_phonetic_typo() -> None:
+    # FIX #2 — Double Metaphone recovers a phonetic miss ("tylonol" -> Tylenol).
+    algo = DefaultAutocompleteAlgorithm()
+    result = asyncio.run(
+        algo.rank(
+            "tylonol",
+            _concepts(
+                ("TYLENOL", "Tylenol", ConceptKind.MEDICATION),
+                ("LISINOPRIL", "Lisinopril", ConceptKind.MEDICATION),
+            ),
+            AutocompleteOptions(limit=10, kinds=(ConceptKind.MEDICATION,)),
+        )
+    )
+    assert "TYLENOL" in [s.id for s in result]
+
+
+def test_autocomplete_exact_prefix_outranks_fuzzy() -> None:
+    # FIX #2 — a literal prefix hit fires the substring path, not fuzzy, and
+    # ranks first.
+    algo = DefaultAutocompleteAlgorithm()
+    result = asyncio.run(
+        algo.rank(
+            "diabe",
+            _concepts(*_POSSESSIVE_CONDS),
+            AutocompleteOptions(limit=10, kinds=(ConceptKind.CONDITION,)),
+        )
+    )
+    assert result[0].id == "DIABETES"
+
+
+def test_autocomplete_fuzzy_opt_out_is_substring_only() -> None:
+    # FIX #2 — fuzzy=False reverts to substring-only; the make_key fix persists.
+    algo = DefaultAutocompleteAlgorithm(fuzzy=False)
+    opts = AutocompleteOptions(limit=10, kinds=(ConceptKind.CONDITION,))
+    conds = _concepts(*_POSSESSIVE_CONDS)
+    assert (
+        asyncio.run(algo.rank("chrons", conds, opts)) == []
+    )  # transposition: no substring match
+    crohns = asyncio.run(algo.rank("crohns", conds, opts))
+    assert "CROHNSDISEASE" in [s.id for s in crohns]
+
+
+def test_autocomplete_empty_query_returns_empty_with_fuzzy_on() -> None:
+    algo = DefaultAutocompleteAlgorithm()
+    result = asyncio.run(
+        algo.rank(
+            "",
+            _concepts(*_POSSESSIVE_CONDS),
+            AutocompleteOptions(limit=10, kinds=(ConceptKind.CONDITION,)),
+        )
+    )
+    assert result == []
+
+
 def test_frequency_sort_scores_unknown_concepts_independently() -> None:
     unknown = Concept(
         id=None,

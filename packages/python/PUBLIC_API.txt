@@ -806,6 +806,9 @@ class Weight
     def from_string(cls, value: str) -> Weight
     def kilograms(self) -> float
 
+=== zyins/min_rank.py ===
+class MinRank(str, Enum)
+
 === zyins/plan_info_label.py ===
 def title_case_label(key: str) -> str
 class PlanInfoItem
@@ -1000,6 +1003,7 @@ class AutocompleteAlgorithm(Protocol)
     async def rank(self, query: str, candidates: Sequence[Concept], options: AutocompleteOptions) -> list[Suggestion]
 class DefaultAutocompleteAlgorithm
     def version_tag(self) -> str | None
+    def fuzzy(self) -> bool
     def clone(self, **overrides) -> DefaultAutocompleteAlgorithm
     async def rank(self, query: str, candidates: Sequence[Concept], options: AutocompleteOptions) -> list[Suggestion]
 
