@@ -25,19 +25,28 @@ public sealed class DefaultAutocompleteAlgorithm : IAutocompleteAlgorithm
 {
     private static readonly char[] Whitespace = new[] { ' ', '\t', '\n', '\r' };
 
-    /// <summary>Construct with an optional version tag pinning the
-    /// adapter to a specific catalog revision.</summary>
-    public DefaultAutocompleteAlgorithm(string? versionTag = null)
+    /// <summary>Construct with an optional version tag pinning the adapter to
+    /// a specific catalog revision. <paramref name="fuzzy"/> toggles the
+    /// typo-tolerant fallback — when <c>true</c> (the default) a query the
+    /// substring filter cannot place falls back to a token-aware fuzzy pass
+    /// (Damerau-OSA within the length band OR Double-Metaphone equality), with
+    /// fuzzy hits ranked strictly below every literal bucket. Pass
+    /// <c>fuzzy: false</c> to restore substring-only behaviour.</summary>
+    public DefaultAutocompleteAlgorithm(string? versionTag = null, bool fuzzy = true)
     {
         VersionTag = versionTag;
+        Fuzzy = fuzzy;
     }
 
     /// <inheritdoc/>
     public string? VersionTag { get; }
 
+    /// <summary>Whether the typo-tolerant fuzzy fallback is enabled.</summary>
+    public bool Fuzzy { get; }
+
     /// <summary>Return a clone with selected fields overridden.</summary>
-    public DefaultAutocompleteAlgorithm Clone(string? versionTag = null) =>
-        new(versionTag ?? VersionTag);
+    public DefaultAutocompleteAlgorithm Clone(string? versionTag = null, bool? fuzzy = null) =>
+        new(versionTag ?? VersionTag, fuzzy ?? Fuzzy);
 
     /// <inheritdoc/>
     public Task<IReadOnlyList<Suggestion>> Rank(
@@ -61,9 +70,22 @@ public sealed class DefaultAutocompleteAlgorithm : IAutocompleteAlgorithm
 
         var queryUpper = query.ToUpperInvariant();
         var queryWords = AutocompleteTokens.Tokenize(query);
-        var filtered = AutocompleteFilter.Filter(pool, queryUpper, queryWords);
+        // make_key form: uppercase, strip ALL non-alphanumeric — what the
+        // engine matches on server-side, so a correctly-spelled "crohns"
+        // reaches "Crohn's Disease".
+        var queryKey = MakeKey.Normalize(query);
+        var filtered = AutocompleteFilter.Filter(pool, queryKey, queryWords);
         var buckets = AutocompleteBuckets.Categorize(filtered, queryWords, queryUpper);
         var grouped = AutocompleteBuckets.Flatten(buckets);
+        // Typo-tolerant fallback. When the literal filter comes up nearly
+        // empty, recover transpositions/phonetic misses ("chrons" → Crohn's,
+        // "diabetis" → Diabetes, "tylonol" → Tylenol). Fuzzy hits occupy the
+        // strict lowest bucket. Default ON; fuzzy:false skips it.
+        if (Fuzzy && filtered.Count <= AutocompleteFuzzy.FallbackThreshold)
+        {
+            var fuzzyHits = AutocompleteFuzzy.Collect(queryKey, queryWords, pool, filtered);
+            if (fuzzyHits.Count > 0) grouped.Add(fuzzyHits);
+        }
         // Alphabetical collapses every bucket into one A→Z group (the relevance
         // filter already decided membership); the default boosts by frequency,
         // keeping the group structure so each group's scale is preserved.
@@ -89,7 +111,7 @@ public sealed class DefaultAutocompleteAlgorithm : IAutocompleteAlgorithm
             var key = concept.Id ?? concept.InputText;
             if (!seen.Add(key)) continue;
             rank++;
-            var span = AutocompleteSpan.Compute(concept.Name, queryUpper);
+            var span = AutocompleteSpan.Compute(concept.Name, queryKey);
             var score = (double)scoreOf[AutocompleteFrequency.ScoreKey(concept)];
             output.Add(new Suggestion(concept, score, span, rank));
         }
@@ -131,14 +153,34 @@ internal static class AutocompleteTokens
 
 internal static class AutocompleteSpan
 {
-    public static MatchedSpan Compute(string name, string queryUpper)
+    /// <summary>Locate <paramref name="queryKey"/> (the make_key form) inside
+    /// <paramref name="name"/>, tracking each surviving char's source index so
+    /// the returned [start, length) range maps back onto the display name even
+    /// when stripped punctuation (an apostrophe in "Crohn's") sits inside the
+    /// matched run. Returns an empty span when there is no match.</summary>
+    public static MatchedSpan Compute(string name, string queryKey)
     {
-        if (string.IsNullOrEmpty(queryUpper) || string.IsNullOrEmpty(name))
+        if (string.IsNullOrEmpty(queryKey) || string.IsNullOrEmpty(name))
         {
             return new MatchedSpan(0, 0);
         }
-        var upper = name.ToUpperInvariant();
-        var idx = upper.IndexOf(queryUpper, StringComparison.Ordinal);
-        return idx < 0 ? new MatchedSpan(0, 0) : new MatchedSpan(idx, queryUpper.Length);
+        var normalized = new char[name.Length];
+        var sourceIndices = new int[name.Length];
+        var n = 0;
+        for (var i = 0; i < name.Length; i++)
+        {
+            var ch = char.ToUpperInvariant(name[i]);
+            if ((ch >= 'A' && ch <= 'Z') || (ch >= '0' && ch <= '9'))
+            {
+                normalized[n] = ch;
+                sourceIndices[n] = i;
+                n++;
+            }
+        }
+        var idx = new string(normalized, 0, n).IndexOf(queryKey, StringComparison.Ordinal);
+        if (idx < 0) return new MatchedSpan(0, 0);
+        var start = sourceIndices[idx];
+        var endSource = sourceIndices[idx + queryKey.Length - 1];
+        return new MatchedSpan(start, endSource + 1 - start);
     }
 }

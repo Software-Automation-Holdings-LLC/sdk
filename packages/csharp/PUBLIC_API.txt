@@ -636,6 +636,7 @@ public class EnumWireValues
     public IReadOnlyList<string> AllNicotineDurationValues(...)
     public IReadOnlyList<string> AllProductTypeValues(...)
     public IReadOnlyList<string> AllCoverageTypeValues(...)
+    public IReadOnlyList<string> AllMinRankValues(...)
 
 === Zyins/Envelope.cs ===
 namespace Isa.Sdk.Zyins;
@@ -731,6 +732,17 @@ public class LogosSubClient
     public byte[]? Bytes { ... }
     public string? DataUri { ... }
     public Task<LogoResult> GetAsync(...)
+
+=== Zyins/MinRank.cs ===
+namespace Isa.Sdk.Zyins;
+public class MinRank
+    public string Immediate
+    public string Graded
+    public string Rop
+    public string ReturnOfPremium
+    public string Guaranteed
+    public string GuaranteedIssue
+    public string Gi
 
 === Zyins/Models.cs ===
 namespace Isa.Sdk.Zyins;
@@ -956,11 +968,14 @@ namespace Isa.Sdk.Zyins.Reference;
     public Dictionary<string, int> ComputeScoreLookup(...)
     public string ScoreKey(...)
     public List<IConcept> FlattenAlphabetical(...)
+    public int FallbackThreshold
+    public List<IConcept> Collect(...)
 
 === Zyins/Reference/DefaultAutocompleteAlgorithm.cs ===
 namespace Isa.Sdk.Zyins.Reference;
 public class DefaultAutocompleteAlgorithm : IAutocompleteAlgorithm
     public string? VersionTag { ... }
+    public bool Fuzzy { ... }
     public DefaultAutocompleteAlgorithm Clone(...)
     public Task<IReadOnlyList<Suggestion>> Rank(...)
     public List<string> Tokenize(...)

@@ -109,11 +109,12 @@ internal static class V3WireBuilder
     /// 100); a multi-amount probe sends <c>coverage.quote_options</c>
     /// (mirroring <c>/v3/quote</c>), satisfying the server's additive
     /// <c>face_amount_cents</c> XOR <c>quote_options</c> contract (zyins #400).
-    /// <paramref name="options"/> fields that are not part of the v3 prequalify
-    /// envelope (<c>min_rank</c>, <c>show_unreleased</c>,
-    /// <c>skip_health_based_underwriting</c>, <c>only_product_class</c>,
-    /// <c>include_product_class</c>) are silently dropped; they survive on
-    /// <c>/v3/quote</c> via <see cref="SerializeRequest"/>.
+    /// <paramref name="options"/> values <c>min_rank</c>, <c>show_unreleased</c>,
+    /// <c>skip_health_based_underwriting</c>, and <c>only_product_class</c> ride
+    /// the same wire keys <c>/v3/quote</c> uses; the server (zyins #439) honors
+    /// them on <c>/v3/prequalify</c> (see <see cref="WriteV3SharedOptions"/>).
+    /// <c>include_product_class</c> has no place in the explicit-products
+    /// envelope and is not serialized.
     /// </summary>
     internal static string SerializeV3PrequalifyBody(
         Applicant applicant,
@@ -193,12 +194,50 @@ internal static class V3WireBuilder
             }
             writer.WriteEndArray();
 
-            // include_ineligible (only option carried into the v3 envelope)
+            // Shared scalar underwriting options (min_rank, only_product_class,
+            // show_unreleased, skip_health_based_underwriting) the server honors
+            // on /v3/prequalify (zyins #439), identically to /v3/quote.
+            WriteV3SharedOptions(writer, options);
+
+            // include_ineligible defaults to true so consumers always see the
+            // full pricing table; rows the applicant does not qualify for
+            // surface with eligibility.eligible: false rather than being dropped.
             writer.WriteBoolean("include_ineligible", options?.IncludeIneligible ?? true);
 
             writer.WriteEndObject();
         }
         return Encoding.UTF8.GetString(stream.ToArray());
+    }
+
+    /// <summary>
+    /// Write the scalar underwriting options shared by the v3 prequalify
+    /// envelope and the v3 quote flat body — <c>min_rank</c>,
+    /// <c>only_product_class</c>, <c>skip_health_based_underwriting</c>,
+    /// <c>show_unreleased</c>. Each key is written only when its option is set;
+    /// an unset option leaves the key absent so the server sees no key rather
+    /// than <c>null</c>. <c>include_product_class</c> (a quote-only flat-body
+    /// concern) and <c>include_ineligible</c> (builder-specific defaulting) are
+    /// written by their respective builders, not here.
+    /// </summary>
+    private static void WriteV3SharedOptions(Utf8JsonWriter writer, V3CommonOptions? options)
+    {
+        if (options is null) return;
+        if (!string.IsNullOrEmpty(options.OnlyProductClass))
+        {
+            writer.WriteString("only_product_class", options.OnlyProductClass);
+        }
+        if (!string.IsNullOrEmpty(options.MinRank))
+        {
+            writer.WriteString("min_rank", options.MinRank);
+        }
+        if (options.ShowUnreleased.HasValue)
+        {
+            writer.WriteBoolean("show_unreleased", options.ShowUnreleased.Value);
+        }
+        if (options.SkipHealthBasedUnderwriting.HasValue)
+        {
+            writer.WriteBoolean("skip_health_based_underwriting", options.SkipHealthBasedUnderwriting.Value);
+        }
     }
 
     /// <summary>
@@ -407,12 +446,9 @@ internal static class V3WireBuilder
 
             // options
             var includeIneligibleResolved = options?.IncludeIneligible ?? true;
+            WriteV3SharedOptions(writer, options);
             if (options is not null)
             {
-                if (!string.IsNullOrEmpty(options.OnlyProductClass))
-                {
-                    writer.WriteString("only_product_class", options.OnlyProductClass);
-                }
                 if (options.IncludeProductClass is { Count: > 0 })
                 {
                     writer.WritePropertyName("include_product_class");
@@ -422,18 +458,6 @@ internal static class V3WireBuilder
                         writer.WriteStringValue(s);
                     }
                     writer.WriteEndArray();
-                }
-                if (!string.IsNullOrEmpty(options.MinRank))
-                {
-                    writer.WriteString("min_rank", options.MinRank);
-                }
-                if (options.ShowUnreleased.HasValue)
-                {
-                    writer.WriteBoolean("show_unreleased", options.ShowUnreleased.Value);
-                }
-                if (options.SkipHealthBasedUnderwriting.HasValue)
-                {
-                    writer.WriteBoolean("skip_health_based_underwriting", options.SkipHealthBasedUnderwriting.Value);
                 }
             }
             writer.WriteBoolean("include_ineligible", includeIneligibleResolved);

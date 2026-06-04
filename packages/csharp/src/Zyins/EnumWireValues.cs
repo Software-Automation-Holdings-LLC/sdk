@@ -60,6 +60,13 @@ public static class EnumWireValues
     public static IReadOnlyList<string> AllCoverageTypeValues() =>
         new[] { "face_value", "monthly_budget" };
 
+    /// <summary>Returns every canonical wire string the server accepts for
+    /// <c>min_rank</c>. Synonyms (<see cref="MinRank.ReturnOfPremium"/>,
+    /// <see cref="MinRank.GuaranteedIssue"/>, <see cref="MinRank.Gi"/>) collapse
+    /// onto these tokens and are not enumerated separately.</summary>
+    public static IReadOnlyList<string> AllMinRankValues() =>
+        new[] { "graded", "guaranteed", "immediate", "rop" };
+
     /// <summary>Returns the wire string for a <see cref="V3EligibilityCategory"/>
     /// value — the exact JSON string the server emits and the test fixture records.
     /// Mirrors the switch in <c>V3Internal.CoerceEligibility</c> so the mapping

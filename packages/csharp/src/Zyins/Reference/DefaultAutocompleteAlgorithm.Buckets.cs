@@ -14,10 +14,13 @@ namespace Isa.Sdk.Zyins.Reference;
 internal static class AutocompleteFilter
 {
     /// <summary>Pre-filter survivors by simple substring tests; mirrors
-    /// the <c>filterOptions</c> step in the JS worker.</summary>
+    /// the <c>filterOptions</c> step in the JS worker. The single-word path
+    /// compares on the make_key form (uppercase, all non-alphanumeric stripped
+    /// from BOTH sides) so a correctly-spelled "crohns" matches "Crohn's
+    /// Disease" — the server-side make_key match.</summary>
     public static List<IConcept> Filter(
         IReadOnlyCollection<IConcept> options,
-        string queryUpper,
+        string queryKey,
         IReadOnlyList<string> queryWords)
     {
         var survivors = new List<IConcept>();
@@ -26,7 +29,7 @@ internal static class AutocompleteFilter
             var upperName = (option.Name ?? string.Empty).ToUpperInvariant();
             if (queryWords.Count < 2)
             {
-                if (upperName.IndexOf(queryUpper, StringComparison.Ordinal) >= 0)
+                if (MakeKey.Normalize(option.Name).IndexOf(queryKey, StringComparison.Ordinal) >= 0)
                 {
                     survivors.Add(option);
                 }
@@ -105,7 +108,13 @@ internal static class AutocompleteBuckets
                 list.Add(option);
             }
 
-            if (queryWords.All(w => nameUpper.IndexOf(w, StringComparison.Ordinal) >= 0))
+            // independentWordIntersection is mutually exclusive with the
+            // superset (wordCountNoTolerance) bucket — mirrors the canonical
+            // TS reference (`!supersetOfInput && allWordsAppear`). Without the
+            // guard a superset candidate lands in BOTH buckets and the dedupe
+            // mislabels it once independent ranks above noTol.
+            if (!supersetOfInput
+                && queryWords.All(w => nameUpper.IndexOf(w, StringComparison.Ordinal) >= 0))
             {
                 buckets.IndependentWordIntersection.Add(option);
             }
@@ -120,12 +129,14 @@ internal static class AutocompleteBuckets
             .ToList();
         var noTolFlat = buckets.WordCountNoTolerance.Values.SelectMany(v => v).ToList();
         var withTolFlat = buckets.WordCountWithTolerance.Values.SelectMany(v => v).ToList();
+        // independentWordIntersection ranks ABOVE wordCountNoTolerance —
+        // mirrors the canonical TS/JS reference (and the Go/Python/PHP ports).
         return new List<List<IConcept>>
         {
             startsWithSorted,
             buckets.SameWords,
-            noTolFlat,
             buckets.IndependentWordIntersection,
+            noTolFlat,
             buckets.SameNumWithTolerance,
             withTolFlat,
         };
@@ -224,5 +235,74 @@ internal static class AutocompleteFrequency
             .ThenBy(c => c.Name, StringComparer.Ordinal)
             .ThenBy(c => c.Id ?? string.Empty, StringComparer.Ordinal)
             .ToList();
+    }
+}
+
+internal static class AutocompleteFuzzy
+{
+    /// <summary>Substring-hit count at or below which the typo-tolerant
+    /// fallback fires. A typo-recovery pass only earns its keep when literal
+    /// matching comes up nearly empty.</summary>
+    public const int FallbackThreshold = 1;
+
+    private const int AutocompleteMaxDistance = 2;
+
+    /// <summary>Edit-distance ceiling for the autocomplete fuzzy band, by
+    /// query-unit length. One wider than the <see cref="FuzzyMatchAlgorithm"/>
+    /// single-result band in the medium range: autocomplete shows a ranked
+    /// list with fuzzy hits in the strict lowest bucket, so a slightly looser
+    /// net is safe and catches double-edit transpositions the match path
+    /// rejects ("chrons" → "crohns" is OSA distance 2).</summary>
+    private static int ThresholdForLength(int unitLength) =>
+        unitLength < DamerauOsa.FuzzyShortLen ? 1 : AutocompleteMaxDistance;
+
+    /// <summary>Recover typo'd queries the literal pre-filter could not place.
+    /// For each pooled candidate not already matched, the query matches when
+    /// ANY candidate token clears the bar against the corresponding query unit
+    /// — Damerau-OSA within the length band OR Double-Metaphone equality.
+    /// Per-token matching keeps a short query ("chrons") from being swamped by
+    /// the edit distance of a long name ("CROHNSDISEASE"). Reuses the same
+    /// primitives as <see cref="FuzzyMatchAlgorithm"/> for cross-language
+    /// parity.</summary>
+    public static List<IConcept> Collect(
+        string queryKey,
+        IReadOnlyList<string> queryWords,
+        IReadOnlyCollection<IConcept> pool,
+        IReadOnlyList<IConcept> alreadyMatched)
+    {
+        if (queryKey.Length == 0) return new List<IConcept>();
+        var matched = new HashSet<string>(
+            alreadyMatched.Select(AutocompleteFrequency.ScoreKey), StringComparer.Ordinal);
+        var queryUnits = queryWords.Count > 1 ? queryWords : new List<string> { queryKey };
+        var queryCodes = queryUnits.Select(u => DoubleMetaphone.Encode(u).Primary).ToList();
+        var hits = new List<IConcept>();
+        foreach (var candidate in pool)
+        {
+            if (matched.Contains(AutocompleteFrequency.ScoreKey(candidate))) continue;
+            var tokens = AutocompleteTokens.Tokenize(candidate.Name ?? string.Empty);
+            if (MatchesAnyToken(queryUnits, queryCodes, tokens)) hits.Add(candidate);
+        }
+        return hits;
+    }
+
+    private static bool MatchesAnyToken(
+        IReadOnlyList<string> queryUnits,
+        IReadOnlyList<string> queryCodes,
+        IReadOnlyList<string> candidateTokens)
+    {
+        for (var u = 0; u < queryUnits.Count; u++)
+        {
+            var unit = queryUnits[u];
+            if (unit.Length == 0) continue;
+            var threshold = ThresholdForLength(unit.Length);
+            var code = queryCodes[u];
+            foreach (var token in candidateTokens)
+            {
+                if (token.Length == 0) continue;
+                if (DamerauOsa.Distance(unit, token, threshold) <= threshold) return true;
+                if (code.Length > 0 && DoubleMetaphone.Encode(token).Primary == code) return true;
+            }
+        }
+        return false;
     }
 }

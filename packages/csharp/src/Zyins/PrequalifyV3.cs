@@ -234,6 +234,9 @@ public static class Grouping
 }
 
 /// <summary>Options layered on top of the v3 prequalify / quote request.</summary>
+/// <remarks><c>MinRank</c> is the minimum guaranteed-issue rank; pass a
+/// <see cref="Isa.Sdk.Zyins.MinRank"/> constant (canonical
+/// <c>Guaranteed</c> / <c>Rop</c>, or a synonym) or a plain string.</remarks>
 public record PrequalifyOptions(
     string? OnlyProductClass = null,
     IReadOnlyList<string>? IncludeProductClass = null,
@@ -252,6 +255,9 @@ public record PrequalifyRequest(
 );
 
 /// <summary>Options for the v3 quote endpoint. Same shape as the prequalify options.</summary>
+/// <remarks><c>MinRank</c> is the minimum guaranteed-issue rank; pass a
+/// <see cref="Isa.Sdk.Zyins.MinRank"/> constant (canonical
+/// <c>Guaranteed</c> / <c>Rop</c>, or a synonym) or a plain string.</remarks>
 public record QuoteOptions(
     string? OnlyProductClass = null,
     IReadOnlyList<string>? IncludeProductClass = null,
