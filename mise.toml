@@ -1,0 +1,67 @@
+# Unified Go SDK mirror. Authored-style Go module at the repo root
+# (core/zyins/rapidsign/proxy/...); the packages/{csharp,php,python,ts} trees are
+# the sibling-language SDK mirrors and carry no Go code. This contract gates the
+# Go module. Everything is auto-published from isa-platform; manual edits are
+# overwritten on the next release.
+
+[tools]
+go = "1.26.1"
+
+[tasks.setup]
+description = "Download module dependencies"
+run = "go mod download"
+
+[tasks.fmt]
+description = "Auto-format (gofmt)"
+run = "gofmt -w ."
+
+[tasks.fmt-check]
+description = "Check formatting (fails on diff)"
+run = '''
+out=$(gofmt -l .)
+test -z "$out" || { echo "needs gofmt:"; echo "$out"; exit 1; }
+echo "gofmt OK"
+'''
+
+[tasks.lint]
+description = "Static analysis (go vet)"
+depends = ["setup"]
+run = "go vet ./..."
+
+[tasks.test]
+description = "Run tests"
+depends = ["setup"]
+run = "go test ./..."
+
+[tasks.build]
+description = "Compile all packages"
+depends = ["setup"]
+run = "go build ./..."
+
+[tasks.scan]
+description = "Security scan: vulnerabilities + secrets"
+depends = ["setup"]
+run = [
+  "go run golang.org/x/vuln/cmd/govulncheck@latest ./... || true",
+  "trunk check --filter=gitleaks,semgrep --no-progress || true",
+]
+
+[tasks.coverage]
+description = "Test coverage summary"
+depends = ["setup"]
+run = "go test -cover ./..."
+
+[tasks.doctor]
+description = "Validate that the repo exposes the standard platform contract"
+run = '''
+test -f mise.toml
+list=$(mise tasks ls)
+for v in setup fmt fmt-check lint test build scan coverage doctor ci; do
+  echo "$list" | grep -q "$v" || { echo "missing task: $v"; exit 1; }
+done
+echo "platform contract OK"
+'''
+
+[tasks.ci]
+description = "Full repo gate"
+depends = ["fmt-check", "lint", "test", "scan", "build"]

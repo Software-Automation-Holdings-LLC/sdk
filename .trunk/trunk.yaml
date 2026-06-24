@@ -1,0 +1,8 @@
+# The org metalint config + house rule-pack live in dev-config and are pulled
+# via this source. Renovate bumps `ref`.
+version: 0.1
+plugins:
+  sources:
+    - id: org
+      ref: v1
+      uri: https://github.com/Software-Automation-Holdings-LLC/dev-config

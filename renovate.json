@@ -1,0 +1,4 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": ["github>Software-Automation-Holdings-LLC/dev-config#v1"]
+}
