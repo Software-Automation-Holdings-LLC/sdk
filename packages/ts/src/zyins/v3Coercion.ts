@@ -26,7 +26,7 @@ export function coerceCarrier(raw: unknown): OfferCarrier {
 
 export function coerceProduct(raw: unknown): OfferProduct {
   const r = isRecord(raw) ? raw : {};
-  return {
+  const product: OfferProduct = {
     id: toStr(r['id']),
     slug: toStr(r['slug']),
     name: toStr(r['name']),
@@ -34,6 +34,15 @@ export function coerceProduct(raw: unknown): OfferProduct {
     type: toStr(r['type']),
     wire_token: toStr(r['wire_token']),
   };
+  // `plan_group` / `plan_group_label` are optional on the wire — present for
+  // sub-grouped families (term `20-year`, medsup `plan-g`), absent for `fex`.
+  // Preserve the value verbatim when present; omit when absent so an
+  // ungrouped product reads as "no group" (mirrors `coercePlan`'s posture).
+  if (typeof r['plan_group'] === 'string') product.plan_group = r['plan_group'];
+  if (typeof r['plan_group_label'] === 'string') {
+    product.plan_group_label = r['plan_group_label'];
+  }
+  return product;
 }
 
 /** Coerce the leaf `{cents, display}` amount (OpenAPI `AmountResponse`). */

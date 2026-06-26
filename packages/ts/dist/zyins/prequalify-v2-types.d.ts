@@ -53,6 +53,17 @@ export interface OfferProduct {
     type: string;
     /** Wire token for the product family — equals `type` today. */
     wire_token: string;
+    /**
+     * Plan-grouping key for families that sub-divide (term `20-year`,
+     * medsup `plan-g`). Drives the results grouping rail in consuming UIs.
+     * Absent for families with no sub-grouping (e.g. `fex`).
+     */
+    plan_group?: string;
+    /**
+     * Human-readable label for {@link plan_group} (e.g. `20 Year`, `Plan G`).
+     * Absent whenever `plan_group` is absent.
+     */
+    plan_group_label?: string;
 }
 /**
  * One server-canonical entry in {@link OfferPlanInfo}.
