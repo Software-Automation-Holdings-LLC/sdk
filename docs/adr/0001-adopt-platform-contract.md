@@ -52,10 +52,20 @@ The repo's disposition under SDK policy (`SAH_DEVOPS_STRATEGY.md` §12) is there
   runs in `isa-platform`'s `sdk-publish.yml`, where `buf` and the proto registry live.
 - **Central config** consumed from `dev-config@v1` (lefthook, trunk, Renovate preset);
   managed files are thin pointers, not hand-edited copies.
-- **Self-policing gate.** `.github/workflows/advisory-checks.yml` is a thin caller into
-  `dev-config@v1` (flag-hygiene, observability-contract, workflow-conformance,
-  pr-linear). `.github/workflows/security-scan.yml` routes gitleaks/semgrep/grype/
-  govulncheck findings to Linear on the remediation-SLA model.
+- **The self-policing reusables cannot run on this PUBLIC repo (structural).** `sdk` is
+  the one **public** SDK mirror (so `go get github.com/Software-Automation-Holdings-LLC/sdk`
+  is frictionless); `dev-config` is **private**. GitHub forbids a public repository from
+  calling a private repository's reusable workflows — regardless of `dev-config`'s
+  `organization`-level access — so `advisory-checks.yml` / `security-scan.yml` thin
+  callers (flag-hygiene, observability-contract, workflow-conformance, pr-linear,
+  security routing) **fail at startup on this repo and can never go green.** They are
+  therefore not carried here (a permanently-red check would violate the silence rule).
+  Their substance is delivered another way (see Consequences) and the org-level
+  resolution is surfaced as a fork in the PR.
+- **Security posture (native, public-repo-appropriate).** GitHub secret scanning and
+  **push protection** are enabled (the at-rest + at-push secret gate), CodeQL code
+  scanning runs (the `Analyze` jobs), and `mise run scan` runs `govulncheck`. This
+  covers secrets + SAST + dependency vulns without the un-callable private reusable.
 - **Git hooks** owned by `lefthook.yml`. **Dependencies** via Renovate (no Dependabot).
 
 ## Consequences
@@ -75,6 +85,17 @@ The repo's disposition under SDK policy (`SAH_DEVOPS_STRATEGY.md` §12) is there
   `gofmt` in the generator and stamping every published file with a generated banner are
   source-side hygiene items, tracked upstream. These are correctly out of scope here: a
   mirror cannot fix what the next publish overwrites.
+- **Org-governance fork — self-policing gate for PUBLIC mirrors (not closeable by this
+  PR):** the dev-config advisory/security reusables are private and a public repo cannot
+  call them. The org must choose one: (a) publish a **public** reusable-workflow source
+  the public mirror can call; (b) keep the Go mirror **private** (contradicts public
+  `go get` distribution per ADR-035); or (c) **accept native-GHAS on the public mirror
+  and run the advisory gate (flag-hygiene/observability/workflow-conformance/pr-linear)
+  on the private SOURCE repo `isa-platform`, on the human PRs that actually change this
+  mirror's content** — the recommended option, since the published mirror receives no
+  human PRs (only `sdk-publish` bot tags), so PR↔Linear linking, flag hygiene, and
+  observability contracts naturally belong at the source. `isa-platform` does not yet run
+  `advisory-checks.yml`; standing that up is its own onboarding ticket.
 - **Requires an org-admin action (not closeable by this PR):** the §12 generator-bot
   **path-lock** must be applied as an org ruleset on `sdk` restricting pushes to the
   published trees to the publish bot identity (the `sdk-publish` workflow's app). Until
