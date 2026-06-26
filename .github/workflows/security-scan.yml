@@ -1,0 +1,17 @@
+# Thin caller into dev-config@v1. gitleaks (secrets) + semgrep (SAST) + grype (deps,
+# SBOM) + govulncheck (Go) → deduplicated findings routed to Linear on the
+# remediation-SLA model (§7). Report-only: scanners never fail the job; the blocking
+# secret gate is lefthook at commit + GitHub push protection. Checkov is a no-op here
+# (no Terraform in this mirror).
+name: security-scan
+on:
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  scan:
+    uses: Software-Automation-Holdings-LLC/dev-config/.github/workflows/security-scan.yml@v1
+    secrets:
+      DEV_BOT_APP_ID: ${{ secrets.DEV_BOT_APP_ID }}
+      DEV_BOT_PRIVATE_KEY: ${{ secrets.DEV_BOT_PRIVATE_KEY }}
+      LINEAR_API_KEY: ${{ secrets.LINEAR_API_KEY }}

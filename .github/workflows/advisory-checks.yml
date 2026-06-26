@@ -1,0 +1,40 @@
+# Thin caller into dev-config@v1. The self-policing advisory gate: flag-hygiene,
+# observability-contract, workflow-conformance, pr-linear. All advisory (report-only);
+# the reusables mint a short-lived DEV_BOT app token at runtime to read private
+# dev-config. A repo with no feature-flags.toml / observability.toml is a clean pass.
+name: advisory-checks
+on:
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  flag-hygiene:
+    permissions:
+      contents: read
+    uses: Software-Automation-Holdings-LLC/dev-config/.github/workflows/flag-hygiene.yml@v1
+    secrets:
+      DEV_BOT_APP_ID: ${{ secrets.DEV_BOT_APP_ID }}
+      DEV_BOT_PRIVATE_KEY: ${{ secrets.DEV_BOT_PRIVATE_KEY }}
+  observability-contract:
+    permissions:
+      contents: read
+    uses: Software-Automation-Holdings-LLC/dev-config/.github/workflows/observability-contract.yml@v1
+    secrets:
+      DEV_BOT_APP_ID: ${{ secrets.DEV_BOT_APP_ID }}
+      DEV_BOT_PRIVATE_KEY: ${{ secrets.DEV_BOT_PRIVATE_KEY }}
+  workflow-conformance:
+    permissions:
+      contents: read
+    uses: Software-Automation-Holdings-LLC/dev-config/.github/workflows/workflow-conformance.yml@v1
+    secrets:
+      DEV_BOT_APP_ID: ${{ secrets.DEV_BOT_APP_ID }}
+      DEV_BOT_PRIVATE_KEY: ${{ secrets.DEV_BOT_PRIVATE_KEY }}
+  pr-linear:
+    permissions:
+      contents: read
+      pull-requests: write
+    uses: Software-Automation-Holdings-LLC/dev-config/.github/workflows/pr-linear.yml@v1
+    secrets:
+      DEV_BOT_APP_ID: ${{ secrets.DEV_BOT_APP_ID }}
+      DEV_BOT_PRIVATE_KEY: ${{ secrets.DEV_BOT_PRIVATE_KEY }}
+      LINEAR_API_KEY: ${{ secrets.LINEAR_API_KEY }}
