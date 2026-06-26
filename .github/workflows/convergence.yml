@@ -1,0 +1,92 @@
+# Thin caller -> dev-config review-coordinator. Drives a PR to convergence: it gathers
+# the AI reviewers' outcomes and hands the PR to the authoring agent (Devin) to resolve
+# every open review thread, holding the PR a DRAFT until clean, then marking it ready.
+#
+# It must wake on every shape a finding can arrive in, or a PR sits draft forever with
+# nobody driving it:
+#   * a reviewer SUBMITS a review (Cursor/Sentry/CodeRabbit when it submits) -> run LAST,
+#     behind the bots, so the agent resolves their threads rather than racing them;
+#   * a reviewer leaves a single review-thread COMMENT without submitting a review;
+#   * a reviewer (e.g. CodeRabbit's summary) posts a PR-level ISSUE COMMENT, not a review;
+#   * the PR is opened / marked ready / pushed to (re-checks the current thread state);
+#   * a human adds the `agent:converge` label to dispatch on demand.
+# Every path converges on the same idempotent coordinator: zero open threads -> nothing to
+# do (and flip a held draft ready); otherwise hold draft + (re)drive the Devin session.
+#
+# Fork PRs are skipped (the head-repo guard) so secrets are never exposed to untrusted
+# code. The coordinator's own round-marker comments and bot chatter are filtered so it
+# never re-triggers on itself. The ref is SHA-pinned (with a `# v1` comment) for
+# GHAS/policy; Renovate maintains the SHA as v1 moves. This workflow never merges.
+name: convergence
+
+on:
+  pull_request_review:
+    types: [submitted]
+  pull_request_review_comment:
+    types: [created]
+  issue_comment:
+    types: [created]
+  pull_request_target:
+    types: [opened, ready_for_review, synchronize, labeled]
+
+# A caller caps the token for the reusable workflow, so it must grant the write scopes
+# the coordinator needs to post round markers and triage labels on this PR.
+permissions:
+  contents: read
+  pull-requests: write
+  issues: write
+
+jobs:
+  # issue_comment payloads lack head-repo metadata, so we query the PR API to
+  # enforce the same fork guard applied to pull_request_* events (fail-closed).
+  issue-comment-fork-guard:
+    if: github.event_name == 'issue_comment' && github.event.issue.pull_request
+    runs-on: ubuntu-latest
+    outputs:
+      safe: ${{ steps.check.outputs.safe }}
+    steps:
+      - id: check
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_API_URL: ${{ github.event.issue.pull_request.url }}
+          THIS_REPO: ${{ github.repository }}
+        run: |
+          head_repo=$(gh api "$PR_API_URL" --jq '.head.repo.full_name')
+          if [ "$head_repo" = "$THIS_REPO" ]; then
+            echo 'safe=true' >> "$GITHUB_OUTPUT"
+          else
+            echo 'safe=false' >> "$GITHUB_OUTPUT"
+          fi
+
+  converge:
+    needs: [issue-comment-fork-guard]
+    # Engage only on PRs from THIS repo (never a fork -> secrets stay safe), and only on
+    # the signals above. For pull_request_* events the head-repo guard is inline; for
+    # issue_comment the guard job above resolves fork status via the API (always() lets
+    # converge evaluate when the guard was skipped on non-issue_comment events).
+    # `issue.pull_request` is set iff the comment is on a PR; filter the coordinator's
+    # own round markers and bot identity so a posted marker never re-triggers convergence.
+    if: >-
+      always() &&
+      ((github.event.pull_request.head.repo.full_name == github.repository &&
+        (github.event_name == 'pull_request_review' ||
+         github.event_name == 'pull_request_review_comment' ||
+         (github.event_name == 'pull_request_target' &&
+          (github.event.action != 'labeled' ||
+           github.event.label.name == 'agent:converge')))) ||
+       (github.event_name == 'issue_comment' &&
+        needs.issue-comment-fork-guard.outputs.safe == 'true' &&
+        github.event.sender.login != 'sah-dev-bot[bot]' &&
+        !startsWith(github.event.comment.body, '<!-- sah:convergence-round')))
+    # Job-level so it engages only when the job actually runs: an unrelated label on a
+    # labeled event skips this job and therefore never cancels a live convergence run.
+    # Newest convergence run per PR wins -> the "run-last" agent is the one that finishes.
+    # The PR number lives at different paths per event type (issue_comment uses
+    # `issue.number`); fall through to the first that is set.
+    concurrency:
+      group: convergence-${{ github.event.pull_request.number || github.event.issue.number }}
+      cancel-in-progress: true
+    uses: Software-Automation-Holdings-LLC/dev-config/.github/workflows/review-coordinator.yml@99f7de239b88e8f6990a1f6b9a4b0e80c476defb # v1
+    secrets: inherit
+    with:
+      pr_number: ${{ github.event.pull_request.number || github.event.issue.number }}
