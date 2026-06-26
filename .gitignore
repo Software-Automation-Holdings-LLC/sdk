@@ -1,0 +1,39 @@
+# Allowlist: ignore everything, then re-include what belongs in the repo.
+/*
+
+# Tooling / platform contract
+!/.github/
+!/.gitignore
+!/.trunk/
+!/docs/
+!/lefthook.yml
+!/mise.toml
+!/renovate.json
+
+# Go module
+!/go.mod
+!/go.sum
+!/*.go
+
+# Project docs / metadata
+!/CHANGELOG.md
+!/MIGRATION.md
+!/PUBLIC_API.txt
+!/README.md
+!/VERSION
+
+# Source trees
+!/account/
+!/catalog/
+!/codemod-v2/
+!/contract/
+!/core/
+!/packages/
+!/proxy/
+!/rapidsign/
+!/scripts/
+!/zyins/
+
+# Trunk keeps only its checked-in config; ignore its caches.
+/.trunk/*
+!/.trunk/trunk.yaml
