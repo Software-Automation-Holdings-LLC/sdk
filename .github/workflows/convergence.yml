@@ -37,22 +37,47 @@ permissions:
   issues: write
 
 jobs:
+  # issue_comment payloads lack head-repo metadata, so we query the PR API to
+  # enforce the same fork guard applied to pull_request_* events (fail-closed).
+  issue-comment-fork-guard:
+    if: github.event_name == 'issue_comment' && github.event.issue.pull_request
+    runs-on: ubuntu-latest
+    outputs:
+      safe: ${{ steps.check.outputs.safe }}
+    steps:
+      - id: check
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_API_URL: ${{ github.event.issue.pull_request.url }}
+          THIS_REPO: ${{ github.repository }}
+        run: |
+          head_repo=$(gh api "$PR_API_URL" --jq '.head.repo.full_name')
+          if [ "$head_repo" = "$THIS_REPO" ]; then
+            echo 'safe=true' >> "$GITHUB_OUTPUT"
+          else
+            echo 'safe=false' >> "$GITHUB_OUTPUT"
+          fi
+
   converge:
+    needs: [issue-comment-fork-guard]
     # Engage only on PRs from THIS repo (never a fork -> secrets stay safe), and only on
-    # the signals above. For issue_comment, `issue.pull_request` is set iff the comment is
-    # on a PR; filter the coordinator's own round markers and its bot identity so a posted
-    # marker never re-triggers convergence (the loop would otherwise never settle).
+    # the signals above. For pull_request_* events the head-repo guard is inline; for
+    # issue_comment the guard job above resolves fork status via the API (always() lets
+    # converge evaluate when the guard was skipped on non-issue_comment events).
+    # `issue.pull_request` is set iff the comment is on a PR; filter the coordinator's
+    # own round markers and bot identity so a posted marker never re-triggers convergence.
     if: >-
-      (github.event.pull_request.head.repo.full_name == github.repository &&
-       (github.event_name == 'pull_request_review' ||
-        github.event_name == 'pull_request_review_comment' ||
-        (github.event_name == 'pull_request_target' &&
-         (github.event.action != 'labeled' ||
-          github.event.label.name == 'agent:converge')))) ||
-      (github.event_name == 'issue_comment' &&
-       github.event.issue.pull_request &&
-       github.event.sender.login != 'sah-dev-bot[bot]' &&
-       !startsWith(github.event.comment.body, '<!-- sah:convergence-round'))
+      always() &&
+      ((github.event.pull_request.head.repo.full_name == github.repository &&
+        (github.event_name == 'pull_request_review' ||
+         github.event_name == 'pull_request_review_comment' ||
+         (github.event_name == 'pull_request_target' &&
+          (github.event.action != 'labeled' ||
+           github.event.label.name == 'agent:converge')))) ||
+       (github.event_name == 'issue_comment' &&
+        needs.issue-comment-fork-guard.outputs.safe == 'true' &&
+        github.event.sender.login != 'sah-dev-bot[bot]' &&
+        !startsWith(github.event.comment.body, '<!-- sah:convergence-round')))
     # Job-level so it engages only when the job actually runs: an unrelated label on a
     # labeled event skips this job and therefore never cancels a live convergence run.
     # Newest convergence run per PR wins -> the "run-last" agent is the one that finishes.
