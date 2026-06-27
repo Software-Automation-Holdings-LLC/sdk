@@ -86,7 +86,7 @@ jobs:
     concurrency:
       group: convergence-${{ github.event.pull_request.number || github.event.issue.number }}
       cancel-in-progress: true
-    uses: Software-Automation-Holdings-LLC/dev-config/.github/workflows/review-coordinator.yml@99f7de239b88e8f6990a1f6b9a4b0e80c476defb # v1
+    uses: Software-Automation-Holdings-LLC/dev-config/.github/workflows/review-coordinator.yml@a5a2658ffd6ebf87f89b96c92cf83a9e6a3556e3 # v1
     secrets: inherit
     with:
       pr_number: ${{ github.event.pull_request.number || github.event.issue.number }}
