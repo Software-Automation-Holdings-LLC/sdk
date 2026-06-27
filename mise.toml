@@ -17,7 +17,7 @@
 # (that is owned upstream where the source is editable).
 
 [tools]
-go = "1.26.1"
+go = "1.26.4"
 
 [tasks.setup]
 description = "Download module dependencies."
