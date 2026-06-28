@@ -1,0 +1,79 @@
+# Advisory platform checks — copy this to a consuming repo as
+# `.github/workflows/advisory-checks.yml`. It wires the three vendor-neutral,
+# advisory-by-default reusables the platform ships. None of them block a merge in
+# this form (no `enforce: true`), so the file is safe to drop into any repo: a repo
+# with no registry/contract is a clean pass, and pr-linear only comments.
+#
+# Per-repo customization is in the commented `with:` blocks. Flip a check to required
+# later by setting `enforce: true` on that job (evaluate -> enforce), once the repo is
+# clean. Rollout guidance: docs/runbooks/adopt-advisory-checks.md.
+#
+# Each reusable loads its checker from the private dev-config repo, so it mints its own
+# short-lived DEV_BOT app token at runtime (no PLATFORM_TOKEN needed). Callers just pass
+# the DEV_BOT app credentials below; they are org secrets available to every repo.
+#
+# Each job is scoped to least privilege: flag-hygiene and observability-contract are
+# contents:read only; pr-linear additionally needs pull-requests:write for its sticky
+# comment. The token the reusable receives is the intersection of the grant below and
+# the reusable's own declared permissions.
+
+name: advisory-checks
+
+on:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  flag-hygiene:
+    permissions:
+      contents: read
+    uses: Software-Automation-Holdings-LLC/dev-config/.github/workflows/flag-hygiene.yml@v1
+    secrets:
+      DEV_BOT_APP_ID: ${{ secrets.DEV_BOT_APP_ID }}
+      DEV_BOT_PRIVATE_KEY: ${{ secrets.DEV_BOT_PRIVATE_KEY }}
+    # with:
+    #   flags_file: feature-flags.toml   # default; omit if you keep the standard path
+    #   max_age_days: 90                 # stale threshold (advisory only)
+
+  observability-contract:
+    permissions:
+      contents: read
+    uses: Software-Automation-Holdings-LLC/dev-config/.github/workflows/observability-contract.yml@v1
+    secrets:
+      DEV_BOT_APP_ID: ${{ secrets.DEV_BOT_APP_ID }}
+      DEV_BOT_PRIVATE_KEY: ${{ secrets.DEV_BOT_PRIVATE_KEY }}
+    # with:
+    #   obs_file: observability.toml      # default; a repo with no contract is a clean pass
+
+  # Flags workflows that reimplement deploy/release/build-and-package logic inline
+  # instead of calling a dev-config reusable (DevOps Standard §6: reference, don't
+  # copy). A repo of pure callers / mise-run workflows is a clean pass; opt a
+  # legitimate exception out with `# platform:allow-handrolled <reason>` in the
+  # workflow or .github/workflow-conformance.toml.
+  workflow-conformance:
+    permissions:
+      contents: read
+    uses: Software-Automation-Holdings-LLC/dev-config/.github/workflows/workflow-conformance.yml@v1
+    secrets:
+      DEV_BOT_APP_ID: ${{ secrets.DEV_BOT_APP_ID }}
+      DEV_BOT_PRIVATE_KEY: ${{ secrets.DEV_BOT_PRIVATE_KEY }}
+    # with:
+    #   workflows_dir: .github/workflows  # default; the dir scanned in the caller repo
+
+  # On PRs from forks, GITHUB_TOKEN is read-only by default, so pr-linear's sticky
+  # comment won't post unless the repo enables "Send write tokens to workflows from
+  # pull requests" (Settings -> Actions). The reusable degrades gracefully — it warns
+  # instead of failing — so the advisory result is unaffected either way.
+  pr-linear:
+    permissions:
+      contents: read
+      pull-requests: write
+    uses: Software-Automation-Holdings-LLC/dev-config/.github/workflows/pr-linear.yml@v1
+    secrets:
+      DEV_BOT_APP_ID: ${{ secrets.DEV_BOT_APP_ID }}
+      DEV_BOT_PRIVATE_KEY: ${{ secrets.DEV_BOT_PRIVATE_KEY }}
+      # LINEAR_API_KEY: ${{ secrets.LINEAR_API_KEY }}  # optional: verify issue existence
+    # with:
+    #   team_keys: SAH,ENG                # strict: only these Linear teams count
