@@ -1,0 +1,24 @@
+name: security-scan
+
+# Calls the platform security-scan reusable: scanners run report-only, findings
+# are deduped to Linear, and high/critical units are delegated to Devin.
+on:
+  pull_request:
+  schedule:
+    - cron: "0 12 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  security-events: read
+
+jobs:
+  scan:
+    permissions:
+      contents: read
+      security-events: read
+    uses: Software-Automation-Holdings-LLC/dev-config/.github/workflows/security-scan.yml@d54ec9cb37dd7a7c7fa5b287de5d2edb8deafb7a # v1
+    secrets:
+      DEV_BOT_APP_ID: ${{ secrets.DEV_BOT_APP_ID }}
+      DEV_BOT_PRIVATE_KEY: ${{ secrets.DEV_BOT_PRIVATE_KEY }}
+      LINEAR_API_KEY: ${{ secrets.LINEAR_API_KEY }}
