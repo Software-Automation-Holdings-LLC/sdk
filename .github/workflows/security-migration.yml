@@ -1,0 +1,27 @@
+name: security-migration
+
+# Calls the platform security-remediation driver. During the sprint, verified
+# security fixes (`security` + `migrated:verified`) are approved and auto-merge
+# is enabled when the self-expiring sprint variable is open.
+on:
+  pull_request_target:
+    types: [labeled, synchronize, ready_for_review]
+
+permissions:
+  contents: read
+  pull-requests: write
+  issues: write
+
+jobs:
+  security-migration:
+    if: >-
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      contains(github.event.pull_request.labels.*.name, 'security') &&
+      contains(github.event.pull_request.labels.*.name, 'migrated:verified')
+    uses: Software-Automation-Holdings-LLC/dev-config/.github/workflows/security-migration.yml@v1
+    with:
+      pr_number: ${{ github.event.pull_request.number }}
+    secrets:
+      DEVIN_API_KEY: ${{ secrets.DEVIN_API_KEY }}
+      DEV_BOT_APP_ID: ${{ secrets.DEV_BOT_APP_ID }}
+      DEV_BOT_PRIVATE_KEY: ${{ secrets.DEV_BOT_PRIVATE_KEY }}
