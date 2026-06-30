@@ -1,0 +1,24 @@
+# Managed by dev-config — do not edit. Pulled into each repo by the scaffold.
+#
+# These files are distributed BYTE-VERBATIM from dev-config (Renovate bumps the
+# pointers; setup hydrates them). prettier — enabled in the trunk metalint set and
+# honored here whether it runs via `trunk check` or directly — must never reformat
+# them, or `lint` reports a diff against the managed source on every JS/Ruby repo.
+# (Go repos never hit this because gofmt ignores YAML/JSON.)
+
+# Central pointer + config files
+lefthook.yml
+renovate.json
+convergence.yml
+trunk.yaml
+.trunk/
+
+# Managed workflow files distributed verbatim
+.github/workflows/safe-class-approve.yml
+
+# Lockfiles are generated, not authored — let the package manager own their format
+package-lock.json
+pnpm-lock.yaml
+yarn.lock
+composer.lock
+Gemfile.lock
