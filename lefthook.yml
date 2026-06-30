@@ -1,5 +1,5 @@
-# The ENTIRE lefthook config a product repo carries. Real hooks live in
-# dev-config. Renovate bumps `ref`.
+# The ENTIRE lefthook config a product repo carries. Real hooks live in dev-config.
+# Renovate bumps `ref`.
 remotes:
   - git_url: https://github.com/Software-Automation-Holdings-LLC/dev-config
     ref: v1

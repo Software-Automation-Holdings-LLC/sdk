@@ -1,8 +1,13 @@
-# The org metalint config + house rule-pack live in dev-config and are pulled
-# via this source. Renovate bumps `ref`.
+# Goes to .trunk/trunk.yaml in the product repo. Org metalint rules live in dev-config
+# plugin.yaml; trunk-io/plugins supplies linter definitions. Renovate bumps both refs.
 version: 0.1
+cli:
+  version: 1.22.8
 plugins:
   sources:
+    - id: trunk
+      ref: v1.6.7
+      uri: https://github.com/trunk-io/plugins
     - id: org
       ref: v1
       uri: https://github.com/Software-Automation-Holdings-LLC/dev-config
