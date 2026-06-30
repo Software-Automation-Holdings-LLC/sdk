@@ -1,0 +1,60 @@
+# After platform work merges to main, refresh automation-owned open PRs so CI
+# runs against the current base (scaffold pointers, workflow callers, dev-config pin).
+name: platform-rebase-open-prs
+
+on:
+  push:
+    branches:
+      - main
+      - master
+    # Only org/scaffold pointer changes affect bot PR CI bases — not every app merge.
+    paths:
+      - lefthook.yml
+      - renovate.json
+      - .trunk/trunk.yaml
+      - .github/pull_request_template.md
+      - .prettierignore
+      - .github/workflows/advisory-suite.yml
+      - .github/workflows/convergence.yml
+      - .github/workflows/platform-rebase-open-prs.yml
+      - .github/workflows/security-migration.yml
+      - .github/workflows/safe-class-approve.yml
+      - .github/workflows/security-scan.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: platform-rebase-${{ github.repository }}
+  cancel-in-progress: false
+
+jobs:
+  rebase:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - name: Mint sah-dev-bot token
+        id: token
+        uses: actions/create-github-app-token@d72941d797fd3113feb6b93fd0dec494b13a2547 # v1.12.0
+        with:
+          app-id: ${{ secrets.DEV_BOT_APP_ID }}
+          private-key: ${{ secrets.DEV_BOT_PRIVATE_KEY }}
+          owner: ${{ github.repository_owner }}
+          repositories: ${{ github.event.repository.name }},dev-config
+
+      - name: Fetch rebase helper from dev-config
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+        with:
+          repository: Software-Automation-Holdings-LLC/dev-config
+          ref: v1
+          sparse-checkout: review/rebase_open_prs.py
+          sparse-checkout-cone-mode: false
+          token: ${{ steps.token.outputs.token }}
+
+      - name: Rebase bot-scoped open PRs
+        env:
+          GH_TOKEN: ${{ steps.token.outputs.token }}
+        run: python3 review/rebase_open_prs.py --repo "${{ github.repository }}" --execute
