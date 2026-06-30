@@ -10,15 +10,14 @@ on:
 
 permissions:
   contents: read
-  security-events: write
+  security-events: read
 
 jobs:
   scan:
-    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
     permissions:
       contents: read
-      security-events: write
-    uses: Software-Automation-Holdings-LLC/dev-config/.github/workflows/security-scan.yml@d54ec9cb37dd7a7c7fa5b287de5d2edb8deafb7a # v1
+      security-events: read
+    uses: Software-Automation-Holdings-LLC/dev-config/.github/workflows/security-scan.yml@v1
     secrets:
       DEV_BOT_APP_ID: ${{ secrets.DEV_BOT_APP_ID }}
       DEV_BOT_PRIVATE_KEY: ${{ secrets.DEV_BOT_PRIVATE_KEY }}
