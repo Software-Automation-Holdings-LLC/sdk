@@ -43,17 +43,21 @@ description = "Go vulnerability scan. Advisories route to Linear via security-sc
 depends = ["setup"]
 run = "go run golang.org/x/vuln/cmd/govulncheck@latest ./... || true"
 
+[tasks.generated-guard]
+description = "Verify published protobuf/connect stubs retain codegen banners (mirror regen-diff proxy; full gate lives upstream)."
+run = "bash scripts/check-generated-markers.sh"
+
 [tasks.doctor]
 description = "Cheap platform-contract check: mise.toml present and the universal verbs exist."
 run = '''
 test -f mise.toml
 list=$(mise tasks ls)
-for v in setup lint test scan build doctor ci; do
+for v in setup lint test scan build generated-guard doctor ci; do
   echo "$list" | grep -q "^$v" || { echo "missing task: $v"; exit 1; }
 done
 echo "platform contract OK"
 '''
 
 [tasks.ci]
-description = "The full mirror gate: build-correctness (lint) + tree-compiles (test) + importability (build) + vuln scan."
-depends = ["lint", "test", "build", "scan"]
+description = "The full mirror gate: build-correctness (lint) + tree-compiles (test) + importability (build) + vuln scan + generated-marker guard."
+depends = ["lint", "test", "build", "scan", "generated-guard"]
