@@ -9,8 +9,9 @@ permissions:
 
 jobs:
   suite:
-    permissions:
-      contents: read
-      pull-requests: write
+    # permissions: is NOT allowed at the job level when the job calls a reusable
+    # workflow via `uses:`. GitHub validates and rejects the file before any job
+    # runs, producing "This run likely failed because of a workflow file issue".
+    # Workflow-level permissions (above) are inherited by the reusable caller.
     uses: Software-Automation-Holdings-LLC/dev-config/.github/workflows/advisory-suite.yml@v1
     secrets: inherit
