@@ -6,6 +6,7 @@ on:
 
 permissions:
   contents: read
+  pull-requests: write # advisory-suite opens/comments on PRs via pr-linear
 
 jobs:
   suite:
