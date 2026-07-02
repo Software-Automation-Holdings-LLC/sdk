@@ -11,12 +11,14 @@ on:
 permissions:
   contents: read
   security-events: read
+  pull-requests: write # reusable reconcile step closes stale security PRs
 
 jobs:
   scan:
     permissions:
       contents: read
       security-events: read
+      pull-requests: write # reusable reconcile step closes stale security PRs
     uses: Software-Automation-Holdings-LLC/dev-config/.github/workflows/security-scan.yml@v1
     secrets:
       DEV_BOT_APP_ID: ${{ secrets.DEV_BOT_APP_ID }}
