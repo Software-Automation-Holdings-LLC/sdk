@@ -77,7 +77,7 @@ jobs:
         needs.fork-guard.result == 'success' &&
         needs.fork-guard.outputs.is_fork != 'true' &&
         github.event.sender.login != 'sah-dev-bot[bot]' &&
-        !startsWith(github.event.comment.body, '<!-- sah:convergence-round'))))
+        !startsWith(github.event.comment.body, '<!-- sah:convergence-round')))
     runs-on: ubuntu-latest
     outputs:
       eligible: ${{ steps.check.outputs.eligible }}
