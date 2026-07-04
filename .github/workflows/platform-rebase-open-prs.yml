@@ -50,8 +50,8 @@ jobs:
         with:
           repository: Software-Automation-Holdings-LLC/dev-config
           ref: v1
-          sparse-checkout: review/rebase_open_prs.py
-          sparse-checkout-cone-mode: false
+          sparse-checkout: review
+          sparse-checkout-cone-mode: true
           token: ${{ steps.token.outputs.token }}
 
       - name: Rebase bot-scoped open PRs
