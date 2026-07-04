@@ -1,0 +1,51 @@
+# Thin caller -> dev-config ci-failure-watch reusable.
+#
+# `workflow_run` only fires for workflows in the SAME repo, so (unlike the PagerDuty
+# relay, which lives centrally in dev-config) this detector must be scaffolded into
+# every repo. The `workflows:` list below is the union of every CI + deploy/CD
+# workflow `name:` observed fleet-wide at authoring time (see
+# docs/runbooks/ci-failure-watch.md) — GitHub simply never fires this trigger for a
+# name a given repo doesn't have, so listing names other repos use is harmless here.
+name: ci-failure-watch
+
+on:
+  workflow_run:
+    types: [completed]
+    workflows:
+      - CI
+      - ci
+      - CD Pipeline
+      - Deploy to Production
+      - Infrastructure Deployment
+      - Prod Quote Canary
+      - Deploy
+      - deploy
+      - production-deploy
+      - Terraform Deploy
+      - Terraform Deploy (reusable)
+      - Deploy Preview
+      - Deploy WordPress to ECS
+      - Prod Shape Canary
+      - lambda-bluegreen-deploy
+      - ecs-deploy
+      - nq-prod-canary
+      - Canary Deploy (api-request-processor)
+      - Deploy Account (dev)
+      - OpenTofu
+      - Release
+      - CI/CD Pipeline
+      - Terraform Infrastructure
+
+permissions:
+  contents: read
+  actions: write
+
+jobs:
+  respond:
+    uses: Software-Automation-Holdings-LLC/dev-config/.github/workflows/ci-failure-watch.yml@f973bb30e3299044dd81424593f06cac8876000d # v1
+    secrets:
+      DEV_BOT_APP_ID: ${{ secrets.DEV_BOT_APP_ID }}
+      DEV_BOT_PRIVATE_KEY: ${{ secrets.DEV_BOT_PRIVATE_KEY }}
+      LINEAR_API_KEY: ${{ secrets.LINEAR_API_KEY }}
+      DEVIN_API_KEY: ${{ secrets.DEVIN_API_KEY }}
+      DEVIN_ORG_ID: ${{ secrets.DEVIN_ORG_ID }}

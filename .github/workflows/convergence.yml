@@ -95,7 +95,7 @@ jobs:
         uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
         with:
           repository: Software-Automation-Holdings-LLC/dev-config
-          ref: v1
+          ref: f973bb30e3299044dd81424593f06cac8876000d # v1
           sparse-checkout: review
           sparse-checkout-cone-mode: true
           token: ${{ steps.token.outputs.token }}
@@ -115,7 +115,7 @@ jobs:
       !cancelled() &&
       needs.fork-guard.result != 'failure' &&
       needs.scope.outputs.eligible == 'true'
-    uses: Software-Automation-Holdings-LLC/dev-config/.github/workflows/review-coordinator.yml@v1
+    uses: Software-Automation-Holdings-LLC/dev-config/.github/workflows/review-coordinator.yml@f973bb30e3299044dd81424593f06cac8876000d # v1
     secrets: inherit
     with:
       pr_number: ${{ github.event.pull_request.number || github.event.issue.number || github.event.check_run.pull_requests[0].number }}

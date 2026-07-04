@@ -1,12 +1,12 @@
 # Thin caller -> .github/workflows/safe-class-approve.yml in the product repo.
 # Delegates safe-class auto-approval to the central reusable workflow. SHA-pinned
-# to dev-config v1 (144e98c); Renovate maintains the SHA as v1 moves. Forked PRs
+# to dev-config v1 (a75954a); Renovate maintains the SHA as v1 moves. Forked PRs
 # carry no secrets, so they fall through to human approval.
 name: safe-class-approve
 
 on:
   pull_request:
-    types: [opened, synchronize, reopened, labeled]
+    types: [opened, synchronize, reopened, labeled, ready_for_review]
 
 permissions:
   contents: read
@@ -15,10 +15,11 @@ permissions:
 
 jobs:
   approve:
-    # sah-dev-bot cannot approve PRs it authored (GitHub rejects self-approval);
-    # skip so the check reports neutral and human approval is expected instead.
-    if: github.event.pull_request.user.login != 'sah-dev-bot[bot]'
-    uses: Software-Automation-Holdings-LLC/dev-config/.github/workflows/safe-class-approve.yml@144e98ca09d0ea078b16beb9bd09f684d7f9b84f # v1
+    # The reusable workflow approves via sah-release-dev-bot, so only skip when
+    # *that* bot is the author (true self-approval). sah-dev-bot is a different
+    # identity and is safe to approve via sah-release-dev-bot (canary probes).
+    if: github.event.pull_request.user.login != 'sah-release-dev-bot[bot]'
+    uses: Software-Automation-Holdings-LLC/dev-config/.github/workflows/safe-class-approve.yml@f973bb30e3299044dd81424593f06cac8876000d # v1
     secrets: inherit
     with:
       pr_number: ${{ github.event.pull_request.number }}

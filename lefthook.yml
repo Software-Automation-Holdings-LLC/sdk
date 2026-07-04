@@ -1,7 +1,7 @@
 # The ENTIRE lefthook config a product repo carries. Real hooks live in dev-config.
-# Renovate bumps `ref`.
+# `release-scaffold` updates `ref` when v1 advances; conformance sweep distributes fleet-wide.
 remotes:
   - git_url: https://github.com/Software-Automation-Holdings-LLC/dev-config
-    ref: v1
+    ref: f973bb30e3299044dd81424593f06cac8876000d # v1
     configs:
       - lefthook/base.yml

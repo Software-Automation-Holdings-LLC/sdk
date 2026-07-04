@@ -1,5 +1,5 @@
 # Goes to .trunk/trunk.yaml in the product repo. Org metalint rules live in dev-config
-# plugin.yaml; trunk-io/plugins supplies linter definitions. Renovate bumps both refs.
+# plugin.yaml; trunk-io/plugins supplies linter definitions. Renovate bumps the trunk-io ref; `release-scaffold` updates the dev-config SHA pin.
 version: 0.1
 cli:
   version: 1.22.8
@@ -9,5 +9,5 @@ plugins:
       ref: v1.6.7
       uri: https://github.com/trunk-io/plugins
     - id: org
-      ref: v1
+      ref: f973bb30e3299044dd81424593f06cac8876000d # v1
       uri: https://github.com/Software-Automation-Holdings-LLC/dev-config

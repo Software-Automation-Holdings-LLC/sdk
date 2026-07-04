@@ -1,10 +1,12 @@
 # Thin caller -> dev-config automerge-guard reusable.
-# When an operator removes `safe-automerge`, GitHub auto-merge is disabled.
+# Handles two label events:
+#   - unlabeled safe-automerge  → disable auto-merge (gate label removed)
+#   - labeled   do-not-merge    → disable auto-merge (hold applied post-arming)
 name: automerge-guard
 
 on:
   pull_request_target:
-    types: [unlabeled]
+    types: [unlabeled, labeled]
 
 permissions:
   contents: read
@@ -12,12 +14,24 @@ permissions:
   issues: write
 
 jobs:
-  guard:
+  guard-on-unlabel:
     if: >-
+      github.event.action == 'unlabeled' &&
       github.event.pull_request.head.repo.full_name == github.repository &&
       github.event.label.name == 'safe-automerge'
-    uses: Software-Automation-Holdings-LLC/dev-config/.github/workflows/automerge-guard.yml@main
+    uses: Software-Automation-Holdings-LLC/dev-config/.github/workflows/automerge-guard.yml@f973bb30e3299044dd81424593f06cac8876000d # v1
     secrets: inherit
     with:
       pr_number: ${{ github.event.pull_request.number }}
       removed_label: ${{ github.event.label.name }}
+
+  guard-on-label:
+    if: >-
+      github.event.action == 'labeled' &&
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      github.event.label.name == 'do-not-merge'
+    uses: Software-Automation-Holdings-LLC/dev-config/.github/workflows/automerge-guard.yml@f973bb30e3299044dd81424593f06cac8876000d # v1
+    secrets: inherit
+    with:
+      pr_number: ${{ github.event.pull_request.number }}
+      added_label: ${{ github.event.label.name }}

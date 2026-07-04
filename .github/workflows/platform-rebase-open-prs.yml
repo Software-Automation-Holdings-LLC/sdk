@@ -3,6 +3,12 @@
 name: platform-rebase-open-prs
 
 on:
+  schedule:
+    # Every 3 hours: sweeps DIRTY PRs that piled up before this cron existed (the
+    # push+path trigger only fires on new platform merges, leaving the 49-PR backlog
+    # untouched between pushes). 3 h gives Devin time to make progress between runs
+    # while keeping the backlog gap well under a business day.
+    - cron: "0 */3 * * *"
   push:
     branches:
       - main
@@ -49,12 +55,16 @@ jobs:
         uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
         with:
           repository: Software-Automation-Holdings-LLC/dev-config
-          ref: v1
-          sparse-checkout: review
-          sparse-checkout-cone-mode: true
+          ref: f973bb30e3299044dd81424593f06cac8876000d # v1
+          sparse-checkout: review/
+          sparse-checkout-cone-mode: false
           token: ${{ steps.token.outputs.token }}
 
       - name: Rebase bot-scoped open PRs
         env:
           GH_TOKEN: ${{ steps.token.outputs.token }}
+          # Devin keys are optional: if absent the script skips conflict dispatch and
+          # logs a warning; clean-rebase and out-of-scope needs-human paths still run.
+          DEVIN_API_KEY: ${{ secrets.DEVIN_API_KEY }}
+          DEVIN_ORG_ID: ${{ secrets.DEVIN_ORG_ID }}
         run: python3 review/rebase_open_prs.py --repo "${{ github.repository }}" --execute
