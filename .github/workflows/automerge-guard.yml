@@ -16,7 +16,7 @@ jobs:
     if: >-
       github.event.pull_request.head.repo.full_name == github.repository &&
       github.event.label.name == 'safe-automerge'
-    uses: Software-Automation-Holdings-LLC/dev-config/.github/workflows/automerge-guard.yml@main
+    uses: Software-Automation-Holdings-LLC/dev-config/.github/workflows/automerge-guard.yml@5b6a9abe01bdf7928058373f86b725871e1b6569  # main
     secrets: inherit
     with:
       pr_number: ${{ github.event.pull_request.number }}
