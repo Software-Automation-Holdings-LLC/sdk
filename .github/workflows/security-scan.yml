@@ -15,10 +15,10 @@ permissions:
 
 jobs:
   scan:
-    # permissions: is NOT allowed at the job level when the job calls a reusable
-    # workflow via `uses:`. GitHub validates and rejects the file before any job
-    # runs, producing "This run likely failed because of a workflow file issue".
-    # Workflow-level permissions (above) are inherited by the reusable caller.
+    permissions:
+      contents: read
+      security-events: read
+      pull-requests: write # reusable reconcile step closes stale security PRs
     uses: Software-Automation-Holdings-LLC/dev-config/.github/workflows/security-scan.yml@v1
     secrets:
       DEV_BOT_APP_ID: ${{ secrets.DEV_BOT_APP_ID }}
