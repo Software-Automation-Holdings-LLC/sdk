@@ -18,7 +18,7 @@ jobs:
       github.event.pull_request.head.repo.full_name == github.repository &&
       contains(github.event.pull_request.labels.*.name, 'security') &&
       contains(github.event.pull_request.labels.*.name, 'migrated:verified')
-    uses: Software-Automation-Holdings-LLC/dev-config/.github/workflows/security-migration.yml@v1
+    uses: Software-Automation-Holdings-LLC/dev-config/.github/workflows/security-migration.yml@d421892f7c31b03c35a4fab8d30208d3c6dba199 # v1
     with:
       pr_number: ${{ github.event.pull_request.number }}
     secrets:

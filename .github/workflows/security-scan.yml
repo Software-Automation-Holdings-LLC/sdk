@@ -19,7 +19,7 @@ jobs:
       contents: read
       security-events: read
       pull-requests: write # reusable reconcile step closes stale security PRs
-    uses: Software-Automation-Holdings-LLC/dev-config/.github/workflows/security-scan.yml@v1
+    uses: Software-Automation-Holdings-LLC/dev-config/.github/workflows/security-scan.yml@d421892f7c31b03c35a4fab8d30208d3c6dba199 # v1
     secrets:
       DEV_BOT_APP_ID: ${{ secrets.DEV_BOT_APP_ID }}
       DEV_BOT_PRIVATE_KEY: ${{ secrets.DEV_BOT_PRIVATE_KEY }}

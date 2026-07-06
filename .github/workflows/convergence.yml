@@ -115,7 +115,7 @@ jobs:
       !cancelled() &&
       needs.fork-guard.result != 'failure' &&
       needs.scope.outputs.eligible == 'true'
-    uses: Software-Automation-Holdings-LLC/dev-config/.github/workflows/review-coordinator.yml@v1
+    uses: Software-Automation-Holdings-LLC/dev-config/.github/workflows/review-coordinator.yml@d421892f7c31b03c35a4fab8d30208d3c6dba199 # v1
     secrets: inherit
     with:
       pr_number: ${{ github.event.pull_request.number || github.event.issue.number || github.event.check_run.pull_requests[0].number }}

@@ -11,7 +11,7 @@ permissions:
 
 jobs:
   label:
-    uses: Software-Automation-Holdings-LLC/dev-config/.github/workflows/incident-pr-label.yml@v1
+    uses: Software-Automation-Holdings-LLC/dev-config/.github/workflows/incident-pr-label.yml@d421892f7c31b03c35a4fab8d30208d3c6dba199 # v1
     secrets:
       DEV_BOT_APP_ID: ${{ secrets.DEV_BOT_APP_ID }}
       DEV_BOT_PRIVATE_KEY: ${{ secrets.DEV_BOT_PRIVATE_KEY }}

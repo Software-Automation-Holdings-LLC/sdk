@@ -12,5 +12,5 @@ jobs:
     permissions:
       contents: read
       pull-requests: write
-    uses: Software-Automation-Holdings-LLC/dev-config/.github/workflows/advisory-suite.yml@v1
+    uses: Software-Automation-Holdings-LLC/dev-config/.github/workflows/advisory-suite.yml@d421892f7c31b03c35a4fab8d30208d3c6dba199 # v1
     secrets: inherit
