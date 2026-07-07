@@ -18,7 +18,7 @@ jobs:
     # sah-dev-bot cannot approve PRs it authored (GitHub rejects self-approval);
     # skip so the check reports neutral and human approval is expected instead.
     if: github.event.pull_request.user.login != 'sah-dev-bot[bot]'
-    uses: Software-Automation-Holdings-LLC/dev-config/.github/workflows/safe-class-approve.yml@144e98ca09d0ea078b16beb9bd09f684d7f9b84f # v1
+    uses: Software-Automation-Holdings-LLC/dev-config/.github/workflows/safe-class-approve.yml@v1 # sprint: tracks main
     secrets: inherit
     with:
       pr_number: ${{ github.event.pull_request.number }}
