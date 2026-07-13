@@ -3,6 +3,9 @@
 version: 0.1
 cli:
   version: 1.22.8
+  options:
+    - commands: [ALL]
+      args: --monitor=false
 plugins:
   sources:
     - id: trunk
@@ -11,3 +14,9 @@ plugins:
     - id: org
       ref: v1
       uri: https://github.com/Software-Automation-Holdings-LLC/dev-config
+actions:
+  disabled:
+    - trunk-upgrade-available
+    - trunk-announce
+    - trunk-single-player-auto-upgrade
+    - trunk-whoami
