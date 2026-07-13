@@ -1,13 +1,21 @@
-# Goes to .trunk/trunk.yaml in the product repo. Org metalint rules live in dev-config
-# plugin.yaml; trunk-io/plugins supplies linter definitions. Renovate bumps both refs.
 version: 0.1
 cli:
   version: 1.22.8
+  options:
+  - commands:
+    - ALL
+    args: --monitor=false
 plugins:
   sources:
-    - id: trunk
-      ref: v1.6.7
-      uri: https://github.com/trunk-io/plugins
-    - id: org
-      ref: v1
-      uri: https://github.com/Software-Automation-Holdings-LLC/dev-config
+  - id: trunk
+    ref: v1.6.7
+    uri: https://github.com/trunk-io/plugins
+  - id: org
+    ref: v1
+    uri: https://github.com/Software-Automation-Holdings-LLC/dev-config
+actions:
+  disabled:
+  - trunk-upgrade-available
+  - trunk-announce
+  - trunk-single-player-auto-upgrade
+  - trunk-whoami
