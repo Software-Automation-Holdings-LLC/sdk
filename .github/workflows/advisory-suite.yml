@@ -13,4 +13,7 @@ jobs:
       contents: read
       pull-requests: write
     uses: Software-Automation-Holdings-LLC/dev-config/.github/workflows/advisory-suite.yml@v1
-    secrets: inherit
+    secrets:
+      DEV_BOT_APP_ID: ${{ secrets.DEV_BOT_APP_ID }}
+      DEV_BOT_PRIVATE_KEY: ${{ secrets.DEV_BOT_PRIVATE_KEY }}
+      LINEAR_API_KEY: ${{ secrets.LINEAR_API_KEY }}
