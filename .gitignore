@@ -17,6 +17,7 @@
 
 # Project docs / metadata
 !/CHANGELOG.md
+!/LICENSE
 !/MIGRATION.md
 !/PUBLIC_API.txt
 !/README.md
