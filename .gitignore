@@ -17,9 +17,11 @@
 
 # Project docs / metadata
 !/CHANGELOG.md
+!/CONTRIBUTING.md
 !/MIGRATION.md
 !/PUBLIC_API.txt
 !/README.md
+!/SECURITY.md
 !/VERSION
 
 # Source trees
