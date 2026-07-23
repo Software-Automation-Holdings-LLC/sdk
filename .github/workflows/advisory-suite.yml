@@ -12,7 +12,7 @@ jobs:
     permissions:
       contents: read
       pull-requests: write
-    uses: Software-Automation-Holdings-LLC/dev-config/.github/workflows/advisory-suite.yml@v1
+    uses: Software-Automation-Holdings-LLC/dev-config/.github/workflows/advisory-suite.yml@main # sprint: tracks main
     secrets:
       DEV_BOT_APP_ID: ${{ secrets.DEV_BOT_APP_ID }}
       DEV_BOT_PRIVATE_KEY: ${{ secrets.DEV_BOT_PRIVATE_KEY }}
