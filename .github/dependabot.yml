@@ -1,0 +1,184 @@
+version: 2
+updates:
+  - package-ecosystem: composer
+    directory: /packages/php
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 10
+    ignore:
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major"]
+    groups:
+      patch-and-minor:
+        applies-to: version-updates
+        update-types: [minor, patch]
+  - package-ecosystem: composer
+    directory: /packages/php/core
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 10
+    ignore:
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major"]
+    groups:
+      patch-and-minor:
+        applies-to: version-updates
+        update-types: [minor, patch]
+  - package-ecosystem: composer
+    directory: /packages/php/proxy
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 10
+    ignore:
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major"]
+    groups:
+      patch-and-minor:
+        applies-to: version-updates
+        update-types: [minor, patch]
+  - package-ecosystem: composer
+    directory: /packages/php/rapidsign
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 10
+    ignore:
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major"]
+    groups:
+      patch-and-minor:
+        applies-to: version-updates
+        update-types: [minor, patch]
+  - package-ecosystem: composer
+    directory: /packages/php/zyins
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 10
+    ignore:
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major"]
+    groups:
+      patch-and-minor:
+        applies-to: version-updates
+        update-types: [minor, patch]
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 10
+    ignore:
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major"]
+    groups:
+      patch-and-minor:
+        applies-to: version-updates
+        update-types: [minor, patch]
+  - package-ecosystem: gomod
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 10
+    ignore:
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major"]
+    groups:
+      patch-and-minor:
+        applies-to: version-updates
+        update-types: [minor, patch]
+  - package-ecosystem: npm
+    directory: /packages/ts
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 10
+    ignore:
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major"]
+    groups:
+      patch-and-minor:
+        applies-to: version-updates
+        update-types: [minor, patch]
+  - package-ecosystem: npm
+    directory: /packages/ts/core
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 10
+    ignore:
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major"]
+    groups:
+      patch-and-minor:
+        applies-to: version-updates
+        update-types: [minor, patch]
+  - package-ecosystem: npm
+    directory: /packages/ts/proxy
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 10
+    ignore:
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major"]
+    groups:
+      patch-and-minor:
+        applies-to: version-updates
+        update-types: [minor, patch]
+  - package-ecosystem: npm
+    directory: /packages/ts/rapidsign
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 10
+    ignore:
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major"]
+    groups:
+      patch-and-minor:
+        applies-to: version-updates
+        update-types: [minor, patch]
+  - package-ecosystem: npm
+    directory: /packages/ts/zyins
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 10
+    ignore:
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major"]
+    groups:
+      patch-and-minor:
+        applies-to: version-updates
+        update-types: [minor, patch]
+  - package-ecosystem: nuget
+    directory: /packages/csharp
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 10
+    ignore:
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major"]
+    groups:
+      patch-and-minor:
+        applies-to: version-updates
+        update-types: [minor, patch]
+  - package-ecosystem: pip
+    directory: /packages/python
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 10
+    ignore:
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major"]
+    groups:
+      patch-and-minor:
+        applies-to: version-updates
+        update-types: [minor, patch]
