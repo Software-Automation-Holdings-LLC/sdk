@@ -6,7 +6,7 @@ import argparse
 import sys
 from pathlib import Path
 
-from .rewriter import rewrite_tree
+_CODEMOD_INSTALL_HINT = "pip install 'sah-sdk[codemod]'"
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -26,15 +26,29 @@ def main(argv: list[str] | None = None) -> int:
         print(f"error: {args.path} does not exist", file=sys.stderr)
         return 2
 
-    result = rewrite_tree(args.path, dry_run=args.dry_run)
+    try:
+        from .rewriter import rewrite_tree
+    except ModuleNotFoundError as exc:
+        if exc.name != "libcst":
+            raise
+        print(
+            f"error: libcst is required for the codemod; install with {_CODEMOD_INSTALL_HINT}",
+            file=sys.stderr,
+        )
+        return 2
+
+    try:
+        result = rewrite_tree(args.path, dry_run=args.dry_run)
+    except ValueError as exc:
+        print(f"error: {exc}", file=sys.stderr)
+        return 2
+
     for diag in result.diagnostics:
         print(f"{diag.file}: {diag.old} -> {diag.new}")
     print(
-        f"scanned {result.files_scanned} file(s); "
-        f"{result.files_changed} would change"
+        f"scanned {result.files_scanned} file(s); {result.files_changed} would change"
         if args.dry_run
-        else f"scanned {result.files_scanned} file(s); "
-        f"rewrote {result.files_changed}"
+        else f"scanned {result.files_scanned} file(s); rewrote {result.files_changed}"
     )
     if args.dry_run and result.files_changed:
         return 1

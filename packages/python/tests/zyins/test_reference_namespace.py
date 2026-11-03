@@ -120,7 +120,9 @@ def facade(bundle: DatasetBundleV3) -> ReferenceFacade:
 # ---------------------------------------------------------------------------
 
 
-def test_match_known_condition_returns_condition_concept(bundle: DatasetBundleV3) -> None:
+def test_match_known_condition_returns_condition_concept(
+    bundle: DatasetBundleV3,
+) -> None:
     # "High Blood Pressure" normalizes via MakeKey to HIGHBLOODPRESSURE,
     # which is the id in the fixture.
     result = match("High Blood Pressure", bundle)
@@ -185,7 +187,9 @@ def test_match_condition_helper_returns_condition(bundle: DatasetBundleV3) -> No
 # ---------------------------------------------------------------------------
 
 
-def test_medication_conditions_sorted_most_common_first(bundle: DatasetBundleV3) -> None:
+def test_medication_conditions_sorted_most_common_first(
+    bundle: DatasetBundleV3,
+) -> None:
     """INSULIN is more common for DIABETES (90) than HIGHBLOODPRESSURE (10)."""
     concept = match_medication("INSULIN", bundle)
     ordered = concept.conditions(Sort.MOST_COMMON_FIRST)
@@ -199,7 +203,9 @@ def test_medication_conditions_sorted_alphabetical(bundle: DatasetBundleV3) -> N
     assert tuple(c.id for c in ordered) == ("DIABETES", "HIGHBLOODPRESSURE")
 
 
-def test_condition_medications_sorted_most_common_first(bundle: DatasetBundleV3) -> None:
+def test_condition_medications_sorted_most_common_first(
+    bundle: DatasetBundleV3,
+) -> None:
     """Lisinopril (95) ranks above Insulin (10) for HIGHBLOODPRESSURE."""
     concept = match_condition("High Blood Pressure", bundle)
     ordered = concept.medications(Sort.MOST_COMMON_FIRST)
@@ -212,18 +218,24 @@ def test_condition_medications_sorted_alphabetical(bundle: DatasetBundleV3) -> N
     assert tuple(m.id for m in ordered) == ("INSULIN", "LISINOPRIL")
 
 
-def test_condition_with_no_medications_returns_empty_tuple(bundle: DatasetBundleV3) -> None:
+def test_condition_with_no_medications_returns_empty_tuple(
+    bundle: DatasetBundleV3,
+) -> None:
     concept = match_condition("Asthma", bundle)
     assert concept.medications() == ()
 
 
-def test_medication_accessor_on_condition_returns_empty(bundle: DatasetBundleV3) -> None:
+def test_medication_accessor_on_condition_returns_empty(
+    bundle: DatasetBundleV3,
+) -> None:
     concept = match_condition("Diabetes", bundle)
     assert concept.medications.__call__ is not None  # accessor exists
     assert concept.conditions() == ()
 
 
-def test_condition_accessor_on_medication_returns_empty(bundle: DatasetBundleV3) -> None:
+def test_condition_accessor_on_medication_returns_empty(
+    bundle: DatasetBundleV3,
+) -> None:
     concept = match_medication("INSULIN", bundle)
     assert concept.medications() == ()
 

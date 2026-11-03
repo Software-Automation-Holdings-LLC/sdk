@@ -53,7 +53,9 @@ class _CapturingTransport:
     response_body: str = "{}"
     response_status: int = 200
     response_headers: dict[str, str] = field(default_factory=dict)
-    calls: list[tuple[str, str, dict[str, str], str | None]] = field(default_factory=list)
+    calls: list[tuple[str, str, dict[str, str], str | None]] = field(
+        default_factory=list
+    )
 
     def request(
         self,
@@ -200,7 +202,9 @@ def test_prequalify_v3_threads_applicant_zip_into_coverage() -> None:
     assert coverage["zip"] == "75001"
 
 
-def test_prequalify_v3_serializes_conditions_medications_and_nicotine_specificity() -> None:
+def test_prequalify_v3_serializes_conditions_medications_and_nicotine_specificity() -> (
+    None
+):
     """Conditions, medications, and nicotine specificity must follow the
     v3 schemas: ``text`` (not ``name``/``type``), ``first_fill``/``last_fill``
     keys, and the ``NicotineFrequencyV3`` enum mapping."""
@@ -279,7 +283,9 @@ def test_prequalify_v1_marshaler_still_emits_flat_shape() -> None:
     flat = json.loads(body)
     # The v1 marshaler MUST keep emitting the legacy flat root and MUST
     # NOT have grown a v3 envelope.
-    assert "applicant" not in flat, "v1/v2 surface unexpectedly emits the v3 applicant envelope"
+    assert "applicant" not in flat, (
+        "v1/v2 surface unexpectedly emits the v3 applicant envelope"
+    )
     assert "coverage" not in flat
 
 
@@ -319,7 +325,10 @@ def test_prequalify_v3_single_monthly_budget_serializes_quote_options() -> None:
     )
     coverage = json.loads(body)["coverage"]
     assert "face_amount_cents" not in coverage
-    assert coverage["quote_options"] == {"quote_type": "monthly_budget", "amounts": ["50"]}
+    assert coverage["quote_options"] == {
+        "quote_type": "monthly_budget",
+        "amounts": ["50"],
+    }
 
 
 def test_prequalify_v3_parse_absent_plans_field_raises() -> None:

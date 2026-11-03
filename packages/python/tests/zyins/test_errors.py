@@ -7,6 +7,7 @@ import json
 from sah_sdk.core.errors import (
     AuthError,
     ISAError,
+    IsaPermissionError,
     LicenseError,
     PrequalifyError,
     RateLimitError,
@@ -41,9 +42,42 @@ def test_401_maps_to_auth_error() -> None:
     assert err.http_status == 401
 
 
-def test_403_maps_to_auth_error() -> None:
+def test_403_maps_to_permission_error() -> None:
     err = from_http_response(403, "forbidden")
-    assert isinstance(err, AuthError)
+    assert isinstance(err, IsaPermissionError)
+    assert err.code == "permission_denied"
+    assert err.http_status == 403
+
+
+def test_problem_details_permission_denied() -> None:
+    body = json.dumps(
+        {
+            "code": "permission_denied",
+            "title": "Forbidden",
+            "detail": "missing scope",
+            "status": 403,
+        }
+    )
+    err = from_http_response(403, body)
+    assert isinstance(err, IsaPermissionError)
+
+
+def test_403_problem_details_preserves_specific_code() -> None:
+    # A 403 carrying a problem-details body with a specific code must keep
+    # that code and detail rather than being flattened into a generic
+    # permission error.
+    body = json.dumps(
+        {
+            "code": "license_locked",
+            "title": "Locked",
+            "detail": "license is locked",
+            "status": 403,
+        }
+    )
+    err = from_http_response(403, body)
+    assert isinstance(err, LicenseError)
+    assert err.code == "locked"
+    assert str(err) == "license is locked"
 
 
 def test_problem_details_validation_error() -> None:

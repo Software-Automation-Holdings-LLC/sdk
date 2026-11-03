@@ -64,9 +64,19 @@ class IsaCredentialState:
     every sub-client captures the same reference.
     """
 
-    __slots__ = ("_device_id", "_email", "_keycode", "_license_key", "_listeners", "_order_id", "_store")
+    __slots__ = (
+        "_device_id",
+        "_email",
+        "_keycode",
+        "_license_key",
+        "_listeners",
+        "_order_id",
+        "_store",
+    )
 
-    def __init__(self, initial: LicenseCredentialSnapshot, store: CredentialStore) -> None:
+    def __init__(
+        self, initial: LicenseCredentialSnapshot, store: CredentialStore
+    ) -> None:
         self._keycode = initial.keycode
         self._email = initial.email
         self._device_id = initial.device_id

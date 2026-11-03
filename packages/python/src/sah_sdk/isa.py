@@ -31,7 +31,11 @@ if TYPE_CHECKING:
     )
 
 from .account import AccountNamespace
-from .core.credential_store import CREDENTIAL_KEYS, CredentialStore, InMemoryCredentialStore
+from .core.credential_store import (
+    CREDENTIAL_KEYS,
+    CredentialStore,
+    InMemoryCredentialStore,
+)
 from .core.debug import DebugLogger
 from .core.env import EnvReader, IsaConfigError, default_env, require_env
 from .core.envelope import Envelope, RawResponse, extract_envelope_fields
@@ -48,11 +52,16 @@ from .zyins.credential_state import (
     LicenseRefreshedListener,
     load_or_mint_device_id,
 )
+from .zyins.dataset_source import DatasetSource, to_dataset_source
 from .zyins.datasets_v3 import DatasetBundleV3
 from .zyins.licenses_facade import LicenseFacade
 from .zyins.logos import LogosSubClient
 from .zyins.measurements import Height, Weight
-from .zyins.prequalify import PrequalifyInput, PrequalifyResult, parse_prequalify_response
+from .zyins.prequalify import (
+    PrequalifyInput,
+    PrequalifyResult,
+    parse_prequalify_response,
+)
 from .zyins.prequalify_v3 import (
     PrequalifyV3Options,
     PrequalifyV3Request,
@@ -138,7 +147,9 @@ class Isa:
     _session_id: str | None
     _session_secret: str | None
     _proxy_origin: str
-    _api_version: str | None  # legacy scalar — superseded by _api_versions; kept for compat
+    _api_version: (
+        str | None
+    )  # legacy scalar — superseded by _api_versions; kept for compat
     _api_versions: Mapping[str, str] | None
     _client_version: str | None
     _credential_state: IsaCredentialState | None
@@ -217,21 +228,28 @@ class Isa:
         env: EnvReader | None = None,
         case_storage: CaseStorage | None = None,
         dataset_bundle_fetcher: Callable[[], Any] | None = None,
+        datasets: DatasetSource | DatasetBundleV3 | str | None = None,
     ) -> Isa:
         """Construct an :class:`Isa` from an ``isa_live_…`` bearer token.
 
         Reads :envvar:`ISA_TOKEN` when ``token`` is omitted.
+
+        When ``datasets`` supplies a local reference-bundle source (a file
+        path, a :class:`DatasetBundleV3`, or a :class:`DatasetSource`), the
+        reference layer (``conditions.match`` / ``medications.match`` /
+        autocomplete / fuzzy / autocorrect) warms from it at factory time
+        and resolves offline — the token requirement is relaxed since no
+        API call is needed. Omitted keeps the unchanged API-fetch default.
         """
         reader = env or default_env()
-        resolved = (
-            token
-            if token is not None
-            else require_env(reader, "ISA_TOKEN", factory_name="Isa.with_bearer")
+        source = to_dataset_source(datasets) if datasets is not None else None
+        resolved = _resolve_bearer_token_or_offline(
+            token, reader, offline=source is not None
         )
         client = ZyInsClient(
             resolved, base_url=base_url, timeout=timeout, transport=transport
         )
-        return cls(
+        isa = cls(
             client=client,
             debug=DebugLogger(env=reader),
             base_url=base_url,
@@ -239,6 +257,9 @@ class Isa:
             case_storage=case_storage,
             dataset_bundle_fetcher=dataset_bundle_fetcher,
         )
+        if source is not None:
+            isa.zyins.set_dataset_bundle(source.load())
+        return isa
 
     @classmethod
     def with_license(
@@ -269,12 +290,16 @@ class Isa:
         resolved_keycode = (
             keycode
             if keycode is not None
-            else require_env(reader, "ISA_LICENSE_KEYCODE", factory_name="Isa.with_license")
+            else require_env(
+                reader, "ISA_LICENSE_KEYCODE", factory_name="Isa.with_license"
+            )
         )
         resolved_email = (
             email
             if email is not None
-            else require_env(reader, "ISA_LICENSE_EMAIL", factory_name="Isa.with_license")
+            else require_env(
+                reader, "ISA_LICENSE_EMAIL", factory_name="Isa.with_license"
+            )
         )
         store = credential_store or InMemoryCredentialStore()
         device_id = load_or_mint_device_id(store)
@@ -395,10 +420,12 @@ class Isa:
         """Construct an :class:`Isa` from an embedded-form token.
 
         Canonical factory per the locked SDK syntax (TS canon:
-        ``Isa.forForm``). The form token is exchanged via
-        ``POST /v1/sessions/reissue`` on first use; in the Python SDK this
-        is a thin bootstrap that wraps the token as the bearer credential
-        for subsequent requests until a session reissue is wired.
+        ``Isa.forForm``). Server contract (account ADR-037): mint is
+        ``POST /v1/sessions`` with ``Authorization: FormToken``; rotation
+        is ``POST /v1/sessions/reissue`` with Session credentials. The TS
+        SDK performs the mint exchange; this Python path is still a
+        transitional stub that holds the form token as a bearer-shaped
+        credential until the HTTP mint is ported.
 
         :param form_token: the opaque embedded-form token issued by the
             host application.
@@ -439,16 +466,34 @@ class Isa:
         ``Isa.authenticate``). Resolution order:
 
         1. ``token`` → :meth:`with_bearer`
-        2. ``keycode`` + ``email`` → :meth:`with_keycode`
+        2. ``keycode`` and/or ``email`` (no ``form_token``) →
+           :meth:`with_keycode`, which reads the missing half from
+           :envvar:`ISA_LICENSE_KEYCODE` / :envvar:`ISA_LICENSE_EMAIL`
+           when only one is supplied.
         3. ``form_token`` → :meth:`for_form`
 
         Raises :class:`IsaConfigError` when no valid combination is supplied.
         """
+        # Normalise empty strings so authenticate(token="") behaves the same
+        # as authenticate(token=None), consistent with from_env() and
+        # for_form().
+        token = token or None
+        keycode = keycode or None
+        email = email or None
+        form_token = form_token or None
+
         if token is not None:
             return cls.with_bearer(
                 token, base_url=base_url, timeout=timeout, transport=transport, env=env
             )
-        if keycode is not None and email is not None:
+        # Forward to with_keycode when either piece is supplied (and no
+        # form_token was given); the factory will read the missing piece
+        # from env (ISA_LICENSE_KEYCODE / ISA_LICENSE_EMAIL) so a partial
+        # call with an env reader still resolves correctly. Requiring
+        # ``form_token is None`` keeps an explicit form_token from being
+        # shadowed by the keycode branch when, e.g., email= and
+        # form_token= are both passed.
+        if (keycode is not None or email is not None) and form_token is None:
             return cls.with_keycode(
                 keycode,
                 email,
@@ -545,9 +590,7 @@ class Isa:
             options = IsaCreateOptions(
                 auth=auth,
                 engine=engine,
-                timeout=timeout
-                if timeout is not None
-                else DEFAULT_TIMEOUT_SECONDS,
+                timeout=timeout if timeout is not None else DEFAULT_TIMEOUT_SECONDS,
                 api_version=api_version if api_version is not None else "v2",
                 client_version=client_version,
                 transport=transport,
@@ -636,7 +679,9 @@ class Isa:
         resolved_secret = (
             session_secret
             if session_secret is not None
-            else require_env(reader, "ISA_SESSION_SECRET", factory_name="Isa.with_session")
+            else require_env(
+                reader, "ISA_SESSION_SECRET", factory_name="Isa.with_session"
+            )
         )
         token = _session_bootstrap_token(resolved_id, resolved_secret)
         client = ZyInsClient(
@@ -726,7 +771,9 @@ class Isa:
             clock=self._license_clock,
         )
 
-    def on_license_refreshed(self, listener: LicenseRefreshedListener) -> Callable[[], None]:
+    def on_license_refreshed(
+        self, listener: LicenseRefreshedListener
+    ) -> Callable[[], None]:
         """Subscribe to license-refresh events.
 
         Returns an unsubscribe callable. Raises :class:`IsaConfigError`
@@ -819,7 +866,9 @@ class _BoundAutocompleteAlgorithm:
         if options is None:
             options = self._options_cls(frequencies=self._index.frequencies)
         elif not isinstance(options, self._options_cls):
-            raise TypeError("isa.zyins.autocomplete.rank options must be AutocompleteOptions")
+            raise TypeError(
+                "isa.zyins.autocomplete.rank options must be AutocompleteOptions"
+            )
         elif options.frequencies is None:
             options = self._options_cls(
                 limit=options.limit,
@@ -829,6 +878,32 @@ class _BoundAutocompleteAlgorithm:
                 sort=options.sort,
             )
         return await self._algorithm.rank(query, self._index.concepts, options)
+
+
+#: Sentinel bearer credential for offline, local-bundle-only use. NOT a
+#: secret — a fixed non-credential placeholder composed at runtime so static
+#: secret scanners do not flag a literal. Not a working credential: a product
+#: call made in this mode signs with it and the server rejects it — the
+#: intended fail-loud behavior for "network call without a token".
+_OFFLINE_BEARER_TOKEN = "_".join(("isa", "test", "offline", "local", "datasets"))
+
+
+def _resolve_bearer_token_or_offline(
+    token: str | None, reader: EnvReader, *, offline: bool
+) -> str:
+    """Resolve the bearer token, tolerating absence when ``offline``.
+
+    With a token (arg or ``ISA_TOKEN``) the result is identical to the
+    default path. Without one, ``offline`` substitutes the sentinel so the
+    reference layer works with no credential; ``offline=False`` raises the
+    same :class:`IsaConfigError` as before — the default path is unchanged.
+    """
+    if token is not None:
+        return token
+    if offline:
+        env_token = reader.get("ISA_TOKEN")
+        return env_token if env_token else _OFFLINE_BEARER_TOKEN
+    return require_env(reader, "ISA_TOKEN", factory_name="Isa.with_bearer")
 
 
 def _license_bootstrap_token(keycode: str, email: str) -> str:
@@ -1113,7 +1188,9 @@ class ZyinsNamespace:
             )
         match_algorithm = self._isa._match_algorithm_override
         if match_algorithm is None:
-            match_algorithm = self._default_match_algorithm_cls(version_tag=bundle.version)
+            match_algorithm = self._default_match_algorithm_cls(
+                version_tag=bundle.version
+            )
         self._cached_matcher = _BoundMatchAlgorithm(
             match_algorithm,
             index,
@@ -1130,9 +1207,7 @@ class ZyinsNamespace:
         )
         self._cached_for_version = bundle.version
 
-    def _bind_versioned_callables(
-        self, api_versions: Mapping[str, str] | None
-    ) -> None:
+    def _bind_versioned_callables(self, api_versions: Mapping[str, str] | None) -> None:
         """Resolve ``prequalify`` / ``quote`` to their pinned-version targets.
 
         Idempotent — factories that set ``Isa._api_versions`` after
@@ -1632,9 +1707,7 @@ class _QuoteV3Callable:
         )
 
 
-def _assert_surface_pinned_to_v3(
-    isa: Isa, surface: str, method_name: str
-) -> None:
+def _assert_surface_pinned_to_v3(isa: Isa, surface: str, method_name: str) -> None:
     """Guard that the caller has explicitly pinned ``surface`` to ``v3``.
 
     Mirrors TS ``assertPrequalifyApiVersion`` / ``assertQuoteApiVersion``

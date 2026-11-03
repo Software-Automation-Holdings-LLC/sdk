@@ -2,7 +2,7 @@
 
 Produces the four headers the ISA Platform session verifier requires::
 
-    Authorization:     Bearer <session_secret>
+    Authorization:     Session <session_secret>
     X-Isa-Session-Id:  <session_id>
     X-Isa-Timestamp:   <iso8601_z>
     X-Isa-Signature:   hex(HMAC-SHA256(session_secret, canonical))
@@ -23,9 +23,12 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import datetime, timezone
 
-_EMPTY_SHA256 = (
-    "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
-)
+_EMPTY_SHA256 = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+
+#: Authorization scheme the proxy session verifier requires. Not
+#: "Bearer" — the value is an HMAC secret, not a bearer token.
+#: See services/proxy/internal/auth/session.go (authzSchemeName).
+_SESSION_AUTH_SCHEME = "Session"
 
 #: Clock seam — returns the current UTC instant. Default is the system
 #: wall clock; tests pin time by passing a callable that returns a fixed
@@ -59,9 +62,7 @@ def canonical_string(
     """Build the canonical signing string. Pure function; safe to call directly."""
     body_bytes = body.encode("utf-8") if isinstance(body, str) else bytes(body)
     body_hash_hex = (
-        _EMPTY_SHA256
-        if not body_bytes
-        else hashlib.sha256(body_bytes).hexdigest()
+        _EMPTY_SHA256 if not body_bytes else hashlib.sha256(body_bytes).hexdigest()
     )
     return "\n".join(
         [
@@ -105,7 +106,7 @@ def sign_request(
     """Compute the canonical session-auth headers for a single request.
 
     The body is sha256'd, never sent in the header. The session secret
-    travels in ``Authorization: Bearer …``; the per-request signature
+    travels in ``Authorization: Session …``; the per-request signature
     travels in ``X-Isa-Signature``. The four headers together are the
     wire contract the Go verifier admits.
 
@@ -114,9 +115,7 @@ def sign_request(
     if not session_id:
         raise ValueError("sign_request: session_id must be a non-empty string")
     if not session_secret:
-        raise ValueError(
-            "sign_request: session_secret must be a non-empty string"
-        )
+        raise ValueError("sign_request: session_secret must be a non-empty string")
     clock_fn = clock or _system_clock
     timestamp = format_timestamp(clock_fn())
     canonical = canonical_string(method, path, body, timestamp, session_id)
@@ -126,7 +125,7 @@ def sign_request(
         hashlib.sha256,
     ).hexdigest()
     return SignedHeaders(
-        authorization=f"Bearer {session_secret}",
+        authorization=f"{_SESSION_AUTH_SCHEME} {session_secret}",
         isa_session_id=session_id,
         isa_timestamp=timestamp,
         isa_signature=signature,

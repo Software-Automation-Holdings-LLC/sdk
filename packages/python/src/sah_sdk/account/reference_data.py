@@ -87,10 +87,14 @@ class AccountReferenceData:
         body = dispatch(self._ctx, method="GET", path=path)
         return _parse(body)
 
-    def _post_reference(self, scope: str, payload: dict[str, Any]) -> ReferenceDataResult:
+    def _post_reference(
+        self, scope: str, payload: dict[str, Any]
+    ) -> ReferenceDataResult:
         path = _REFERENCE_V2_PATH if scope == "compiled_data_v3" else _REFERENCE_V1_PATH
-        wire: dict[str, Any] = {"scope": scope}
-        wire.update(payload)
+        # Merge payload first, then overwrite scope so caller-supplied "scope"
+        # keys in the payload dict can never silently change the routing key.
+        wire: dict[str, Any] = {k: v for k, v in payload.items() if k != "scope"}
+        wire["scope"] = scope
         body = json.dumps(wire, separators=(",", ":"))
         raw = dispatch(self._ctx, method="POST", path=path, body=body)
         return _parse(raw)

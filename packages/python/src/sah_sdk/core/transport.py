@@ -13,7 +13,7 @@ from typing import Any, Protocol
 
 import httpx
 
-from .errors import from_http_response
+from .errors import IsaTransportError, from_http_response
 
 
 @dataclass(frozen=True, slots=True)
@@ -60,12 +60,15 @@ class HttpTransport:
         headers: dict[str, str],
         body: str | None = None,
     ) -> TransportResponse:
-        response = self._client.request(
-            method,
-            url,
-            headers=headers,
-            content=body,
-        )
+        try:
+            response = self._client.request(
+                method,
+                url,
+                headers=headers,
+                content=body,
+            )
+        except httpx.RequestError as exc:
+            raise IsaTransportError(str(exc) or "transport request failed") from exc
         return TransportResponse(
             status=response.status_code,
             body=response.text,

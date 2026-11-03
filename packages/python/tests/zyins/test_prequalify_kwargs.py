@@ -39,7 +39,11 @@ _OK_BODY = json.dumps(
                 {
                     "id": "offer_01",
                     "eligible": True,
-                    "carrier": {"id": "aetna-accendo", "name": "Aetna Accendo", "logo_url": ""},
+                    "carrier": {
+                        "id": "aetna-accendo",
+                        "name": "Aetna Accendo",
+                        "logo_url": "",
+                    },
                     "product": {
                         "id": "prod_d7b57156-3e83-506b-8936-0692c1193dc7",
                         "slug": "fex-aetna-accendo",
@@ -49,17 +53,26 @@ _OK_BODY = json.dumps(
                         "wire_token": "fex-aetna-accendo",
                     },
                     "plan_info": [],
-                    "death_benefit": {"amount": {"cents": 2500000, "display": "$25,000"}, "period": None},
+                    "death_benefit": {
+                        "amount": {"cents": 2500000, "display": "$25,000"},
+                        "period": None,
+                    },
                     "pricing": [
                         {
                             "rate_class": "standard",
                             "primary": True,
-                            "eligibility": {"eligible": True, "category": "immediate", "reasons": []},
+                            "eligibility": {
+                                "eligible": True,
+                                "category": "immediate",
+                                "reasons": [],
+                            },
                             "rank": 1,
                             "premium": {
                                 "amount": {"cents": 8742, "display": "$87.42"},
                                 "default_mode": "MONTHLY-EFT",
-                                "modes": {"MONTHLY-EFT": {"cents": 8742, "display": "$87.42"}},
+                                "modes": {
+                                    "MONTHLY-EFT": {"cents": 8742, "display": "$87.42"}
+                                },
                             },
                         }
                     ],
@@ -198,7 +211,9 @@ class TestPrequalifyKwargs:
         )
 
         # In v3, eligibility is per pricing row, not on the offer directly.
-        assert envelope.data.plans[0].pricing[0].eligibility.category.value == "immediate"
+        assert (
+            envelope.data.plans[0].pricing[0].eligibility.category.value == "immediate"
+        )
 
     def test_rejects_mixed_input_and_kwargs(self) -> None:
         transport = _CapturingTransport()

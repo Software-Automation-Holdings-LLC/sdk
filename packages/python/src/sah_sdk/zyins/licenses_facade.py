@@ -98,7 +98,9 @@ class LicenseFacade:
             },
             separators=(",", ":"),
         )
-        raw = self._dispatch("POST", _ACTIVATE_PATH, body=body, device_id=resolved_device)
+        raw = self._dispatch(
+            "POST", _ACTIVATE_PATH, body=body, device_id=resolved_device
+        )
         result = _parse_activate(raw)
         if result.license_key:
             self._state.refresh_license_key(result.license_key)
@@ -143,7 +145,9 @@ class LicenseFacade:
         if resolved_device:
             payload["deviceId"] = resolved_device
         body = json.dumps(payload, separators=(",", ":"))
-        raw = self._dispatch("POST", _DEACTIVATE_PATH, body=body, device_id=resolved_device)
+        raw = self._dispatch(
+            "POST", _DEACTIVATE_PATH, body=body, device_id=resolved_device
+        )
         result = _parse_deactivate(raw)
         self._state.clear_license_key()
         return result

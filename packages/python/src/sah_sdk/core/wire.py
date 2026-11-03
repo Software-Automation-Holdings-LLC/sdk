@@ -24,7 +24,8 @@ def applicant_to_wire_dict(applicant: Applicant) -> dict[str, Any]:
         nicotine_value = {"last_used": nicotine_use.last_used.value}
         if nicotine_use.product_usage:
             nicotine_value["product_usage"] = [
-                {"type": p.type, "frequency": p.frequency} for p in nicotine_use.product_usage
+                {"type": p.type, "frequency": p.frequency}
+                for p in nicotine_use.product_usage
             ]
     else:
         nicotine_value = nicotine_use.value

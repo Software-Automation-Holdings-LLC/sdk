@@ -45,7 +45,9 @@ def test_wire_body_preserves_nicotine_product_usage() -> None:
             state="CA",
             nicotine_use=NicotineUsageInput(
                 last_used=NicotineDuration.WITHIN_12_MONTHS,
-                product_usage=(NicotineProductUsage(type="CIGARETTE", frequency="DAILY"),),
+                product_usage=(
+                    NicotineProductUsage(type="CIGARETTE", frequency="DAILY"),
+                ),
             ),
         ),
         coverage=Coverage.face_value(50_000),

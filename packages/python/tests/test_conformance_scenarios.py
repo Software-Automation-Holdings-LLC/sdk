@@ -47,7 +47,9 @@ SCENARIOS = _load_scenarios()
 
 
 def test_scenarios_file_has_at_least_ten_cases() -> None:
-    assert len(SCENARIOS) >= MIN_SCENARIOS, f"expected >={MIN_SCENARIOS} scenarios, found {len(SCENARIOS)}"
+    assert len(SCENARIOS) >= MIN_SCENARIOS, (
+        f"expected >={MIN_SCENARIOS} scenarios, found {len(SCENARIOS)}"
+    )
 
 
 @pytest.mark.parametrize("scenario", SCENARIOS, ids=lambda s: str(s["name"]))
@@ -102,7 +104,9 @@ def test_scenario_against_isa_mock(scenario: dict[str, Any]) -> None:
 
     if expected.get("idempotency_key_echoed") is True:
         sent_key = headers.get("X-Isa-Idempotency-Key")
-        assert sent_key is not None, f"{scenario['name']}: request missing idempotency key"
+        assert sent_key is not None, (
+            f"{scenario['name']}: request missing idempotency key"
+        )
         assert payload.get("idempotency_key") == sent_key, (
             f"{scenario['name']}: envelope idempotency_key did not echo request key"
         )

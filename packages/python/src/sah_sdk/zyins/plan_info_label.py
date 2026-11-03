@@ -122,7 +122,9 @@ def coerce_plan_info(raw: object) -> tuple[PlanInfoItem, ...]:
         for k, v in raw.items():
             if not isinstance(k, str) or k == "":
                 continue
-            values = tuple(x for x in (v if isinstance(v, list) else []) if isinstance(x, str))
+            values = tuple(
+                x for x in (v if isinstance(v, list) else []) if isinstance(x, str)
+            )
             items.append(PlanInfoItem(key=k, label=title_case_label(k), values=values))
         return tuple(items)
     return ()

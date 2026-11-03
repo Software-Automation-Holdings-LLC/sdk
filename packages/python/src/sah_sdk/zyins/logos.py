@@ -63,7 +63,9 @@ class _HttpxLogosFetch:
 
     __slots__ = ("_client", "_owns")
 
-    def __init__(self, *, client: httpx.Client | None = None, timeout: float = 30.0) -> None:
+    def __init__(
+        self, *, client: httpx.Client | None = None, timeout: float = 30.0
+    ) -> None:
         self._client = client or httpx.Client(timeout=timeout)
         self._owns = client is None
 
@@ -140,8 +142,7 @@ def _assert_data_uri(body: str) -> str:
     """
     if not body.startswith("data:image/"):
         raise ISAError(
-            "zyins.logos.get: expected a data:image/... URI but got: "
-            f"{body[:32]}",
+            f"zyins.logos.get: expected a data:image/... URI but got: {body[:32]}",
             code="unknown",
         )
     return body
