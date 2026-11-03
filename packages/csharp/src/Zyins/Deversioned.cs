@@ -63,13 +63,13 @@ public sealed record QuoteV3Options(
 [Obsolete("Use Grouping.")]
 public static class V3Grouping
 {
-    /// <summary>Forwards to <see cref="Grouping.ByAmount"/>.</summary>
-    public static IReadOnlyDictionary<long, IReadOnlyList<V3Offer>> ByAmount(IReadOnlyList<V3Offer> plans) =>
-        Grouping.ByAmount(plans);
+  /// <summary>Forwards to <see cref="Grouping.ByAmount"/>.</summary>
+  public static IReadOnlyDictionary<long, IReadOnlyList<V3Offer>> ByAmount(IReadOnlyList<V3Offer> plans) =>
+      Grouping.ByAmount(plans);
 
-    /// <summary>Forwards to <see cref="Grouping.OfferPremium"/>.</summary>
-    public static V3Premium? OfferPremium(V3Offer offer) =>
-        Grouping.OfferPremium(offer);
+  /// <summary>Forwards to <see cref="Grouping.OfferPremium"/>.</summary>
+  public static V3Premium? OfferPremium(V3Offer offer) =>
+      Grouping.OfferPremium(offer);
 }
 
 /// <summary>Deprecated alias for <see cref="IsaClientOptions"/>.</summary>

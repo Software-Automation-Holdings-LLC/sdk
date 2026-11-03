@@ -22,19 +22,19 @@ namespace Isa.Sdk.Zyins.Cases;
 /// <param name="Payload">UTF-8 JSON payload bytes.</param>
 public sealed record CaseRecord(string Id, byte[] Payload)
 {
-    /// <summary>Inputs are validated at the boundary; this constructor enforces them.</summary>
-    public static CaseRecord Of(string id, byte[] payload)
+  /// <summary>Inputs are validated at the boundary; this constructor enforces them.</summary>
+  public static CaseRecord Of(string id, byte[] payload)
+  {
+    if (string.IsNullOrWhiteSpace(id))
     {
-        if (string.IsNullOrWhiteSpace(id))
-        {
-            throw new ArgumentException("CaseRecord.Of: id must be a non-empty string", nameof(id));
-        }
-        if (payload is null)
-        {
-            throw new ArgumentNullException(nameof(payload));
-        }
-        return new CaseRecord(id, payload);
+      throw new ArgumentException("CaseRecord.Of: id must be a non-empty string", nameof(id));
     }
+    if (payload is null)
+    {
+      throw new ArgumentNullException(nameof(payload));
+    }
+    return new CaseRecord(id, payload);
+  }
 }
 
 /// <summary>
@@ -53,26 +53,26 @@ public sealed record PutResult(string Id, string? RecallToken);
 /// </summary>
 public interface ICaseStorage
 {
-    /// <summary>
-    /// Persist a case record. Returns the storage-canonical identifier
-    /// and (where applicable) a recall token the caller must retain to
-    /// read the record back.
-    /// </summary>
-    Task<PutResult> PutAsync(CaseRecord record, CancellationToken ct = default);
+  /// <summary>
+  /// Persist a case record. Returns the storage-canonical identifier
+  /// and (where applicable) a recall token the caller must retain to
+  /// read the record back.
+  /// </summary>
+  Task<PutResult> PutAsync(CaseRecord record, CancellationToken ct = default);
 
-    /// <summary>
-    /// Retrieve a previously-persisted case record. The
-    /// <paramref name="recallToken"/> is required for zero-knowledge
-    /// adapters and ignored by server-side adapters that key on
-    /// <paramref name="id"/> alone. Returns null when no record matches.
-    /// </summary>
-    Task<CaseRecord?> GetAsync(string id, string? recallToken = null, CancellationToken ct = default);
+  /// <summary>
+  /// Retrieve a previously-persisted case record. The
+  /// <paramref name="recallToken"/> is required for zero-knowledge
+  /// adapters and ignored by server-side adapters that key on
+  /// <paramref name="id"/> alone. Returns null when no record matches.
+  /// </summary>
+  Task<CaseRecord?> GetAsync(string id, string? recallToken = null, CancellationToken ct = default);
 
-    /// <summary>
-    /// Delete a previously-persisted case record. Implementations that
-    /// cannot honor deletion (e.g. append-only ledgers) MUST throw
-    /// <see cref="NotSupportedException"/>; callers are expected to
-    /// surface that to the user rather than silently dropping the request.
-    /// </summary>
-    Task DeleteAsync(string id, CancellationToken ct = default);
+  /// <summary>
+  /// Delete a previously-persisted case record. Implementations that
+  /// cannot honor deletion (e.g. append-only ledgers) MUST throw
+  /// <see cref="NotSupportedException"/>; callers are expected to
+  /// surface that to the user rather than silently dropping the request.
+  /// </summary>
+  Task DeleteAsync(string id, CancellationToken ct = default);
 }

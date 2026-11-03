@@ -15,8 +15,8 @@ namespace Isa.Sdk.Webhooks;
 /// </example>
 public sealed class WebhooksNamespace
 {
-    /// <summary>Internal: bound by <see cref="global::Isa.Sdk.IsaClient"/> at construction.</summary>
-    public WebhooksNamespace()
-    {
-    }
+  /// <summary>Internal: bound by <see cref="global::Isa.Sdk.IsaClient"/> at construction.</summary>
+  public WebhooksNamespace()
+  {
+  }
 }

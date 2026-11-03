@@ -15,6 +15,11 @@ public class AccountNamespace
 namespace Isa.Sdk.Account;
 public record BrandingDetail
 public class AccountBranding
+    public string PrimaryColor { ... }
+    public string PrimaryColorWire { ... }
+    public string MainColorWire { ... }
+    public bool HideAffiliateLeads { ... }
+    public bool PreventProductSelection { ... }
     public Task<BrandingDetail> LookupAsync(...)
     public Task<BrandingDetail> LookupAsync(...)
 
@@ -133,13 +138,6 @@ public class ErrorAdviceCodes
 public class ErrorDocUrls
     public string Get(...)
     public string Get(...)
-
-=== Catalog/Medications.cs ===
-namespace Isa.Sdk.Catalog;
-public record MedicationUseMetadata
-public class MedicationUses
-    public IReadOnlyList<string> Values(...)
-    public MedicationUseMetadata Metadata(...)
 
 === Catalog/Products.cs ===
 namespace Isa.Sdk.Catalog;
@@ -352,7 +350,7 @@ public class IsaIdempotencyConflictException : IsaException
     public string Key { ... }
     public DateTimeOffset? FirstSeenAt { ... }
 
-=== Core/IsExternalInit.cs ===
+=== Core/NetStandardCompilerPolyfills.cs ===
 namespace System.Runtime.CompilerServices;
     public string FeatureName { ... }
     public bool IsOptional { ... }
@@ -455,6 +453,7 @@ public class IsaClient
     public partial class IsaClient { ... }
     public ZyInsClient Zyins { ... }
     public event Action<LicenseRefreshedEvent>? OnLicenseRefreshed { ... }
+    public IsaClient WithBearer(...)
     public IsaClient WithBearer(...)
     public IsaClient WithBearer(...)
     public Task<IsaClient> WithLicenseAsync(...)
@@ -580,6 +579,20 @@ public class IsaCredentialState
     public Action OnLicenseRefreshed(...)
     public Task RefreshLicenseKeyAsync(...)
     public Task ClearLicenseKeyAsync(...)
+
+=== Zyins/DatasetSource.cs ===
+namespace Isa.Sdk.Zyins;
+public interface IDatasetSource
+public class DatasetSourceException : Exception
+public class FileDatasetSource : IDatasetSource
+public class ApiDatasetSource : IDatasetSource
+public class StaticDatasetSource : IDatasetSource
+public class ResolvingDatasetSource : IDatasetSource
+    public delegate Task<string> FileReader(...)
+    public Task<DatasetBundleV3> LoadAsync(...)
+    public Task<DatasetBundleV3> LoadAsync(...)
+    public Task<DatasetBundleV3> LoadAsync(...)
+    public Task<DatasetBundleV3> LoadAsync(...)
 
 === Zyins/DatasetsV3.Parser.cs ===
 namespace Isa.Sdk.Zyins;
@@ -928,6 +941,7 @@ public class ConditionsNamespace : IConditionMatcher
 public class ConceptsNamespace : IAnyConceptMatcher
     public Task<DatasetBundleV3> GetAsync(...)
     public Task<DatasetBundleV3> GetAsync(...)
+    public Task<DatasetBundleV3> GetAsync(...)
     public void Invalidate(...)
     public Task<IConcept> MatchAsync(...)
     public void InvalidateCache(...)
@@ -1162,6 +1176,7 @@ public class ZyInsClientBuilder
     public DebugLogger? Logger { ... }
     public ICaseStorage? CaseStorage { ... }
     public IReadOnlyDictionary<string, IsaApiVersion>? ApiVersion { ... }
+    public IDatasetSource? DatasetSource { ... }
     public partial class ZyInsClient { ... }
     public string DefaultBaseUrl
     public PrequalifyV3SubClient Prequalify { ... }
@@ -1218,4 +1233,3 @@ public class SystemEnvironment : IEnvironment
     public ZyInsClient WithLicense(...)
     public ZyInsClient WithSession(...)
     public ZyInsClient WithSession(...)
-

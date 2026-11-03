@@ -24,20 +24,20 @@ namespace Isa.Sdk.Zyins.Options;
 /// </summary>
 public static class BundledApiVersions
 {
-    /// <summary>
-    /// Per-surface bundled version. Lookup keys are stable surface
-    /// identifiers (<c>prequalify</c>, <c>quote</c>, <c>datasets</c>,
-    /// <c>reference</c>, <c>sessions</c>, <c>branding</c>, <c>cases</c>).
-    /// </summary>
-    public static readonly IReadOnlyDictionary<string, IsaApiVersion> Map =
-        new Dictionary<string, IsaApiVersion>
-        {
-            ["prequalify"] = IsaApiVersion.V3,
-            ["quote"] = IsaApiVersion.V3,
-            ["datasets"] = IsaApiVersion.V3,
-            ["reference"] = IsaApiVersion.V3,
-            ["sessions"] = IsaApiVersion.V1,
-            ["branding"] = IsaApiVersion.V1,
-            ["cases"] = IsaApiVersion.V1,
-        };
+  /// <summary>
+  /// Per-surface bundled version. Lookup keys are stable surface
+  /// identifiers (<c>prequalify</c>, <c>quote</c>, <c>datasets</c>,
+  /// <c>reference</c>, <c>sessions</c>, <c>branding</c>, <c>cases</c>).
+  /// </summary>
+  public static readonly IReadOnlyDictionary<string, IsaApiVersion> Map =
+      new Dictionary<string, IsaApiVersion>
+      {
+        ["prequalify"] = IsaApiVersion.V3,
+        ["quote"] = IsaApiVersion.V3,
+        ["datasets"] = IsaApiVersion.V3,
+        ["reference"] = IsaApiVersion.V3,
+        ["sessions"] = IsaApiVersion.V1,
+        ["branding"] = IsaApiVersion.V1,
+        ["cases"] = IsaApiVersion.V1,
+      };
 }

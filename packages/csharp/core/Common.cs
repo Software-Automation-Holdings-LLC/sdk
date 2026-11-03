@@ -30,7 +30,7 @@ namespace IsaSdk.Core.Api.V1 {
             "DjIVLmFwaS5pc2EudjEuRXJyb3JDb2RlUgRjb2RlEhYKBmRldGFpbBgFIAEo",
             "CVIGZGV0YWlsEhoKCGluc3RhbmNlGAYgASgJUghpbnN0YW5jZRIdCgpyZXF1",
             "ZXN0X2lkGAcgASgJUglyZXF1ZXN0SWQSFAoFcGFyYW0YCCABKAlSBXBhcmFt",
-            "EhcKB2RvY191cmwYCSABKAlSBmRvY1VybCrzAwoJRXJyb3JDb2RlEhoKFkVS",
+            "EhcKB2RvY191cmwYCSABKAlSBmRvY1VybCqYBAoJRXJyb3JDb2RlEhoKFkVS",
             "Uk9SX0NPREVfVU5TUEVDSUZJRUQQABIbChdFUlJPUl9DT0RFX1VOQVVUSE9S",
             "SVpFRBABEhwKGEVSUk9SX0NPREVfVE9LRU5fRVhQSVJFRBACEhwKGEVSUk9S",
             "X0NPREVfSU5WQUxJRF9UT0tFThADEhgKFEVSUk9SX0NPREVfRk9SQklEREVO",
@@ -41,16 +41,16 @@ namespace IsaSdk.Core.Api.V1 {
             "Q0VFREVEEAoSHQoZRVJST1JfQ09ERV9JTlRFUk5BTF9FUlJPUhALEhoKFkVS",
             "Uk9SX0NPREVfQkFEX0dBVEVXQVkQDBIeChpFUlJPUl9DT0RFX0dBVEVXQVlf",
             "VElNRU9VVBANEiIKHkVSUk9SX0NPREVfU0VSVklDRV9VTkFWQUlMQUJMRRAO",
-            "Eh4KGkVSUk9SX0NPREVfTk9UX0lNUExFTUVOVEVEEA8qsQEKBVNjb3BlEhUK",
-            "EVNDT1BFX1VOU1BFQ0lGSUVEEAASIwofU0NPUEVfUkFQSURTSUdOX0RPQ1VN",
-            "RU5UU19XUklURRABEiIKHlNDT1BFX1JBUElEU0lHTl9ET0NVTUVOVFNfUkVB",
-            "RBACEiIKHlNDT1BFX1JBUElEU0lHTl9ET0NVTUVOVFNfU0lHThADEiQKIFND",
-            "T1BFX1JBUElEU0lHTl9ET0NVTUVOVFNfTk9USUZZEARCtwEKDmNvbS5hcGku",
-            "aXNhLnYxQgtDb21tb25Qcm90b1ABWkVnaXRodWIuY29tL1NvZnR3YXJlLUF1",
-            "dG9tYXRpb24tSG9sZGluZ3MtTExDL3Nkay9jb3JlL2FwaS9pc2EvdjE7aXNh",
-            "djGiAgNBSViqAhJJc2FTZGsuQ29yZS5BcGkuVjHKAg5TYWhcSXNhXEFwaVxW",
-            "MeICE1NhaFxJc2FcQXBpXFYxXE1ldGHqAgxBcGk6OklzYTo6VjFiBnByb3Rv",
-            "Mw=="));
+            "Eh4KGkVSUk9SX0NPREVfTk9UX0lNUExFTUVOVEVEEA8SIwofRVJST1JfQ09E",
+            "RV9JREVNUE9URU5DWV9DT05GTElDVBAQKrEBCgVTY29wZRIVChFTQ09QRV9V",
+            "TlNQRUNJRklFRBAAEiMKH1NDT1BFX1JBUElEU0lHTl9ET0NVTUVOVFNfV1JJ",
+            "VEUQARIiCh5TQ09QRV9SQVBJRFNJR05fRE9DVU1FTlRTX1JFQUQQAhIiCh5T",
+            "Q09QRV9SQVBJRFNJR05fRE9DVU1FTlRTX1NJR04QAxIkCiBTQ09QRV9SQVBJ",
+            "RFNJR05fRE9DVU1FTlRTX05PVElGWRAEQrcBCg5jb20uYXBpLmlzYS52MUIL",
+            "Q29tbW9uUHJvdG9QAVpFZ2l0aHViLmNvbS9Tb2Z0d2FyZS1BdXRvbWF0aW9u",
+            "LUhvbGRpbmdzLUxMQy9zZGsvY29yZS9hcGkvaXNhL3YxO2lzYXYxogIDQUlY",
+            "qgISSXNhU2RrLkNvcmUuQXBpLlYxygIOU2FoXElzYVxBcGlcVjHiAhNTYWhc",
+            "SXNhXEFwaVxWMVxNZXRh6gIMQXBpOjpJc2E6OlYxYgZwcm90bzM="));
       descriptor = pbr::FileDescriptor.FromGeneratedCode(descriptorData,
           new pbr::FileDescriptor[] { },
           new pbr::GeneratedClrTypeInfo(new[] {typeof(global::IsaSdk.Core.Api.V1.ErrorCode), typeof(global::IsaSdk.Core.Api.V1.Scope), }, null, new pbr::GeneratedClrTypeInfo[] {
@@ -142,6 +142,11 @@ namespace IsaSdk.Core.Api.V1 {
     /// Capability not yet implemented (e.g. PDF renderer not configured).
     /// </summary>
     [pbr::OriginalName("ERROR_CODE_NOT_IMPLEMENTED")] NotImplemented = 15,
+    /// <summary>
+    /// Idempotency key conflict: same key sent with a different body.
+    /// Client must retry with a new idempotency key.
+    /// </summary>
+    [pbr::OriginalName("ERROR_CODE_IDEMPOTENCY_CONFLICT")] IdempotencyConflict = 16,
   }
 
   /// <summary>

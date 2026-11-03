@@ -26,14 +26,14 @@ namespace Isa.Sdk.Zyins.Reference;
 /// <summary>Heuristic mode for <see cref="IAutocorrector.Correct"/>.</summary>
 public enum AutocorrectMode
 {
-    /// <summary>Mid-typing — apply only corrections that do NOT prefix-extend
-    /// the user's current word. Prevents "ASTHM" → "ASTHMA" while typing.</summary>
-    Keyup = 0,
+  /// <summary>Mid-typing — apply only corrections that do NOT prefix-extend
+  /// the user's current word. Prevents "ASTHM" → "ASTHMA" while typing.</summary>
+  Keyup = 0,
 
-    /// <summary>Final pass on submit — apply every match, except when the
-    /// correction is already present in the surrounding text (prevents
-    /// "HIGH CHOLESTEROL" → "HIGH HIGH CHOLESTEROL").</summary>
-    Submit = 1,
+  /// <summary>Final pass on submit — apply every match, except when the
+  /// correction is already present in the surrounding text (prevents
+  /// "HIGH CHOLESTEROL" → "HIGH HIGH CHOLESTEROL").</summary>
+  Submit = 1,
 }
 
 /// <summary>Options struct for <see cref="IAutocorrector.Correct"/>.
@@ -60,18 +60,18 @@ public sealed record AutocorrectorAppliedEvent(string From, string To, int Windo
 /// </example>
 public interface IAutocorrector
 {
-    /// <summary>Apply typo corrections to free-text input. Implementations
-    /// MUST NOT throw on empty or whitespace-only input — return the input
-    /// verbatim.</summary>
-    /// <param name="text">Free-text input. Casing is preserved on
-    /// non-corrected tokens by default-impl convention; custom adapters
-    /// may diverge.</param>
-    /// <param name="options">Mode + future tunables. <c>null</c> defaults
-    /// to <see cref="AutocorrectMode.Submit"/>.</param>
-    /// <returns>The corrected text; never null.</returns>
-    string Correct(string text, AutocorrectOptions? options = null);
+  /// <summary>Apply typo corrections to free-text input. Implementations
+  /// MUST NOT throw on empty or whitespace-only input — return the input
+  /// verbatim.</summary>
+  /// <param name="text">Free-text input. Casing is preserved on
+  /// non-corrected tokens by default-impl convention; custom adapters
+  /// may diverge.</param>
+  /// <param name="options">Mode + future tunables. <c>null</c> defaults
+  /// to <see cref="AutocorrectMode.Submit"/>.</param>
+  /// <returns>The corrected text; never null.</returns>
+  string Correct(string text, AutocorrectOptions? options = null);
 
-    /// <summary>Dataset version this adapter is bound to. <c>null</c>
-    /// when the adapter is dataset-agnostic.</summary>
-    string? VersionTag { get; }
+  /// <summary>Dataset version this adapter is bound to. <c>null</c>
+  /// when the adapter is dataset-agnostic.</summary>
+  string? VersionTag { get; }
 }

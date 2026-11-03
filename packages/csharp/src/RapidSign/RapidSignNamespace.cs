@@ -15,8 +15,8 @@ namespace Isa.Sdk.RapidSign;
 /// </example>
 public sealed class RapidSignNamespace
 {
-    /// <summary>Internal: bound by <see cref="global::Isa.Sdk.IsaClient"/> at construction.</summary>
-    public RapidSignNamespace()
-    {
-    }
+  /// <summary>Internal: bound by <see cref="global::Isa.Sdk.IsaClient"/> at construction.</summary>
+  public RapidSignNamespace()
+  {
+  }
 }
