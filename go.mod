@@ -22,11 +22,11 @@ module github.com/Software-Automation-Holdings-LLC/sdk
 
 go 1.26.1
 
-require golang.org/x/sync v0.20.0
+require golang.org/x/sync v0.22.0
 
 require (
 	connectrpc.com/connect v1.20.0
-	golang.org/x/text v0.37.0
-	google.golang.org/genproto/googleapis/api v0.0.0-20260622175928-b703f567277d
-	google.golang.org/protobuf v1.36.11
+	golang.org/x/text v0.40.0
+	google.golang.org/genproto/googleapis/api v0.0.0-20261026165753-2ffab32bce7e
+	google.golang.org/protobuf v1.36.12
 )
