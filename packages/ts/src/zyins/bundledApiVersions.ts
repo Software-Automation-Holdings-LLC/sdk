@@ -24,16 +24,16 @@
  * a new surface here requires the same addition to {@link BundledApiVersions}.
  */
 export type IsaApiSurface =
-  | 'prequalify'
-  | 'quote'
-  | 'datasets'
-  | 'reference'
-  | 'sessions'
-  | 'branding'
-  | 'cases';
+  | "prequalify"
+  | "quote"
+  | "datasets"
+  | "reference"
+  | "sessions"
+  | "branding"
+  | "cases";
 
 /** Major-version token sent in the `Api-Version` request header. */
-export type IsaApiVersion = 'v1' | 'v2' | 'v3';
+export type IsaApiVersion = "v1" | "v2" | "v3";
 
 /**
  * Per-surface override accepted on `IsaCreateOptions.apiVersion` and the
@@ -48,13 +48,13 @@ export type IsaApiVersionOverride = Partial<Readonly<Record<IsaApiSurface, IsaAp
  * {@link IsaApiVersionOverride} on construction; they do not mutate this.
  */
 export const BundledApiVersions: Readonly<Record<IsaApiSurface, IsaApiVersion>> = Object.freeze({
-  prequalify: 'v3',
-  quote: 'v3',
-  datasets: 'v3',
-  reference: 'v3',
-  sessions: 'v1',
-  branding: 'v1',
-  cases: 'v1',
+  prequalify: "v3",
+  quote: "v3",
+  datasets: "v3",
+  reference: "v3",
+  sessions: "v1",
+  branding: "v1",
+  cases: "v1",
 });
 
 /**
@@ -82,26 +82,28 @@ export function resolveApiVersions(
  * Ordered most-specific-first so `/v1/case/list` matches `cases` before
  * any future `/v1/...` catchall.
  */
-const SURFACE_PATH_PREFIXES: ReadonlyArray<readonly [string, IsaApiSurface]> = Object.freeze([
-  ['/v1/case', 'cases'],
-  ['/v2/case', 'cases'],
-  ['/v1/branding', 'branding'],
-  ['/v2/branding', 'branding'],
-  ['/v1/sessions', 'sessions'],
-  ['/v2/sessions', 'sessions'],
-  ['/v1/datasets', 'datasets'],
-  ['/v2/datasets', 'datasets'],
-  ['/v3/datasets', 'datasets'],
-  ['/v1/reference', 'reference'],
-  ['/v2/reference', 'reference'],
-  ['/v3/reference', 'reference'],
-  ['/v1/quote', 'quote'],
-  ['/v2/quote', 'quote'],
-  ['/v3/quote', 'quote'],
-  ['/v1/prequalify', 'prequalify'],
-  ['/v2/prequalify', 'prequalify'],
-  ['/v3/prequalify', 'prequalify'],
-] as const);
+const SURFACE_PATH_PREFIXES: ReadonlyArray<readonly [string, IsaApiSurface]> = Object.freeze(
+  [
+    ["/v1/case", "cases"],
+    ["/v2/case", "cases"],
+    ["/v1/branding", "branding"],
+    ["/v2/branding", "branding"],
+    ["/v1/sessions", "sessions"],
+    ["/v2/sessions", "sessions"],
+    ["/v1/datasets", "datasets"],
+    ["/v2/datasets", "datasets"],
+    ["/v3/datasets", "datasets"],
+    ["/v1/reference", "reference"],
+    ["/v2/reference", "reference"],
+    ["/v3/reference", "reference"],
+    ["/v1/quote", "quote"],
+    ["/v2/quote", "quote"],
+    ["/v3/quote", "quote"],
+    ["/v1/prequalify", "prequalify"],
+    ["/v2/prequalify", "prequalify"],
+    ["/v3/prequalify", "prequalify"],
+  ] as const,
+);
 
 /**
  * Map a request path to the surface that owns it. Returns `undefined` for

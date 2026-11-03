@@ -13,16 +13,13 @@
  * a thrown error. See `../account/cases` for the enforced guarantee.
  */
 
-import { type AuthContext } from './auth.js';
-import { type Transport } from './transport.js';
-import {
-  create as opaqueCreate,
-  type CaseCreateResult as OpaqueCreateResult,
-} from '../account/cases.js';
-import { type Clock } from '../core/index.js';
+import { type CaseCreateResult as OpaqueCreateResult, create as opaqueCreate } from "../account/cases.js";
+import { type Clock } from "../core/index.js";
+import { type AuthContext } from "./auth.js";
+import { type Transport } from "./transport.js";
 
 /** zyins routing tag pinned by {@link share}. */
-const ZYINS_PRODUCT = 'zyins' as const;
+const ZYINS_PRODUCT = "zyins" as const;
 
 /**
  * Inputs for `cases.share`. `input` is the quote payload; `results` and
@@ -71,11 +68,11 @@ export async function share(
   ctx: CasesContext,
 ): Promise<CaseShareResult> {
   if (!request || request.input === undefined || request.input === null) {
-    throw new Error('zyins: cases.share requires input');
+    throw new Error("zyins: cases.share requires input");
   }
   const payload: Record<string, unknown> = { input: request.input };
-  if (request.results !== undefined) payload['results'] = request.results;
-  if (request.products !== undefined) payload['products'] = request.products;
+  if (request.results !== undefined) payload["results"] = request.results;
+  if (request.products !== undefined) payload["products"] = request.products;
   const result: OpaqueCreateResult = await opaqueCreate({ product: ZYINS_PRODUCT, payload }, ctx);
   return { id: result.id, link: result.link };
 }

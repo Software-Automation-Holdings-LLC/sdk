@@ -1,10 +1,10 @@
-import { type Clock } from '../../core/index.js';
+import { type Clock } from "../../core/index.js";
 export type EmbeddedAlgosureHeaders = {
-    'Authorization': string;
-    '*Host': string;
-    '*Timestamp': string;
-    '*sessionId': string;
-    '*SaltId': string;
+    "Authorization": string;
+    "*Host": string;
+    "*Timestamp": string;
+    "*sessionId": string;
+    "*SaltId": string;
 };
 export interface EmbeddedAlgosureArgs {
     /** Embedded salt content (form.metadata._algosure_salt). */
@@ -48,5 +48,5 @@ export declare function computeEmbeddedAlgosureHMAC(args: EmbeddedAlgosureArgs):
  * regardless of minor clock skew; the verifier still enforces ±30s drift.
  */
 export declare function buildEmbeddedAlgosureHeaders(args: EmbeddedAlgosureArgs): Promise<EmbeddedAlgosureHeaders>;
-export { ALGOSURE_TIME_BUCKET_MS } from './hmac.js';
+export { ALGOSURE_TIME_BUCKET_MS } from "./hmac.js";
 //# sourceMappingURL=embedded.d.ts.map

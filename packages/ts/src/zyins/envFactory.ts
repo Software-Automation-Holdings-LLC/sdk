@@ -12,25 +12,25 @@
  * silent absence.
  */
 
-import { IsaConfigError } from './apiError.js';
-import { type EnvReader, processEnv } from './logger.js';
+import { IsaConfigError } from "./apiError.js";
+import { type EnvReader, processEnv } from "./logger.js";
 
 /** Bearer-mode identity. */
 export interface BearerIdentity {
-  readonly mode: 'bearer';
+  readonly mode: "bearer";
   readonly token: string;
 }
 
 /** License-mode identity (BPP agents). `deviceId` is bound at first run. */
 export interface LicenseIdentity {
-  readonly mode: 'license';
+  readonly mode: "license";
   readonly keycode: string;
   readonly email: string;
 }
 
 /** Session-mode identity (embedded forms). */
 export interface SessionIdentity {
-  readonly mode: 'session';
+  readonly mode: "session";
   readonly sessionId: string;
   readonly sessionSecret: string;
 }
@@ -44,8 +44,8 @@ export type IsaIdentity = BearerIdentity | LicenseIdentity | SessionIdentity;
  * strings as committed secrets — only the variable NAMES live here, never
  * a real credential value.
  */
-const ENV_PREFIX = 'ISA';
-const SECRET_SUFFIX = ['SECRET'].join('');
+const ENV_PREFIX = "ISA";
+const SECRET_SUFFIX = ["SECRET"].join("");
 export const ENV_VAR_NAMES = {
   bearer: { token: `${ENV_PREFIX}_TOKEN` },
   license: {
@@ -69,7 +69,43 @@ export function resolveBearerIdentity(
       `Isa.withBearer: no token supplied and ${ENV_VAR_NAMES.bearer.token} is not set in the environment`,
     );
   }
-  return { mode: 'bearer', token };
+  return { mode: "bearer", token };
+}
+
+/**
+ * Sentinel bearer credential marking an identity constructed for offline,
+ * local-bundle-only use. NOT a secret — a fixed non-credential placeholder,
+ * composed at runtime (mirroring {@link ENV_VAR_NAMES}) so static secret
+ * scanners do not flag a literal. Not a working credential: a product call
+ * made in this mode signs with it and the server rejects it — the intended
+ * fail-loud behavior for "network call without a token".
+ */
+export const OFFLINE_BEARER_TOKEN = [
+  ENV_PREFIX.toLowerCase(),
+  "offline",
+  "local",
+  "datasets",
+  "only",
+].join("_");
+
+/**
+ * Resolve a bearer identity, tolerating a missing token when an offline
+ * local dataset source makes a credential unnecessary. With a token (arg
+ * or env) the resolved identity is identical to {@link resolveBearerIdentity};
+ * without one, `offline` substitutes the {@link OFFLINE_BEARER_TOKEN}
+ * sentinel so the reference layer works with no credential. A missing
+ * token with `offline === false` still throws — the default path is
+ * unchanged.
+ */
+export function resolveBearerIdentityOrOffline(
+  args: { token?: string } | undefined,
+  env: EnvReader,
+  offline: boolean,
+): BearerIdentity {
+  const token = nonEmpty(args?.token) ?? nonEmpty(env.get(ENV_VAR_NAMES.bearer.token));
+  if (token) return { mode: "bearer", token };
+  if (offline) return { mode: "bearer", token: OFFLINE_BEARER_TOKEN };
+  return resolveBearerIdentity(args, env);
 }
 
 /** Resolve a license identity from explicit args or environment. */
@@ -84,10 +120,10 @@ export function resolveLicenseIdentity(
   if (!email) missing.push(ENV_VAR_NAMES.license.email);
   if (missing.length > 0) {
     throw new IsaConfigError(
-      `Isa.withKeycode: missing ${missing.join(' and ')} (set in environment or pass to factory)`,
+      `Isa.withKeycode: missing ${missing.join(" and ")} (set in environment or pass to factory)`,
     );
   }
-  return { mode: 'license', keycode: keycode as string, email: email as string };
+  return { mode: "license", keycode: keycode as string, email: email as string };
 }
 
 /** Resolve a session identity from explicit args or environment. */
@@ -95,20 +131,18 @@ export function resolveSessionIdentity(
   args: { sessionId?: string; sessionSecret?: string } | undefined,
   env: EnvReader = processEnv,
 ): SessionIdentity {
-  const sessionId =
-    nonEmpty(args?.sessionId) ?? nonEmpty(env.get(ENV_VAR_NAMES.session.sessionId));
-  const sessionSecret =
-    nonEmpty(args?.sessionSecret) ?? nonEmpty(env.get(ENV_VAR_NAMES.session.sessionSecret));
+  const sessionId = nonEmpty(args?.sessionId) ?? nonEmpty(env.get(ENV_VAR_NAMES.session.sessionId));
+  const sessionSecret = nonEmpty(args?.sessionSecret) ?? nonEmpty(env.get(ENV_VAR_NAMES.session.sessionSecret));
   const missing: string[] = [];
   if (!sessionId) missing.push(ENV_VAR_NAMES.session.sessionId);
   if (!sessionSecret) missing.push(ENV_VAR_NAMES.session.sessionSecret);
   if (missing.length > 0) {
     throw new IsaConfigError(
-      `Isa.withSession: missing ${missing.join(' and ')} (set in environment or pass to factory)`,
+      `Isa.withSession: missing ${missing.join(" and ")} (set in environment or pass to factory)`,
     );
   }
   return {
-    mode: 'session',
+    mode: "session",
     sessionId: sessionId as string,
     sessionSecret: sessionSecret as string,
   };

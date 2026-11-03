@@ -16,20 +16,20 @@
  * isa-sdk@1.0.1 launch-blocker and is forbidden.
  */
 
-import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'node:fs';
-import { dirname, join, resolve } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { dirname, join, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
-const REPO_TS = resolve(__dirname, '..');
-const CATALOG_DIR = join(REPO_TS, 'src', 'catalog');
+const REPO_TS = resolve(__dirname, "..");
+const CATALOG_DIR = join(REPO_TS, "src", "catalog");
 
 // Resolve the platform repo (the workspace containing this package). When
 // the generator runs outside the monorepo layout, callers must provide
 // SDK_PLATFORM_REPO / SDK_INSURANCE_REPO overrides.
-const DEFAULT_PLATFORM = resolve(REPO_TS, '..', '..');
+const DEFAULT_PLATFORM = resolve(REPO_TS, "..", "..");
 const PLATFORM_REPO = process.env.SDK_PLATFORM_REPO
   ? resolve(process.env.SDK_PLATFORM_REPO)
   : DEFAULT_PLATFORM;
@@ -38,19 +38,20 @@ const PLATFORM_REPO = process.env.SDK_PLATFORM_REPO
 // isa-platform is nested INSIDE the insurance repo, so the JSON lives one
 // level up from the platform repo — not in a sibling `insurance/` dir.
 // Override via SDK_INSURANCE_REPO.
-const DEFAULT_INSURANCE = resolve(PLATFORM_REPO, '..');
+const DEFAULT_INSURANCE = resolve(PLATFORM_REPO, "..");
 const INSURANCE_REPO = process.env.SDK_INSURANCE_REPO
   ? resolve(process.env.SDK_INSURANCE_REPO)
   : DEFAULT_INSURANCE;
 
-const HEADER = (sources) => `/**
+const HEADER = (sources) =>
+  `/**
  * Generated catalog module — do not hand-edit; rerun the generator.
  *
  * Produced by \`packages/ts/scripts/gen-catalog.mjs\`.
  * Regenerate with \`npm run gen:catalog\` (runs automatically before \`build\`).
  *
  * Source data:
-${sources.map((s) => ` *   - ${s}`).join('\n')}
+${sources.map((s) => ` *   - ${s}`).join("\n")}
  */
 `;
 
@@ -60,7 +61,7 @@ const gaps = [];
 function tryReadJson(p) {
   try {
     if (!existsSync(p)) return null;
-    return JSON.parse(readFileSync(p, 'utf8'));
+    return JSON.parse(readFileSync(p, "utf8"));
   } catch (e) {
     process.stderr.write(`gen-catalog: failed to read ${p}: ${e.message}\n`);
     return null;
@@ -70,7 +71,7 @@ function tryReadJson(p) {
 function tryReadText(p) {
   try {
     if (!existsSync(p)) return null;
-    return readFileSync(p, 'utf8');
+    return readFileSync(p, "utf8");
   } catch (e) {
     process.stderr.write(`gen-catalog: failed to read ${p}: ${e.message}\n`);
     return null;
@@ -80,19 +81,19 @@ function tryReadText(p) {
 /** Convert an arbitrary string to a PascalCase TypeScript identifier. */
 function pascal(s) {
   return s
-    .replace(/[^a-zA-Z0-9]+/g, ' ')
+    .replace(/[^a-zA-Z0-9]+/g, " ")
     .trim()
     .split(/\s+/)
-    .map((w) => (w.length === 0 ? '' : w[0].toUpperCase() + w.slice(1).toLowerCase()))
-    .join('');
+    .map((w) => (w.length === 0 ? "" : w[0].toUpperCase() + w.slice(1).toLowerCase()))
+    .join("");
 }
 
 /** Convert a carrier display name to a slug. */
 function slugify(s) {
   return s
     .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '');
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
 }
 
 function ensureDir(p) {
@@ -123,10 +124,10 @@ function preserveOrFail(names, label, source) {
   const missing = names.filter((n) => !existsSync(join(CATALOG_DIR, n)));
   if (missing.length > 0) {
     process.stderr.write(
-      `gen-catalog: FATAL: ${label}: ${source} not found AND no committed ` +
-        `catalog to preserve (${missing.join(', ')}). Refusing to emit an empty ` +
-        `catalog. Run where ${join(INSURANCE_REPO, source)} exists, or commit ` +
-        `a populated catalog first.\n`,
+      `gen-catalog: FATAL: ${label}: ${source} not found AND no committed `
+        + `catalog to preserve (${missing.join(", ")}). Refusing to emit an empty `
+        + `catalog. Run where ${join(INSURANCE_REPO, source)} exists, or commit `
+        + `a populated catalog first.\n`,
     );
     process.exit(1);
   }
@@ -141,12 +142,12 @@ function preserveOrFail(names, label, source) {
 // ---------------------------------------------------------------------------
 
 function genProducts() {
-  const path = join(INSURANCE_REPO, 'v2_products.json');
+  const path = join(INSURANCE_REPO, "v2_products.json");
   const raw = tryReadJson(path);
-  const sources = ['insurance/v2_products.json'];
+  const sources = ["insurance/v2_products.json"];
 
   if (!raw) {
-    preserveOrFail(['products.ts', 'carriers.ts'], 'Products', 'v2_products.json');
+    preserveOrFail(["products.ts", "carriers.ts"], "Products", "v2_products.json");
     return { products: [], carriers: [] };
   }
 
@@ -154,15 +155,15 @@ function genProducts() {
   for (const [cls, list] of Object.entries(raw)) {
     if (!Array.isArray(list)) continue;
     for (const p of list) {
-      if (!p || typeof p !== 'object') continue;
-      const identifier = String(p.identifier || '');
+      if (!p || typeof p !== "object") continue;
+      const identifier = String(p.identifier || "");
       if (!identifier) continue;
       products.push({
         slug: identifier,
         productClass: cls,
-        carrierDisplay: String(p.carrier || ''),
-        carrierSlug: slugify(String(p.carrier || '')),
-        displayName: String(p.name || ''),
+        carrierDisplay: String(p.carrier || ""),
+        carrierSlug: slugify(String(p.carrier || "")),
+        displayName: String(p.name || ""),
         stateVariations: Array.isArray(p.state_variations) ? p.state_variations : [],
       });
     }
@@ -171,14 +172,18 @@ function genProducts() {
 
   const enumMembers = products
     .map((p) => `  ${pascal(p.slug)} = '${p.slug}',`)
-    .join('\n');
+    .join("\n");
 
   const metadataEntries = products
     .map(
       (p) =>
-        `  '${p.slug}': { slug: '${p.slug}', displayName: ${JSON.stringify(p.displayName)}, carrier: '${p.carrierSlug}', productClass: '${p.productClass}', ages: { min: 0, max: 0 }, states: [], faceAmount: { min: 0, max: 0 }, stateVariations: ${JSON.stringify(p.stateVariations)} },`,
+        `  '${p.slug}': { slug: '${p.slug}', displayName: ${
+          JSON.stringify(p.displayName)
+        }, carrier: '${p.carrierSlug}', productClass: '${p.productClass}', ages: { min: 0, max: 0 }, states: [], faceAmount: { min: 0, max: 0 }, stateVariations: ${
+          JSON.stringify(p.stateVariations)
+        } },`,
     )
-    .join('\n');
+    .join("\n");
 
   const productsModule = `${HEADER(sources)}
 /**
@@ -272,7 +277,7 @@ export const Products = Object.freeze({
 });
 `;
 
-  writeFile('products.ts', productsModule);
+  writeFile("products.ts", productsModule);
 
   const byCarrier = new Map();
   for (const p of products) {
@@ -287,11 +292,13 @@ export const Products = Object.freeze({
   const carriers = [...byCarrier.values()].sort((a, b) => a.slug.localeCompare(b.slug));
   const carrierEntries = carriers
     .map((c) => {
-      const productExprs = c.products.map((p) => `Product.${pascal(p)}`).join(', ');
-      return `  '${c.slug}': { displayName: ${JSON.stringify(c.displayName)}, products: [${productExprs}], states: [] },`;
+      const productExprs = c.products.map((p) => `Product.${pascal(p)}`).join(", ");
+      return `  '${c.slug}': { displayName: ${
+        JSON.stringify(c.displayName)
+      }, products: [${productExprs}], states: [] },`;
     })
-    .join('\n');
-  const carrierSlugs = carriers.map((c) => `'${c.slug}'`).join(', ');
+    .join("\n");
+  const carrierSlugs = carriers.map((c) => `'${c.slug}'`).join(", ");
 
   const carriersModule = `${HEADER(sources)}
 import { Product } from './products.js';
@@ -319,17 +326,18 @@ const ALL_CARRIERS: readonly string[] = Object.freeze([${carrierSlugs}]);
  * surfaced in the public reference data. Treat as advisory.
  */
 export const ProductCarriers = Object.freeze({
+  /** Return every carrier slug in stable catalog order. */
   values(): readonly string[] {
     return ALL_CARRIERS;
   },
+  /** Return metadata for a carrier slug, or throw for unknown input. */
   metadata(c: string): ProductCarrierMetadata {
-    const m = CARRIERS[c];
-    if (!m) throw new Error(\`ProductCarriers.metadata: unknown carrier '\${c}'\`);
-    return m;
+    if (!Object.hasOwn(CARRIERS, c)) throw new Error(\`ProductCarriers.metadata: unknown carrier '\${c}'\`);
+    return CARRIERS[c]!;
   },
 });
 `;
-  writeFile('carriers.ts', carriersModule);
+  writeFile("carriers.ts", carriersModule);
 
   return { products, carriers };
 }
@@ -339,73 +347,73 @@ export const ProductCarriers = Object.freeze({
 // ---------------------------------------------------------------------------
 
 const STATES = [
-  ['Alabama', 'AL', false],
-  ['Alaska', 'AK', false],
-  ['Arizona', 'AZ', false],
-  ['Arkansas', 'AR', false],
-  ['California', 'CA', false],
-  ['Colorado', 'CO', false],
-  ['Connecticut', 'CT', false],
-  ['Delaware', 'DE', false],
-  ['Florida', 'FL', false],
-  ['Georgia', 'GA', false],
-  ['Hawaii', 'HI', false],
-  ['Idaho', 'ID', false],
-  ['Illinois', 'IL', false],
-  ['Indiana', 'IN', false],
-  ['Iowa', 'IA', false],
-  ['Kansas', 'KS', false],
-  ['Kentucky', 'KY', false],
-  ['Louisiana', 'LA', false],
-  ['Maine', 'ME', false],
-  ['Maryland', 'MD', false],
-  ['Massachusetts', 'MA', false],
-  ['Michigan', 'MI', false],
-  ['Minnesota', 'MN', false],
-  ['Mississippi', 'MS', false],
-  ['Missouri', 'MO', false],
-  ['Montana', 'MT', false],
-  ['Nebraska', 'NE', false],
-  ['Nevada', 'NV', false],
-  ['New Hampshire', 'NH', false],
-  ['New Jersey', 'NJ', false],
-  ['New Mexico', 'NM', false],
-  ['New York', 'NY', false],
-  ['North Carolina', 'NC', false],
-  ['North Dakota', 'ND', false],
-  ['Ohio', 'OH', false],
-  ['Oklahoma', 'OK', false],
-  ['Oregon', 'OR', false],
-  ['Pennsylvania', 'PA', false],
-  ['Rhode Island', 'RI', false],
-  ['South Carolina', 'SC', false],
-  ['South Dakota', 'SD', false],
-  ['Tennessee', 'TN', false],
-  ['Texas', 'TX', false],
-  ['Utah', 'UT', false],
-  ['Vermont', 'VT', false],
-  ['Virginia', 'VA', false],
-  ['Washington', 'WA', false],
-  ['West Virginia', 'WV', false],
-  ['Wisconsin', 'WI', false],
-  ['Wyoming', 'WY', false],
-  ['District of Columbia', 'DC', false],
-  ['American Samoa', 'AS', true],
-  ['Guam', 'GU', true],
-  ['Northern Mariana Islands', 'MP', true],
-  ['Puerto Rico', 'PR', true],
-  ['United States Virgin Islands', 'VI', true],
+  ["Alabama", "AL", false],
+  ["Alaska", "AK", false],
+  ["Arizona", "AZ", false],
+  ["Arkansas", "AR", false],
+  ["California", "CA", false],
+  ["Colorado", "CO", false],
+  ["Connecticut", "CT", false],
+  ["Delaware", "DE", false],
+  ["Florida", "FL", false],
+  ["Georgia", "GA", false],
+  ["Hawaii", "HI", false],
+  ["Idaho", "ID", false],
+  ["Illinois", "IL", false],
+  ["Indiana", "IN", false],
+  ["Iowa", "IA", false],
+  ["Kansas", "KS", false],
+  ["Kentucky", "KY", false],
+  ["Louisiana", "LA", false],
+  ["Maine", "ME", false],
+  ["Maryland", "MD", false],
+  ["Massachusetts", "MA", false],
+  ["Michigan", "MI", false],
+  ["Minnesota", "MN", false],
+  ["Mississippi", "MS", false],
+  ["Missouri", "MO", false],
+  ["Montana", "MT", false],
+  ["Nebraska", "NE", false],
+  ["Nevada", "NV", false],
+  ["New Hampshire", "NH", false],
+  ["New Jersey", "NJ", false],
+  ["New Mexico", "NM", false],
+  ["New York", "NY", false],
+  ["North Carolina", "NC", false],
+  ["North Dakota", "ND", false],
+  ["Ohio", "OH", false],
+  ["Oklahoma", "OK", false],
+  ["Oregon", "OR", false],
+  ["Pennsylvania", "PA", false],
+  ["Rhode Island", "RI", false],
+  ["South Carolina", "SC", false],
+  ["South Dakota", "SD", false],
+  ["Tennessee", "TN", false],
+  ["Texas", "TX", false],
+  ["Utah", "UT", false],
+  ["Vermont", "VT", false],
+  ["Virginia", "VA", false],
+  ["Washington", "WA", false],
+  ["West Virginia", "WV", false],
+  ["Wisconsin", "WI", false],
+  ["Wyoming", "WY", false],
+  ["District of Columbia", "DC", false],
+  ["American Samoa", "AS", true],
+  ["Guam", "GU", true],
+  ["Northern Mariana Islands", "MP", true],
+  ["Puerto Rico", "PR", true],
+  ["United States Virgin Islands", "VI", true],
 ];
 
 function genStates() {
-  const sources = ['ISO 3166-2:US (50 states + DC + 5 inhabited territories)'];
+  const sources = ["ISO 3166-2:US (50 states + DC + 5 inhabited territories)"];
   const states = [...STATES].sort(([a], [b]) => a.localeCompare(b));
-  const members = states.map(([name, abbr]) => `  ${pascal(name)} = '${abbr}',`).join('\n');
+  const members = states.map(([name, abbr]) => `  ${pascal(name)} = '${abbr}',`).join("\n");
   const meta = states.map(
     ([name, abbr, isTerr]) =>
       `  '${abbr}': { abbreviation: '${abbr}', name: ${JSON.stringify(name)}, isTerritory: ${isTerr} },`,
-  ).join('\n');
-  const byName = states.map(([name, abbr]) => `  ${JSON.stringify(name.toLowerCase())}: '${abbr}',`).join('\n');
+  ).join("\n");
+  const byName = states.map(([name, abbr]) => `  ${JSON.stringify(name.toLowerCase())}: '${abbr}',`).join("\n");
 
   const module = `${HEADER(sources)}
 /**
@@ -433,16 +441,18 @@ ${byName}
 const ALL_STATES: readonly State[] = Object.freeze(Object.values(State) as State[]);
 
 export const States = Object.freeze({
+  /** Return every state and territory abbreviation in display-name order. */
   values(): readonly State[] {
     return ALL_STATES;
   },
+  /** Return state metadata entries in display-name order. */
   entries(): ReadonlyArray<readonly [State, StateMetadata]> {
     return ALL_STATES.map((s) => [s, METADATA[s]!] as const);
   },
+  /** Return metadata for a state abbreviation, or throw for unknown input. */
   metadata(s: State): StateMetadata {
-    const m = METADATA[s];
-    if (!m) throw new Error(\`States.metadata: unknown state '\${s}'\`);
-    return m;
+    if (!Object.hasOwn(METADATA, s)) throw new Error(\`States.metadata: unknown state '\${s}'\`);
+    return METADATA[s]!;
   },
   /**
    * Look up a state by its ISO abbreviation (case-insensitive) or by its
@@ -451,29 +461,24 @@ export const States = Object.freeze({
    */
   byAbbreviation(abbr: string): State | undefined {
     const upper = abbr.toUpperCase();
-    if (upper in METADATA) return upper as State;
-    const fromName = BY_NAME[abbr.toLowerCase()];
-    return fromName ? (fromName as State) : undefined;
+    if (Object.hasOwn(METADATA, upper)) return upper as State;
+    const lower = abbr.toLowerCase();
+    return Object.hasOwn(BY_NAME, lower) ? (BY_NAME[lower] as State) : undefined;
   },
 });
 `;
-  writeFile('states.ts', module);
+  writeFile("states.ts", module);
 }
 
 // ---------------------------------------------------------------------------
-// Conditions & MedicationUses
+// Conditions
 // ---------------------------------------------------------------------------
 
-function genConditionsAndMedicationUses() {
-  const medPath = join(INSURANCE_REPO, 'v2_medications.json');
-  const meds = tryReadJson(medPath);
-  const sources = [
-    'insurance/v2_conditions.json',
-    'insurance/v2_medications.json',
-  ];
+function genConditions() {
+  const sources = ["insurance/v2_conditions.json"];
 
   gaps.push(
-    'ConditionCategories: source data (v2_conditions.json) does not expose taxonomic categories. Emitting empty catalog.',
+    "ConditionCategories: source data (v2_conditions.json) does not expose taxonomic categories. Emitting empty catalog.",
   );
   const condCatModule = `${HEADER(sources)}
 /**
@@ -493,88 +498,20 @@ const CATEGORIES: Readonly<Record<string, ConditionCategoryMetadata>> = Object.f
 
 const ALL_CATEGORIES: readonly string[] = Object.freeze([]);
 
+/** Catalog API for condition categories. */
 export const ConditionCategories = Object.freeze({
+  /** Return every condition category slug in stable catalog order. */
   values(): readonly string[] {
     return ALL_CATEGORIES;
   },
+  /** Return metadata for a condition category, or throw for unknown input. */
   metadata(c: string): ConditionCategoryMetadata {
-    const m = CATEGORIES[c];
-    if (!m) throw new Error(\`ConditionCategories.metadata: unknown category '\${c}'\`);
-    return m;
+    if (!Object.hasOwn(CATEGORIES, c)) throw new Error(\`ConditionCategories.metadata: unknown category '\${c}'\`);
+    return CATEGORIES[c]!;
   },
 });
 `;
-  writeFile('conditions.ts', condCatModule);
-
-  if (!Array.isArray(meds)) {
-    // Same contract as Products: the committed medications.ts is the published
-    // source of truth (~1865 uses) and CI does not check out the engine repo,
-    // so preserve it instead of clobbering it with an empty catalog. Fail loud
-    // only when there is nothing committed to preserve.
-    preserveOrFail(['medications.ts'], 'MedicationUses', 'v2_medications.json');
-    return;
-  }
-
-  /** @type {Map<string, Set<string>>} */
-  const useToMeds = new Map();
-  for (const m of meds) {
-    if (!m || typeof m !== 'object') continue;
-    const name = String(m.name || '');
-    const uses = Array.isArray(m.uses) ? m.uses : [];
-    for (const u of uses) {
-      if (!u || typeof u !== 'object') continue;
-      const cond = String(u.condition || '');
-      if (!cond || !name) continue;
-      let set = useToMeds.get(cond);
-      if (!set) {
-        set = new Set();
-        useToMeds.set(cond, set);
-      }
-      set.add(name);
-    }
-  }
-
-  const useNames = [...useToMeds.keys()].sort();
-  const useEntries = useNames
-    .map((u) => {
-      const m = [...useToMeds.get(u)].sort();
-      return `  ${JSON.stringify(u)}: { displayName: ${JSON.stringify(u)}, medications: ${JSON.stringify(m)} },`;
-    })
-    .join('\n');
-
-  const useModule = `${HEADER(sources)}
-/**
- * Medication uses (indications). A "use" is a canonical condition name
- * (engine wire format) that at least one medication treats. The
- * \`medications\` array lists every medication recorded as treating
- * that use.
- *
- * Catalog size is large (~3000 uses; ~6000 medications); only the names
- * you import are retained by tree-shakers.
- */
-export interface MedicationUseMetadata {
-  readonly displayName: string;
-  readonly medications: readonly string[];
-}
-
-const USES: Readonly<Record<string, MedicationUseMetadata>> = Object.freeze({
-${useEntries}
-});
-
-const ALL_USES: readonly string[] = Object.freeze(Object.keys(USES).sort());
-
-export const MedicationUses = Object.freeze({
-  values(): readonly string[] {
-    return ALL_USES;
-  },
-  metadata(u: string): MedicationUseMetadata {
-    const m = USES[u];
-    if (!m) throw new Error(\`MedicationUses.metadata: unknown use '\${u}'\`);
-    return m;
-  },
-});
-`;
-  writeFile('medications.ts', useModule);
+  writeFile("conditions.ts", condCatModule);
 }
 
 // ---------------------------------------------------------------------------
@@ -582,9 +519,9 @@ export const MedicationUses = Object.freeze({
 // ---------------------------------------------------------------------------
 
 function genScopes() {
-  const protoPath = join(PLATFORM_REPO, 'shared', 'schemas', 'api', 'isa', 'v1', 'common.proto');
+  const protoPath = join(PLATFORM_REPO, "shared", "schemas", "api", "isa", "v1", "common.proto");
   const text = tryReadText(protoPath);
-  const sources = ['isa-platform/shared/schemas/api/isa/v1/common.proto'];
+  const sources = ["isa-platform/shared/schemas/api/isa/v1/common.proto"];
 
   /** @type {{ enumName: string, wire: string, doc: string }[]} */
   const scopes = [];
@@ -592,49 +529,49 @@ function genScopes() {
     const block = text.match(/enum Scope \{([\s\S]*?)\}\s*$/m);
     if (block) {
       const body = block[1];
-      const lines = body.split('\n');
-      let pendingComment = '';
+      const lines = body.split("\n");
+      let pendingComment = "";
       for (const line of lines) {
         const trimmed = line.trim();
-        if (trimmed.startsWith('//')) {
-          pendingComment += ' ' + trimmed.replace(/^\/\/\s?/, '');
+        if (trimmed.startsWith("//")) {
+          pendingComment += " " + trimmed.replace(/^\/\/\s?/, "");
           continue;
         }
         const m = trimmed.match(/^(SCOPE_[A-Z0-9_]+)\s*=\s*\d+;/);
         if (m) {
           const symbol = m[1];
-          if (symbol === 'SCOPE_UNSPECIFIED') {
-            pendingComment = '';
+          if (symbol === "SCOPE_UNSPECIFIED") {
+            pendingComment = "";
             continue;
           }
           const wireMatch = pendingComment.match(/`([^`]+)`/);
           if (!wireMatch) {
-            pendingComment = '';
+            pendingComment = "";
             continue;
           }
           const wire = wireMatch[1];
-          const doc = pendingComment.replace(/`[^`]+`\s*—?\s*/, '').trim();
+          const doc = pendingComment.replace(/`[^`]+`\s*—?\s*/, "").trim();
           const enumName = wire
-            .split(/[:\-]/)
+            .split(/[:-]/)
             .map((p) => p.charAt(0).toUpperCase() + p.slice(1).toLowerCase())
-            .join('');
+            .join("");
           scopes.push({ enumName, wire, doc });
-          pendingComment = '';
-        } else if (trimmed === '') {
-          pendingComment = '';
+          pendingComment = "";
+        } else if (trimmed === "") {
+          pendingComment = "";
         }
       }
     }
   }
 
   if (scopes.length === 0) {
-    gaps.push('Scope: failed to parse common.proto Scope enum — emitting empty catalog.');
+    gaps.push("Scope: failed to parse common.proto Scope enum — emitting empty catalog.");
   }
 
   scopes.sort((a, b) => a.wire.localeCompare(b.wire));
 
-  const members = scopes.map((s) => `  /** ${s.doc} */\n  ${s.enumName} = '${s.wire}',`).join('\n');
-  const descEntries = scopes.map((s) => `  '${s.wire}': ${JSON.stringify(s.doc)},`).join('\n');
+  const members = scopes.map((s) => `  /** ${s.doc} */\n  ${s.enumName} = '${s.wire}',`).join("\n");
+  const descEntries = scopes.map((s) => `  '${s.wire}': ${JSON.stringify(s.doc)},`).join("\n");
 
   const module = `${HEADER(sources)}
 /**
@@ -650,7 +587,7 @@ export const ScopeDescriptions: Readonly<Record<Scope, string>> = Object.freeze(
 ${descEntries}
 }) as Readonly<Record<Scope, string>>;
 `;
-  writeFile('scopes.ts', module);
+  writeFile("scopes.ts", module);
 }
 
 // ---------------------------------------------------------------------------
@@ -658,9 +595,9 @@ ${descEntries}
 // ---------------------------------------------------------------------------
 
 function genSignEvents() {
-  const path = join(PLATFORM_REPO, 'shared', 'go', 'events', 'registry.go');
+  const path = join(PLATFORM_REPO, "shared", "go", "events", "registry.go");
   const text = tryReadText(path);
-  const sources = ['isa-platform/shared/go/events/registry.go'];
+  const sources = ["isa-platform/shared/go/events/registry.go"];
 
   /** @type {{ enumName: string, wire: string }[]} */
   const events = [];
@@ -671,20 +608,20 @@ function genSignEvents() {
       const wire = m[1];
       if (!/^(document|signer)\./.test(wire)) continue;
       const enumName = wire
-        .split('.')
+        .split(".")
         .map((p) => p.charAt(0).toUpperCase() + p.slice(1).toLowerCase())
-        .join('');
+        .join("");
       events.push({ enumName, wire });
     }
   }
 
   if (events.length === 0) {
-    gaps.push('SignEvent: no rapidsign-domain events parsed from registry.go.');
+    gaps.push("SignEvent: no rapidsign-domain events parsed from registry.go.");
   }
 
   events.sort((a, b) => a.wire.localeCompare(b.wire));
-  const members = events.map((e) => `  ${e.enumName} = '${e.wire}',`).join('\n');
-  const labels = events.map((e) => `  '${e.wire}': ${JSON.stringify(eventLabel(e.wire))},`).join('\n');
+  const members = events.map((e) => `  ${e.enumName} = '${e.wire}',`).join("\n");
+  const labels = events.map((e) => `  '${e.wire}': ${JSON.stringify(eventLabel(e.wire))},`).join("\n");
 
   const module = `${HEADER(sources)}
 /**
@@ -699,14 +636,14 @@ export const SignEventLabels: Readonly<Record<SignEvent, string>> = Object.freez
 ${labels}
 }) as Readonly<Record<SignEvent, string>>;
 `;
-  writeFile('signEvents.ts', module);
+  writeFile("signEvents.ts", module);
 }
 
 function eventLabel(wire) {
   return wire
-    .split('.')
+    .split(".")
     .map((part) => part.charAt(0).toUpperCase() + part.slice(1).toLowerCase())
-    .join(' ');
+    .join(" ");
 }
 
 // ---------------------------------------------------------------------------
@@ -714,63 +651,63 @@ function eventLabel(wire) {
 // ---------------------------------------------------------------------------
 
 function genErrors() {
-  const protoPath = join(PLATFORM_REPO, 'shared', 'schemas', 'api', 'isa', 'v1', 'common.proto');
+  const protoPath = join(PLATFORM_REPO, "shared", "schemas", "api", "isa", "v1", "common.proto");
   const text = tryReadText(protoPath);
-  const sources = ['isa-platform/shared/schemas/api/isa/v1/common.proto'];
+  const sources = ["isa-platform/shared/schemas/api/isa/v1/common.proto"];
 
   /** @type {{ enumName: string, wire: string, doc: string }[]} */
   const codes = [];
   if (text) {
     const block = text.match(/enum ErrorCode \{([\s\S]*?)\}/m);
     if (block) {
-      const lines = block[1].split('\n');
-      let pendingComment = '';
+      const lines = block[1].split("\n");
+      let pendingComment = "";
       for (const line of lines) {
         const trimmed = line.trim();
-        if (trimmed.startsWith('//')) {
-          pendingComment += ' ' + trimmed.replace(/^\/\/\s?/, '');
+        if (trimmed.startsWith("//")) {
+          pendingComment += " " + trimmed.replace(/^\/\/\s?/, "");
           continue;
         }
         const m = trimmed.match(/^ERROR_CODE_([A-Z0-9_]+)\s*=\s*\d+;/);
         if (m) {
           const symbol = m[1];
-          if (symbol === 'UNSPECIFIED') {
-            pendingComment = '';
+          if (symbol === "UNSPECIFIED") {
+            pendingComment = "";
             continue;
           }
           const wire = symbol.toLowerCase();
           const enumName = symbol
-            .split('_')
+            .split("_")
             .map((p) => p.charAt(0).toUpperCase() + p.slice(1).toLowerCase())
-            .join('');
+            .join("");
           codes.push({ enumName, wire, doc: pendingComment.trim() });
-          pendingComment = '';
-        } else if (trimmed === '') {
-          pendingComment = '';
+          pendingComment = "";
+        } else if (trimmed === "") {
+          pendingComment = "";
         }
       }
     }
   }
 
   if (codes.length === 0) {
-    gaps.push('ErrorCode: failed to parse common.proto ErrorCode enum — emitting empty catalog.');
+    gaps.push("ErrorCode: failed to parse common.proto ErrorCode enum — emitting empty catalog.");
   }
 
   const compatCodes = [
     {
-      enumName: 'DeadlineExceeded',
-      wire: 'deadline_exceeded',
-      doc: 'Operation exceeded its deadline before completing.',
+      enumName: "DeadlineExceeded",
+      wire: "deadline_exceeded",
+      doc: "Operation exceeded its deadline before completing.",
     },
     {
-      enumName: 'RateLimited',
-      wire: 'rate_limited',
-      doc: 'Legacy RapidSign rate limit code. Retry after the server-provided delay.',
+      enumName: "RateLimited",
+      wire: "rate_limited",
+      doc: "Legacy RapidSign rate limit code. Retry after the server-provided delay.",
     },
     {
-      enumName: 'Unknown',
-      wire: 'unknown',
-      doc: 'Unrecognized error code preserved for forward compatibility.',
+      enumName: "Unknown",
+      wire: "unknown",
+      doc: "Unrecognized error code preserved for forward compatibility.",
     },
   ];
   const knownCodes = new Set(codes.map((c) => c.wire));
@@ -783,34 +720,34 @@ function genErrors() {
   // Advice codes: stable machine-readable next-action identifiers per code.
   // These mirror the `advice_code` examples in SDK_DESIGN.md.
   const ADVICE_MAP = new Map([
-    ['validation_error', 'fix_request_body'],
-    ['idempotency_conflict', 'retry_with_new_key'],
-    ['rate_limit_exceeded', 'wait_and_retry'],
-    ['token_expired', 'refresh_session'],
-    ['invalid_token', 'reissue_session'],
-    ['license_locked', 'contact_support'],
-    ['forbidden', 'check_scopes'],
-    ['not_found', 'verify_resource_id'],
-    ['method_not_allowed', 'check_http_method'],
-    ['conflict', 'reconcile_state'],
-    ['unauthorized', 'authenticate_caller'],
-    ['internal_error', 'retry_or_contact_support'],
-    ['bad_gateway', 'retry_with_backoff'],
-    ['deadline_exceeded', 'retry_with_backoff'],
-    ['gateway_timeout', 'retry_with_backoff'],
-    ['rate_limited', 'wait_and_retry'],
-    ['service_unavailable', 'retry_with_backoff'],
-    ['not_implemented', 'check_feature_availability'],
-    ['unknown', 'see_docs'],
+    ["validation_error", "fix_request_body"],
+    ["idempotency_conflict", "retry_with_new_key"],
+    ["rate_limit_exceeded", "wait_and_retry"],
+    ["token_expired", "refresh_session"],
+    ["invalid_token", "reissue_session"],
+    ["license_locked", "contact_support"],
+    ["forbidden", "check_scopes"],
+    ["not_found", "verify_resource_id"],
+    ["method_not_allowed", "check_http_method"],
+    ["conflict", "reconcile_state"],
+    ["unauthorized", "authenticate_caller"],
+    ["internal_error", "retry_or_contact_support"],
+    ["bad_gateway", "retry_with_backoff"],
+    ["deadline_exceeded", "retry_with_backoff"],
+    ["gateway_timeout", "retry_with_backoff"],
+    ["rate_limited", "wait_and_retry"],
+    ["service_unavailable", "retry_with_backoff"],
+    ["not_implemented", "check_feature_availability"],
+    ["unknown", "see_docs"],
   ]);
 
-  const members = codes.map((c) => `  /** ${c.doc} */\n  ${c.enumName} = '${c.wire}',`).join('\n');
+  const members = codes.map((c) => `  /** ${c.doc} */\n  ${c.enumName} = '${c.wire}',`).join("\n");
   const adviceEntries = codes
-    .map((c) => `  '${c.wire}': '${ADVICE_MAP.get(c.wire) || 'see_docs'}',`)
-    .join('\n');
+    .map((c) => `  '${c.wire}': '${ADVICE_MAP.get(c.wire) || "see_docs"}',`)
+    .join("\n");
   const docEntries = codes
     .map((c) => `  '${c.wire}': 'https://docs.isaapi.com/errors/${c.wire}',`)
-    .join('\n');
+    .join("\n");
 
   const module = `${HEADER(sources)}
 /**
@@ -839,7 +776,7 @@ export const ErrorDocUrls: Readonly<Record<ErrorCode, string>> = Object.freeze({
 ${docEntries}
 }) as Readonly<Record<ErrorCode, string>>;
 `;
-  writeFile('errors.ts', module);
+  writeFile("errors.ts", module);
 }
 
 // ---------------------------------------------------------------------------
@@ -847,18 +784,18 @@ ${docEntries}
 // ---------------------------------------------------------------------------
 
 function genProductsByType() {
-  const path = join(INSURANCE_REPO, 'v2_products.json');
+  const path = join(INSURANCE_REPO, "v2_products.json");
   const raw = tryReadJson(path);
-  const sources = ['insurance/v2_products.json'];
+  const sources = ["insurance/v2_products.json"];
   if (!raw) {
-    preserveOrFail(['productsByType.ts'], 'ProductsByType', 'v2_products.json');
+    preserveOrFail(["productsByType.ts"], "ProductsByType", "v2_products.json");
     return;
   }
   const TYPE_MAP = {
-    fex: { tsKey: 'FinalExpense', nsKey: 'Fex' },
-    medsup: { tsKey: 'MedicareSupplement', nsKey: 'Medsup' },
-    preneed: { tsKey: 'Preneed', nsKey: 'Preneed' },
-    term: { tsKey: 'Term', nsKey: 'Term' },
+    fex: { tsKey: "FinalExpense", nsKey: "Fex" },
+    medsup: { tsKey: "MedicareSupplement", nsKey: "Medsup" },
+    preneed: { tsKey: "Preneed", nsKey: "Preneed" },
+    term: { tsKey: "Term", nsKey: "Term" },
   };
 
   function carrierFrom(displayName) {
@@ -879,10 +816,10 @@ function genProductsByType() {
       continue;
     }
     for (const entry of list) {
-      if (!entry || typeof entry !== 'object') continue;
-      const displayName = String(entry.name || '');
-      const identifier = String(entry.identifier || '');
-      const productId = entry.id ? `prod_${entry.id}` : '';
+      if (!entry || typeof entry !== "object") continue;
+      const displayName = String(entry.name || "");
+      const identifier = String(entry.identifier || "");
+      const productId = entry.id ? `prod_${entry.id}` : "";
       if (!displayName || !identifier) continue;
       if (!productId) {
         throw new Error(
@@ -913,14 +850,16 @@ function genProductsByType() {
   }
   if (unknownTypes.size > 0) {
     gaps.push(
-      `ProductsByType: unsupported product classes found (${[...unknownTypes].sort().join(', ')}). Update TYPE_MAP.`,
+      `ProductsByType: unsupported product classes found (${[...unknownTypes].sort().join(", ")}). Update TYPE_MAP.`,
     );
   }
 
   function bagBody(items, ctorName) {
     return items.map((p) =>
-      `  ${p.enumKey}: Object.freeze({ id: ${JSON.stringify(p.id)}, displayName: ${JSON.stringify(p.displayName)}, productType: ProductType.${ctorName}, carrier: ${JSON.stringify(p.carrier)} }) as Product,`,
-    ).join('\n');
+      `  ${p.enumKey}: Object.freeze({ id: ${JSON.stringify(p.id)}, displayName: ${
+        JSON.stringify(p.displayName)
+      }, productType: ProductType.${ctorName}, carrier: ${JSON.stringify(p.carrier)} }) as Product,`
+    ).join("\n");
   }
 
   const module = `${HEADER(sources)}
@@ -950,19 +889,19 @@ export interface Product {
 }
 
 const FEX_PRODUCTS = {
-${bagBody(namespaces.Fex, 'FinalExpense')}
+${bagBody(namespaces.Fex, "FinalExpense")}
 } as const;
 
 const MEDSUP_PRODUCTS = {
-${bagBody(namespaces.Medsup, 'MedicareSupplement')}
+${bagBody(namespaces.Medsup, "MedicareSupplement")}
 } as const;
 
 const PRENEED_PRODUCTS = {
-${bagBody(namespaces.Preneed, 'Preneed')}
+${bagBody(namespaces.Preneed, "Preneed")}
 } as const;
 
 const TERM_PRODUCTS = {
-${bagBody(namespaces.Term, 'Term')}
+${bagBody(namespaces.Term, "Term")}
 } as const;
 
 type ProductBag = Readonly<Record<string, Product>>;
@@ -1008,7 +947,7 @@ export const Products = Object.freeze({
   byLegacy: (productType: ProductTypeValue, displayName: string) => Product | undefined;
 }>;
 `;
-  writeFile('productsByType.ts', module);
+  writeFile("productsByType.ts", module);
 }
 
 // ---------------------------------------------------------------------------
@@ -1016,7 +955,7 @@ export const Products = Object.freeze({
 // ---------------------------------------------------------------------------
 
 function genIndex() {
-  const module = `${HEADER(['(barrel re-export of every catalog module in this directory)'])}
+  const module = `${HEADER(["(barrel re-export of every catalog module in this directory)"])}
 export { Product, Products, type ProductMetadata } from './products.js';
 export {
   ProductType,
@@ -1027,12 +966,11 @@ export {
 export { State, States, type StateMetadata } from './states.js';
 export { ProductCarriers, type ProductCarrierMetadata } from './carriers.js';
 export { ConditionCategories, type ConditionCategoryMetadata } from './conditions.js';
-export { MedicationUses, type MedicationUseMetadata } from './medications.js';
 export { Scope, ScopeDescriptions } from './scopes.js';
 export { SignEvent, SignEventLabels } from './signEvents.js';
 export { ErrorCode, ErrorAdviceCodes, ErrorDocUrls } from './errors.js';
 `;
-  writeFile('index.ts', module);
+  writeFile("index.ts", module);
 }
 
 // ---------------------------------------------------------------------------
@@ -1043,14 +981,14 @@ ensureDir(CATALOG_DIR);
 genStates();
 genProducts();
 genProductsByType();
-genConditionsAndMedicationUses();
+genConditions();
 genScopes();
 genSignEvents();
 genErrors();
 genIndex();
 
 if (gaps.length > 0) {
-  process.stderr.write('\ngen-catalog: data-source gaps:\n');
+  process.stderr.write("\ngen-catalog: data-source gaps:\n");
   for (const g of gaps) process.stderr.write(`  - ${g}\n`);
 }
-process.stderr.write('\ngen-catalog: done\n');
+process.stderr.write("\ngen-catalog: done\n");

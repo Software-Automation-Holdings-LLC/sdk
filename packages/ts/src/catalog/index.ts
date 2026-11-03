@@ -18,7 +18,6 @@ export {
 export { State, States, type StateMetadata } from './states.js';
 export { ProductCarriers, type ProductCarrierMetadata } from './carriers.js';
 export { ConditionCategories, type ConditionCategoryMetadata } from './conditions.js';
-export { MedicationUses, type MedicationUseMetadata } from './medications.js';
 export { Scope, ScopeDescriptions } from './scopes.js';
 export { SignEvent, SignEventLabels } from './signEvents.js';
 export { ErrorCode, ErrorAdviceCodes, ErrorDocUrls } from './errors.js';

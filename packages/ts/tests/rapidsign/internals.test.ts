@@ -1,9 +1,9 @@
-import { describe, expect, it } from "vitest";
-import { isIso8601Duration, parseDuration, MAX_DURATION_MS } from "../../src/rapidsign/internal/duration";
-import { decodeGzipBase64 } from "../../src/rapidsign/internal/decompress";
-import { RapidSignError } from "../../src/rapidsign/errors";
-import { defaultSleeper, defaultUUIDGenerator, systemClock } from "../../src/rapidsign/internal/random";
 import { gzipSync } from "node:zlib";
+import { describe, expect, it } from "vitest";
+import { RapidSignError } from "../../src/rapidsign/errors";
+import { decodeGzipBase64 } from "../../src/rapidsign/internal/decompress";
+import { isIso8601Duration, MAX_DURATION_MS, parseDuration } from "../../src/rapidsign/internal/duration";
+import { defaultSleeper, defaultUUIDGenerator, systemClock } from "../../src/rapidsign/internal/random";
 
 describe("parseDuration", () => {
   it("accepts a millisecond number unchanged", () => {

@@ -11,9 +11,9 @@
  * BPP enqueue surface; both values are accepted and normalized to
  * `'queued'`.
  */
-import { type AuthContext } from './auth.js';
-import { type Transport } from '../zyins/transport.js';
-import { type Clock } from '../core/index.js';
+import { type Clock } from "../core/index.js";
+import { type Transport } from "../zyins/transport.js";
+import { type AuthContext } from "./auth.js";
 /** One attachment in an email-enqueue request. */
 export interface EmailAttachment {
     filename: string;
@@ -33,7 +33,7 @@ export interface EmailEnqueueRequest {
 }
 export interface EmailEnqueueResult {
     /** Normalized to `'queued'` regardless of which legacy literal the server returns. */
-    status: 'queued';
+    status: "queued";
 }
 export interface EmailContext {
     baseUrl: string;

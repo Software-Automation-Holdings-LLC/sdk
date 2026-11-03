@@ -40,7 +40,7 @@ export const DEFAULT_OBFUSCATION_THRESHOLD = 0.8;
  * @param key   XOR key. Defaults to {@link LEGACY_FUSC_KEY} for wire compat.
  */
 export function obfuscate(input: string, key: string = LEGACY_FUSC_KEY): string {
-    return xorTransform(input, key);
+  return xorTransform(input, key);
 }
 
 /**
@@ -48,7 +48,7 @@ export function obfuscate(input: string, key: string = LEGACY_FUSC_KEY): string 
  * self-inverse; the separate name exists for call-site readability.
  */
 export function deobfuscate(input: string, key: string = LEGACY_FUSC_KEY): string {
-    return xorTransform(input, key);
+  return xorTransform(input, key);
 }
 
 /**
@@ -64,27 +64,27 @@ export function deobfuscate(input: string, key: string = LEGACY_FUSC_KEY): strin
  * values in caches to avoid double-obfuscation.
  */
 export function isObfuscated(value: string, threshold: number = DEFAULT_OBFUSCATION_THRESHOLD): boolean {
-    if (!value) return false;
-    const len = value.length;
-    if (len === 0) return false;
-    let nonAscii = 0;
-    for (let i = 0; i < len; i++) {
-        if (value.charCodeAt(i) > 127) nonAscii++;
-    }
-    return nonAscii / len > threshold;
+  if (!value) return false;
+  const len = value.length;
+  if (len === 0) return false;
+  let nonAscii = 0;
+  for (let i = 0; i < len; i++) {
+    if (value.charCodeAt(i) > 127) nonAscii++;
+  }
+  return nonAscii / len > threshold;
 }
 
 function xorTransform(input: string, key: string): string {
-    if (!key) {
-        throw new Error('obfuscation key must be a non-empty string');
-    }
-    const s = `${input}`;
-    if (!s) return s;
-    const keyLen = key.length;
-    let out = '';
-    for (let i = 0; i < s.length; i++) {
-        const keyCode = key.charCodeAt(i % keyLen);
-        out += String.fromCharCode(s.charCodeAt(i) ^ keyCode);
-    }
-    return out;
+  if (!key) {
+    throw new Error("obfuscation key must be a non-empty string");
+  }
+  const s = `${input}`;
+  if (!s) return s;
+  const keyLen = key.length;
+  let out = "";
+  for (let i = 0; i < s.length; i++) {
+    const keyCode = key.charCodeAt(i % keyLen);
+    out += String.fromCharCode(s.charCodeAt(i) ^ keyCode);
+  }
+  return out;
 }

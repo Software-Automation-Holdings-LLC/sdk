@@ -12,14 +12,14 @@
  * deliberately does NOT 404 for missing branding rows.
  */
 
-import { type AuthContext } from './auth.js';
-import { type Transport } from './transport.js';
-import { fromHttpResponse } from './errors.js';
-import { boolField, isRecord, parseJsonResponse, stringField, unwrapEnvelope } from './response.js';
-import { buildLicenseHMACHeaders } from '../core/index.js';
-import { type Clock, systemClock } from '../core/index.js';
+import { buildLicenseHMACHeaders } from "../core/index.js";
+import { type Clock, systemClock } from "../core/index.js";
+import { type AuthContext } from "./auth.js";
+import { fromHttpResponse } from "./errors.js";
+import { boolField, isRecord, parseJsonResponse, stringField, unwrapEnvelope } from "./response.js";
+import { type Transport } from "./transport.js";
 
-const BRANDING_PATH = '/v2/branding';
+const BRANDING_PATH = "/v2/branding";
 
 /** Whitelabel detail returned by `branding.lookup`. */
 export interface BrandingDetail {
@@ -50,17 +50,17 @@ export async function lookup(ctx: BrandingContext): Promise<BrandingDetail> {
     ctx.auth.licenseKey,
     ctx.auth.orderId,
     ctx.auth.email,
-    'GET',
+    "GET",
     BRANDING_PATH,
-    '',
+    "",
     ctx.auth.deviceId,
     ctx.clock ?? systemClock,
   );
   const response = await ctx.transport({
     url: `${ctx.baseUrl}${BRANDING_PATH}`,
-    method: 'GET',
-    headers: { ...headers, Accept: 'application/json' },
-    body: '',
+    method: "GET",
+    headers: { ...headers, Accept: "application/json" },
+    body: "",
   });
   if (response.status >= 200 && response.status < 300) {
     return parseBrandingResponse(response.body);
@@ -72,36 +72,36 @@ function parseBrandingResponse(body: string): BrandingDetail {
   if (!body) {
     return zeroBrandingDetail();
   }
-  const parsed = parseJsonResponse(body, 'branding.lookup');
+  const parsed = parseJsonResponse(body, "branding.lookup");
   const unwrapped = unwrapEnvelope(parsed);
   const root = isRecord(unwrapped) ? unwrapped : {};
   return {
-    imoName: stringField(root, 'imo_name'),
-    imoLogo: stringField(root, 'imo_logo'),
-    navColor: stringField(root, 'nav_color'),
-    mainColor: stringField(root, 'main_color'),
-    buttonColor: stringField(root, 'button_color'),
-    activeButtonColor: stringField(root, 'active_button_color'),
-    bgColor: stringField(root, 'bg_color'),
-    headerTextColor: stringField(root, 'header_text_color'),
-    hideAffiliateLeads: boolField(root, 'hide_affiliate_leads'),
-    preventProductSelection: boolField(root, 'prevent_product_selection'),
-    defaultSettings: stringField(root, 'default_settings'),
+    imoName: stringField(root, "imo_name"),
+    imoLogo: stringField(root, "imo_logo"),
+    navColor: stringField(root, "nav_color"),
+    mainColor: stringField(root, "main_color"),
+    buttonColor: stringField(root, "button_color"),
+    activeButtonColor: stringField(root, "active_button_color"),
+    bgColor: stringField(root, "bg_color"),
+    headerTextColor: stringField(root, "header_text_color"),
+    hideAffiliateLeads: boolField(root, "hide_affiliate_leads"),
+    preventProductSelection: boolField(root, "prevent_product_selection"),
+    defaultSettings: stringField(root, "default_settings"),
   };
 }
 
 function zeroBrandingDetail(): BrandingDetail {
   return {
-    imoName: '',
-    imoLogo: '',
-    navColor: '',
-    mainColor: '',
-    buttonColor: '',
-    activeButtonColor: '',
-    bgColor: '',
-    headerTextColor: '',
+    imoName: "",
+    imoLogo: "",
+    navColor: "",
+    mainColor: "",
+    buttonColor: "",
+    activeButtonColor: "",
+    bgColor: "",
+    headerTextColor: "",
     hideAffiliateLeads: false,
     preventProductSelection: false,
-    defaultSettings: '',
+    defaultSettings: "",
   };
 }

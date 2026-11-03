@@ -6,13 +6,13 @@
  * device-id mint+persist helpers.
  */
 export {
-  type CredentialStore,
   type AsyncStorageLike,
-  type SyncStorageLike,
   CREDENTIAL_KEYS,
-  inMemoryCredentialStore,
+  type CredentialStore,
   fromAsyncStorage,
   fromLocalStorage,
-} from './credentialStore.js';
+  inMemoryCredentialStore,
+  type SyncStorageLike,
+} from "./credentialStore.js";
 
-export { loadOrMintDeviceId, mintDeviceId } from './deviceId.js';
+export { loadOrMintDeviceId, mintDeviceId } from "./deviceId.js";

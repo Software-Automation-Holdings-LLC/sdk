@@ -13,10 +13,10 @@
  * This module owns ONLY the wire shape + the parser. Consumer-side index
  * construction (`ReferenceIndex`) lives in `./reference/referenceIndex.ts`.
  */
-import { licenseSigner } from './requestSigner.js';
-import { systemClock } from '../core/index.js';
-import { fromHttpResponse } from './errors.js';
-const DATASETS_V3_PATH = '/v3/datasets';
+import { systemClock } from "../core/index.js";
+import { fromHttpResponse } from "./errors.js";
+import { licenseSigner } from "./requestSigner.js";
+const DATASETS_V3_PATH = "/v3/datasets";
 /**
  * Discriminator helper. Lets a caller switch on the result without
  * peeking at `notModified`.
@@ -77,16 +77,16 @@ export async function getDatasetsV3(options, ctx) {
     const pathWithQuery = queryString ? `${DATASETS_V3_PATH}?${queryString}` : DATASETS_V3_PATH;
     const signer = ctx.signer ?? licenseSigner(ctx.auth, ctx.clock ?? systemClock);
     const headers = {
-        ...(await signer.signHeaders({ method: 'GET', path: pathWithQuery, body: '' })),
+        ...(await signer.signHeaders({ method: "GET", path: pathWithQuery, body: "" })),
     };
     if (options?.ifNoneMatch) {
-        headers['If-None-Match'] = options.ifNoneMatch;
+        headers["If-None-Match"] = options.ifNoneMatch;
     }
     const response = await ctx.transport({
         url: `${ctx.baseUrl}${pathWithQuery}`,
-        method: 'GET',
+        method: "GET",
         headers,
-        body: '',
+        body: "",
     });
     if (response.status === 304) {
         return {
@@ -101,24 +101,24 @@ export async function getDatasetsV3(options, ctx) {
 }
 function buildQueryString(options) {
     if (!options)
-        return '';
+        return "";
     const parts = [];
     if (options.include !== undefined) {
-        parts.push(`include=${options.include.map(encodeDatasetCategory).join(',')}`);
+        parts.push(`include=${options.include.map(encodeDatasetCategory).join(",")}`);
     }
     if (options.fields !== undefined) {
         parts.push(`fields=${options.fields}`);
     }
-    return parts.join('&');
+    return parts.join("&");
 }
 function encodeDatasetCategory(category) {
-    if (category === 'spelling_corrections')
-        return 'corrections';
+    if (category === "spelling_corrections")
+        return "corrections";
     return category;
 }
 function readEtag(headers) {
     for (const [key, value] of Object.entries(headers)) {
-        if (key.toLowerCase() === 'etag')
+        if (key.toLowerCase() === "etag")
             return value;
     }
     return undefined;
@@ -126,8 +126,20 @@ function readEtag(headers) {
 // ---------------------------------------------------------------------------
 // Parsing — defensive but never lossy.
 // ---------------------------------------------------------------------------
-const isRecord = (v) => v !== null && typeof v === 'object' && !Array.isArray(v);
-function parseEnvelope(body, etag) {
+const isRecord = (v) => v !== null && typeof v === "object" && !Array.isArray(v);
+/**
+ * Parse a raw `GET /v3/datasets` response body — the full envelope shape
+ * `{ "data": { ... } }` — into a {@link DatasetBundleV3}. Exported so a
+ * local {@link DatasetSource} can reuse the exact same parser the HTTP
+ * path uses; there is intentionally no second parser. `etag` is the value
+ * to stamp on the bundle (the file path has none, so it passes
+ * `undefined`).
+ *
+ * Accepts both the slim `reference-bundle.json` and the full
+ * `datasets.json` — both carry the same `data.datasets` shape; the
+ * reference layer reads only the reference fields.
+ */
+export function parseEnvelope(body, etag) {
     let parsed;
     try {
         parsed = JSON.parse(body);
@@ -137,16 +149,16 @@ function parseEnvelope(body, etag) {
         throw new Error(`Invalid JSON response from ${DATASETS_V3_PATH}: ${message}`);
     }
     const root = isRecord(parsed) ? parsed : {};
-    const data = isRecord(root['data']) ? root['data'] : {};
+    const data = isRecord(root["data"]) ? root["data"] : {};
     return parseData(data, etag);
 }
 function parseData(data, etag) {
-    const datasetsField = isRecord(data['datasets']) ? data['datasets'] : {};
-    const conditionsEntry = parseConditionsEntry(datasetsField['conditions']);
-    const medicationsEntry = parseMedicationsEntry(datasetsField['medications']);
-    const productsEntry = parseGenericEntry(datasetsField['products']);
-    const spellingEntry = parseSpellingCorrectionsEntry(datasetsField['spelling_corrections'] ?? datasetsField['corrections']);
-    const nicotineEntry = parseNicotineOptionsEntry(datasetsField['nicotine_options']);
+    const datasetsField = isRecord(data["datasets"]) ? data["datasets"] : {};
+    const conditionsEntry = parseConditionsEntry(datasetsField["conditions"]);
+    const medicationsEntry = parseMedicationsEntry(datasetsField["medications"]);
+    const productsEntry = parseGenericEntry(datasetsField["products"]);
+    const spellingEntry = parseSpellingCorrectionsEntry(datasetsField["spelling_corrections"] ?? datasetsField["corrections"]);
+    const nicotineEntry = parseNicotineOptionsEntry(datasetsField["nicotine_options"]);
     const datasets = {
         conditions: conditionsEntry,
         medications: medicationsEntry,
@@ -156,16 +168,20 @@ function parseData(data, etag) {
     };
     return {
         etag,
-        version: typeof data['catalog_version'] === 'string' ? data['catalog_version'] : typeof data['version'] === 'string' ? data['version'] : '',
+        version: typeof data["catalog_version"] === "string"
+            ? data["catalog_version"]
+            : typeof data["version"] === "string"
+                ? data["version"]
+                : "",
         conditions: conditionsEntry?.items ?? [],
         medications: medicationsEntry?.items ?? [],
         products: productsEntry?.items ?? [],
         spellingCorrections: spellingEntry?.items ?? [],
         nicotineOptions: nicotineEntry?.items ?? [],
         datasets,
-        productsByFamily: parseProductsByFamily(data['products_by_family']),
-        discontinuedProducts: parseDiscontinuedProducts(data['discontinued_products']),
-        stateDerivatives: parseStateDerivatives(data['state_derivatives']),
+        productsByFamily: parseProductsByFamily(data["products_by_family"]),
+        discontinuedProducts: parseDiscontinuedProducts(data["discontinued_products"]),
+        stateDerivatives: parseStateDerivatives(data["state_derivatives"]),
     };
 }
 function parseProductsByFamily(raw) {
@@ -179,15 +195,15 @@ function parseProductsByFamily(raw) {
         for (const it of value) {
             if (!isRecord(it))
                 continue;
-            const id = it['id'];
-            const name = it['name'];
+            const id = it["id"];
+            const name = it["name"];
             // A row is valid iff it carries a non-empty `id` — the opaque
             // contract key. `name` is display enrichment the server may
             // legitimately leave blank or absent, so a missing/non-string name
             // defaults to '' and keeps the row. Matches the Go/Python/PHP/C#
             // mirrors exactly; only a row with no id is dropped.
-            if (typeof id === 'string' && id !== '') {
-                entities.push({ id, name: typeof name === 'string' ? name : '' });
+            if (typeof id === "string" && id !== "") {
+                entities.push({ id, name: typeof name === "string" ? name : "" });
             }
         }
         out[family] = entities;
@@ -209,10 +225,10 @@ function parseDiscontinuedProducts(raw) {
         // ±Number.MAX_SAFE_INTEGER an integer can no longer be represented
         // faithfully, so the value would be a silently-wrong epoch. Reject it
         // (skip the entry) rather than keep a wrapped/imprecise value.
-        if (typeof value === 'number' &&
-            Number.isInteger(value) &&
-            value >= Number.MIN_SAFE_INTEGER &&
-            value <= Number.MAX_SAFE_INTEGER) {
+        if (typeof value === "number"
+            && Number.isInteger(value)
+            && value >= Number.MIN_SAFE_INTEGER
+            && value <= Number.MAX_SAFE_INTEGER) {
             out[slug] = value;
         }
     }
@@ -223,123 +239,123 @@ function parseStateDerivatives(raw) {
         return [];
     const out = [];
     for (const it of raw)
-        if (typeof it === 'string')
+        if (typeof it === "string")
             out.push(it);
     return out;
 }
 function parseConditionsEntry(raw) {
     if (!isRecord(raw))
         return undefined;
-    const itemsRaw = Array.isArray(raw['items']) ? raw['items'] : [];
+    const itemsRaw = Array.isArray(raw["items"]) ? raw["items"] : [];
     const items = [];
     for (const it of itemsRaw) {
         if (!isRecord(it))
             continue;
-        const id = it['id'];
-        const name = it['name'];
-        if (typeof id !== 'string' || typeof name !== 'string')
+        const id = it["id"];
+        const name = it["name"];
+        if (typeof id !== "string" || typeof name !== "string")
             continue;
         items.push({
             id,
             name,
-            treated_with: parseTreatedWith(it['treated_with']),
+            treated_with: parseTreatedWith(it["treated_with"]),
         });
     }
     return {
-        version: stringField(raw['version']),
-        itemCount: numberField(raw['item_count'], items.length),
+        version: stringField(raw["version"]),
+        itemCount: numberField(raw["item_count"], items.length),
         items,
     };
 }
 function parseMedicationsEntry(raw) {
     if (!isRecord(raw))
         return undefined;
-    const itemsRaw = Array.isArray(raw['items']) ? raw['items'] : [];
+    const itemsRaw = Array.isArray(raw["items"]) ? raw["items"] : [];
     const items = [];
     for (const it of itemsRaw) {
         if (!isRecord(it))
             continue;
-        const id = it['id'];
-        const name = it['name'];
-        if (typeof id !== 'string' || typeof name !== 'string')
+        const id = it["id"];
+        const name = it["name"];
+        if (typeof id !== "string" || typeof name !== "string")
             continue;
         items.push({
             id,
             name,
-            used_for: parseUsedFor(it['used_for']),
+            used_for: parseUsedFor(it["used_for"]),
         });
     }
     return {
-        version: stringField(raw['version']),
-        itemCount: numberField(raw['item_count'], items.length),
+        version: stringField(raw["version"]),
+        itemCount: numberField(raw["item_count"], items.length),
         items,
     };
 }
 function parseGenericEntry(raw) {
     if (!isRecord(raw))
         return undefined;
-    const itemsRaw = Array.isArray(raw['items']) ? raw['items'] : [];
+    const itemsRaw = Array.isArray(raw["items"]) ? raw["items"] : [];
     const items = [];
     for (const it of itemsRaw) {
         if (!isRecord(it))
             continue;
-        const id = it['id'];
-        const name = it['name'];
-        if (typeof id === 'string' && typeof name === 'string')
+        const id = it["id"];
+        const name = it["name"];
+        if (typeof id === "string" && typeof name === "string")
             items.push({ id, name });
     }
     return {
-        version: stringField(raw['version']),
-        itemCount: numberField(raw['item_count'], items.length),
+        version: stringField(raw["version"]),
+        itemCount: numberField(raw["item_count"], items.length),
         items,
     };
 }
 function parseSpellingCorrectionsEntry(raw) {
     if (!isRecord(raw))
         return undefined;
-    const itemsRaw = Array.isArray(raw['items']) ? raw['items'] : [];
+    const itemsRaw = Array.isArray(raw["items"]) ? raw["items"] : [];
     const items = [];
     for (const it of itemsRaw) {
         if (!isRecord(it))
             continue;
-        const id = it['id'];
-        const from = it['from'];
-        const to = it['to'];
-        if (typeof id !== 'string' || typeof from !== 'string' || typeof to !== 'string')
+        const id = it["id"];
+        const from = it["from"];
+        const to = it["to"];
+        if (typeof id !== "string" || typeof from !== "string" || typeof to !== "string")
             continue;
-        const name = typeof it['name'] === 'string' ? it['name'] : from;
+        const name = typeof it["name"] === "string" ? it["name"] : from;
         items.push({ id, name, from, to });
     }
     return {
-        version: stringField(raw['version']),
-        itemCount: numberField(raw['item_count'], items.length),
+        version: stringField(raw["version"]),
+        itemCount: numberField(raw["item_count"], items.length),
         items,
     };
 }
 function parseNicotineOptionsEntry(raw) {
     if (!isRecord(raw))
         return undefined;
-    const itemsRaw = Array.isArray(raw['items']) ? raw['items'] : [];
+    const itemsRaw = Array.isArray(raw["items"]) ? raw["items"] : [];
     const items = [];
     for (const it of itemsRaw) {
         if (!isRecord(it))
             continue;
-        const id = it['id'];
-        const name = it['name'];
-        if (typeof id !== 'string' || typeof name !== 'string')
+        const id = it["id"];
+        const name = it["name"];
+        if (typeof id !== "string" || typeof name !== "string")
             continue;
-        items.push({ id, name, type: parseNicotineType(it['type']) });
+        items.push({ id, name, type: parseNicotineType(it["type"]) });
     }
     return {
-        version: stringField(raw['version']),
-        itemCount: numberField(raw['item_count'], items.length),
+        version: stringField(raw["version"]),
+        itemCount: numberField(raw["item_count"], items.length),
         items,
     };
 }
 function parseNicotineType(raw) {
-    if (raw === 'smoked' || raw === 'smokeless' || raw === 'vapor')
+    if (raw === "smoked" || raw === "smokeless" || raw === "vapor")
         return raw;
-    return 'other';
+    return "other";
 }
 function parseTreatedWith(raw) {
     if (!Array.isArray(raw))
@@ -348,10 +364,10 @@ function parseTreatedWith(raw) {
     for (const it of raw) {
         if (!isRecord(it))
             continue;
-        const id = it['id'];
-        const name = it['name'];
-        const pc = it['prescription_count'];
-        if (typeof id !== 'string' || typeof name !== 'string')
+        const id = it["id"];
+        const name = it["name"];
+        const pc = it["prescription_count"];
+        if (typeof id !== "string" || typeof name !== "string")
             continue;
         out.push({
             id,
@@ -368,10 +384,10 @@ function parseUsedFor(raw) {
     for (const it of raw) {
         if (!isRecord(it))
             continue;
-        const id = it['id'];
-        const name = it['name'];
-        const pc = it['prescription_count'];
-        if (typeof id !== 'string' || typeof name !== 'string')
+        const id = it["id"];
+        const name = it["name"];
+        const pc = it["prescription_count"];
+        if (typeof id !== "string" || typeof name !== "string")
             continue;
         out.push({
             id,
@@ -382,13 +398,13 @@ function parseUsedFor(raw) {
     return out;
 }
 function stringField(raw) {
-    return typeof raw === 'string' ? raw : '';
+    return typeof raw === "string" ? raw : "";
 }
 function numberField(raw, fallback) {
-    return typeof raw === 'number' && Number.isFinite(raw) ? raw : fallback;
+    return typeof raw === "number" && Number.isFinite(raw) ? raw : fallback;
 }
 function parsePrescriptionCount(raw) {
-    return typeof raw === 'number' && Number.isFinite(raw) ? Math.max(0, Math.trunc(raw)) : 0;
+    return typeof raw === "number" && Number.isFinite(raw) ? Math.max(0, Math.trunc(raw)) : 0;
 }
 export class DatasetsV3SubClient {
     ctx;

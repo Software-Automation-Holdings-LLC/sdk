@@ -10,9 +10,9 @@
  * Sorting collapses word order so that prefix / suffix / no-space variants of
  * the same concept resolve identically while severity qualifiers stay
  * distinct (different letter multisets):
- *   - "SEVERE COPD" → "CCDEEOPRSV"  (after expanding from the catalog name)
- *   - "COPD (SEVERE)" → "CCDEEOPRSV"
- *   - "COPD (MILD)" → "CCDDILMOP"   (distinct — collapses with no SEVERE row)
+ *   - "SEVERE COPD" → "CDEEEOPRSV"  (after expanding from the catalog name)
+ *   - "COPD (SEVERE)" → "CDEEEOPRSV"
+ *   - "COPD (MILD)" → "CDDILMOP"    (distinct — collapses with no SEVERE row)
  *
  * Used ONLY for word-order-invariant NAME matching. Opaque catalog ids
  * (e.g. `HIGHBLOODPRESSURE`, `cond_<ULID>`) are never keyed this way —

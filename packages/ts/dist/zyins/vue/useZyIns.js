@@ -8,10 +8,10 @@
  * Peer dependency: vue ^3.0. The import is type-only so consumers without
  * Vue installed do not pull it into their bundle.
  */
-import { inject, provide } from 'vue';
-import { ZyInsClient } from '../client.js';
+import { inject, provide } from "vue";
+import { ZyInsClient } from "../client.js";
 /** Symbol-keyed injection slot. */
-export const ZyInsKey = Symbol('zyins:client');
+export const ZyInsKey = Symbol("zyins:client");
 /**
  * Provide a `ZyInsClient` to descendants. Call from `setup()` of a root
  * component (typically `App.vue`) before any descendant calls `useZyIns()`.
@@ -28,7 +28,7 @@ export function provideZyIns(config) {
 export function useZyIns() {
     const client = inject(ZyInsKey, null);
     if (!client) {
-        throw new Error('useZyIns: called outside provideZyIns(). Call provideZyIns({ auth }) from your root setup().');
+        throw new Error("useZyIns: called outside provideZyIns(). Call provideZyIns({ auth }) from your root setup().");
     }
     return client;
 }

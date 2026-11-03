@@ -16,13 +16,14 @@
  * wire serialization, header building, and response parsing.
  */
 
-import { type Applicant, NicotineUsage, type NicotineUsageInput, NicotineDuration } from './applicant.js';
-import { type CoverageInput, QuoteType, isMulti } from './coverage.js';
-import { fromHttpResponse } from './errors.js';
-import { deriveIdempotencyKey } from './idempotency.js';
-import { buildLicenseHMACHeaders } from '../core/index.js';
-import { type AuthContext } from './auth.js';
-import { type Clock, systemClock } from '../core/index.js';
+import { buildLicenseHMACHeaders } from "../core/index.js";
+import { type Clock, systemClock } from "../core/index.js";
+import { type Applicant, NicotineDuration, NicotineUsage, type NicotineUsageInput } from "./applicant.js";
+import { type AuthContext } from "./auth.js";
+import { type CoverageInput, isMulti, QuoteType } from "./coverage.js";
+import { fromHttpResponse } from "./errors.js";
+import { deriveIdempotencyKey } from "./idempotency.js";
+import { coercePlanInfo } from "./planInfo.js";
 import {
   type OfferCarrier,
   type OfferCategory,
@@ -35,9 +36,8 @@ import {
   type PrequalifyV2Context,
   type PrequalifyV2Request,
   type PrequalifyV2Result,
-} from './prequalify-v2-types.js';
-import { coercePlanInfo } from './planInfo.js';
-import { retryAttemptsFromHeaders } from './retryAttempts.js';
+} from "./prequalify-v2-types.js";
+import { retryAttemptsFromHeaders } from "./retryAttempts.js";
 
 export type {
   OfferCarrier,
@@ -54,13 +54,10 @@ export type {
   PrequalifyV2Context,
   PrequalifyV2Request,
   PrequalifyV2Result,
-} from './prequalify-v2-types.js';
-export type {
-  OfferDeathBenefit,
-  PrequalifyV2Options,
-} from './prequalify-v2-types.js';
+} from "./prequalify-v2-types.js";
+export type { OfferDeathBenefit, PrequalifyV2Options } from "./prequalify-v2-types.js";
 
-const PREQUALIFY_V2_PATH = '/v2/prequalify';
+const PREQUALIFY_V2_PATH = "/v2/prequalify";
 
 /**
  * Run a v2 prequalify call. Builds the wire body, derives the idempotency
@@ -71,9 +68,8 @@ export async function prequalifyV2(
   ctx: PrequalifyV2Context,
 ): Promise<PrequalifyV2Result> {
   const body = serializeWireBody(request);
-  const idempotencyKey =
-    ctx.idempotencyKey ??
-    (await deriveIdempotencyKey({ deviceId: ctx.auth.deviceId, op: 'prequalify_v2', body }));
+  const idempotencyKey = ctx.idempotencyKey
+    ?? (await deriveIdempotencyKey({ deviceId: ctx.auth.deviceId, op: "prequalify_v2", body }));
   const headers = await buildHeaders({
     auth: ctx.auth,
     body,
@@ -81,7 +77,7 @@ export async function prequalifyV2(
     clock: ctx.clock,
   });
   const url = `${ctx.baseUrl}${PREQUALIFY_V2_PATH}`;
-  const response = await ctx.transport({ url, method: 'POST', headers, body });
+  const response = await ctx.transport({ url, method: "POST", headers, body });
   if (response.status >= 200 && response.status < 300) {
     return parseEnvelope(response.body, idempotencyKey, retryAttemptsFromHeaders(response.headers));
   }
@@ -100,30 +96,30 @@ function serializeWireBody(request: PrequalifyV2Request): string {
     conditions: applicant.conditions ?? [],
     medications: applicant.medications ?? [],
     quote_options: {
-      quote_type: coverage.type === 'face_value' ? QuoteType.FaceAmounts : QuoteType.MonthlyBudget,
+      quote_type: coverage.type === "face_value" ? QuoteType.FaceAmounts : QuoteType.MonthlyBudget,
       amounts: extractAmounts(coverage).map((n) => String(n)),
     },
     ...products.toWireFields(),
   };
   if (applicant.zip !== undefined) {
-    payload['zip'] = applicant.zip;
+    payload["zip"] = applicant.zip;
   }
   if (options) {
     if (options.onlyProductClass !== undefined) {
-      payload['only_product_class'] = options.onlyProductClass.wireToken;
+      payload["only_product_class"] = options.onlyProductClass.wireToken;
     }
     if (options.includeProductClass !== undefined && options.includeProductClass.length > 0) {
-      const fromSelection = payload['include_product_class'] as string[] | undefined;
+      const fromSelection = payload["include_product_class"] as string[] | undefined;
       const extra = options.includeProductClass.map((t) => t.wireToken);
-      payload['include_product_class'] = [...new Set([...(fromSelection ?? []), ...extra])];
+      payload["include_product_class"] = [...new Set([...(fromSelection ?? []), ...extra])];
     }
-    if (options.minRank !== undefined) payload['min_rank'] = options.minRank;
-    if (options.showUnreleased !== undefined) payload['show_unreleased'] = options.showUnreleased;
+    if (options.minRank !== undefined) payload["min_rank"] = options.minRank;
+    if (options.showUnreleased !== undefined) payload["show_unreleased"] = options.showUnreleased;
     if (options.skipHealthBasedUnderwriting !== undefined) {
-      payload['skip_health_based_underwriting'] = options.skipHealthBasedUnderwriting;
+      payload["skip_health_based_underwriting"] = options.skipHealthBasedUnderwriting;
     }
     if (options.includeIneligible !== undefined) {
-      payload['include_ineligible'] = options.includeIneligible;
+      payload["include_ineligible"] = options.includeIneligible;
     }
   }
   // SDK-side default (matches the bpp2.0 shim that this PR absorbs):
@@ -131,8 +127,8 @@ function serializeWireBody(request: PrequalifyV2Request): string {
   // render an "Excluded" panel without an explicit opt-in. Server-side
   // also defaults to true post-zyins#345; this is a defensive belt for
   // older deployments and for v1 callers who pre-shim their bodies.
-  if (payload['include_ineligible'] === undefined) {
-    payload['include_ineligible'] = true;
+  if (payload["include_ineligible"] === undefined) {
+    payload["include_ineligible"] = true;
   }
   return JSON.stringify(payload);
 }
@@ -142,9 +138,9 @@ function extractAmounts(coverage: CoverageInput): readonly number[] {
 }
 
 function serializeNicotineUsage(
-  nicotineUse: Applicant['nicotineUse'],
+  nicotineUse: Applicant["nicotineUse"],
 ): { last_used: string; product_usage?: Array<{ type: string; frequency: string }> } {
-  if (typeof nicotineUse === 'object' && nicotineUse !== null) {
+  if (typeof nicotineUse === "object" && nicotineUse !== null) {
     const input = nicotineUse as NicotineUsageInput;
     const result: { last_used: string; product_usage?: Array<{ type: string; frequency: string }> } = {
       last_used: input.lastUsed as string,
@@ -180,7 +176,7 @@ async function buildHeaders(args: {
     args.auth.licenseKey,
     args.auth.orderId,
     args.auth.email,
-    'POST',
+    "POST",
     PREQUALIFY_V2_PATH,
     args.body,
     args.auth.deviceId,
@@ -188,20 +184,18 @@ async function buildHeaders(args: {
   );
   return {
     ...licenseHeaders,
-    'Content-Type': 'application/json',
-    'Idempotency-Key': args.idempotencyKey,
+    "Content-Type": "application/json",
+    "Idempotency-Key": args.idempotencyKey,
   };
 }
 
-const isRecord = (v: unknown): v is Record<string, unknown> =>
-  v !== null && typeof v === 'object' && !Array.isArray(v);
+const isRecord = (v: unknown): v is Record<string, unknown> => v !== null && typeof v === "object" && !Array.isArray(v);
 
-const toStr = (v: unknown): string => (typeof v === 'string' ? v : '');
-const toNum = (v: unknown): number => (typeof v === 'number' ? v : 0);
+const toStr = (v: unknown): string => (typeof v === "string" ? v : "");
+const toNum = (v: unknown): number => (typeof v === "number" ? v : 0);
 const toBool = (v: unknown): boolean => v === true;
-const toNullableNum = (v: unknown): number | null =>
-  typeof v === 'number' && Number.isFinite(v) ? v : null;
-const toNullableStr = (v: unknown): string | null => (typeof v === 'string' ? v : null);
+const toNullableNum = (v: unknown): number | null => typeof v === "number" && Number.isFinite(v) ? v : null;
+const toNullableStr = (v: unknown): string | null => (typeof v === "string" ? v : null);
 
 function parseEnvelope(
   body: string,
@@ -217,16 +211,16 @@ function parseEnvelope(
     );
   }
   const root = isRecord(parsed) ? parsed : {};
-  const requestId = toStr(root['request_id']);
-  const echoKey = toStr(root['idempotency_key']) || idempotencyKey;
-  const livemode = root['livemode'] === undefined ? true : toBool(root['livemode']);
-  const data = isRecord(root['data']) ? (root['data'] as Record<string, unknown>) : {};
-  const plansRaw = Array.isArray(data['plans']) ? (data['plans'] as unknown[]) : [];
+  const requestId = toStr(root["request_id"]);
+  const echoKey = toStr(root["idempotency_key"]) || idempotencyKey;
+  const livemode = root["livemode"] === undefined ? true : toBool(root["livemode"]);
+  const data = isRecord(root["data"]) ? (root["data"] as Record<string, unknown>) : {};
+  const plansRaw = Array.isArray(data["plans"]) ? (data["plans"] as unknown[]) : [];
   const plans = plansRaw.map(coercePlanOffer);
   return {
     plans,
-    has_more: toBool(data['has_more']),
-    next_cursor: toNullableStr(data['next_cursor']),
+    has_more: toBool(data["has_more"]),
+    next_cursor: toNullableStr(data["next_cursor"]),
     requestId,
     idempotencyKey: echoKey,
     livemode,
@@ -236,16 +230,15 @@ function parseEnvelope(
 
 function coerceEligibility(raw: unknown): OfferEligibility {
   const r = isRecord(raw) ? raw : {};
-  const categoryRaw = r['category'];
-  const category: OfferCategory =
-    categoryRaw === 'immediate' || categoryRaw === 'graded' || categoryRaw === 'rop'
-      ? categoryRaw
-      : null;
-  const reasonsRaw = Array.isArray(r['reasons']) ? (r['reasons'] as unknown[]) : [];
+  const categoryRaw = r["category"];
+  const category: OfferCategory = categoryRaw === "immediate" || categoryRaw === "graded" || categoryRaw === "rop"
+    ? categoryRaw
+    : null;
+  const reasonsRaw = Array.isArray(r["reasons"]) ? (r["reasons"] as unknown[]) : [];
   return {
-    eligible: toBool(r['eligible']),
+    eligible: toBool(r["eligible"]),
     category,
-    coverage_tier: toNullableStr(r['coverage_tier']),
+    coverage_tier: toNullableStr(r["coverage_tier"]),
     reasons: reasonsRaw.map((x) => toStr(x)),
   };
 }
@@ -253,45 +246,45 @@ function coerceEligibility(raw: unknown): OfferEligibility {
 function coerceCarrier(raw: unknown): OfferCarrier {
   const r = isRecord(raw) ? raw : {};
   return {
-    id: toStr(r['id']),
-    name: toStr(r['name']),
-    logo_url: toStr(r['logo_url']),
+    id: toStr(r["id"]),
+    name: toStr(r["name"]),
+    logo_url: toStr(r["logo_url"]),
   };
 }
 
 function coerceProduct(raw: unknown): OfferProduct {
   const r = isRecord(raw) ? raw : {};
   return {
-    id: toStr(r['id']),
-    slug: toStr(r['slug']),
-    name: toStr(r['name']),
-    display_name: toStr(r['display_name']),
-    type: toStr(r['type']),
-    wire_token: toStr(r['wire_token']),
+    id: toStr(r["id"]),
+    slug: toStr(r["slug"]),
+    name: toStr(r["name"]),
+    display_name: toStr(r["display_name"]),
+    type: toStr(r["type"]),
+    wire_token: toStr(r["wire_token"]),
   };
 }
 
 function coerceMoney(raw: unknown): OfferMoney {
   const r = isRecord(raw) ? raw : {};
   return {
-    cents: toNum(r['cents']),
-    display: toStr(r['display']),
+    cents: toNum(r["cents"]),
+    display: toStr(r["display"]),
   };
 }
 
 function coercePremium(raw: unknown): OfferPremium | null {
   if (raw === null || raw === undefined) return null;
   if (!isRecord(raw)) return null;
-  const modesRaw = isRecord(raw['modes']) ? (raw['modes'] as Record<string, unknown>) : {};
+  const modesRaw = isRecord(raw["modes"]) ? (raw["modes"] as Record<string, unknown>) : {};
   const modes: Record<string, OfferMoney> = {};
   for (const [k, v] of Object.entries(modesRaw)) {
     modes[k] = coerceMoney(v);
   }
   return {
-    cents: toNum(raw['cents']),
-    display: toStr(raw['display']),
-    mode: toStr(raw['mode']),
-    rate_class: toStr(raw['rate_class']),
+    cents: toNum(raw["cents"]),
+    display: toStr(raw["display"]),
+    mode: toStr(raw["mode"]),
+    rate_class: toStr(raw["rate_class"]),
     modes,
   };
 }
@@ -299,13 +292,13 @@ function coercePremium(raw: unknown): OfferPremium | null {
 function coerceOtherOffer(raw: unknown): OtherOffer {
   const r = isRecord(raw) ? raw : {};
   return {
-    rank: toNullableNum(r['rank']),
-    eligibility: coerceEligibility(r['eligibility']),
-    premium: coercePremium(r['premium']),
+    rank: toNullableNum(r["rank"]),
+    eligibility: coerceEligibility(r["eligibility"]),
+    premium: coercePremium(r["premium"]),
   };
 }
 
-function mergePlanInfo(primary: PlanOffer['plan_info'], secondary: PlanOffer['plan_info']): PlanOffer['plan_info'] {
+function mergePlanInfo(primary: PlanOffer["plan_info"], secondary: PlanOffer["plan_info"]): PlanOffer["plan_info"] {
   if (secondary.length === 0) return primary;
   const keys = new Set(primary.map((entry) => entry.key));
   return [...primary, ...secondary.filter((entry) => !keys.has(entry.key))];
@@ -315,29 +308,29 @@ function mergePlanInfoLegacy(
   planInfoLegacy: Record<string, readonly string[]> | undefined,
   wireLegacy: Record<string, readonly string[]> | undefined,
 ): Record<string, readonly string[]> | undefined {
-  const merged = { ...(wireLegacy ?? {}), ...(planInfoLegacy ?? {}) };
+  const merged = { ...wireLegacy, ...planInfoLegacy };
   return Object.keys(merged).length === 0 ? undefined : merged;
 }
 
 function coercePlanOffer(raw: unknown): PlanOffer {
   const r = isRecord(raw) ? raw : {};
-  const otherOffersRaw = Array.isArray(r['other_offers']) ? (r['other_offers'] as unknown[]) : [];
-  const metadata = isRecord(r['metadata']) ? (r['metadata'] as Record<string, unknown>) : {};
-  const planInfo = coercePlanInfo(r['plan_info']);
-  const legacyPlanInfo = coercePlanInfo(r['plan_info_legacy']);
+  const otherOffersRaw = Array.isArray(r["other_offers"]) ? (r["other_offers"] as unknown[]) : [];
+  const metadata = isRecord(r["metadata"]) ? (r["metadata"] as Record<string, unknown>) : {};
+  const planInfo = coercePlanInfo(r["plan_info"]);
+  const legacyPlanInfo = coercePlanInfo(r["plan_info_legacy"]);
   const planInfoLegacy = mergePlanInfoLegacy(planInfo.legacy, legacyPlanInfo.legacy);
   return {
-    object: 'plan_offer',
-    id: toStr(r['id']),
-    result_index: toNum(r['result_index']),
-    rank: toNullableNum(r['rank']),
-    eligibility: coerceEligibility(r['eligibility']),
-    carrier: coerceCarrier(r['carrier']),
-    product: coerceProduct(r['product']),
+    object: "plan_offer",
+    id: toStr(r["id"]),
+    result_index: toNum(r["result_index"]),
+    rank: toNullableNum(r["rank"]),
+    eligibility: coerceEligibility(r["eligibility"]),
+    carrier: coerceCarrier(r["carrier"]),
+    product: coerceProduct(r["product"]),
     plan_info: mergePlanInfo(planInfo.array, legacyPlanInfo.array),
     ...(planInfoLegacy === undefined ? {} : { plan_info_legacy: planInfoLegacy }),
-    death_benefit: coerceMoney(r['death_benefit']),
-    premium: coercePremium(r['premium']),
+    death_benefit: coerceMoney(r["death_benefit"]),
+    premium: coercePremium(r["premium"]),
     other_offers: otherOffersRaw.map(coerceOtherOffer),
     metadata,
   };

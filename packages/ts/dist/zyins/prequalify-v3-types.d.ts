@@ -13,21 +13,21 @@
  * `deathBenefit.amount.cents` and monthly-budget offers off
  * `budget.amount.cents`.
  */
-import type { Applicant } from './applicant.js';
-import type { CoverageInput } from './coverage.js';
-import type { ProductSelection, ProductClassValue } from './product.js';
-import type { MinRankValue } from './minRank.js';
-import type { AuthContext } from './auth.js';
-import type { RequestSigner } from './requestSigner.js';
-import type { Transport } from './transport.js';
-import type { Clock } from '../core/index.js';
-import type { OfferCarrier, OfferProduct, OfferPlanInfo } from './prequalify-v2-types.js';
+import type { Clock } from "../core/index.js";
+import type { Applicant } from "./applicant.js";
+import type { AuthContext } from "./auth.js";
+import type { CoverageInput } from "./coverage.js";
+import type { MinRankValue } from "./minRank.js";
+import type { OfferCarrier, OfferPlanInfo, OfferProduct } from "./prequalify-v2-types.js";
+import type { ProductClassValue, ProductSelection } from "./product.js";
+import type { RequestSigner } from "./requestSigner.js";
+import type { Transport } from "./transport.js";
 /**
  * Underwriting rank bucket. `null` reserved for the unlikely case the
  * server cannot resolve any bucket; closed enum otherwise. This is NOT
  * the carrier rate-class label — that lives on `V3PricingRow.rateClass`.
  */
-export type V3EligibilityCategory = 'immediate' | 'graded' | 'rop' | 'other' | null;
+export type V3EligibilityCategory = "immediate" | "graded" | "rop" | "other" | null;
 /** Eligibility for one row of the pricing table. */
 export interface V3Eligibility {
     /** Underwriting rank bucket (closed enum), `null` when unresolved. */
@@ -55,7 +55,7 @@ export interface V3Amount {
  * Recurrence period for a {@link V3Money}. `null` is a one-time / lump-sum
  * amount (a death benefit); the named values are premium billing cycles.
  */
-export type V3Period = 'monthly' | 'quarterly' | 'semiannual' | 'annual' | null;
+export type V3Period = "monthly" | "quarterly" | "semiannual" | "annual" | null;
 /**
  * A monetary value with a recurrence period (the OpenAPI `Money`). Used
  * for `deathBenefit` (`period: null`, a one-time lump sum) and `budget`
@@ -118,7 +118,7 @@ export interface V3PricingRow {
  * synthetic rank.
  */
 export interface V3Offer {
-    readonly object: 'plan_offer';
+    readonly object: "plan_offer";
     /**
      * UUID v5 identifying this product-at-a-requested-amount offer. In a
      * multi-amount response the same product appears once per amount, each

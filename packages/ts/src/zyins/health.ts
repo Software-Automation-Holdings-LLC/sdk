@@ -11,14 +11,14 @@
  * the client; the server ignores them on this route.
  */
 
-import { type AuthContext } from './auth.js';
-import { type Transport } from './transport.js';
-import { fromHttpResponse } from './errors.js';
+import { type AuthContext } from "./auth.js";
+import { fromHttpResponse } from "./errors.js";
+import { type Transport } from "./transport.js";
 
-const READINESS_PATH = '/ready';
+const READINESS_PATH = "/ready";
 
 /** Mirror of proto `ServingStatus`. Wire values are lower-case. */
-export type ServingStatus = 'serving' | 'not_serving' | 'unknown';
+export type ServingStatus = "serving" | "not_serving" | "unknown";
 
 /** Per-dependency probe outcome. */
 export interface ProbeResult {
@@ -61,9 +61,9 @@ export interface HealthContext {
 export async function getReadiness(ctx: HealthContext): Promise<ReadinessResult> {
   const response = await ctx.transport({
     url: `${ctx.baseUrl}${READINESS_PATH}`,
-    method: 'GET',
-    headers: { Accept: 'application/json' },
-    body: '',
+    method: "GET",
+    headers: { Accept: "application/json" },
+    body: "",
   });
   if (response.status >= 200 && response.status < 300) {
     return parseReadiness(response.body);
@@ -73,42 +73,42 @@ export async function getReadiness(ctx: HealthContext): Promise<ReadinessResult>
 
 function parseReadiness(body: string): ReadinessResult {
   if (!body) {
-    throw new Error('zyins: readiness response body was empty');
+    throw new Error("zyins: readiness response body was empty");
   }
   const parsed: unknown = JSON.parse(body);
-  if (!parsed || typeof parsed !== 'object') {
-    throw new Error('zyins: readiness response was not a JSON object');
+  if (!parsed || typeof parsed !== "object") {
+    throw new Error("zyins: readiness response was not a JSON object");
   }
   const o = parsed as Record<string, unknown>;
   return {
-    ready: typeof o['ready'] === 'boolean' ? o['ready'] : false,
-    status: parseServingStatus(o['status']),
-    db: parseProbe(o['db']),
-    cache: parseProbe(o['cache']),
-    downstreamServices: parseDownstreamMap(o['downstream_services']),
-    checkedAt: typeof o['checked_at'] === 'string' ? (o['checked_at'] as string) : '',
+    ready: typeof o["ready"] === "boolean" ? o["ready"] : false,
+    status: parseServingStatus(o["status"]),
+    db: parseProbe(o["db"]),
+    cache: parseProbe(o["cache"]),
+    downstreamServices: parseDownstreamMap(o["downstream_services"]),
+    checkedAt: typeof o["checked_at"] === "string" ? (o["checked_at"] as string) : "",
   };
 }
 
 function parseProbe(value: unknown): ProbeResult {
-  if (!value || typeof value !== 'object') {
-    return { status: 'unknown', latencyMs: 0, checkedAt: '' };
+  if (!value || typeof value !== "object") {
+    return { status: "unknown", latencyMs: 0, checkedAt: "" };
   }
   const o = value as Record<string, unknown>;
   return {
-    status: parseServingStatus(o['status']),
-    latencyMs: typeof o['latency_ms'] === 'number' ? (o['latency_ms'] as number) : 0,
-    message: typeof o['message'] === 'string' ? (o['message'] as string) : undefined,
-    checkedAt: typeof o['checked_at'] === 'string' ? (o['checked_at'] as string) : '',
+    status: parseServingStatus(o["status"]),
+    latencyMs: typeof o["latency_ms"] === "number" ? (o["latency_ms"] as number) : 0,
+    message: typeof o["message"] === "string" ? (o["message"] as string) : undefined,
+    checkedAt: typeof o["checked_at"] === "string" ? (o["checked_at"] as string) : "",
   };
 }
 
 function parseServingStatus(value: unknown): ServingStatus {
-  return value === 'serving' || value === 'not_serving' || value === 'unknown' ? value : 'unknown';
+  return value === "serving" || value === "not_serving" || value === "unknown" ? value : "unknown";
 }
 
 function parseDownstreamMap(value: unknown): Record<string, ProbeResult> {
-  if (!value || typeof value !== 'object') return {};
+  if (!value || typeof value !== "object") return {};
   const out: Record<string, ProbeResult> = {};
   for (const [key, probe] of Object.entries(value as Record<string, unknown>)) {
     out[key] = parseProbe(probe);

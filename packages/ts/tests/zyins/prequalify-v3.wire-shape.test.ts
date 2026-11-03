@@ -15,33 +15,21 @@
  *    `/v2/prequalify` — preserved untouched by the v3 fix.
  */
 
-import { describe, expect, it } from 'vitest';
-import { ZyInsClient } from '../../src/zyins/client';
-import type { Transport, TransportRequest } from '../../src/zyins/transport';
-import {
-  TEST_APPLICANT,
-  TEST_AUTH,
-  TEST_COVERAGE,
-  TEST_PRODUCTS,
-  FIXED_CLOCK,
-} from './fixtures';
-import {
-  type Applicant,
-  Height,
-  NicotineDuration,
-  Sex,
-  Weight,
-} from '../../src/zyins/applicant';
-import { MinRank } from '../../src/zyins/minRank';
-import { ProductClass, type ProductClassValue } from '../../src/zyins/product';
+import { describe, expect, it } from "vitest";
+import { type Applicant, Height, NicotineDuration, Sex, Weight } from "../../src/zyins/applicant";
+import { ZyInsClient } from "../../src/zyins/client";
+import { MinRank } from "../../src/zyins/minRank";
+import { ProductClass, type ProductClassValue } from "../../src/zyins/product";
+import type { Transport, TransportRequest } from "../../src/zyins/transport";
+import { FIXED_CLOCK, TEST_APPLICANT, TEST_AUTH, TEST_COVERAGE, TEST_PRODUCTS } from "./fixtures";
 
 function isRecord(v: unknown): v is Record<string, unknown> {
-  return v !== null && typeof v === 'object' && !Array.isArray(v);
+  return v !== null && typeof v === "object" && !Array.isArray(v);
 }
 
 function parseBody(raw: string | undefined): Record<string, unknown> {
-  const parsed: unknown = JSON.parse(raw ?? '{}');
-  if (!isRecord(parsed)) throw new Error('Expected request body to parse to an object');
+  const parsed: unknown = JSON.parse(raw ?? "{}");
+  if (!isRecord(parsed)) throw new Error("Expected request body to parse to an object");
   return parsed;
 }
 
@@ -52,9 +40,9 @@ function captureTransport(): { transport: Transport; captured: { req?: Transport
     return {
       status: 200,
       body: JSON.stringify({
-        object: 'prequalify_result',
-        request_id: 'req_01HZK2N5GQR9T8X4B6FJW3Y1AS',
-        idempotency_key: req.headers['Idempotency-Key'] ?? '',
+        object: "prequalify_result",
+        request_id: "req_01HZK2N5GQR9T8X4B6FJW3Y1AS",
+        idempotency_key: req.headers["Idempotency-Key"] ?? "",
         livemode: true,
         data: { plans: [] },
       }),
@@ -64,12 +52,12 @@ function captureTransport(): { transport: Transport; captured: { req?: Transport
   return { transport, captured };
 }
 
-describe('prequalifyV3 wire shape', () => {
-  it('emits the v3 envelope — applicant + coverage + products — and POSTs to /v3/prequalify', async () => {
+describe("prequalifyV3 wire shape", () => {
+  it("emits the v3 envelope — applicant + coverage + products — and POSTs to /v3/prequalify", async () => {
     const { transport, captured } = captureTransport();
     const client = new ZyInsClient({
       auth: TEST_AUTH,
-      baseUrl: 'https://test.example',
+      baseUrl: "https://test.example",
       transport,
       clock: FIXED_CLOCK,
     });
@@ -79,53 +67,53 @@ describe('prequalifyV3 wire shape', () => {
       products: TEST_PRODUCTS,
     });
 
-    expect(captured.req?.url).toBe('https://test.example/v3/prequalify');
-    expect(captured.req?.method).toBe('POST');
-    expect(captured.req?.headers['Api-Version']).toBe('v3');
+    expect(captured.req?.url).toBe("https://test.example/v3/prequalify");
+    expect(captured.req?.method).toBe("POST");
+    expect(captured.req?.headers["Api-Version"]).toBe("v3");
 
     const body = parseBody(captured.req?.body);
 
     // Envelope keys — must NOT carry the v2 flat fields.
     expect(Object.keys(body).sort()).toEqual(
-      ['applicant', 'coverage', 'include_ineligible', 'products'].sort(),
+      ["applicant", "coverage", "include_ineligible", "products"].sort(),
     );
-    expect(body).not.toHaveProperty('date_of_birth');
-    expect(body).not.toHaveProperty('gender');
-    expect(body).not.toHaveProperty('height');
-    expect(body).not.toHaveProperty('weight');
-    expect(body).not.toHaveProperty('nicotine_usage');
-    expect(body).not.toHaveProperty('quote_options');
+    expect(body).not.toHaveProperty("date_of_birth");
+    expect(body).not.toHaveProperty("gender");
+    expect(body).not.toHaveProperty("height");
+    expect(body).not.toHaveProperty("weight");
+    expect(body).not.toHaveProperty("nicotine_usage");
+    expect(body).not.toHaveProperty("quote_options");
 
     // Applicant envelope per ApplicantV3Input.
-    const applicant = body['applicant'];
-    if (!isRecord(applicant)) throw new Error('applicant must be an object');
-    expect(applicant['sex']).toBe('male');
-    expect(applicant['dob']).toBe('1962-04-18');
-    expect(applicant['height_inches']).toBe(70);
-    expect(applicant['weight_lbs']).toBe(195);
-    expect(applicant).not.toHaveProperty('gender');
-    expect(applicant).not.toHaveProperty('date_of_birth');
-    expect(applicant).not.toHaveProperty('height');
-    expect(applicant).not.toHaveProperty('weight');
-    expect(applicant).not.toHaveProperty('state'); // state lives on coverage in v3
-    expect(applicant['nicotine']).toEqual({ last_used: 'never' });
+    const applicant = body["applicant"];
+    if (!isRecord(applicant)) throw new Error("applicant must be an object");
+    expect(applicant["sex"]).toBe("male");
+    expect(applicant["dob"]).toBe("1962-04-18");
+    expect(applicant["height_inches"]).toBe(70);
+    expect(applicant["weight_lbs"]).toBe(195);
+    expect(applicant).not.toHaveProperty("gender");
+    expect(applicant).not.toHaveProperty("date_of_birth");
+    expect(applicant).not.toHaveProperty("height");
+    expect(applicant).not.toHaveProperty("weight");
+    expect(applicant).not.toHaveProperty("state"); // state lives on coverage in v3
+    expect(applicant["nicotine"]).toEqual({ last_used: "never" });
 
     // Coverage envelope per CoverageV3Input — face_amount_cents + state.
-    const coverage = body['coverage'];
-    if (!isRecord(coverage)) throw new Error('coverage must be an object');
+    const coverage = body["coverage"];
+    if (!isRecord(coverage)) throw new Error("coverage must be an object");
     // TEST_COVERAGE = Coverage.faceValue(100_000) → 10_000_000 cents.
-    expect(coverage['face_amount_cents']).toBe(10_000_000);
-    expect(coverage['state']).toBe('NC');
+    expect(coverage["face_amount_cents"]).toBe(10_000_000);
+    expect(coverage["state"]).toBe("NC");
     // No applicant zip supplied → coverage.zip MUST be absent (not an
     // empty string; the server pattern ^\d{5}(-\d{4})?$ rejects "").
-    expect(coverage).not.toHaveProperty('zip');
+    expect(coverage).not.toHaveProperty("zip");
 
     // Products: flat slug list per the PrequalifyV3Request schema.
-    expect(Array.isArray(body['products'])).toBe(true);
-    expect((body['products'] as readonly unknown[]).length).toBeGreaterThan(0);
+    expect(Array.isArray(body["products"])).toBe(true);
+    expect((body["products"] as readonly unknown[]).length).toBeGreaterThan(0);
   });
 
-  it('threads applicant.zip into coverage.zip (medsup fix)', async () => {
+  it("threads applicant.zip into coverage.zip (medsup fix)", async () => {
     // Before the fix the serializer dropped applicant.zip on the v3
     // prequalify path, so the server zip-gated and silently filtered
     // medsup products. zip must ride the coverage envelope, mirroring the
@@ -133,23 +121,23 @@ describe('prequalifyV3 wire shape', () => {
     const { transport, captured } = captureTransport();
     const client = new ZyInsClient({
       auth: TEST_AUTH,
-      baseUrl: 'https://test.example',
+      baseUrl: "https://test.example",
       transport,
       clock: FIXED_CLOCK,
     });
     await client.prequalifyV3({
-      applicant: { ...TEST_APPLICANT, zip: '75001' },
+      applicant: { ...TEST_APPLICANT, zip: "75001" },
       coverage: TEST_COVERAGE,
       products: TEST_PRODUCTS,
     });
 
     const body = parseBody(captured.req?.body);
-    const coverage = body['coverage'];
-    if (!isRecord(coverage)) throw new Error('coverage must be an object');
-    expect(coverage['zip']).toBe('75001');
+    const coverage = body["coverage"];
+    if (!isRecord(coverage)) throw new Error("coverage must be an object");
+    expect(coverage["zip"]).toBe("75001");
   });
 
-  it('omits a whitespace-only zip from the wire (prod 400 regression)', async () => {
+  it("omits a whitespace-only zip from the wire (prod 400 regression)", async () => {
     // A consumer (bpp2.0) injected a placeholder zip of " " (a single space)
     // for an unentered ZIP. The space is not empty-string, so the old guard
     // let it ride → server rejected the request 400 ("unknown field zip" /
@@ -158,44 +146,44 @@ describe('prequalifyV3 wire shape', () => {
     const { transport, captured } = captureTransport();
     const client = new ZyInsClient({
       auth: TEST_AUTH,
-      baseUrl: 'https://test.example',
+      baseUrl: "https://test.example",
       transport,
       clock: FIXED_CLOCK,
     });
     await client.prequalifyV3({
-      applicant: { ...TEST_APPLICANT, zip: '   ' },
+      applicant: { ...TEST_APPLICANT, zip: "   " },
       coverage: TEST_COVERAGE,
       products: TEST_PRODUCTS,
     });
 
     const body = parseBody(captured.req?.body);
-    const coverage = body['coverage'];
-    if (!isRecord(coverage)) throw new Error('coverage must be an object');
-    expect(coverage).not.toHaveProperty('zip');
+    const coverage = body["coverage"];
+    if (!isRecord(coverage)) throw new Error("coverage must be an object");
+    expect(coverage).not.toHaveProperty("zip");
   });
 
-  it('serializes conditions, medications, and nicotine specificity per the v3 schemas', async () => {
+  it("serializes conditions, medications, and nicotine specificity per the v3 schemas", async () => {
     const { transport, captured } = captureTransport();
     const applicant: Applicant = {
-      dob: '1962-04-18',
+      dob: "1962-04-18",
       sex: Sex.Male,
       height: Height.fromFeetInches(5, 10),
       weight: Weight.fromPounds(195),
-      state: 'NC',
+      state: "NC",
       nicotineUse: {
         lastUsed: NicotineDuration.Within12Months,
-        productUsage: [{ type: 'CIGARETTE', frequency: 'DAILY' }],
+        productUsage: [{ type: "CIGARETTE", frequency: "DAILY" }],
       },
       conditions: [
-        { name: 'High Blood Pressure', wasDiagnosed: '5 YEARS AGO', lastTreatment: '2 MONTHS AGO' },
+        { name: "High Blood Pressure", wasDiagnosed: "5 YEARS AGO", lastTreatment: "2 MONTHS AGO" },
       ],
       medications: [
-        { name: 'Lisinopril', use: 'High Blood Pressure', firstFill: '5 YEARS AGO', lastFill: '1 MONTH AGO' },
+        { name: "Lisinopril", use: "High Blood Pressure", firstFill: "5 YEARS AGO", lastFill: "1 MONTH AGO" },
       ],
     };
     const client = new ZyInsClient({
       auth: TEST_AUTH,
-      baseUrl: 'https://test.example',
+      baseUrl: "https://test.example",
       transport,
       clock: FIXED_CLOCK,
     });
@@ -206,27 +194,27 @@ describe('prequalifyV3 wire shape', () => {
     });
 
     const body = parseBody(captured.req?.body);
-    const ap = body['applicant'];
-    if (!isRecord(ap)) throw new Error('applicant must be an object');
+    const ap = body["applicant"];
+    if (!isRecord(ap)) throw new Error("applicant must be an object");
 
-    expect(ap['conditions']).toEqual([
-      { text: 'High Blood Pressure', was_diagnosed: '5 YEARS AGO', last_treatment: '2 MONTHS AGO' },
+    expect(ap["conditions"]).toEqual([
+      { text: "High Blood Pressure", was_diagnosed: "5 YEARS AGO", last_treatment: "2 MONTHS AGO" },
     ]);
-    expect(ap['medications']).toEqual([
+    expect(ap["medications"]).toEqual([
       {
-        text: 'Lisinopril',
-        use: 'High Blood Pressure',
-        first_fill: '5 YEARS AGO',
-        last_fill: '1 MONTH AGO',
+        text: "Lisinopril",
+        use: "High Blood Pressure",
+        first_fill: "5 YEARS AGO",
+        last_fill: "1 MONTH AGO",
       },
     ]);
-    expect(ap['nicotine']).toEqual({
-      last_used: 'within_12_months',
-      specificity: [{ text: 'CIGARETTE', frequency: 'daily' }],
+    expect(ap["nicotine"]).toEqual({
+      last_used: "within_12_months",
+      specificity: [{ text: "CIGARETTE", frequency: "daily" }],
     });
   });
 
-  it('emits the four shared underwriting options on the prequalify envelope', async () => {
+  it("emits the four shared underwriting options on the prequalify envelope", async () => {
     // min_rank, only_product_class, show_unreleased, and
     // skip_health_based_underwriting ride the same wire keys /v3/quote uses;
     // the server (zyins #439) honors them on /v3/prequalify. This guards
@@ -236,7 +224,7 @@ describe('prequalifyV3 wire shape', () => {
     const { transport, captured } = captureTransport();
     const client = new ZyInsClient({
       auth: TEST_AUTH,
-      baseUrl: 'https://test.example',
+      baseUrl: "https://test.example",
       transport,
       clock: FIXED_CLOCK,
     });
@@ -253,18 +241,18 @@ describe('prequalifyV3 wire shape', () => {
     });
 
     const body = parseBody(captured.req?.body);
-    expect(body['min_rank']).toBe('graded');
-    expect(body['only_product_class']).toBe('fex');
-    expect(body['show_unreleased']).toBe(true);
-    expect(body['skip_health_based_underwriting']).toBe(true);
-    expect(body).not.toHaveProperty('include_product_class');
+    expect(body["min_rank"]).toBe("graded");
+    expect(body["only_product_class"]).toBe("fex");
+    expect(body["show_unreleased"]).toBe(true);
+    expect(body["skip_health_based_underwriting"]).toBe(true);
+    expect(body).not.toHaveProperty("include_product_class");
   });
 
-  it('omits empty string min_rank on the prequalify envelope', async () => {
+  it("omits empty string min_rank on the prequalify envelope", async () => {
     const { transport, captured } = captureTransport();
     const client = new ZyInsClient({
       auth: TEST_AUTH,
-      baseUrl: 'https://test.example',
+      baseUrl: "https://test.example",
       transport,
       clock: FIXED_CLOCK,
     });
@@ -272,17 +260,17 @@ describe('prequalifyV3 wire shape', () => {
       applicant: TEST_APPLICANT,
       coverage: TEST_COVERAGE,
       products: TEST_PRODUCTS,
-      options: { minRank: '' },
+      options: { minRank: "" },
     });
 
-    expect(parseBody(captured.req?.body)).not.toHaveProperty('min_rank');
+    expect(parseBody(captured.req?.body)).not.toHaveProperty("min_rank");
   });
 
-  it('omits empty product-class wire token on the prequalify envelope', async () => {
+  it("omits empty product-class wire token on the prequalify envelope", async () => {
     const { transport, captured } = captureTransport();
     const client = new ZyInsClient({
       auth: TEST_AUTH,
-      baseUrl: 'https://test.example',
+      baseUrl: "https://test.example",
       transport,
       clock: FIXED_CLOCK,
     });
@@ -292,14 +280,14 @@ describe('prequalifyV3 wire shape', () => {
       products: TEST_PRODUCTS,
       options: {
         onlyProductClass: {
-          wireToken: '',
-          displayName: 'Empty',
-          namespaceKey: 'Empty',
+          wireToken: "",
+          displayName: "Empty",
+          namespaceKey: "Empty",
         } as unknown as ProductClassValue,
       },
     });
 
-    expect(parseBody(captured.req?.body)).not.toHaveProperty('only_product_class');
+    expect(parseBody(captured.req?.body)).not.toHaveProperty("only_product_class");
   });
 
   // Each canonical MinRank member and synonym serializes to its lowercase
@@ -307,18 +295,18 @@ describe('prequalifyV3 wire shape', () => {
   // which carries min_rank). Mirrors the Go/Python/PHP/C# wire-shape suites
   // so a divergence fails TS CI.
   it.each([
-    [MinRank.Immediate, 'immediate'],
-    [MinRank.Graded, 'graded'],
-    [MinRank.Rop, 'rop'],
-    [MinRank.Guaranteed, 'guaranteed'],
-    [MinRank.ReturnOfPremium, 'rop'],
-    [MinRank.GuaranteedIssue, 'guaranteed'],
-    [MinRank.Gi, 'guaranteed'],
-  ])('serializes min_rank %s to wire token %s', async (option, wireToken) => {
+    [MinRank.Immediate, "immediate"],
+    [MinRank.Graded, "graded"],
+    [MinRank.Rop, "rop"],
+    [MinRank.Guaranteed, "guaranteed"],
+    [MinRank.ReturnOfPremium, "rop"],
+    [MinRank.GuaranteedIssue, "guaranteed"],
+    [MinRank.Gi, "guaranteed"],
+  ])("serializes min_rank %s to wire token %s", async (option, wireToken) => {
     const { transport, captured } = captureTransport();
     const client = new ZyInsClient({
       auth: TEST_AUTH,
-      baseUrl: 'https://test.example',
+      baseUrl: "https://test.example",
       transport,
       clock: FIXED_CLOCK,
     });
@@ -329,16 +317,16 @@ describe('prequalifyV3 wire shape', () => {
       options: { minRank: option },
     });
 
-    expect(parseBody(captured.req?.body)['min_rank']).toBe(wireToken);
+    expect(parseBody(captured.req?.body)["min_rank"]).toBe(wireToken);
   });
 });
 
-describe('prequalifyV2 wire shape (regression guard)', () => {
-  it('still emits the v2 flat shape against /v2/prequalify', async () => {
+describe("prequalifyV2 wire shape (regression guard)", () => {
+  it("still emits the v2 flat shape against /v2/prequalify", async () => {
     const { transport, captured } = captureTransport();
     const client = new ZyInsClient({
       auth: TEST_AUTH,
-      baseUrl: 'https://test.example',
+      baseUrl: "https://test.example",
       transport,
       clock: FIXED_CLOCK,
     });
@@ -348,20 +336,20 @@ describe('prequalifyV2 wire shape (regression guard)', () => {
       products: TEST_PRODUCTS,
     });
 
-    expect(captured.req?.url).toBe('https://test.example/v2/prequalify');
-    expect(captured.req?.method).toBe('POST');
+    expect(captured.req?.url).toBe("https://test.example/v2/prequalify");
+    expect(captured.req?.method).toBe("POST");
 
     const body = parseBody(captured.req?.body);
     // v2 flat fields MUST be present.
-    expect(body['date_of_birth']).toBe('1962-04-18');
-    expect(body['gender']).toBe('male');
-    expect(body['height']).toBe(70);
-    expect(body['weight']).toBe(195);
-    expect(body['state']).toBe('NC');
-    expect(body['nicotine_usage']).toEqual({ last_used: 'never' });
-    expect(body['quote_options']).toBeDefined();
+    expect(body["date_of_birth"]).toBe("1962-04-18");
+    expect(body["gender"]).toBe("male");
+    expect(body["height"]).toBe(70);
+    expect(body["weight"]).toBe(195);
+    expect(body["state"]).toBe("NC");
+    expect(body["nicotine_usage"]).toEqual({ last_used: "never" });
+    expect(body["quote_options"]).toBeDefined();
     // v3 envelope keys MUST NOT be present.
-    expect(body).not.toHaveProperty('applicant');
-    expect(body).not.toHaveProperty('coverage');
+    expect(body).not.toHaveProperty("applicant");
+    expect(body).not.toHaveProperty("coverage");
   });
 });

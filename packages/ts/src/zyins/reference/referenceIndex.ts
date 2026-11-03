@@ -11,20 +11,11 @@
  * `ReferenceFacade`.
  */
 
-import type {
-  ConditionEntity,
-  DatasetBundleV3,
-  MedicationEntity,
-} from '../datasets-v3.js';
-import { _makeKey } from './_makeKey.js';
-import { _checkKey } from './_checkKey.js';
-import { Sort } from './Sort.js';
-import {
-  type Concept,
-  type ConditionConcept,
-  type MedicationConcept,
-  type UnknownConcept,
-} from './Concept.js';
+import type { ConditionEntity, DatasetBundleV3, MedicationEntity } from "../datasets-v3.js";
+import { _checkKey } from "./_checkKey.js";
+import { _makeKey } from "./_makeKey.js";
+import { type Concept, type ConditionConcept, type MedicationConcept, type UnknownConcept } from "./Concept.js";
+import { Sort } from "./Sort.js";
 
 export class ReferenceIndex {
   private readonly conditionById: ReadonlyMap<string, ConditionEntity>;
@@ -71,15 +62,11 @@ export class ReferenceIndex {
   }
 
   listMedications(): MedicationConcept[] {
-    return this.bundle.medications.map((entity) =>
-      this.buildMedicationConcept(entity, entity.name),
-    );
+    return this.bundle.medications.map((entity) => this.buildMedicationConcept(entity, entity.name));
   }
 
   listConditions(): ConditionConcept[] {
-    return this.bundle.conditions.map((entity) =>
-      this.buildConditionConcept(entity, entity.name),
-    );
+    return this.bundle.conditions.map((entity) => this.buildConditionConcept(entity, entity.name));
   }
 
   lookupMedication(text: string): MedicationConcept | UnknownConcept {
@@ -105,13 +92,13 @@ export class ReferenceIndex {
   /** Rebuild the matched catalog concept while preserving caller input text. */
   lookupResolvedConcept(result: Concept, inputText: string): Concept {
     if (!result.isKnown || result.id === null) return buildUnknownConcept(inputText);
-    if (result.kind === 'condition') {
+    if (result.kind === "condition") {
       const entity = this.conditionById.get(result.id);
       return entity
         ? this.buildConditionConcept(entity, inputText)
         : buildUnknownConcept(inputText);
     }
-    if (result.kind === 'medication') {
+    if (result.kind === "medication") {
       const entity = this.medicationById.get(result.id);
       return entity
         ? this.buildMedicationConcept(entity, inputText)
@@ -144,15 +131,14 @@ export class ReferenceIndex {
   ): MedicationConcept {
     const conditions = (sort?: Sort): readonly ConditionConcept[] => {
       const used = entity.used_for;
-      const ordered =
-        (sort ?? Sort.MostCommonFirst) === Sort.Alphabetical
-          ? [...used].sort((a, b) => a.name.localeCompare(b.name))
-          : [...used].sort((a, b) => {
-              if (b.prescription_count !== a.prescription_count) {
-                return b.prescription_count - a.prescription_count;
-              }
-              return a.name.localeCompare(b.name);
-            });
+      const ordered = (sort ?? Sort.MostCommonFirst) === Sort.Alphabetical
+        ? [...used].sort((a, b) => a.name.localeCompare(b.name))
+        : [...used].sort((a, b) => {
+          if (b.prescription_count !== a.prescription_count) {
+            return b.prescription_count - a.prescription_count;
+          }
+          return a.name.localeCompare(b.name);
+        });
       return ordered.map((row) => {
         const target = this.conditionById.get(row.id);
         if (target) return this.buildConditionConcept(target, inputText);
@@ -166,13 +152,12 @@ export class ReferenceIndex {
     return {
       id: entity.id,
       name: entity.name,
-      kind: 'medication',
+      kind: "medication",
       isKnown: true,
       inputText,
       conditions,
       medications: () => [],
-      equals: (other: Concept) =>
-        other.kind === 'medication' && other.isKnown && other.id === entity.id,
+      equals: (other: Concept) => other.kind === "medication" && other.isKnown && other.id === entity.id,
     };
   }
 
@@ -182,15 +167,14 @@ export class ReferenceIndex {
   ): ConditionConcept {
     const medications = (sort?: Sort): readonly MedicationConcept[] => {
       const treated = entity.treated_with;
-      const ordered =
-        (sort ?? Sort.MostCommonFirst) === Sort.Alphabetical
-          ? [...treated].sort((a, b) => a.name.localeCompare(b.name))
-          : [...treated].sort((a, b) => {
-              if (b.prescription_count !== a.prescription_count) {
-                return b.prescription_count - a.prescription_count;
-              }
-              return a.name.localeCompare(b.name);
-            });
+      const ordered = (sort ?? Sort.MostCommonFirst) === Sort.Alphabetical
+        ? [...treated].sort((a, b) => a.name.localeCompare(b.name))
+        : [...treated].sort((a, b) => {
+          if (b.prescription_count !== a.prescription_count) {
+            return b.prescription_count - a.prescription_count;
+          }
+          return a.name.localeCompare(b.name);
+        });
       return ordered.map((row) => {
         const target = this.medicationById.get(row.id);
         if (target) return this.buildMedicationConcept(target, inputText);
@@ -203,13 +187,12 @@ export class ReferenceIndex {
     return {
       id: entity.id,
       name: entity.name,
-      kind: 'condition',
+      kind: "condition",
       isKnown: true,
       inputText,
       medications,
       conditions: () => [],
-      equals: (other: Concept) =>
-        other.kind === 'condition' && other.isKnown && other.id === entity.id,
+      equals: (other: Concept) => other.kind === "condition" && other.isKnown && other.id === entity.id,
     };
   }
 }
@@ -232,7 +215,7 @@ export function buildUnknownConcept(inputText: string): UnknownConcept {
   return {
     id: null,
     name: inputText,
-    kind: 'unknown',
+    kind: "unknown",
     isKnown: false,
     inputText,
     conditions: () => [],

@@ -13,25 +13,26 @@
  * directly and skip the umbrella entirely.
  */
 
-import { DocumentsService, type DocumentsContext } from './documents.js';
-import { RapidSignError } from './errors.js';
-import { WebhooksService } from './webhooks.js';
-import { defaultTransport, type Transport } from './internal/transport.js';
-import { defaultDecompressor, type Decompressor } from './internal/decompress.js';
+import { type DocumentsContext, DocumentsService } from "./documents.js";
+import { RapidSignError } from "./errors.js";
+import { type Decompressor, defaultDecompressor } from "./internal/decompress.js";
 import {
+  type Clock,
   defaultSleeper,
   defaultUUIDGenerator,
-  systemClock,
-  type Clock,
   type Sleeper,
+  systemClock,
   type UUIDGenerator,
-} from './internal/random.js';
+} from "./internal/random.js";
+import { defaultTransport, type Transport } from "./internal/transport.js";
+import { VoiceService } from "./voice.js";
+import { WebhooksService } from "./webhooks.js";
 
 /** Production RapidSign endpoint. Override only for staging / local. */
-export const DEFAULT_RAPIDSIGN_BASE_URL = 'https://rapidsign.isaapi.com';
+export const DEFAULT_RAPIDSIGN_BASE_URL = "https://rapidsign.isaapi.com";
 
 /** Default User-Agent string. The version is updated on each release. */
-export const DEFAULT_USER_AGENT = '@isa-sdk/rapidsign-js/0.0.0';
+export const DEFAULT_USER_AGENT = "@isa-sdk/rapidsign-js/0.0.0";
 
 /** Default retry budget for transient 5xx / 429 errors. */
 export const DEFAULT_MAX_RETRIES = 2;
@@ -60,19 +61,20 @@ export interface RapidSignClientOptions {
 
 /**
  * The RapidSign client. Construct once per bearer token; methods are
- * grouped under typed sub-clients (`documents`, `webhooks`).
+ * grouped under typed sub-clients (`documents`, `voice`, `webhooks`).
  */
 export class RapidSignClient {
   public readonly documents: DocumentsService;
+  public readonly voice: VoiceService;
   public readonly webhooks: WebhooksService;
 
   constructor(token: string, options: RapidSignClientOptions = {}) {
-    const trimmedToken = typeof token === 'string' ? token.trim() : '';
+    const trimmedToken = typeof token === "string" ? token.trim() : "";
     if (trimmedToken.length === 0) {
-      throw new RapidSignError.ValidationError('RapidSignClient: bearer token is required', {
+      throw new RapidSignError.ValidationError("RapidSignClient: bearer token is required", {
         httpStatus: 400,
-        requestId: '',
-        param: 'token',
+        requestId: "",
+        param: "token",
       });
     }
     const ctx: DocumentsContext = {
@@ -87,6 +89,7 @@ export class RapidSignClient {
       maxRetries: options.maxRetries ?? DEFAULT_MAX_RETRIES,
     };
     this.documents = new DocumentsService(ctx);
+    this.voice = new VoiceService(ctx);
     this.webhooks = new WebhooksService();
   }
 }

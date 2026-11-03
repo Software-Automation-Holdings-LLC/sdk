@@ -7,20 +7,20 @@
  *
  * Header assembly is the caller's responsibility; this facade moves bytes.
  */
-import { resolveFetch } from '../../core/index.js';
+import { resolveFetch } from "../../core/index.js";
 /**
  * Build the default transport. Tests pass `fetchImpl` to avoid the global.
  * The returned function always lowercases response header keys so the
  * client's lookups (`headers['x-request-id']`) are case-insensitive.
  */
 export function defaultTransport(fetchImpl) {
-    const f = resolveFetch(fetchImpl, 'RapidSignTransport');
+    const f = resolveFetch(fetchImpl, "RapidSignTransport");
     return async (request) => {
         const init = {
             method: request.method,
             headers: request.headers,
         };
-        if (request.method !== 'GET' && request.method !== 'DELETE') {
+        if (request.method !== "GET" && request.method !== "DELETE") {
             init.body = request.body;
         }
         if (request.signal) {

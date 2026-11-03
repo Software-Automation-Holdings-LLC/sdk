@@ -26,16 +26,16 @@
  * the first signed request with an unhelpful protocol error.
  */
 export function isAuthContext(value) {
-    if (value === null || typeof value !== 'object')
+    if (value === null || typeof value !== "object")
         return false;
     const v = value;
-    return (typeof v.licenseKey === 'string' &&
-        v.licenseKey.length > 0 &&
-        typeof v.orderId === 'string' &&
-        v.orderId.length > 0 &&
-        typeof v.email === 'string' &&
-        v.email.length > 0 &&
-        typeof v.deviceId === 'string' &&
-        v.deviceId.length > 0);
+    return (typeof v.licenseKey === "string"
+        && v.licenseKey.length > 0
+        && typeof v.orderId === "string"
+        && v.orderId.length > 0
+        && typeof v.email === "string"
+        && v.email.length > 0
+        && typeof v.deviceId === "string"
+        && v.deviceId.length > 0);
 }
 //# sourceMappingURL=auth.js.map

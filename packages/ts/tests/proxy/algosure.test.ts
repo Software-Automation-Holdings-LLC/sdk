@@ -1,13 +1,13 @@
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, vi } from "vitest";
 import {
   ALGOSURE_TIME_BUCKET_MS,
   buildAlgosureHeaders,
   computeAlgosureHMAC,
   deriveSimpleKey,
-} from '../../src/proxy/algosure/hmac';
+} from "../../src/proxy/algosure/hmac";
 
 const FIXED_TIME = 1_700_000_000_000;
-const SALT = 'abcdefghijklmnopqrstuvwxyz0123456789';
+const SALT = "abcdefghijklmnopqrstuvwxyz0123456789";
 
 function mockFetchSalt(salt: string): typeof fetch {
   return vi.fn().mockResolvedValue({
@@ -16,33 +16,33 @@ function mockFetchSalt(salt: string): typeof fetch {
   }) as unknown as typeof fetch;
 }
 
-describe('deriveSimpleKey', () => {
-  it('produces a stable key for the same bucket', () => {
+describe("deriveSimpleKey", () => {
+  it("produces a stable key for the same bucket", () => {
     const k1 = deriveSimpleKey(SALT, FIXED_TIME);
     const k2 = deriveSimpleKey(SALT, FIXED_TIME + 1_000);
     expect(k1).toBe(k2);
   });
 
-  it('rotates the key at the next time bucket', () => {
+  it("rotates the key at the next time bucket", () => {
     const k1 = deriveSimpleKey(SALT, FIXED_TIME);
     const k2 = deriveSimpleKey(SALT, FIXED_TIME + ALGOSURE_TIME_BUCKET_MS);
     expect(k1).not.toBe(k2);
   });
 
-  it('returns at least 8 characters', () => {
+  it("returns at least 8 characters", () => {
     const k = deriveSimpleKey(SALT, FIXED_TIME);
     expect(k.length).toBeGreaterThanOrEqual(8);
   });
 });
 
-describe('computeAlgosureHMAC', () => {
-  it('returns a 64-char hex tag and the supplied timestamp', async () => {
+describe("computeAlgosureHMAC", () => {
+  it("returns a 64-char hex tag and the supplied timestamp", async () => {
     const [tag, ts] = await computeAlgosureHMAC({
-      host: 'example.com',
-      method: 'POST',
-      path: '/v1/call',
+      host: "example.com",
+      method: "POST",
+      path: "/v1/call",
       body: { x: 1 },
-      sessionId: 'sess-123',
+      sessionId: "sess-123",
       time: FIXED_TIME,
       fetchImpl: mockFetchSalt(SALT),
     });
@@ -50,13 +50,13 @@ describe('computeAlgosureHMAC', () => {
     expect(ts).toBe(FIXED_TIME);
   });
 
-  it('produces the same tag for identical inputs (round-trip)', async () => {
+  it("produces the same tag for identical inputs (round-trip)", async () => {
     const args = {
-      host: 'example.com',
-      method: 'POST',
-      path: '/v1/call',
-      body: 'hello',
-      sessionId: 'sess-123',
+      host: "example.com",
+      method: "POST",
+      path: "/v1/call",
+      body: "hello",
+      sessionId: "sess-123",
       time: FIXED_TIME,
       fetchImpl: mockFetchSalt(SALT),
     };
@@ -65,28 +65,28 @@ describe('computeAlgosureHMAC', () => {
     expect(tag1).toBe(tag2);
   });
 
-  it('produces different tags for different bodies', async () => {
+  it("produces different tags for different bodies", async () => {
     const base = {
-      host: 'example.com',
-      method: 'POST',
-      path: '/v1/call',
-      sessionId: 'sess-123',
+      host: "example.com",
+      method: "POST",
+      path: "/v1/call",
+      sessionId: "sess-123",
       time: FIXED_TIME,
       fetchImpl: mockFetchSalt(SALT),
     };
-    const [a] = await computeAlgosureHMAC({ ...base, body: 'a' });
-    const [b] = await computeAlgosureHMAC({ ...base, body: 'b' });
+    const [a] = await computeAlgosureHMAC({ ...base, body: "a" });
+    const [b] = await computeAlgosureHMAC({ ...base, body: "b" });
     expect(a).not.toBe(b);
   });
 
-  it('uses the injected clock when time is omitted', async () => {
+  it("uses the injected clock when time is omitted", async () => {
     const clock = vi.fn(() => FIXED_TIME);
     const [, ts] = await computeAlgosureHMAC({
-      host: 'example.com',
-      method: 'POST',
-      path: '/v1/call',
-      body: '',
-      sessionId: 'sess-123',
+      host: "example.com",
+      method: "POST",
+      path: "/v1/call",
+      body: "",
+      sessionId: "sess-123",
       clock,
       fetchImpl: mockFetchSalt(SALT),
     });
@@ -94,29 +94,29 @@ describe('computeAlgosureHMAC', () => {
     expect(clock).toHaveBeenCalledOnce();
   });
 
-  it('throws when the salt is empty', async () => {
+  it("throws when the salt is empty", async () => {
     await expect(
       computeAlgosureHMAC({
-        host: 'example.com',
-        method: 'POST',
-        path: '/v1/call',
-        body: '',
-        sessionId: 's',
+        host: "example.com",
+        method: "POST",
+        path: "/v1/call",
+        body: "",
+        sessionId: "s",
         time: FIXED_TIME,
-        fetchImpl: mockFetchSalt(''),
+        fetchImpl: mockFetchSalt(""),
       }),
     ).rejects.toThrow(/empty salt/);
   });
 
-  it('throws when the salt fetch fails', async () => {
-    const f = vi.fn().mockResolvedValue({ ok: false, status: 502, text: async () => '' }) as unknown as typeof fetch;
+  it("throws when the salt fetch fails", async () => {
+    const f = vi.fn().mockResolvedValue({ ok: false, status: 502, text: async () => "" }) as unknown as typeof fetch;
     await expect(
       computeAlgosureHMAC({
-        host: 'example.com',
-        method: 'POST',
-        path: '/v1/call',
-        body: '',
-        sessionId: 's',
+        host: "example.com",
+        method: "POST",
+        path: "/v1/call",
+        body: "",
+        sessionId: "s",
         time: FIXED_TIME,
         fetchImpl: f,
       }),
@@ -124,52 +124,52 @@ describe('computeAlgosureHMAC', () => {
   });
 });
 
-describe('computeAlgosureHMAC tamper detection', () => {
+describe("computeAlgosureHMAC tamper detection", () => {
   const base = {
-    host: 'example.com',
-    method: 'POST',
-    path: '/v1/call',
-    sessionId: 'sess-123',
+    host: "example.com",
+    method: "POST",
+    path: "/v1/call",
+    sessionId: "sess-123",
     time: FIXED_TIME,
-    body: 'payload',
+    body: "payload",
     fetchImpl: mockFetchSalt(SALT),
   };
 
-  it('rejects tampered session id (signature changes)', async () => {
+  it("rejects tampered session id (signature changes)", async () => {
     const [a] = await computeAlgosureHMAC({ ...base });
-    const [b] = await computeAlgosureHMAC({ ...base, sessionId: 'other' });
+    const [b] = await computeAlgosureHMAC({ ...base, sessionId: "other" });
     expect(a).not.toBe(b);
   });
 
-  it('rejects tampered method (signature changes)', async () => {
+  it("rejects tampered method (signature changes)", async () => {
     const [a] = await computeAlgosureHMAC({ ...base });
-    const [b] = await computeAlgosureHMAC({ ...base, method: 'GET' });
+    const [b] = await computeAlgosureHMAC({ ...base, method: "GET" });
     expect(a).not.toBe(b);
   });
 
-  it('rejects tampered salt (signature changes)', async () => {
+  it("rejects tampered salt (signature changes)", async () => {
     const [a] = await computeAlgosureHMAC({ ...base, fetchImpl: mockFetchSalt(SALT) });
     const [b] = await computeAlgosureHMAC({
       ...base,
-      fetchImpl: mockFetchSalt('zyxwvutsrqponmlkjihgfedcba9876543210'),
+      fetchImpl: mockFetchSalt("zyxwvutsrqponmlkjihgfedcba9876543210"),
     });
     expect(a).not.toBe(b);
   });
 });
 
-describe('computeAlgosureHMAC salt-proxy timeout', () => {
+describe("computeAlgosureHMAC salt-proxy timeout", () => {
   const SALT_TIMEOUT_MS = 20;
   const HANG_DELAY_MS = 200;
 
-  it('aborts the salt fetch when saltTimeout elapses', async () => {
+  it("aborts the salt fetch when saltTimeout elapses", async () => {
     const hangingFetch = vi.fn((_url: RequestInfo | URL, init: RequestInit = {}) => {
       return new Promise<Response>((_resolve, reject) => {
         const signal = init.signal as AbortSignal | undefined;
-        const handle = setTimeout(() => reject(new Error('fetch did not abort')), HANG_DELAY_MS);
+        const handle = setTimeout(() => reject(new Error("fetch did not abort")), HANG_DELAY_MS);
         if (signal) {
-          signal.addEventListener('abort', () => {
+          signal.addEventListener("abort", () => {
             clearTimeout(handle);
-            reject(new DOMException('aborted', 'AbortError'));
+            reject(new DOMException("aborted", "AbortError"));
           });
         }
       });
@@ -177,12 +177,12 @@ describe('computeAlgosureHMAC salt-proxy timeout', () => {
 
     await expect(
       computeAlgosureHMAC({
-        host: 'example.com',
-        method: 'POST',
-        path: '/v1/call',
-        sessionId: 'sess-123',
+        host: "example.com",
+        method: "POST",
+        path: "/v1/call",
+        sessionId: "sess-123",
         time: FIXED_TIME,
-        body: '',
+        body: "",
         fetchImpl: hangingFetch,
         saltTimeout: SALT_TIMEOUT_MS,
       }),
@@ -190,20 +190,20 @@ describe('computeAlgosureHMAC salt-proxy timeout', () => {
   });
 });
 
-describe('buildAlgosureHeaders', () => {
-  it('emits all four required headers', async () => {
+describe("buildAlgosureHeaders", () => {
+  it("emits all four required headers", async () => {
     const headers = await buildAlgosureHeaders({
-      host: 'example.com',
-      method: 'POST',
-      path: '/v1/call',
-      body: '',
-      sessionId: 'sess-123',
+      host: "example.com",
+      method: "POST",
+      path: "/v1/call",
+      body: "",
+      sessionId: "sess-123",
       time: FIXED_TIME,
       fetchImpl: mockFetchSalt(SALT),
     });
     expect(headers.Authorization).toMatch(/^[0-9a-f]{64}$/);
-    expect(headers['*Host']).toBe('example.com');
-    expect(headers['*Timestamp']).toBe(String(FIXED_TIME));
-    expect(headers['*sessionId']).toBe('sess-123');
+    expect(headers["*Host"]).toBe("example.com");
+    expect(headers["*Timestamp"]).toBe(String(FIXED_TIME));
+    expect(headers["*sessionId"]).toBe("sess-123");
   });
 });

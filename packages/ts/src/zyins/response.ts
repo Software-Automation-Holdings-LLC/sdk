@@ -11,10 +11,10 @@ export function parseJsonResponse(body: string, operation: string): unknown {
 /** Tolerate both bare response bodies and the ADR-012 `{ data: ... }` wrap. */
 export function unwrapEnvelope(parsed: unknown): unknown {
   if (
-    isRecord(parsed) &&
-    'data' in parsed &&
-    parsed.data !== null &&
-    parsed.data !== undefined
+    isRecord(parsed)
+    && "data" in parsed
+    && parsed.data !== null
+    && parsed.data !== undefined
   ) {
     return parsed.data;
   }
@@ -22,25 +22,25 @@ export function unwrapEnvelope(parsed: unknown): unknown {
 }
 
 export function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
+  return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
 export function stringField(r: Record<string, unknown>, key: string): string {
   const v = r[key];
-  return typeof v === 'string' ? v : '';
+  return typeof v === "string" ? v : "";
 }
 
 export function firstStringField(r: Record<string, unknown>, keys: string[]): string {
   for (const k of keys) {
     const v = r[k];
-    if (typeof v === 'string' && v.length > 0) return v;
+    if (typeof v === "string" && v.length > 0) return v;
   }
-  return '';
+  return "";
 }
 
 export function boolField(r: Record<string, unknown>, key: string): boolean {
   const v = r[key];
-  if (typeof v === 'boolean') return v;
-  if (typeof v === 'string') return v === 'true' || v === '1';
+  if (typeof v === "boolean") return v;
+  if (typeof v === "string") return v === "true" || v === "1";
   return false;
 }

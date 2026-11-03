@@ -11,16 +11,16 @@
  * headers — body carries no credentials.
  */
 
-import { type AuthContext } from './auth.js';
-import { type Transport } from '../zyins/transport.js';
-import { fromHttpResponse } from '../zyins/errors.js';
-import { deriveIdempotencyKey } from '../zyins/idempotency.js';
-import { unwrapEnvelope } from '../zyins/response.js';
-import { buildLicenseHMACHeaders } from '../core/index.js';
-import { type Clock, systemClock } from '../core/index.js';
+import { buildLicenseHMACHeaders } from "../core/index.js";
+import { type Clock, systemClock } from "../core/index.js";
+import { fromHttpResponse } from "../zyins/errors.js";
+import { deriveIdempotencyKey } from "../zyins/idempotency.js";
+import { unwrapEnvelope } from "../zyins/response.js";
+import { type Transport } from "../zyins/transport.js";
+import { type AuthContext } from "./auth.js";
 
-const PREFERENCES_RESTORE_PATH = '/v2/preferences/restore';
-const PREFERENCES_BACKUP_PATH = '/v2/preferences/backup';
+const PREFERENCES_RESTORE_PATH = "/v2/preferences/restore";
+const PREFERENCES_BACKUP_PATH = "/v2/preferences/backup";
 
 /** Opaque preferences document — keys and values are caller-defined. */
 export type PreferencesDocument = Record<string, unknown>;
@@ -61,25 +61,25 @@ export async function lookup(
   request: PreferencesLookupRequest,
   ctx: PreferencesContext,
 ): Promise<PreferencesLookupResult> {
-  if (!request || typeof request.scope !== 'string' || request.scope.length === 0) {
-    throw new Error('account: preferences.lookup requires a non-empty scope');
+  if (!request || typeof request.scope !== "string" || request.scope.length === 0) {
+    throw new Error("account: preferences.lookup requires a non-empty scope");
   }
   const path = `${PREFERENCES_RESTORE_PATH}?scope=${encodeURIComponent(request.scope)}`;
   const headers = await buildLicenseHMACHeaders(
     ctx.auth.licenseKey,
     ctx.auth.orderId,
     ctx.auth.email,
-    'GET',
+    "GET",
     path,
-    '',
+    "",
     ctx.auth.deviceId,
     ctx.clock ?? systemClock,
   );
   const response = await ctx.transport({
     url: `${ctx.baseUrl}${path}`,
-    method: 'GET',
-    headers: { ...headers, Accept: 'application/json' },
-    body: '',
+    method: "GET",
+    headers: { ...headers, Accept: "application/json" },
+    body: "",
   });
   if (response.status >= 200 && response.status < 300) {
     return { prefs: parsePrefsBody(response.body) };
@@ -92,16 +92,15 @@ export async function set(
   request: PreferencesSetRequest,
   ctx: PreferencesContext,
 ): Promise<PreferencesSetResult> {
-  if (!request || typeof request.scope !== 'string' || request.scope.length === 0) {
-    throw new Error('account: preferences.set requires a non-empty scope');
+  if (!request || typeof request.scope !== "string" || request.scope.length === 0) {
+    throw new Error("account: preferences.set requires a non-empty scope");
   }
-  if (!request.prefs || typeof request.prefs !== 'object') {
-    throw new Error('account: preferences.set requires a prefs object');
+  if (!request.prefs || typeof request.prefs !== "object") {
+    throw new Error("account: preferences.set requires a prefs object");
   }
   const body = JSON.stringify({ scope: request.scope, prefs: request.prefs });
-  const idempotencyKey =
-    ctx.idempotencyKey ??
-    (await deriveIdempotencyKey({
+  const idempotencyKey = ctx.idempotencyKey
+    ?? (await deriveIdempotencyKey({
       deviceId: ctx.auth.deviceId,
       op: `preferences_set:${request.scope}`,
       body,
@@ -110,7 +109,7 @@ export async function set(
     ctx.auth.licenseKey,
     ctx.auth.orderId,
     ctx.auth.email,
-    'POST',
+    "POST",
     PREFERENCES_BACKUP_PATH,
     body,
     ctx.auth.deviceId,
@@ -118,12 +117,12 @@ export async function set(
   );
   const response = await ctx.transport({
     url: `${ctx.baseUrl}${PREFERENCES_BACKUP_PATH}`,
-    method: 'POST',
+    method: "POST",
     headers: {
       ...headers,
-      'Content-Type': 'application/json',
-      Accept: 'application/json',
-      'Idempotency-Key': idempotencyKey,
+      "Content-Type": "application/json",
+      Accept: "application/json",
+      "Idempotency-Key": idempotencyKey,
     },
     body,
   });
@@ -143,15 +142,14 @@ function parsePrefsBody(body: string): PreferencesDocument {
     throw new Error(`account: preferences response was not valid JSON: ${(err as Error).message}`);
   }
   const root = unwrapEnvelope(parsed);
-  if (root && typeof root === 'object' && 'prefs' in (root as Record<string, unknown>)) {
+  if (root && typeof root === "object" && "prefs" in (root as Record<string, unknown>)) {
     const prefs = (root as { prefs: unknown }).prefs;
-    if (prefs && typeof prefs === 'object') {
+    if (prefs && typeof prefs === "object") {
       return prefs as PreferencesDocument;
     }
   }
-  if (root && typeof root === 'object') {
+  if (root && typeof root === "object") {
     return root as PreferencesDocument;
   }
   return {};
 }
-

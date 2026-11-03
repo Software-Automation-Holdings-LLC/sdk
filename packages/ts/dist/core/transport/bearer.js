@@ -16,8 +16,8 @@ export class StaticToken {
     value;
     constructor(value) {
         this.value = value;
-        if (value === '') {
-            throw new Error('transport: StaticToken refuses an empty value');
+        if (value === "") {
+            throw new Error("transport: StaticToken refuses an empty value");
         }
     }
     token() {
@@ -34,10 +34,10 @@ export class BearerTransport {
     inner;
     constructor(opts) {
         if (!opts.source) {
-            throw new Error('transport: BearerTransport requires a TokenSource');
+            throw new Error("transport: BearerTransport requires a TokenSource");
         }
         if (!opts.fetch) {
-            throw new Error('transport: BearerTransport requires a fetch implementation');
+            throw new Error("transport: BearerTransport requires a fetch implementation");
         }
         this.source = opts.source;
         this.inner = opts.fetch;
@@ -47,7 +47,7 @@ export class BearerTransport {
         return async (input, init) => {
             const token = await this.source.token();
             const headers = new Headers(init?.headers);
-            headers.set('Authorization', `Bearer ${token}`);
+            headers.set("Authorization", `Bearer ${token}`);
             return this.inner(input, { ...init, headers });
         };
     }

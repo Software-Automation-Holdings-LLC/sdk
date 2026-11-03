@@ -13,20 +13,20 @@
  * (timeout handling, transient tagging) into Tier 3 — that is Tier 2's job,
  * and Tier 3 is allowed to assume the protocol layer above it is reliable.
  */
-import { resolveFetch } from '../core/index.js';
+import { resolveFetch } from "../core/index.js";
 /**
  * Construct the default transport. Accepts an optional `fetchImpl` override
  * so tests inject a stub without touching globals.
  */
 export function defaultTransport(fetchImpl) {
-    const f = resolveFetch(fetchImpl, 'ZyInsTransport');
+    const f = resolveFetch(fetchImpl, "ZyInsTransport");
     return async (request) => {
         const init = {
             method: request.method,
             headers: request.headers,
             signal: request.signal,
         };
-        if (request.method !== 'GET' && request.method !== 'DELETE') {
+        if (request.method !== "GET" && request.method !== "DELETE") {
             init.body = request.body;
         }
         const response = await f(request.url, init);

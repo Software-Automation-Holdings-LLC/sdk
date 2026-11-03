@@ -20,7 +20,7 @@
  * and returns the typed offer envelope. `'v1'` preserves the legacy
  * contract for callers still wired against the old envelope.
  */
-import { BundledApiVersions, resolveApiVersions, } from './bundledApiVersions.js';
+import { BundledApiVersions, resolveApiVersions, } from "./bundledApiVersions.js";
 export { BundledApiVersions, resolveApiVersions };
 /**
  * Bearer-auth supplier factory. Resolves a server-to-server `isa_live_…`
@@ -29,11 +29,11 @@ export { BundledApiVersions, resolveApiVersions };
 export const BearerAuth = {
     /** Construct from an explicit token. */
     fromToken(token) {
-        return { kind: 'bearer', token };
+        return { kind: "bearer", token };
     },
     /** Construct from `ISA_TOKEN` at factory time. */
     fromEnv() {
-        return { kind: 'bearer' };
+        return { kind: "bearer" };
     },
 };
 /**
@@ -44,42 +44,42 @@ export const BearerAuth = {
 export const LicenseAuth = {
     /** Construct from explicit keycode + email. */
     fromKeycode(keycode, email, extras) {
-        return { kind: 'license', keycode, email, ...(extras ?? {}) };
+        return { kind: "license", keycode, email, ...extras };
     },
     /** Construct from environment variables at factory time. */
     fromEnv() {
-        return { kind: 'license' };
+        return { kind: "license" };
     },
 };
 /** Form-token auth supplier factory (embedded eApp). */
 export const FormAuth = {
     fromToken(formToken) {
-        return { kind: 'form', formToken };
+        return { kind: "form", formToken };
     },
 };
-const PRODUCTION_REMOTE_ORIGIN = 'https://zyins.isaapi.com';
-const PRODUCTION_PROXY_ORIGIN = 'https://proxy.isaapi.com';
-const IN_MEMORY_TRANSPORT_ERROR = 'InMemoryEngine requires inMemoryEngineWith(transport) before product calls';
+const PRODUCTION_REMOTE_ORIGIN = "https://zyins.isaapi.com";
+const PRODUCTION_PROXY_ORIGIN = "https://proxy.isaapi.com";
+const IN_MEMORY_TRANSPORT_ERROR = "InMemoryEngine requires inMemoryEngineWith(transport) before product calls";
 /** Production ZyINS endpoint (`https://zyins.isaapi.com`). */
 export const RemoteEngine = {
     /** Default — production endpoint. */
-    default: { kind: 'remote', baseUrl: PRODUCTION_REMOTE_ORIGIN },
+    default: { kind: "remote", baseUrl: PRODUCTION_REMOTE_ORIGIN },
     /** Construct from an explicit base URL (staging, region-specific). */
     at(baseUrl) {
-        return { kind: 'remote', baseUrl };
+        return { kind: "remote", baseUrl };
     },
 };
 /** Local engine binary — points at a developer or test endpoint. */
 export const LocalEngine = {
     at(baseUrl) {
-        return { kind: 'local', baseUrl };
+        return { kind: "local", baseUrl };
     },
 };
 /** Routes through the platform proxy (`/v1/call`). */
 export const ProxyEngine = {
-    default: { kind: 'proxy', proxyOrigin: PRODUCTION_PROXY_ORIGIN },
+    default: { kind: "proxy", proxyOrigin: PRODUCTION_PROXY_ORIGIN },
     at(proxyOrigin) {
-        return { kind: 'proxy', proxyOrigin };
+        return { kind: "proxy", proxyOrigin };
     },
 };
 /**
@@ -87,7 +87,7 @@ export const ProxyEngine = {
  * transport to satisfy the same surface used by real engines.
  */
 export const InMemoryEngine = {
-    kind: 'in_memory',
+    kind: "in_memory",
     transport: async () => {
         throw new Error(IN_MEMORY_TRANSPORT_ERROR);
     },
@@ -98,7 +98,7 @@ export const InMemoryEngine = {
  * transport's network hop.
  */
 export function inMemoryEngineWith(transport) {
-    return { kind: 'in_memory', transport };
+    return { kind: "in_memory", transport };
 }
 /** Default per-call timeout in milliseconds. */
 export const DEFAULT_TIMEOUT_MS = 30_000;
@@ -109,8 +109,8 @@ export const DEFAULT_TIMEOUT_MS = 30_000;
 export function resolveIsaOptions(opts) {
     const engine = opts.engine ?? RemoteEngine.default;
     const baseUrl = engineBaseUrl(engine);
-    const proxyOrigin = engine.kind === 'proxy' ? engine.proxyOrigin : undefined;
-    const engineTransport = engine.kind === 'in_memory' ? engine.transport : undefined;
+    const proxyOrigin = engine.kind === "proxy" ? engine.proxyOrigin : undefined;
+    const engineTransport = engine.kind === "in_memory" ? engine.transport : undefined;
     const transport = opts.transport ?? engineTransport;
     return {
         auth: opts.auth,
@@ -127,12 +127,12 @@ export function resolveIsaOptions(opts) {
 }
 function engineBaseUrl(engine) {
     switch (engine.kind) {
-        case 'remote':
-        case 'local':
+        case "remote":
+        case "local":
             return engine.baseUrl;
-        case 'proxy':
+        case "proxy":
             return PRODUCTION_REMOTE_ORIGIN;
-        case 'in_memory':
+        case "in_memory":
             return PRODUCTION_REMOTE_ORIGIN;
     }
 }

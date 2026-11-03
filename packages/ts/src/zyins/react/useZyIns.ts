@@ -11,12 +11,12 @@
  * pulling React into their bundle — they simply do not import this file.
  */
 
-import { createContext, createElement, useContext, useMemo, type ReactNode } from 'react';
-import { type AuthContext } from '../auth.js';
-import { ZyInsClient, type ZyInsClientOptions } from '../client.js';
+import { createContext, createElement, type ReactNode, useContext, useMemo } from "react";
+import { type AuthContext } from "../auth.js";
+import { ZyInsClient, type ZyInsClientOptions } from "../client.js";
 
 /** Shape carried by the provider. Extends auth with optional client overrides. */
-export interface ZyInsProviderConfig extends Omit<ZyInsClientOptions, 'auth'> {
+export interface ZyInsProviderConfig extends Omit<ZyInsClientOptions, "auth"> {
   auth: AuthContext;
 }
 
@@ -45,7 +45,9 @@ export function ZyInsProvider(props: { config: ZyInsProviderConfig; children: Re
 export function useZyIns(): ZyInsClient {
   const client = useContext(ZyInsContext);
   if (!client) {
-    throw new Error('useZyIns: called outside <ZyInsProvider>. Wrap your app root with <ZyInsProvider config={{ auth }} />.');
+    throw new Error(
+      "useZyIns: called outside <ZyInsProvider>. Wrap your app root with <ZyInsProvider config={{ auth }} />.",
+    );
   }
   return client;
 }

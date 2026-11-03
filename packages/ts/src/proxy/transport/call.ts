@@ -3,12 +3,12 @@
  * shape and the Algosure HMAC headers required by the platform proxy.
  */
 
-import { buildAlgosureHeaders } from '../algosure/hmac.js';
-import { type Clock } from '../../core/index.js';
-import { HttpRequestError, httpRequest } from '../../core/index.js';
-import { REQUEST, RETURN_TYPE } from '../../core/index.js';
+import { type Clock } from "../../core/index.js";
+import { httpRequest, HttpRequestError } from "../../core/index.js";
+import { REQUEST, RETURN_TYPE } from "../../core/index.js";
+import { buildAlgosureHeaders } from "../algosure/hmac.js";
 
-const PROXY_CALL_PATH = '/v1/call';
+const PROXY_CALL_PATH = "/v1/call";
 
 export interface ProxyCallParams {
   /** e.g., "https://proxy.isaapi.com" */
@@ -57,7 +57,7 @@ export interface ProxyCallResponse {
  * `{integration_id, params}` envelope, signed with Algosure HMAC headers.
  */
 export async function proxyCall(params: ProxyCallParams): Promise<ProxyCallResponse> {
-  const url = `${params.proxyOrigin.replace(/\/$/, '')}${PROXY_CALL_PATH}`;
+  const url = `${params.proxyOrigin.replace(/\/$/, "")}${PROXY_CALL_PATH}`;
   const envelope = {
     integration_id: params.integrationId,
     params: params.params,
@@ -82,7 +82,7 @@ export async function proxyCall(params: ProxyCallParams): Promise<ProxyCallRespo
   // to the salt fetch — otherwise cancelling the operation only interrupts
   // header generation and the /v1/call request continues in the background.
   const otherArgs: RequestInit = {
-    headers: { 'Content-Type': 'application/json', ...headers },
+    headers: { "Content-Type": "application/json", ...headers },
     ...(params.signal !== undefined ? { signal: params.signal } : {}),
   };
 
@@ -101,21 +101,21 @@ export async function proxyCall(params: ProxyCallParams): Promise<ProxyCallRespo
   });
 
   if (!isProxyCallResponse(response)) {
-    throw new HttpRequestError('proxyCall: malformed response from proxy');
+    throw new HttpRequestError("proxyCall: malformed response from proxy");
   }
   return response;
 }
 
 function isProxyCallResponse(value: unknown): value is ProxyCallResponse {
   if (!isPlainObject(value)) return false;
-  if (typeof value.status !== 'number') return false;
+  if (typeof value.status !== "number") return false;
   if (!isStringRecord(value.headers)) return false;
-  return Object.prototype.hasOwnProperty.call(value, 'body');
+  return Object.prototype.hasOwnProperty.call(value, "body");
 }
 
 function isStringRecord(value: unknown): value is Record<string, string> {
   if (!isPlainObject(value)) return false;
-  return Object.values(value).every((v) => typeof v === 'string');
+  return Object.values(value).every((v) => typeof v === "string");
 }
 
 // JavaScript's `typeof [] === 'object'` returns true, and `Object.values(array)`
@@ -124,5 +124,5 @@ function isStringRecord(value: unknown): value is Record<string, string> {
 // returns `undefined`, silently breaking downstream lookups. Reject arrays (and
 // null) explicitly so callers always see real Record<string, string> shape.
 function isPlainObject(value: unknown): value is Record<string, unknown> {
-  return value !== null && typeof value === 'object' && !Array.isArray(value);
+  return value !== null && typeof value === "object" && !Array.isArray(value);
 }

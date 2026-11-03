@@ -1,20 +1,21 @@
-import { describe, expect, it } from 'vitest';
-import { RapidSignClient } from '../../src/rapidsign/client';
-import { RapidSignError } from '../../src/rapidsign/errors';
+import { describe, expect, it } from "vitest";
+import { RapidSignClient } from "../../src/rapidsign/client";
+import { RapidSignError } from "../../src/rapidsign/errors";
+import type { Sleeper } from "../../src/rapidsign/internal/random";
 import {
+  counterUUID,
   CREATE_OK_BODY,
   FIXED_CLOCK,
+  gzipBase64,
+  instantSleeper,
   NOTIFY_OK_BODY,
+  queueTransport,
   SEND_REQUEST,
   TEST_BASE,
   TEST_TOKEN,
-  counterUUID,
-  gzipBase64,
-  instantSleeper,
-  queueTransport,
-} from './fixtures';
+} from "./fixtures";
 
-function newClient(transport: ReturnType<typeof queueTransport>['transport']): RapidSignClient {
+function newClient(transport: ReturnType<typeof queueTransport>["transport"]): RapidSignClient {
   const { sleeper } = instantSleeper();
   return new RapidSignClient(TEST_TOKEN, {
     baseUrl: TEST_BASE,
@@ -26,56 +27,56 @@ function newClient(transport: ReturnType<typeof queueTransport>['transport']): R
   });
 }
 
-describe('documents.send', () => {
-  it('issues a CreateDocument + NotifyDocument pair and returns a typed Envelope', async () => {
+describe("documents.send", () => {
+  it("issues a CreateDocument + NotifyDocument pair and returns a typed Envelope", async () => {
     const { transport, calls } = queueTransport([
-      { status: 200, body: CREATE_OK_BODY, headers: { 'x-request-id': 'req_create' } },
-      { status: 202, body: NOTIFY_OK_BODY, headers: { 'x-request-id': 'req_notify' } },
+      { status: 200, body: CREATE_OK_BODY, headers: { "x-request-id": "req_create" } },
+      { status: 202, body: NOTIFY_OK_BODY, headers: { "x-request-id": "req_notify" } },
     ]);
     const client = newClient(transport);
     const env = await client.documents.send(SEND_REQUEST);
     expect(calls).toHaveLength(2);
     expect(calls[0]!.request.url).toBe(`${TEST_BASE}/v1/documents`);
-    expect(calls[0]!.request.method).toBe('POST');
+    expect(calls[0]!.request.method).toBe("POST");
     expect(calls[1]!.request.url).toBe(`${TEST_BASE}/v1/documents/sig_test_1/notify`);
-    expect(env.id).toBe('doc_test_1');
-    expect(env.signId).toBe('sig_test_1');
-    expect(env.signUrl).toBe('https://sign.example/sig_test_1');
-    expect(env.viewUrl).toBe('https://view.example/view_test_1');
-    expect(env.status).toBe('notified');
-    expect(env.recipient.email).toBe('john.doe@acme-agency.com');
-    expect(env.metadata.applicationId).toBe('app_1234');
+    expect(env.id).toBe("doc_test_1");
+    expect(env.signId).toBe("sig_test_1");
+    expect(env.signUrl).toBe("https://sign.example/sig_test_1");
+    expect(env.viewUrl).toBe("https://view.example/view_test_1");
+    expect(env.status).toBe("notified");
+    expect(env.recipient.email).toBe("john.doe@acme-agency.com");
+    expect(env.metadata.applicationId).toBe("app_1234");
     expect(env.createdAt).toBeInstanceOf(Date);
     expect(env.expiresAt).toBeInstanceOf(Date);
-    expect(env.hashes['https://example.com/a.pdf']).toBe('abc123');
+    expect(env.hashes["https://example.com/a.pdf"]).toBe("abc123");
   });
 
-  it('sends an auto-generated Idempotency-Key on the Create call', async () => {
+  it("sends an auto-generated Idempotency-Key on the Create call", async () => {
     const { transport, calls } = queueTransport([
       { status: 200, body: CREATE_OK_BODY },
       { status: 202, body: NOTIFY_OK_BODY },
     ]);
     const client = newClient(transport);
     await client.documents.send(SEND_REQUEST);
-    const createKey = calls[0]!.request.headers['Idempotency-Key'];
-    const notifyKey = calls[1]!.request.headers['Idempotency-Key'];
+    const createKey = calls[0]!.request.headers["Idempotency-Key"];
+    const notifyKey = calls[1]!.request.headers["Idempotency-Key"];
     expect(createKey).toMatch(/^[0-9a-f-]{36}$/);
     expect(notifyKey).toMatch(/^[0-9a-f-]{36}$/);
     expect(createKey).not.toBe(notifyKey);
   });
 
-  it('honours a caller-supplied idempotencyKey on the Create call', async () => {
+  it("honours a caller-supplied idempotencyKey on the Create call", async () => {
     const { transport, calls } = queueTransport([
       { status: 200, body: CREATE_OK_BODY },
       { status: 202, body: NOTIFY_OK_BODY },
     ]);
     const client = newClient(transport);
-    const myKey = 'my-explicit-key-aaaaaaaaaaaa';
+    const myKey = "my-explicit-key-aaaaaaaaaaaa";
     await client.documents.send({ ...SEND_REQUEST, idempotencyKey: myKey });
-    expect(calls[0]!.request.headers['Idempotency-Key']).toBe(myKey);
+    expect(calls[0]!.request.headers["Idempotency-Key"]).toBe(myKey);
   });
 
-  it('rejects an empty packet', async () => {
+  it("rejects an empty packet", async () => {
     const { transport } = queueTransport([]);
     const client = newClient(transport);
     await expect(
@@ -83,7 +84,7 @@ describe('documents.send', () => {
     ).rejects.toBeInstanceOf(RapidSignError.ValidationError);
   });
 
-  it('rejects a missing recipient email', async () => {
+  it("rejects a missing recipient email", async () => {
     const { transport } = queueTransport([]);
     const client = newClient(transport);
     await expect(
@@ -92,15 +93,15 @@ describe('documents.send', () => {
     ).rejects.toBeInstanceOf(RapidSignError.ValidationError);
   });
 
-  it('rejects an empty recipient email', async () => {
+  it("rejects an empty recipient email", async () => {
     const { transport } = queueTransport([]);
     const client = newClient(transport);
     await expect(
-      client.documents.send({ ...SEND_REQUEST, recipient: { email: '' } }),
+      client.documents.send({ ...SEND_REQUEST, recipient: { email: "" } }),
     ).rejects.toBeInstanceOf(RapidSignError.ValidationError);
   });
 
-  it('includes client-minted sign_ids on the CreateDocument body', async () => {
+  it("includes client-minted sign_ids on the CreateDocument body", async () => {
     const { transport, calls } = queueTransport([
       { status: 200, body: CREATE_OK_BODY },
       { status: 202, body: NOTIFY_OK_BODY },
@@ -115,28 +116,67 @@ describe('documents.send', () => {
     expect(calls[1]!.request.url).toBe(`${TEST_BASE}/v1/documents/sig_test_1/notify`);
   });
 
-  it('translates a 400 ProblemDetails on Create into a typed ValidationError', async () => {
+  it("sends formId/includeCodeInLink as snake_case form_id/include_code_in_link on the NotifyDocument body", async () => {
+    const { transport, calls } = queueTransport([
+      { status: 200, body: CREATE_OK_BODY },
+      { status: 202, body: NOTIFY_OK_BODY },
+    ]);
+    const client = newClient(transport);
+    await client.documents.send({
+      ...SEND_REQUEST,
+      formId: "form_abc123",
+      includeCodeInLink: true,
+    });
+    const notifyBody = JSON.parse(calls[1]!.request.body);
+    expect(notifyBody.form_id).toBe("form_abc123");
+    expect(notifyBody.include_code_in_link).toBe(true);
+  });
+
+  it("omits form_id/include_code_in_link on the NotifyDocument body when not supplied", async () => {
+    const { transport, calls } = queueTransport([
+      { status: 200, body: CREATE_OK_BODY },
+      { status: 202, body: NOTIFY_OK_BODY },
+    ]);
+    const client = newClient(transport);
+    await client.documents.send(SEND_REQUEST);
+    const notifyBody = JSON.parse(calls[1]!.request.body);
+    expect(notifyBody).not.toHaveProperty("form_id");
+    expect(notifyBody).not.toHaveProperty("include_code_in_link");
+  });
+
+  it("omits include_code_in_link on the NotifyDocument body when explicitly false, matching Go/PHP omitempty parity", async () => {
+    const { transport, calls } = queueTransport([
+      { status: 200, body: CREATE_OK_BODY },
+      { status: 202, body: NOTIFY_OK_BODY },
+    ]);
+    const client = newClient(transport);
+    await client.documents.send({ ...SEND_REQUEST, includeCodeInLink: false });
+    const notifyBody = JSON.parse(calls[1]!.request.body);
+    expect(notifyBody).not.toHaveProperty("include_code_in_link");
+  });
+
+  it("translates a 400 ProblemDetails on Create into a typed ValidationError", async () => {
     const { transport } = queueTransport([
       {
         status: 400,
         body: JSON.stringify({
-          type: 't',
-          title: 'Validation failed',
+          type: "t",
+          title: "Validation failed",
           status: 400,
-          code: 'validation_error',
-          detail: 'packet[0].url must be https',
-          param: 'packet[0].url',
+          code: "validation_error",
+          detail: "packet[0].url must be https",
+          param: "packet[0].url",
         }),
       },
     ]);
     const client = newClient(transport);
     await expect(client.documents.send(SEND_REQUEST)).rejects.toMatchObject({
-      code: 'validation_error',
-      field: 'packet[0].url',
+      code: "validation_error",
+      field: "packet[0].url",
     });
   });
 
-  it('passes the binding legal text and metadata into the Create body', async () => {
+  it("passes the binding legal text and metadata into the Create body", async () => {
     const { transport, calls } = queueTransport([
       { status: 200, body: CREATE_OK_BODY },
       { status: 202, body: NOTIFY_OK_BODY },
@@ -144,15 +184,15 @@ describe('documents.send', () => {
     const client = newClient(transport);
     await client.documents.send(SEND_REQUEST);
     const body = JSON.parse(calls[0]!.request.body);
-    expect(body.binding_legal_text).toBe('I agree to the terms above.');
-    expect(body.metadata.applicationId).toBe('app_1234');
-    expect(body.packet[0].url).toBe('https://example.com/a.pdf');
+    expect(body.binding_legal_text).toBe("I agree to the terms above.");
+    expect(body.metadata.applicationId).toBe("app_1234");
+    expect(body.packet[0].url).toBe("https://example.com/a.pdf");
     expect(body.is_production).toBe(true);
     expect(body.remote_allowed).toBe(true);
-    expect(typeof body.session_id).toBe('string');
+    expect(typeof body.session_id).toBe("string");
   });
 
-  it('encodes a numeric expiresIn (ms) as ISO-8601 seconds', async () => {
+  it("encodes a numeric expiresIn (ms) as ISO-8601 seconds", async () => {
     const { transport, calls } = queueTransport([
       { status: 200, body: CREATE_OK_BODY },
       { status: 202, body: NOTIFY_OK_BODY },
@@ -160,107 +200,196 @@ describe('documents.send', () => {
     const client = newClient(transport);
     await client.documents.send({ ...SEND_REQUEST, expiresIn: 86_400_000 });
     const body = JSON.parse(calls[0]!.request.body);
-    expect(body.ttl).toBe('PT86400S');
+    expect(body.ttl).toBe("PT86400S");
   });
 
-  it('uppercases lowercase ISO-8601 expiresIn on the wire', async () => {
+  it("uppercases lowercase ISO-8601 expiresIn on the wire", async () => {
     const { transport, calls } = queueTransport([
       { status: 200, body: CREATE_OK_BODY },
       { status: 202, body: NOTIFY_OK_BODY },
     ]);
     const client = newClient(transport);
-    await client.documents.send({ ...SEND_REQUEST, expiresIn: 'p14d' });
+    await client.documents.send({ ...SEND_REQUEST, expiresIn: "p14d" });
     const body = JSON.parse(calls[0]!.request.body);
-    expect(body.ttl).toBe('P14D');
+    expect(body.ttl).toBe("P14D");
   });
 
-  it('passes through an ISO-8601 expiresIn unchanged', async () => {
+  it("passes through an ISO-8601 expiresIn unchanged", async () => {
     const { transport, calls } = queueTransport([
       { status: 200, body: CREATE_OK_BODY },
       { status: 202, body: NOTIFY_OK_BODY },
     ]);
     const client = newClient(transport);
-    await client.documents.send({ ...SEND_REQUEST, expiresIn: 'P14D' });
+    await client.documents.send({ ...SEND_REQUEST, expiresIn: "P14D" });
     const body = JSON.parse(calls[0]!.request.body);
-    expect(body.ttl).toBe('P14D');
+    expect(body.ttl).toBe("P14D");
   });
 
-  it('rejects degenerate ISO-8601 expiresIn at the SDK boundary', async () => {
+  it("rejects degenerate ISO-8601 expiresIn at the SDK boundary", async () => {
     const { transport } = queueTransport([]);
     const client = newClient(transport);
     await expect(
-      client.documents.send({ ...SEND_REQUEST, expiresIn: 'P' }),
+      client.documents.send({ ...SEND_REQUEST, expiresIn: "P" }),
     ).rejects.toBeInstanceOf(RapidSignError.ValidationError);
   });
 
-  it('encodes shorthand expiresIn strings as ISO-8601 seconds', async () => {
+  it("encodes shorthand expiresIn strings as ISO-8601 seconds", async () => {
     const { transport, calls } = queueTransport([
       { status: 200, body: CREATE_OK_BODY },
       { status: 202, body: NOTIFY_OK_BODY },
     ]);
     const client = newClient(transport);
-    await client.documents.send({ ...SEND_REQUEST, expiresIn: '7d' });
+    await client.documents.send({ ...SEND_REQUEST, expiresIn: "7d" });
     const body = JSON.parse(calls[0]!.request.body);
-    expect(body.ttl).toBe('PT604800S');
+    expect(body.ttl).toBe("PT604800S");
   });
 });
 
-describe('documents.get', () => {
-  it('parses a signed-document response into a typed Signature', async () => {
+describe("documents.get", () => {
+  it("parses a signed-document response into a typed Signature", async () => {
     const { transport, calls } = queueTransport([
       {
         status: 200,
         body: JSON.stringify({
-          sign_id: 'sig_test_1',
-          signature: Buffer.from('PNG-BYTES').toString('base64'),
-          user_metadata: JSON.stringify({ ip: '198.51.100.42', user_agent: 'Mozilla/5.0' }),
+          sign_id: "sig_test_1",
+          signature: Buffer.from("PNG-BYTES").toString("base64"),
+          user_metadata: JSON.stringify({ ip: "198.51.100.42", user_agent: "Mozilla/5.0" }),
           timestamp: 1_700_000_500,
         }),
       },
     ]);
     const client = newClient(transport);
-    const sig = await client.documents.get('sig_test_1');
+    const sig = await client.documents.get("sig_test_1");
     expect(calls[0]!.request.url).toBe(`${TEST_BASE}/v1/documents/sig_test_1`);
-    expect(calls[0]!.request.method).toBe('GET');
-    expect(sig.signId).toBe('sig_test_1');
-    expect(sig.signature.toString('utf8')).toBe('PNG-BYTES');
-    expect(sig.signerIp).toBe('198.51.100.42');
-    expect(sig.userAgent).toBe('Mozilla/5.0');
+    expect(calls[0]!.request.method).toBe("GET");
+    expect(sig.signId).toBe("sig_test_1");
+    expect(sig.signature.toString("utf8")).toBe("PNG-BYTES");
+    expect(sig.signerIp).toBe("198.51.100.42");
+    expect(sig.userAgent).toBe("Mozilla/5.0");
     expect(sig.signedAt.getTime()).toBe(1_700_000_500_000);
   });
 
-  it('throws NotFound for an unknown sign id', async () => {
-    const { transport } = queueTransport([{ status: 404, body: 'not found' }]);
+  it("throws NotFound for an unknown sign id", async () => {
+    const { transport } = queueTransport([{ status: 404, body: "not found" }]);
     const client = newClient(transport);
-    await expect(client.documents.get('sig_missing')).rejects.toBeInstanceOf(RapidSignError.NotFound);
+    await expect(client.documents.get("sig_missing")).rejects.toBeInstanceOf(RapidSignError.NotFound);
   });
 
-  it('rejects an empty signId at the SDK boundary', async () => {
+  it("rejects an empty signId at the SDK boundary", async () => {
     const { transport } = queueTransport([]);
     const client = newClient(transport);
-    await expect(client.documents.get('')).rejects.toBeInstanceOf(RapidSignError.ValidationError);
+    await expect(client.documents.get("")).rejects.toBeInstanceOf(RapidSignError.ValidationError);
   });
 
-  it('forwards an optional session_id as a query parameter', async () => {
+  it("forwards an optional session_id as a query parameter", async () => {
     const { transport, calls } = queueTransport([
       {
         status: 200,
         body: JSON.stringify({
-          sign_id: 'sig_test_1',
-          signature: 'AAAA',
+          sign_id: "sig_test_1",
+          signature: "AAAA",
           timestamp: 1,
         }),
       },
     ]);
     const client = newClient(transport);
-    await client.documents.get('sig_test_1', 'sess_abc');
+    await client.documents.get("sig_test_1", { sessionId: "sess_abc" });
     expect(calls[0]!.request.url).toBe(`${TEST_BASE}/v1/documents/sig_test_1?session_id=sess_abc`);
+  });
+
+  it("forwards an AbortSignal through the options object", async () => {
+    const { transport, calls } = queueTransport([
+      {
+        status: 200,
+        body: JSON.stringify({
+          sign_id: "sig_test_1",
+          signature: "AAAA",
+          timestamp: 1,
+        }),
+      },
+    ]);
+    const client = newClient(transport);
+    const ac = new AbortController();
+    await client.documents.get("sig_test_1", { signal: ac.signal });
+    expect(calls[0]!.request.signal).toBe(ac.signal);
+  });
+
+  it("forwards both sessionId and signal together", async () => {
+    const { transport, calls } = queueTransport([
+      {
+        status: 200,
+        body: JSON.stringify({
+          sign_id: "sig_test_1",
+          signature: "AAAA",
+          timestamp: 1,
+        }),
+      },
+    ]);
+    const client = newClient(transport);
+    const ac = new AbortController();
+    await client.documents.get("sig_test_1", { sessionId: "sess_xyz", signal: ac.signal });
+    expect(calls[0]!.request.url).toBe(`${TEST_BASE}/v1/documents/sig_test_1?session_id=sess_xyz`);
+    expect(calls[0]!.request.signal).toBe(ac.signal);
+  });
+
+  it("stops retrying immediately when the signal aborts during backoff", async () => {
+    const { transport, calls } = queueTransport([
+      { status: 503, body: "try again" },
+      {
+        status: 200,
+        body: JSON.stringify({ sign_id: "sig_test_1", signature: "AAAA", timestamp: 1 }),
+      },
+    ]);
+    const ac = new AbortController();
+    const sleeps: number[] = [];
+    const sleeper: Sleeper = async (ms, signal) => {
+      sleeps.push(ms);
+      // Simulate the caller aborting while the retry backoff is in flight.
+      ac.abort();
+      if (signal?.aborted) {
+        const err = new Error("aborted");
+        err.name = "AbortError";
+        throw err;
+      }
+    };
+    const client = new RapidSignClient(TEST_TOKEN, {
+      baseUrl: TEST_BASE,
+      transport,
+      clock: FIXED_CLOCK,
+      sleeper,
+      uuid: counterUUID(),
+      maxRetries: 3,
+    });
+    await expect(client.documents.get("sig_test_1", { signal: ac.signal })).rejects.toMatchObject({
+      name: "AbortError",
+    });
+    // The first (retryable) request went out, backoff aborted, and no second
+    // request was ever issued — retries stopped immediately.
+    expect(calls).toHaveLength(1);
+    expect(sleeps).toHaveLength(1);
+  });
+
+  it("forwards an already-aborted signal on the very first request", async () => {
+    const { transport, calls } = queueTransport([
+      {
+        status: 200,
+        body: JSON.stringify({ sign_id: "sig_test_1", signature: "AAAA", timestamp: 1 }),
+      },
+    ]);
+    const client = newClient(transport);
+    const ac = new AbortController();
+    ac.abort();
+    await client.documents.get("sig_test_1", { signal: ac.signal });
+    // The signal is handed to the transport on the first dispatch, so a
+    // caller who aborts before the call can observe cancellation.
+    expect(calls[0]!.request.signal).toBe(ac.signal);
+    expect(calls[0]!.request.signal?.aborted).toBe(true);
   });
 });
 
-describe('documents.download', () => {
-  it('decompresses a gzip+base64 PDF body transparently', async () => {
-    const pdfBytes = 'fake-pdf-content';
+describe("documents.download", () => {
+  it("decompresses a gzip+base64 PDF body transparently", async () => {
+    const pdfBytes = "fake-pdf-content";
     const { transport } = queueTransport([
       {
         status: 200,
@@ -272,32 +401,79 @@ describe('documents.download', () => {
       },
     ]);
     const client = newClient(transport);
-    const buf = await client.documents.download('sig_test_1');
+    const buf = await client.documents.download("sig_test_1");
     expect(Buffer.isBuffer(buf)).toBe(true);
-    expect(buf.toString('utf8')).toBe(pdfBytes);
+    expect(buf.toString("utf8")).toBe(pdfBytes);
   });
 
-  it('returns raw bytes when the server says compressed=false', async () => {
-    const pdfBytes = 'raw-pdf';
+  it("returns raw bytes when the server says compressed=false", async () => {
+    const pdfBytes = "raw-pdf";
     const { transport } = queueTransport([
       {
         status: 200,
         body: JSON.stringify({
-          pdf_gzip_base64: Buffer.from(pdfBytes, 'utf8').toString('base64'),
+          pdf_gzip_base64: Buffer.from(pdfBytes, "utf8").toString("base64"),
           compressed: false,
         }),
       },
     ]);
     const client = newClient(transport);
-    const buf = await client.documents.download('sig_test_1');
-    expect(buf.toString('utf8')).toBe(pdfBytes);
+    const buf = await client.documents.download("sig_test_1");
+    expect(buf.toString("utf8")).toBe(pdfBytes);
   });
 
-
-  it('retries transient 5xx errors on download', async () => {
-    const pdfBytes = 'fake-pdf-content';
+  it("forwards an optional session_id as a query parameter", async () => {
     const { transport, calls } = queueTransport([
-      { status: 500, body: 'temporary fault' },
+      {
+        status: 200,
+        body: JSON.stringify({
+          pdf_gzip_base64: Buffer.from("raw-pdf", "utf8").toString("base64"),
+          compressed: false,
+        }),
+      },
+    ]);
+    const client = newClient(transport);
+    await client.documents.download("sig_test_1", { sessionId: "sess_abc" });
+    expect(calls[0]!.request.url).toBe(`${TEST_BASE}/v1/documents/sig_test_1/download?session_id=sess_abc`);
+  });
+
+  it("forwards an AbortSignal through the options object", async () => {
+    const { transport, calls } = queueTransport([
+      {
+        status: 200,
+        body: JSON.stringify({
+          pdf_gzip_base64: Buffer.from("raw-pdf", "utf8").toString("base64"),
+          compressed: false,
+        }),
+      },
+    ]);
+    const client = newClient(transport);
+    const ac = new AbortController();
+    await client.documents.download("sig_test_1", { signal: ac.signal });
+    expect(calls[0]!.request.signal).toBe(ac.signal);
+  });
+
+  it("forwards both sessionId and signal together", async () => {
+    const { transport, calls } = queueTransport([
+      {
+        status: 200,
+        body: JSON.stringify({
+          pdf_gzip_base64: Buffer.from("raw-pdf", "utf8").toString("base64"),
+          compressed: false,
+        }),
+      },
+    ]);
+    const client = newClient(transport);
+    const ac = new AbortController();
+    await client.documents.download("sig_test_1", { sessionId: "sess_xyz", signal: ac.signal });
+    expect(calls[0]!.request.url).toBe(`${TEST_BASE}/v1/documents/sig_test_1/download?session_id=sess_xyz`);
+    expect(calls[0]!.request.signal).toBe(ac.signal);
+  });
+
+  it("retries transient 5xx errors on download", async () => {
+    const pdfBytes = "fake-pdf-content";
+    const { transport, calls } = queueTransport([
+      { status: 500, body: "temporary fault" },
       {
         status: 200,
         body: JSON.stringify({
@@ -315,42 +491,100 @@ describe('documents.download', () => {
       uuid: counterUUID(),
       maxRetries: 1,
     });
-    const buf = await client.documents.download('sig_test_1');
-    expect(buf.toString('utf8')).toBe(pdfBytes);
+    const buf = await client.documents.download("sig_test_1");
+    expect(buf.toString("utf8")).toBe(pdfBytes);
     expect(calls).toHaveLength(2);
     expect(sleeps.length).toBeGreaterThanOrEqual(1);
   });
 
-  it('throws NotFound when the document is not stored', async () => {
-    const { transport } = queueTransport([{ status: 404, body: '' }]);
-    const client = newClient(transport);
-    await expect(client.documents.download('sig_missing')).rejects.toBeInstanceOf(RapidSignError.NotFound);
+  it("stops retrying immediately when the signal aborts during backoff", async () => {
+    const { transport, calls } = queueTransport([
+      { status: 503, body: "try again" },
+      {
+        status: 200,
+        body: JSON.stringify({
+          pdf_gzip_base64: Buffer.from("raw-pdf", "utf8").toString("base64"),
+          compressed: false,
+        }),
+      },
+    ]);
+    const ac = new AbortController();
+    const sleeps: number[] = [];
+    const sleeper: Sleeper = async (ms, signal) => {
+      sleeps.push(ms);
+      // Simulate the caller aborting while the retry backoff is in flight.
+      ac.abort();
+      if (signal?.aborted) {
+        const err = new Error("aborted");
+        err.name = "AbortError";
+        throw err;
+      }
+    };
+    const client = new RapidSignClient(TEST_TOKEN, {
+      baseUrl: TEST_BASE,
+      transport,
+      clock: FIXED_CLOCK,
+      sleeper,
+      uuid: counterUUID(),
+      maxRetries: 3,
+    });
+    await expect(
+      client.documents.download("sig_test_1", { signal: ac.signal }),
+    ).rejects.toMatchObject({ name: "AbortError" });
+    expect(calls).toHaveLength(1);
+    expect(sleeps).toHaveLength(1);
   });
 
-  it('throws Unknown on a 200 with an unparseable body', async () => {
-    const { transport } = queueTransport([{ status: 200, body: 'not-json' }]);
+  it("forwards an already-aborted signal on the very first request", async () => {
+    const { transport, calls } = queueTransport([
+      {
+        status: 200,
+        body: JSON.stringify({
+          pdf_gzip_base64: Buffer.from("raw-pdf", "utf8").toString("base64"),
+          compressed: false,
+        }),
+      },
+    ]);
     const client = newClient(transport);
-    await expect(client.documents.download('sig_test_1')).rejects.toBeInstanceOf(RapidSignError.Unknown);
+    const ac = new AbortController();
+    ac.abort();
+    await client.documents.download("sig_test_1", { signal: ac.signal });
+    // The signal reaches the transport on the first dispatch, so a caller
+    // who aborts before the call can observe cancellation — parity with get.
+    expect(calls[0]!.request.signal).toBe(ac.signal);
+    expect(calls[0]!.request.signal?.aborted).toBe(true);
+  });
+
+  it("throws NotFound when the document is not stored", async () => {
+    const { transport } = queueTransport([{ status: 404, body: "" }]);
+    const client = newClient(transport);
+    await expect(client.documents.download("sig_missing")).rejects.toBeInstanceOf(RapidSignError.NotFound);
+  });
+
+  it("throws Unknown on a 200 with an unparseable body", async () => {
+    const { transport } = queueTransport([{ status: 200, body: "not-json" }]);
+    const client = newClient(transport);
+    await expect(client.documents.download("sig_test_1")).rejects.toBeInstanceOf(RapidSignError.Unknown);
   });
 });
 
-describe('documents.cancel', () => {
-  it('throws NotImplemented with the tracking issue URL', async () => {
+describe("documents.cancel", () => {
+  it("throws NotImplemented with the tracking issue URL", async () => {
     const { transport } = queueTransport([]);
     const client = newClient(transport);
     await expect(
-      client.documents.cancel('sig_test_1', { reason: 'applicant withdrew' }),
+      client.documents.cancel("sig_test_1", { reason: "applicant withdrew" }),
     ).rejects.toMatchObject({
-      code: 'not_implemented',
-      message: expect.stringContaining('issues/38'),
+      code: "not_implemented",
+      message: expect.stringContaining("issues/38"),
     });
   });
 
-  it('still validates inputs even though the call is stubbed', async () => {
+  it("still validates inputs even though the call is stubbed", async () => {
     const { transport } = queueTransport([]);
     const client = newClient(transport);
     await expect(
-      client.documents.cancel('sig_test_1', { reason: '' }),
+      client.documents.cancel("sig_test_1", { reason: "" }),
     ).rejects.toBeInstanceOf(RapidSignError.ValidationError);
   });
 });

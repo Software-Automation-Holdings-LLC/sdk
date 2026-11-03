@@ -13,7 +13,7 @@
  * @returns        The resolved SubtleCrypto instance.
  * @throws         Error if SubtleCrypto is not available.
  */
-export function resolveSubtle(injected, context = 'Crypto') {
+export function resolveSubtle(injected, context = "Crypto") {
     if (injected)
         return injected;
     const g = globalThis;
@@ -30,8 +30,8 @@ export function resolveSubtle(injected, context = 'Crypto') {
  */
 export function arrayBufferToHex(buffer) {
     return Array.from(new Uint8Array(buffer))
-        .map((b) => b.toString(16).padStart(2, '0'))
-        .join('');
+        .map((b) => b.toString(16).padStart(2, "0"))
+        .join("");
 }
 /**
  * Resolves the fetch implementation from the optional injection or the global.
@@ -42,7 +42,7 @@ export function arrayBufferToHex(buffer) {
  * @returns        The resolved fetch implementation.
  * @throws         Error if fetch is not available.
  */
-export function resolveFetch(injected, context = 'Crypto') {
+export function resolveFetch(injected, context = "Crypto") {
     if (injected)
         return injected;
     const g = globalThis;
@@ -62,15 +62,15 @@ export function resolveFetch(injected, context = 'Crypto') {
 export function base64EncodeUtf8(input) {
     const g = globalThis;
     if (g.Buffer)
-        return g.Buffer.from(input, 'utf8').toString('base64');
-    if (typeof g.btoa === 'function') {
+        return g.Buffer.from(input, "utf8").toString("base64");
+    if (typeof g.btoa === "function") {
         const bytes = new TextEncoder().encode(input);
-        let binary = '';
+        let binary = "";
         for (const byte of bytes)
             binary += String.fromCharCode(byte);
         return g.btoa(binary);
     }
-    throw new Error('Crypto: no base64 encoder available (btoa or Buffer)');
+    throw new Error("Crypto: no base64 encoder available (btoa or Buffer)");
 }
 /**
  * Decodes a standard or URL-safe base64 string to raw bytes in any JS
@@ -78,18 +78,18 @@ export function base64EncodeUtf8(input) {
  * fragment-borne base64url key decodes without a separate code path.
  */
 export function base64ToBytes(input) {
-    const normalized = input.replace(/-/g, '+').replace(/_/g, '/');
+    const normalized = input.replace(/-/g, "+").replace(/_/g, "/");
     const g = globalThis;
     if (g.Buffer)
-        return Uint8Array.from(g.Buffer.from(normalized, 'base64'));
-    if (typeof g.atob === 'function') {
+        return Uint8Array.from(g.Buffer.from(normalized, "base64"));
+    if (typeof g.atob === "function") {
         const binary = g.atob(padBase64(normalized));
         const bytes = new Uint8Array(binary.length);
         for (let i = 0; i < binary.length; i += 1)
             bytes[i] = binary.charCodeAt(i);
         return bytes;
     }
-    throw new Error('Crypto: no base64 decoder available (atob or Buffer)');
+    throw new Error("Crypto: no base64 decoder available (atob or Buffer)");
 }
 /**
  * Standard-base64-encodes raw bytes in any JS runtime. Emits the padded std
@@ -99,14 +99,14 @@ export function base64ToBytes(input) {
 export function bytesToBase64(bytes) {
     const g = globalThis;
     if (g.Buffer)
-        return g.Buffer.from(bytes).toString('base64');
-    if (typeof g.btoa === 'function') {
-        let binary = '';
+        return g.Buffer.from(bytes).toString("base64");
+    if (typeof g.btoa === "function") {
+        let binary = "";
         for (const byte of bytes)
             binary += String.fromCharCode(byte);
         return g.btoa(binary);
     }
-    throw new Error('Crypto: no base64 encoder available (btoa or Buffer)');
+    throw new Error("Crypto: no base64 encoder available (btoa or Buffer)");
 }
 /**
  * URL-safe-base64-encodes raw bytes (RFC 4648 §5, padding stripped). Used for
@@ -114,12 +114,12 @@ export function bytesToBase64(bytes) {
  * percent-encoding. The companion {@link base64ToBytes} accepts this form.
  */
 export function bytesToBase64Url(bytes) {
-    return bytesToBase64(bytes).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+    return bytesToBase64(bytes).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
 }
 /** Re-pads a normalized (std-alphabet) base64 string to a length multiple of 4. */
 function padBase64(input) {
     const remainder = input.length % 4;
-    return remainder === 0 ? input : input + '='.repeat(4 - remainder);
+    return remainder === 0 ? input : input + "=".repeat(4 - remainder);
 }
 /**
  * Default random source backed by `crypto.getRandomValues`. Override in tests
@@ -130,7 +130,7 @@ function padBase64(input) {
 export const systemRandomBytes = (length) => {
     const g = globalThis;
     if (!g.crypto?.getRandomValues) {
-        throw new Error('Crypto: crypto.getRandomValues is not available in this environment');
+        throw new Error("Crypto: crypto.getRandomValues is not available in this environment");
     }
     const bytes = new Uint8Array(length);
     g.crypto.getRandomValues(bytes);

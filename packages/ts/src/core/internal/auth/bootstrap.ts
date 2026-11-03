@@ -22,9 +22,17 @@
  * break and requires a major SDK bump + doc + fixture update.
  */
 
-import { createHmac as nodeCreateHmac } from 'node:crypto';
+import { arrayBufferToHex, resolveSubtle } from "../crypto.js";
 
-import { resolveSubtle, arrayBufferToHex } from '../crypto.js';
+const signatureHeaderName = "ISA-Signature";
+
+type NodeCreateHmac = typeof import("node:crypto").createHmac;
+type NodeCryptoModule = Pick<typeof import("node:crypto"), "createHmac">;
+type ProcessWithBuiltins = NodeJS.Process & {
+  getBuiltinModule?: (moduleName: string) => unknown;
+};
+
+declare const require: undefined | ((moduleName: string) => unknown);
 
 /**
  * Inputs to the bootstrap signature. Mirrors the auth-vector fixture
@@ -60,25 +68,24 @@ export interface BootstrapSignature {
   readonly canonical: string;
   /** Lowercase hex HMAC-SHA256 over canonical, keyed by licenseKey. */
   readonly hex: string;
-  /** `ISA-Signature: t=<ts>,v1=<hex>` — ready to set as a header value. */
-  readonly header: string;
+  /** Header name callers should set. */
+  readonly headerName: "ISA-Signature";
+  /** `t=<ts>,v1=<hex>` — ready to set as the header value. */
+  readonly headerValue: string;
+  /** Complete header line for docs and conformance output. */
+  readonly headerLine: string;
 }
 
 /**
  * Synchronous Node-only implementation. Used by the conformance test and
- * any server-side code that runs in Node ≥20. Browser callers should use
+ * any server-side code that runs in Node ≥20.16. Browser callers should use
  * {@link buildBootstrapSignatureAsync} which delegates to SubtleCrypto.
  */
 export function buildBootstrapSignature(input: BootstrapInput): BootstrapSignature {
   const serializedBody = serializeBootstrapBody(input);
   const canonical = buildCanonical(input.timestamp, input.method, input.path, serializedBody);
-  const hex = nodeCreateHmac('sha256', input.licenseKey).update(canonical).digest('hex');
-  return {
-    serializedBody,
-    canonical,
-    hex,
-    header: `ISA-Signature: t=${input.timestamp},v1=${hex}`,
-  };
+  const hex = getNodeCreateHmac()("sha256", input.licenseKey).update(canonical).digest("hex");
+  return buildSignatureResult(input, serializedBody, canonical, hex);
 }
 
 /**
@@ -88,24 +95,53 @@ export async function buildBootstrapSignatureAsync(
   input: BootstrapInput,
   subtle?: SubtleCrypto,
 ): Promise<BootstrapSignature> {
-  const cryptoSubtle = resolveSubtle(subtle, 'Bootstrap');
+  const cryptoSubtle = resolveSubtle(subtle, "Bootstrap");
   const serializedBody = serializeBootstrapBody(input);
   const canonical = buildCanonical(input.timestamp, input.method, input.path, serializedBody);
   const encoder = new TextEncoder();
   const key = await cryptoSubtle.importKey(
-    'raw',
+    "raw",
     encoder.encode(input.licenseKey),
-    { name: 'HMAC', hash: 'SHA-256' },
+    { name: "HMAC", hash: "SHA-256" },
     false,
-    ['sign'],
+    ["sign"],
   );
-  const sig = await cryptoSubtle.sign('HMAC', key, encoder.encode(canonical));
+  const sig = await cryptoSubtle.sign("HMAC", key, encoder.encode(canonical));
   const hex = arrayBufferToHex(sig);
+  return buildSignatureResult(input, serializedBody, canonical, hex);
+}
+
+/**
+ * Load Node crypto only for the sync helper so browser bundles can import
+ * the async SubtleCrypto path without resolving node built-ins.
+ */
+function getNodeCreateHmac(): NodeCreateHmac {
+  const getBuiltinModule = (globalThis.process as ProcessWithBuiltins | undefined)?.getBuiltinModule;
+  if (getBuiltinModule) {
+    return (getBuiltinModule("node:crypto") as NodeCryptoModule).createHmac;
+  }
+
+  if (typeof require === "function") {
+    return (require("node:crypto") as NodeCryptoModule).createHmac;
+  }
+
+  throw new Error("buildBootstrapSignature requires Node 20.16+ crypto; use buildBootstrapSignatureAsync in browsers");
+}
+
+function buildSignatureResult(
+  input: BootstrapInput,
+  serializedBody: string,
+  canonical: string,
+  hex: string,
+): BootstrapSignature {
+  const headerValue = `t=${input.timestamp},v1=${hex}`;
   return {
     serializedBody,
     canonical,
     hex,
-    header: `ISA-Signature: t=${input.timestamp},v1=${hex}`,
+    headerName: signatureHeaderName,
+    headerValue,
+    headerLine: `${signatureHeaderName}: ${headerValue}`,
   };
 }
 

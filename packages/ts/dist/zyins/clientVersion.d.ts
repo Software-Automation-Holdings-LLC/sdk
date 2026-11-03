@@ -18,7 +18,7 @@ export interface ClientVersionStatus {
     minimum: string;
     /** Consumer-supplied identifier (Isa constructor option). */
     ours: string;
-    level: 'soft';
+    level: "soft";
 }
 /** Listener registered via `Isa.onClientVersionMismatch`. */
 export type ClientVersionListener = (status: ClientVersionStatus) => void;

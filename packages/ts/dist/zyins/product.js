@@ -14,8 +14,8 @@
  * reverse lookup (`Products.byId`) live in `src/catalog/productsByType.ts`
  * (re-exported below).
  */
-export { ProductType as ProductClass, Products, } from '../catalog/productsByType.js';
-export { ProductType } from './productType.js';
+export { Products, ProductType as ProductClass, } from "../catalog/productsByType.js";
+export { ProductType } from "./productType.js";
 /**
  * One or more products selected for a single prequalify call.
  *
@@ -40,14 +40,14 @@ export class ProductSelection {
     /** Pick specific products by their typed `Product` object. */
     static of(products) {
         if (products.length === 0) {
-            throw new Error('ProductSelection.of: at least one product is required');
+            throw new Error("ProductSelection.of: at least one product is required");
         }
         return new ProductSelection(products, []);
     }
     /** Pick all products of one or more types. */
     static byTypes(types) {
         if (types.length === 0) {
-            throw new Error('ProductSelection.byTypes: at least one type is required');
+            throw new Error("ProductSelection.byTypes: at least one type is required");
         }
         return new ProductSelection([], types);
     }
@@ -56,7 +56,7 @@ export class ProductSelection {
         const t = opts.types ?? [];
         const p = opts.plus ?? [];
         if (t.length === 0 && p.length === 0) {
-            throw new Error('ProductSelection.fromMix: provide at least one type or product');
+            throw new Error("ProductSelection.fromMix: provide at least one type or product");
         }
         return new ProductSelection(p, t);
     }

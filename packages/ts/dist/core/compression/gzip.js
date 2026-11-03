@@ -13,7 +13,7 @@
  * Ported verbatim from eapp-system/resources/js/lib/Compression.js
  * (`SAH_Compress` / `SAH_Decompress`).
  */
-const GZIP_ENCODING = 'gzip';
+const GZIP_ENCODING = "gzip";
 const GZIP_OS_BYTE_OFFSET = 9;
 const LEGACY_GZIP_OS_BYTE = 0x13;
 /**
@@ -23,7 +23,7 @@ const LEGACY_GZIP_OS_BYTE = 0x13;
  * The returned `body` is base64 of the gzip stream.
  */
 export async function compress(input) {
-    const bytes = typeof input === 'string' ? new TextEncoder().encode(input) : input;
+    const bytes = typeof input === "string" ? new TextEncoder().encode(input) : input;
     const compressedBytes = await gzipBytes(bytes);
     const body = bytesToBase64(compressedBytes);
     return { compressed: true, body };
@@ -32,8 +32,8 @@ export async function compress(input) {
  * Decompress a Form.enc wire envelope back to the original UTF-8 string.
  */
 export async function decompress(envelope) {
-    if (!envelope || envelope.compressed !== true || typeof envelope.body !== 'string') {
-        throw new Error('decompress: envelope must be {compressed: true, body: string}');
+    if (!envelope || envelope.compressed !== true || typeof envelope.body !== "string") {
+        throw new Error("decompress: envelope must be {compressed: true, body: string}");
     }
     const compressedBytes = base64ToBytes(envelope.body);
     return gunzipBytes(compressedBytes);
@@ -44,8 +44,8 @@ export async function decompress(envelope) {
  */
 export async function gzipBytes(bytes) {
     const CS = globalThis.CompressionStream;
-    if (typeof CS === 'undefined') {
-        throw new Error('CompressionStream is not supported in this environment');
+    if (typeof CS === "undefined") {
+        throw new Error("CompressionStream is not supported in this environment");
     }
     const stream = new CS(GZIP_ENCODING);
     const writer = stream.writable.getWriter();
@@ -66,8 +66,8 @@ export async function gzipBytes(bytes) {
  */
 export async function gunzipBytes(bytes) {
     const DS = globalThis.DecompressionStream;
-    if (typeof DS === 'undefined') {
-        throw new Error('DecompressionStream is not supported in this environment');
+    if (typeof DS === "undefined") {
+        throw new Error("DecompressionStream is not supported in this environment");
     }
     const stream = new DS(GZIP_ENCODING);
     const writer = stream.writable.getWriter();
@@ -98,7 +98,7 @@ function toArrayBufferView(bytes) {
  * decoder expects.
  */
 function bytesToBase64(bytes) {
-    let binary = '';
+    let binary = "";
     for (let i = 0; i < bytes.length; i++) {
         binary += String.fromCharCode(bytes[i]);
     }

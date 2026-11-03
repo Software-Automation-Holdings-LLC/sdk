@@ -4,7 +4,7 @@
  * Produces the four headers required by the ISA Platform session-auth
  * verifier (`shared/go/auth/session/verifier.go`):
  *
- *   Authorization:     Bearer <sessionSecret>
+ *   Authorization:     Session <sessionSecret>
  *   X-Isa-Session-Id:  <sessionId>
  *   X-Isa-Timestamp:   <iso8601_z>
  *   X-Isa-Signature:   hex(HMAC-SHA256(sessionSecret, canonicalString))
@@ -18,28 +18,34 @@
  *
  * @see shared/go/auth/session/canonical.go (the source of truth)
  */
-import { resolveSubtle, arrayBufferToHex } from '../internal/crypto.js';
-const CONTEXT = 'SignRequest';
-const PRECOMPUTED_EMPTY_SHA256 = 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855';
+import { arrayBufferToHex, resolveSubtle } from "../internal/crypto.js";
+const CONTEXT = "SignRequest";
+const PRECOMPUTED_EMPTY_SHA256 = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855";
+/**
+ * Authorization scheme the proxy session verifier requires. Not
+ * `Bearer` — the value is an HMAC secret, not a bearer token.
+ * @see services/proxy/internal/auth/session.go (authzSchemeName)
+ */
+const SESSION_AUTH_SCHEME = "Session";
 const systemSignClock = () => new Date();
 /**
  * Format `Date` as RFC 3339 UTC with a `Z` suffix (no milliseconds).
  * Matches `time.Time.Format(time.RFC3339)` in Go for UTC instants.
  */
 export function formatTimestamp(d) {
-    const pad = (n) => n.toString().padStart(2, '0');
-    return (d.getUTCFullYear().toString() +
-        '-' +
-        pad(d.getUTCMonth() + 1) +
-        '-' +
-        pad(d.getUTCDate()) +
-        'T' +
-        pad(d.getUTCHours()) +
-        ':' +
-        pad(d.getUTCMinutes()) +
-        ':' +
-        pad(d.getUTCSeconds()) +
-        'Z');
+    const pad = (n) => n.toString().padStart(2, "0");
+    return (d.getUTCFullYear().toString()
+        + "-"
+        + pad(d.getUTCMonth() + 1)
+        + "-"
+        + pad(d.getUTCDate())
+        + "T"
+        + pad(d.getUTCHours())
+        + ":"
+        + pad(d.getUTCMinutes())
+        + ":"
+        + pad(d.getUTCSeconds())
+        + "Z");
 }
 /**
  * Build the canonical signing string. Exported for cross-SDK parity
@@ -50,11 +56,11 @@ export async function canonicalString(method, path, body, timestamp, sessionId, 
     return `${method.toUpperCase()}\n${path}\n${bodyHashHex}\n${timestamp}\n${sessionId}`;
 }
 async function sha256Hex(body, subtle) {
-    const bytes = typeof body === 'string' ? new TextEncoder().encode(body) : body;
+    const bytes = typeof body === "string" ? new TextEncoder().encode(body) : body;
     if (bytes.length === 0)
         return PRECOMPUTED_EMPTY_SHA256;
     const cryptoSubtle = resolveSubtle(subtle, CONTEXT);
-    const digest = await cryptoSubtle.digest('SHA-256', toArrayBuffer(bytes));
+    const digest = await cryptoSubtle.digest("SHA-256", toArrayBuffer(bytes));
     return arrayBufferToHex(digest);
 }
 function toArrayBuffer(bytes) {
@@ -66,9 +72,9 @@ async function hmacSha256Hex(secret, message, subtle) {
     const cryptoSubtle = resolveSubtle(subtle, CONTEXT);
     const encoder = new TextEncoder();
     const secretBytes = encoder.encode(secret);
-    const key = await cryptoSubtle.importKey('raw', toArrayBuffer(secretBytes), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
+    const key = await cryptoSubtle.importKey("raw", toArrayBuffer(secretBytes), { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
     const messageBytes = encoder.encode(message);
-    const sig = await cryptoSubtle.sign('HMAC', key, toArrayBuffer(messageBytes));
+    const sig = await cryptoSubtle.sign("HMAC", key, toArrayBuffer(messageBytes));
     return arrayBufferToHex(sig);
 }
 /**
@@ -89,10 +95,10 @@ export async function signRequest(input) {
     const signature = await hmacSha256Hex(input.sessionSecret, canonical, input.subtle);
     return {
         headers: {
-            Authorization: `Bearer ${input.sessionSecret}`,
-            'X-Isa-Session-Id': input.sessionId,
-            'X-Isa-Timestamp': timestamp,
-            'X-Isa-Signature': signature,
+            Authorization: `${SESSION_AUTH_SCHEME} ${input.sessionSecret}`,
+            "X-Isa-Session-Id": input.sessionId,
+            "X-Isa-Timestamp": timestamp,
+            "X-Isa-Signature": signature,
         },
     };
 }

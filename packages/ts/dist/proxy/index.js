@@ -8,6 +8,6 @@
  * dependency (ADR-035 "Proxy is internal-facing").
  */
 export * from "./algosure/index.js";
-export * from "./transport/call.js";
 export { assertSessionIdentityForProxyCall, proxyCall as proxyCallV2, } from "./call.js";
+export * from "./transport/call.js";
 //# sourceMappingURL=index.js.map

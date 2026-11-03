@@ -1,6 +1,6 @@
 # Migration — 0.x → 1.0.0-rc.1 (TypeScript)
 
-The cross-language guide at [`../../MIGRATION.md`](../../MIGRATION.md)
+The cross-language guide at [`../../docs/sdk/MIGRATION.md`](../../docs/sdk/MIGRATION.md)
 covers the full cut (constructor rename, per-surface `apiVersion`,
 v3 wire-shape, CaseStorage adapter, bundleless `reference.match`).
 TS-specific notes:
@@ -29,16 +29,16 @@ TS-specific notes:
   `isa.zyins.reference.refresh()` invalidates.
 - **TypeScript strict mode:** `tsc --noEmit` against the SDK now
   enforces the locked surface contract (see CI workflow
-  `sdk-public-api.yml`).
+  `sdk.yml`).
 
 ---
 
-# Historical: per-product SDK packages (v0.0.0 → v0.3.0)
+## Historical: per-product SDK packages (v0.0.0 → v0.3.0)
 
 Per SDK_DESIGN §0 (2026-05-18), the TypeScript SDK now ships as one unified
 package: `@software-automation-holdings-llc/sdk`.
 
-## Package mapping
+### Package mapping
 
 | Old (retired)        | New                                     |
 | -------------------- | --------------------------------------- |
@@ -47,7 +47,7 @@ package: `@software-automation-holdings-llc/sdk`.
 | `@isa-sdk/rapidsign` | `@software-automation-holdings-llc/sdk` |
 | `@isa-sdk/proxy`     | `@software-automation-holdings-llc/sdk` |
 
-## Codemod
+### Codemod
 
 A jscodeshift codemod scaffold lives at `codemod/rename-isa-sdk-imports.ts`
 (work in progress). Until it ships, the rewrite is mechanical:
@@ -61,7 +61,7 @@ A jscodeshift codemod scaffold lives at `codemod/rename-isa-sdk-imports.ts`
 +// then use isa.rapidsign.* on a constructed Isa instance.
 ```
 
-## Public API surface
+### Public API surface
 
 The unified barrel exports:
 

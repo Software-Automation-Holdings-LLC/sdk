@@ -1,4 +1,4 @@
-import { type Clock } from '../../core/index.js';
+import { type Clock } from "../../core/index.js";
 /** 30-second buckets for clock-skew tolerance. Must match server. */
 export declare const ALGOSURE_TIME_BUCKET_MS = 30000;
 /** Default proxy for fetching the rotating salt. */
@@ -43,10 +43,10 @@ export interface AlgosureHMACArgs {
     saltTimeout?: number;
 }
 export type AlgosureHeaders = {
-    'Authorization': string;
-    '*Host': string;
-    '*Timestamp': string;
-    '*sessionId': string;
+    "Authorization": string;
+    "*Host": string;
+    "*Timestamp": string;
+    "*sessionId": string;
 };
 /**
  * Computes an HMAC-SHA256 authentication tag for an Algosure-authenticated

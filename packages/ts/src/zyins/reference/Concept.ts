@@ -15,10 +15,10 @@
  * not surfaced; consumers compare on `id` (use `Concept.equals`).
  */
 
-import type { Sort } from './Sort.js';
+import type { Sort } from "./Sort.js";
 
 /** Discriminator on a concept handle. */
-export type ConceptKind = 'medication' | 'condition' | 'unknown';
+export type ConceptKind = "medication" | "condition" | "unknown";
 
 export interface Concept {
   /**
@@ -66,17 +66,17 @@ export interface Concept {
 
 /** A `Concept` whose `kind` is statically known to be `'medication'`. */
 export interface MedicationConcept extends Concept {
-  readonly kind: 'medication';
+  readonly kind: "medication";
 }
 
 /** A `Concept` whose `kind` is statically known to be `'condition'`. */
 export interface ConditionConcept extends Concept {
-  readonly kind: 'condition';
+  readonly kind: "condition";
 }
 
 /** A `Concept` whose `kind` is statically known to be `'unknown'`. */
 export interface UnknownConcept extends Concept {
-  readonly kind: 'unknown';
+  readonly kind: "unknown";
   readonly isKnown: false;
   readonly id: null;
 }

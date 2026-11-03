@@ -8,13 +8,13 @@
  * timestamp, session) to prevent replay, tampering, and cross-endpoint
  * reuse.
  */
-import { resolveFetch, resolveSubtle, arrayBufferToHex, systemClock } from '../../core/index.js';
+import { arrayBufferToHex, resolveFetch, resolveSubtle, systemClock } from "../../core/index.js";
 /** Context label passed to runtime resolvers for error attribution. */
-const ALGOSURE_CONTEXT = 'Algosure';
+const ALGOSURE_CONTEXT = "Algosure";
 /** 30-second buckets for clock-skew tolerance. Must match server. */
 export const ALGOSURE_TIME_BUCKET_MS = 30_000;
 /** Default proxy for fetching the rotating salt. */
-export const DEFAULT_SALT_PROXY_URL = 'https://isaapi.com/proxy/get-authorizer-content';
+export const DEFAULT_SALT_PROXY_URL = "https://isaapi.com/proxy/get-authorizer-content";
 /**
  * Computes an HMAC-SHA256 authentication tag for an Algosure-authenticated
  * request.
@@ -33,16 +33,16 @@ export async function computeAlgosureHMAC(args) {
         timeoutMs: args.saltTimeout,
     });
     if (!saltContent || saltContent.length === 0) {
-        throw new Error('Algosure: empty salt content from host');
+        throw new Error("Algosure: empty salt content from host");
     }
     const simpleKey = deriveSimpleKey(saltContent, timestamp);
-    let bodyStr = '';
+    let bodyStr = "";
     if (args.body != null) {
-        bodyStr = typeof args.body === 'string' ? args.body : JSON.stringify(args.body);
+        bodyStr = typeof args.body === "string" ? args.body : JSON.stringify(args.body);
     }
     const bodyHash = await sha256Hex(bodyStr, subtle);
     // Null-delimited fields, matching server-side verification order.
-    const message = [args.method || 'POST', args.path || '/', bodyHash, String(timestamp), args.sessionId || ''].join('\x00');
+    const message = [args.method || "POST", args.path || "/", bodyHash, String(timestamp), args.sessionId || ""].join("\x00");
     const hmacTag = await hmacSHA256(simpleKey, message, subtle);
     return [hmacTag, timestamp];
 }
@@ -52,10 +52,10 @@ export async function computeAlgosureHMAC(args) {
 export async function buildAlgosureHeaders(args) {
     const [hmacTag, timestamp] = await computeAlgosureHMAC(args);
     return {
-        'Authorization': hmacTag,
-        '*Host': args.host,
-        '*Timestamp': String(timestamp),
-        '*sessionId': args.sessionId,
+        "Authorization": hmacTag,
+        "*Host": args.host,
+        "*Timestamp": String(timestamp),
+        "*sessionId": args.sessionId,
     };
 }
 /**
@@ -68,11 +68,11 @@ export async function buildAlgosureHeaders(args) {
 export function deriveSimpleKey(saltContent, timestampMs) {
     const bucket = Math.floor(timestampMs / ALGOSURE_TIME_BUCKET_MS);
     const digitSum = String(Math.abs(bucket))
-        .split('')
+        .split("")
         .reduce((sum, d) => sum + Number.parseInt(d, 10), 0);
     const keyLen = Math.max(8, digitSum || 1);
     const start = ((bucket % saltContent.length) + saltContent.length) % saltContent.length;
-    let key = '';
+    let key = "";
     for (let i = 0; i < keyLen; i++) {
         key += saltContent[(start + i) % saltContent.length];
     }
@@ -84,9 +84,9 @@ async function fetchSaltContent(cfg) {
     const { signal, cancel } = buildSaltSignal(cfg.signal, cfg.timeoutMs);
     try {
         const response = await f(url, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ Target: cfg.host, Return: 'Text', RequestType: 'GET' }),
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ Target: cfg.host, Return: "Text", RequestType: "GET" }),
             ...(signal ? { signal } : {}),
         });
         if (!response.ok) {
@@ -111,26 +111,28 @@ function buildSaltSignal(caller, timeoutMs) {
         }
         else {
             abortHandler = () => controller.abort();
-            caller.addEventListener('abort', abortHandler, { once: true });
+            caller.addEventListener("abort", abortHandler, { once: true });
         }
     }
     const cancel = () => {
         clearTimeout(handle);
         if (abortHandler && caller) {
-            caller.removeEventListener('abort', abortHandler);
+            caller.removeEventListener("abort", abortHandler);
         }
     };
     return { signal: controller.signal, cancel };
 }
 async function hmacSHA256(key, message, subtle) {
     const encoder = new TextEncoder();
-    const cryptoKey = await subtle.importKey('raw', encoder.encode(key), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
-    const signature = await subtle.sign('HMAC', cryptoKey, encoder.encode(message));
+    const cryptoKey = await subtle.importKey("raw", encoder.encode(key), { name: "HMAC", hash: "SHA-256" }, false, [
+        "sign",
+    ]);
+    const signature = await subtle.sign("HMAC", cryptoKey, encoder.encode(message));
     return arrayBufferToHex(signature);
 }
 async function sha256Hex(data, subtle) {
     const encoder = new TextEncoder();
-    const hashBuffer = await subtle.digest('SHA-256', encoder.encode(data));
+    const hashBuffer = await subtle.digest("SHA-256", encoder.encode(data));
     return arrayBufferToHex(hashBuffer);
 }
 //# sourceMappingURL=hmac.js.map

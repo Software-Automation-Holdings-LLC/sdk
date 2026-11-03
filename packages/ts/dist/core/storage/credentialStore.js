@@ -22,9 +22,9 @@
 /** Canonical key names the SDK uses inside any {@link CredentialStore}. */
 export const CREDENTIAL_KEYS = {
     /** Per-device identifier; HMAC signing key for `X-Device-Signature`. */
-    deviceId: 'isa.deviceId',
+    deviceId: "isa.deviceId",
     /** License key minted at `/v1/licenses/activate`. */
-    licenseKey: 'isa.licenseKey',
+    licenseKey: "isa.licenseKey",
 };
 /**
  * In-memory {@link CredentialStore}. Default when the caller supplies no

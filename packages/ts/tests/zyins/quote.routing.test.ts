@@ -6,10 +6,10 @@
  * `quote` — and only at call time, which is right, but with the wrong
  * method name. Fixed in buildQuoteCallable.
  */
-import { describe, it, expect } from 'vitest';
-import { Isa, IsaConfigError } from '../../src/zyins';
-import type { Transport } from '../../src/transport';
-import { TEST_APPLICANT, TEST_AUTH, TEST_COVERAGE, TEST_PRODUCTS } from './fixtures';
+import { describe, expect, it } from "vitest";
+import { Isa, IsaConfigError } from "../../src/zyins";
+import type { Transport } from "../../src/zyins/transport";
+import { TEST_APPLICANT, TEST_AUTH, TEST_COVERAGE, TEST_PRODUCTS, withSessionBootstrap } from "./fixtures";
 
 const QUOTE_REQUEST = {
   applicant: TEST_APPLICANT,
@@ -18,62 +18,67 @@ const QUOTE_REQUEST = {
 } as const;
 
 async function buildIsa(
-  apiVersion?: { quote?: 'v1' | 'v2' | 'v3' },
+  apiVersion?: { quote?: "v1" | "v2" | "v3" },
   transport?: Transport,
 ): Promise<Isa> {
-  const isa = await Isa.withKeycode(
-    { keycode: TEST_AUTH.licenseKey, email: TEST_AUTH.email },
+  // Transport is supplied at construction (the supported injection point)
+  // rather than mutated on the client post-hoc: `sessionSigner` captures
+  // its transport reference once, at construction, so a later reassignment
+  // of an internal field would never reach it.
+  return Isa.withKeycode(
+    // An activated licenseKey is required: the transport-reaching case
+    // signs via the transparently-bootstrapped session (sessionSigner),
+    // which — like the product surfaces themselves — refuses to proceed
+    // for an unactivated device.
+    { keycode: TEST_AUTH.licenseKey, email: TEST_AUTH.email, licenseKey: TEST_AUTH.licenseKey },
     { get: () => undefined },
-    apiVersion === undefined ? {} : { apiVersion },
+    {
+      ...(apiVersion !== undefined && { apiVersion }),
+      ...(transport !== undefined && { transport: withSessionBootstrap(transport) }),
+    },
   );
-  if (transport) {
-    type Internal = { clientOnce: () => { transport: Transport } };
-    const client = ((isa.zyins as unknown) as Internal).clientOnce();
-    client.transport = transport;
-  }
-  return isa;
 }
 
-describe('isa.zyins.quote version routing', () => {
-  it('does not throw at construction for a default-pinned client', async () => {
+describe("isa.zyins.quote version routing", () => {
+  it("does not throw at construction for a default-pinned client", async () => {
     await expect(buildIsa()).resolves.toBeDefined();
   });
 
-  it('rejects a v2-pinned quote call with a quote-named config error', async () => {
+  it("rejects a v2-pinned quote call with a quote-named config error", async () => {
     // The bundled default routes quote to v3; only v3 is supported. A
     // consumer who pins the legacy v2 surface reaches the unsupported
     // callable, which must surface a `quote`-named error (not `quoteV3`).
-    const isa = await buildIsa({ quote: 'v2' });
+    const isa = await buildIsa({ quote: "v2" });
     await expect(isa.zyins.quote(QUOTE_REQUEST)).rejects.toBeInstanceOf(IsaConfigError);
     await expect(isa.zyins.quote(QUOTE_REQUEST)).rejects.toThrow(
       /isa\.zyins\.quote requires apiVersion 'v3'/,
     );
   });
 
-  it('does not leak the internal quoteV3 alias in the v2-pinned error', async () => {
-    const isa = await buildIsa({ quote: 'v2' });
+  it("does not leak the internal quoteV3 alias in the v2-pinned error", async () => {
+    const isa = await buildIsa({ quote: "v2" });
     const err = await isa.zyins.quote(QUOTE_REQUEST).catch((e: unknown) => e);
-    expect((err as Error).message).not.toContain('quoteV3');
+    expect((err as Error).message).not.toContain("quoteV3");
   });
 
-  it('reaches the transport when pinned to v3 (no config error)', async () => {
-    let hit = '';
+  it("reaches the transport when pinned to v3 (no config error)", async () => {
+    let hit = "";
     const transport: Transport = async (req) => {
       hit = req.url;
       return {
         status: 200,
         body: JSON.stringify({
-          object: 'quote_result',
-          request_id: 'req_01HZK2N5GQR9T8X4B6FJW3Y1AS',
-          idempotency_key: '550e8400-e29b-41d4-a716-446655440000',
+          object: "quote_result",
+          request_id: "req_01HZK2N5GQR9T8X4B6FJW3Y1AS",
+          idempotency_key: "550e8400-e29b-41d4-a716-446655440000",
           livemode: false,
           data: { offers: [], meta: { amounts: [], total_products: 0 } },
         }),
         headers: {},
       };
     };
-    const isa = await buildIsa({ quote: 'v3' }, transport);
+    const isa = await buildIsa({ quote: "v3" }, transport);
     await isa.zyins.quote(QUOTE_REQUEST).catch(() => undefined);
-    expect(hit).toContain('/v3/quote');
+    expect(hit).toContain("/v3/quote");
   });
 });
