@@ -53,14 +53,12 @@ func TestReferenceIndex_ConcurrentFirstMatch_NoRace(t *testing.T) {
 	c, doer := newMatchTopClient(t)
 
 	var wg sync.WaitGroup
-	for i := 0; i < raceGoroutines; i++ {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
+	for range raceGoroutines {
+		wg.Go(func() {
 			if _, err := c.Medications().Match(context.Background(), "LISINOPRIL"); err != nil {
 				t.Errorf("Match: %v", err)
 			}
-		}()
+		})
 	}
 	wg.Wait()
 
@@ -84,9 +82,9 @@ func TestReferenceIndex_ConcurrentFirstMatch_NoRace(t *testing.T) {
 // must receive a usable index from the single fetch (doer.calls == 1).
 //
 // This test fails against code that passes A's cancellable context to
-// the shared fetch: cancelling A would abort the doer (its select hits
+// the shared fetch: canceling A would abort the doer (its select hits
 // req.Context().Done()), the shared fetch would error, and B — parked on
-// the same done channel — would receive that context-cancelled error.
+// the same done channel — would receive that context-canceled error.
 func TestReferenceIndex_FirstCallerCancel_DoesNotAbortSharedFetch(t *testing.T) {
 	t.Parallel()
 	doer := newMatchTopBlockingDoer(matchTopBundleJSON)
@@ -107,7 +105,7 @@ func TestReferenceIndex_FirstCallerCancel_DoesNotAbortSharedFetch(t *testing.T) 
 	<-doer.entered // A's fetch is in flight; refIndex.inflight is set.
 
 	// Caller B joins the in-flight fetch. Because inflight was set before
-	// the doer signalled entered, B is guaranteed to coalesce (take the
+	// the doer signaled entered, B is guaranteed to coalesce (take the
 	// cache lock, see inflight != nil, park in waitReferenceIndex on the
 	// shared done channel) rather than start a second fetch.
 	type matchResult struct {
@@ -150,17 +148,13 @@ func TestRefreshReferenceIndex_ConcurrentWithMatch_NoRace(t *testing.T) {
 	c, _ := newMatchTopClient(t)
 
 	var wg sync.WaitGroup
-	for i := 0; i < raceGoroutines; i++ {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
+	for range raceGoroutines {
+		wg.Go(func() {
 			_, _ = c.Medications().Match(context.Background(), "LISINOPRIL")
-		}()
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
+		})
+		wg.Go(func() {
 			c.RefreshReferenceIndex()
-		}()
+		})
 	}
 	wg.Wait()
 }

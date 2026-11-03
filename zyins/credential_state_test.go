@@ -33,6 +33,29 @@ func TestCredentialState_RefreshTriggersListener(t *testing.T) {
 	}
 }
 
+func TestCredentialState_UnsubscribeRemovesMovedListener(t *testing.T) {
+	s, err := NewCredentialState(CredentialSnapshot{Keycode: "K", Email: "e@x"}, nil)
+	if err != nil {
+		t.Fatalf("NewCredentialState: %v", err)
+	}
+	var firstCalls, secondCalls int
+	unsubFirst := s.OnLicenseRefreshed(func(LicenseRefreshedEvent) { firstCalls++ })
+	unsubSecond := s.OnLicenseRefreshed(func(LicenseRefreshedEvent) { secondCalls++ })
+
+	unsubFirst()
+	unsubSecond()
+
+	if err := s.RefreshLicenseKey("lk-new"); err != nil {
+		t.Fatalf("RefreshLicenseKey: %v", err)
+	}
+	if firstCalls != 0 {
+		t.Errorf("first listener calls=%d", firstCalls)
+	}
+	if secondCalls != 0 {
+		t.Errorf("second listener calls=%d", secondCalls)
+	}
+}
+
 func TestCredentialState_ClearRemovesKey(t *testing.T) {
 	s, err := NewCredentialState(CredentialSnapshot{Keycode: "K", Email: "e@x", LicenseKey: "lk-old"}, nil)
 	if err != nil {

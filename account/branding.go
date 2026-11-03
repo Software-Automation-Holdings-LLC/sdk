@@ -58,10 +58,7 @@ func parseBranding(body []byte) (*BrandingDetail, error) {
 	if len(body) == 0 {
 		return out, nil
 	}
-	data, err := unwrapEnvelope(body)
-	if err != nil {
-		return nil, fmt.Errorf("account: Branding parse envelope: %w", err)
-	}
+	data := unwrapEnvelope(body)
 	if len(data) == 0 {
 		return out, nil
 	}

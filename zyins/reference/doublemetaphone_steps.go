@@ -26,7 +26,7 @@ func stepC(w word, code *codeBuilder, index int) int {
 		code.appendBoth("X")
 		return index + 3
 	}
-	if w.contains(index, 2, "CC") && !(index == 1 && w.at(0) == 'M') {
+	if w.contains(index, 2, "CC") && (index != 1 || w.at(0) != 'M') {
 		return stepCC(w, code, index)
 	}
 	if w.contains(index, 2, "CK", "CG", "CQ") {
@@ -432,8 +432,9 @@ func stepW(w word, code *codeBuilder, index int) int {
 }
 
 func stepX(w word, code *codeBuilder, index int) int {
-	if !(index == w.length()-1 &&
-		(w.contains(index-3, 3, "IAU", "EAU") || w.contains(index-2, 2, "AU", "OU"))) {
+	isSilentFrenchFinalX := index == w.length()-1 &&
+		(w.contains(index-3, 3, "IAU", "EAU") || w.contains(index-2, 2, "AU", "OU"))
+	if !isSilentFrenchFinalX {
 		code.appendBoth("KS")
 	}
 	if w.contains(index+1, 1, "C", "X") {

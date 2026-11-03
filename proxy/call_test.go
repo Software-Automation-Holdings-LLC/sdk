@@ -83,8 +83,7 @@ func TestCall_RejectsBothIdentifiers(t *testing.T) {
 		IntegrationUUID: "u",
 		IntegrationID:   1,
 	})
-	var ve *zyins.ValidationError
-	if !errors.As(err, &ve) {
+	if _, ok := errors.AsType[*zyins.ValidationError](err); !ok {
 		t.Fatalf("expected *zyins.ValidationError, got %T: %v", err, err)
 	}
 }
@@ -92,8 +91,7 @@ func TestCall_RejectsBothIdentifiers(t *testing.T) {
 func TestCall_RejectsNeitherIdentifier(t *testing.T) {
 	srv, _ := statusServer(t, 200, map[string]any{"ok": true})
 	_, err := proxy.Call(context.Background(), sessionBinding(srv.URL), proxy.CallOptions{})
-	var ve *zyins.ValidationError
-	if !errors.As(err, &ve) {
+	if _, ok := errors.AsType[*zyins.ValidationError](err); !ok {
 		t.Fatalf("expected *zyins.ValidationError, got %T: %v", err, err)
 	}
 }
@@ -104,8 +102,7 @@ func TestCall_RejectsNonPositiveIntegrationID(t *testing.T) {
 		_, err := proxy.Call(context.Background(), sessionBinding(srv.URL), proxy.CallOptions{
 			IntegrationID: integrationID,
 		})
-		var ve *zyins.ValidationError
-		if !errors.As(err, &ve) {
+		if _, ok := errors.AsType[*zyins.ValidationError](err); !ok {
 			t.Fatalf("expected *zyins.ValidationError, got %T: %v", err, err)
 		}
 	}
@@ -117,8 +114,7 @@ func TestCall_RejectsNegativeIntegrationIDWithUUID(t *testing.T) {
 		IntegrationUUID: "int_abc",
 		IntegrationID:   -1,
 	})
-	var ve *zyins.ValidationError
-	if !errors.As(err, &ve) {
+	if _, ok := errors.AsType[*zyins.ValidationError](err); !ok {
 		t.Fatalf("expected *zyins.ValidationError, got %T: %v", err, err)
 	}
 }
@@ -184,7 +180,7 @@ func TestCall_SessionAuthHeadersPresent(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Call failed: %v", err)
 	}
-	if got := captured.Headers.Get("Authorization"); got != "Bearer "+fixtureSecret() {
+	if got := captured.Headers.Get("Authorization"); got != "Session "+fixtureSecret() {
 		t.Errorf("Authorization = %q", got)
 	}
 	if got := captured.Headers.Get("X-Isa-Session-Id"); got != "sess_test_unit" {
@@ -209,8 +205,7 @@ func TestCall_401MapsToAuthError(t *testing.T) {
 	_, err := proxy.Call(context.Background(), sessionBinding(srv.URL), proxy.CallOptions{
 		IntegrationUUID: "int_abc",
 	})
-	var ae *zyins.AuthError
-	if !errors.As(err, &ae) {
+	if _, ok := errors.AsType[*zyins.AuthError](err); !ok {
 		t.Fatalf("expected *zyins.AuthError, got %T: %v", err, err)
 	}
 }

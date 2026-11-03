@@ -18,7 +18,6 @@ func TestNew_RejectsEmptyToken(t *testing.T) {
 		{"tab", "\t"},
 	}
 	for _, tc := range cases {
-		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 			if _, err := New(tc.token); err == nil {
@@ -79,7 +78,6 @@ func TestNew_InvalidBaseURL(t *testing.T) {
 		{"missing-host", "https://"},
 	}
 	for _, tc := range cases {
-		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 			if _, err := New("isa_test_abc", Options{BaseURL: tc.baseURL}); err == nil {

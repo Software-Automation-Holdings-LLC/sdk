@@ -40,7 +40,7 @@ func decodeBase64Signature(s string) ([]byte, error) {
 	if b, err := base64.RawURLEncoding.DecodeString(s); err == nil {
 		return b, nil
 	}
-	return nil, fmt.Errorf("rapidsign: signature payload was not valid base64")
+	return nil, errors.New("rapidsign: signature payload was not valid base64")
 }
 
 // errorsAs is a thin alias over errors.As that keeps call sites in

@@ -80,10 +80,7 @@ func (s *CasesService) Create(ctx context.Context, in CaseCreateInput, opts ...C
 	if err != nil {
 		return nil, fmt.Errorf("account: Cases.Create: %w", err)
 	}
-	data, err := unwrapEnvelope(body)
-	if err != nil {
-		return nil, fmt.Errorf("account: Cases.Create envelope: %w", err)
-	}
+	data := unwrapEnvelope(body)
 	if len(data) == 0 {
 		return nil, errors.New("account: Cases.Create response body was empty")
 	}
@@ -104,10 +101,7 @@ func (s *CasesService) Get(ctx context.Context, caseID string) (*CaseSummary, er
 	if err != nil {
 		return nil, fmt.Errorf("account: Cases.Get: %w", err)
 	}
-	data, err := unwrapEnvelope(body)
-	if err != nil {
-		return nil, fmt.Errorf("account: Cases.Get envelope: %w", err)
-	}
+	data := unwrapEnvelope(body)
 	out := &CaseSummary{}
 	if len(data) == 0 {
 		return out, nil
@@ -124,10 +118,7 @@ func (s *CasesService) List(ctx context.Context) ([]CaseSummary, error) {
 	if err != nil {
 		return nil, fmt.Errorf("account: Cases.List: %w", err)
 	}
-	data, err := unwrapEnvelope(body)
-	if err != nil {
-		return nil, fmt.Errorf("account: Cases.List envelope: %w", err)
-	}
+	data := unwrapEnvelope(body)
 	if len(data) == 0 {
 		return []CaseSummary{}, nil
 	}

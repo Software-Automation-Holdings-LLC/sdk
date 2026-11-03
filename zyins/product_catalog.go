@@ -63,7 +63,7 @@ func (c *ProductCatalog) Find(name string) (catalog.Product, error) {
 func (c *ProductCatalog) TryFind(name string) *catalog.Product {
 	needle := strings.ToLower(name)
 	for i := range c.products {
-		if strings.ToLower(c.products[i].Name) == needle {
+		if strings.EqualFold(c.products[i].Name, needle) {
 			p := c.products[i]
 			return &p
 		}

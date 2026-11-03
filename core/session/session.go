@@ -131,6 +131,9 @@ func (s *Store) CurrentSecret() *Session {
 	return &cp
 }
 
+// DeviceID returns the device id the session is bound to at bootstrap.
+func (s *Store) DeviceID() string { return s.input.DeviceID }
+
 // Bootstrap performs POST /v1/sessions with the embedded HMAC signature.
 // Concurrent calls share one round-trip via singleflight.
 func (s *Store) Bootstrap(ctx context.Context) (*Session, error) {
@@ -157,7 +160,10 @@ func (s *Store) Bootstrap(ctx context.Context) (*Session, error) {
 	if err := ctx.Err(); err != nil {
 		return nil, fmt.Errorf("session: Bootstrap canceled (keycode=%s): %w", s.input.Keycode, err)
 	}
-	sess := v.(*Session)
+	sess, ok := v.(*Session)
+	if !ok {
+		return nil, fmt.Errorf("session: Bootstrap (keycode=%s): unexpected result type %T", s.input.Keycode, v)
+	}
 	cp := *sess
 	return &cp, nil
 }
@@ -213,7 +219,7 @@ func (s *Store) doExchange(ctx context.Context) (*Session, error) {
 	if sigErr != nil {
 		return nil, fmt.Errorf("session: bootstrap signature (keycode=%s): %w", s.input.Keycode, sigErr)
 	}
-	req, reqErr := http.NewRequestWithContext(ctx, "POST", s.baseURL+"/v1/sessions", bytes.NewReader([]byte(sig.SerializedBody)))
+	req, reqErr := http.NewRequestWithContext(ctx, http.MethodPost, s.baseURL+"/v1/sessions", bytes.NewReader([]byte(sig.SerializedBody)))
 	if reqErr != nil {
 		return nil, fmt.Errorf("session: build request (baseURL=%s): %w", s.baseURL, reqErr)
 	}
@@ -224,7 +230,7 @@ func (s *Store) doExchange(ctx context.Context) (*Session, error) {
 	if doErr != nil {
 		return nil, fmt.Errorf("session: POST /v1/sessions (baseURL=%s): %w", s.baseURL, doErr)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
 		b, _ := io.ReadAll(io.LimitReader(resp.Body, maxBootstrapErrorBodyBytes))
 		return nil, fmt.Errorf("%w: status=%d body=%s", ErrBootstrapFailed, resp.StatusCode, string(b))

@@ -20,7 +20,7 @@ func (m mapEnv) get(key string) (string, bool) {
 
 func TestWithBearer_ReadsISA_TOKEN(t *testing.T) {
 	t.Parallel()
-	env := mapEnv{EnvTokenVar: "isa_test_4fjK2nQ7mX1aB8sR9pZ3"}
+	env := mapEnv{EnvTokenVar: "isa_test_placeholder"}
 	opt, err := withBearerFrom(env)
 	if err != nil {
 		t.Fatalf("withBearerFrom: %v", err)

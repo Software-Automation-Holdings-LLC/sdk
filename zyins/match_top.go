@@ -102,19 +102,40 @@ func waitReferenceIndex(ctx context.Context, f *referenceIndexFetch) (*reference
 	case <-f.done:
 		return f.index, f.err
 	case <-ctx.Done():
-		return nil, fmt.Errorf("zyins: reference index fetch: %w", ctx.Err())
+		return nil, fmt.Errorf("zyins: reference bundle fetch: %w", ctx.Err())
 	}
 }
 
 func (c *Client) fetchReferenceIndex(ctx context.Context) (*reference.Index, error) {
+	bundle, err := c.referenceBundle(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return c.NewReferenceIndex(bundle), nil
+}
+
+// referenceBundle resolves the bundle that warms the reference layer.
+// A configured DatasetSource (local file / in-memory / chain) wins; with
+// none set the API path (DatasetsV3.Get) is used — the unchanged default.
+func (c *Client) referenceBundle(ctx context.Context) (*DatasetBundleV3, error) {
+	if c.datasetSource != nil {
+		bundle, err := c.datasetSource.Load(ctx)
+		if err != nil {
+			return nil, fmt.Errorf("zyins: reference bundle load: %w", err)
+		}
+		if bundle == nil {
+			return nil, errors.New("zyins: reference bundle load: source returned nil bundle")
+		}
+		return bundle, nil
+	}
 	res, err := c.DatasetsV3.Get(ctx, DatasetsV3Options{})
 	if err != nil {
-		return nil, fmt.Errorf("zyins: reference index fetch: %w", err)
+		return nil, fmt.Errorf("zyins: reference bundle fetch: %w", err)
 	}
 	if res == nil || res.Bundle == nil {
-		return nil, errors.New("zyins: reference index fetch: empty datasets bundle")
+		return nil, errors.New("zyins: reference bundle fetch: empty datasets bundle")
 	}
-	return c.NewReferenceIndex(res.Bundle), nil
+	return res.Bundle, nil
 }
 
 // RefreshReferenceIndex invalidates the cached *reference.Index and the

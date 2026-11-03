@@ -178,7 +178,7 @@ func TestLicenses_Deactivate_PreservesMissingLegacyRemaining(t *testing.T) {
 }
 
 func TestLicenses_Check_AcceptsEnvelopedResponse(t *testing.T) {
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		_, _ = w.Write([]byte(`{"data":{"status":"inactive"}}`))
 	}))
@@ -196,7 +196,7 @@ func TestLicenses_Check_AcceptsEnvelopedResponse(t *testing.T) {
 }
 
 func TestLicenses_Check_RejectsMissingEmail(t *testing.T) {
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	srv := httptest.NewServer(http.HandlerFunc(func(_ http.ResponseWriter, _ *http.Request) {
 		t.Fatalf("request must not hit the wire on validation failure")
 	}))
 	defer srv.Close()
@@ -205,14 +205,13 @@ func TestLicenses_Check_RejectsMissingEmail(t *testing.T) {
 	if err == nil {
 		t.Fatalf("expected validation error, got nil")
 	}
-	var ve *ValidationError
-	if !errors.As(err, &ve) {
+	if _, ok := errors.AsType[*ValidationError](err); !ok {
 		t.Fatalf("expected *ValidationError, got %T: %v", err, err)
 	}
 }
 
 func TestLicenses_Check_NilInput(t *testing.T) {
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {}))
+	srv := httptest.NewServer(http.HandlerFunc(func(_ http.ResponseWriter, _ *http.Request) {}))
 	defer srv.Close()
 	c := newTestClient(t, srv)
 	_, err := c.License.Check(context.Background(), nil)
@@ -222,7 +221,7 @@ func TestLicenses_Check_NilInput(t *testing.T) {
 }
 
 func TestLicenses_Check_ServerError(t *testing.T) {
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", "application/problem+json")
 		w.WriteHeader(http.StatusInternalServerError)
 		_, _ = w.Write([]byte(`{"type":"about:blank","title":"server error","status":500,"code":"server_error"}`))
@@ -261,7 +260,7 @@ func TestLicenses_Deactivate_HappyPath(t *testing.T) {
 }
 
 func TestLicenses_Deactivate_RejectsMissingKeycode(t *testing.T) {
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {}))
+	srv := httptest.NewServer(http.HandlerFunc(func(_ http.ResponseWriter, _ *http.Request) {}))
 	defer srv.Close()
 	c := newTestClient(t, srv)
 	_, err := c.License.Deactivate(context.Background(), &LicenseDeactivateInput{Email: "x@x"})

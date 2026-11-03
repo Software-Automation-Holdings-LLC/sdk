@@ -36,6 +36,7 @@ package reference
 // Safe for concurrent use: the instance holds no mutable per-call state.
 
 import (
+	"maps"
 	"strings"
 
 	"golang.org/x/text/unicode/norm"
@@ -52,9 +53,7 @@ type FuzzyMatchAlgorithmOption func(*fuzzyMatchAlgorithmOptions)
 func WithFuzzyFrequencies(frequencies map[string]int) FuzzyMatchAlgorithmOption {
 	return func(o *fuzzyMatchAlgorithmOptions) {
 		copied := make(map[string]int, len(frequencies))
-		for id, count := range frequencies {
-			copied[id] = count
-		}
+		maps.Copy(copied, frequencies)
 		o.frequencies = copied
 	}
 }

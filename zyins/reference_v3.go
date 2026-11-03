@@ -23,6 +23,7 @@
 package zyins
 
 import (
+	"slices"
 	"sort"
 	"strings"
 	"sync"
@@ -242,7 +243,7 @@ func checkKey(text string) string {
 			b = append(b, ch)
 		}
 	}
-	sort.Slice(b, func(i, j int) bool { return b[i] < b[j] })
+	slices.Sort(b)
 	return string(b)
 }
 
@@ -356,18 +357,14 @@ func deriveMissingReverse(cat *refCatalog) {
 }
 
 func contains(s []string, v string) bool {
-	for _, x := range s {
-		if x == v {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(s, v)
 }
 
 func (c *refCatalog) conditionName(id string) (string, bool) {
 	n, ok := c.conditionNames[id]
 	return n, ok
 }
+
 func (c *refCatalog) medicationName(id string) (string, bool) {
 	n, ok := c.medicationNames[id]
 	return n, ok
@@ -418,6 +415,7 @@ func (c *refCatalog) medicationIDForText(text string) (string, bool) {
 func (c *refCatalog) medicationsForCondition(conditionID string) []string {
 	return c.medicationsByCondition[conditionID]
 }
+
 func (c *refCatalog) conditionsForMedication(medicationID string) []string {
 	return c.conditionsByMedication[medicationID]
 }
@@ -626,9 +624,11 @@ func (s *ReferenceService) Concepts() ReferenceMatcher { return s.concepts }
 
 func newReferenceService() *ReferenceService { return &ReferenceService{} }
 
-type medicationMatcher struct{}
-type conditionMatcher struct{}
-type conceptMatcher struct{}
+type (
+	medicationMatcher struct{}
+	conditionMatcher  struct{}
+	conceptMatcher    struct{}
+)
 
 func (medicationMatcher) Match(text string, bundle *DatasetBundleV3) Concept {
 	cat := catalogFor(bundle)

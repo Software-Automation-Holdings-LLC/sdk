@@ -9,7 +9,7 @@ import "testing"
 //   - isa.zyins.cases.share is canonical; isa.zyins.cases.create is a
 //     deprecated alias for callers who had not yet migrated.
 func TestCanonicalSurface(t *testing.T) {
-	c, err := NewClient(WithToken("isa_test_4fjK2nQ7mX1aB8sR9pZ3"))
+	c, err := NewClient(WithToken("isa_test_aaaaaaaaaaaaaaaaaaaa"))
 	if err != nil {
 		t.Fatalf("NewClient: %v", err)
 	}
@@ -24,6 +24,6 @@ func TestCanonicalSurface(t *testing.T) {
 	// Share method must be callable — compile-time check via an indirect call.
 	// We use a local variable so the compiler cannot fold it away, and we
 	// never actually call it (no live server in unit tests).
-	var _ = c.Cases.Share
-	var _ = c.Cases.Create
+	_ = c.Cases.Share
+	_ = c.Cases.Create
 }

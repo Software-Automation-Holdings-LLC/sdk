@@ -20,24 +20,24 @@ type captureAcctRequest struct {
 
 func newServerCapturing(t *testing.T, status int, response string) (*httptest.Server, *captureAcctRequest) {
 	t.Helper()
-	cap := &captureAcctRequest{}
+	captured := &captureAcctRequest{}
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		cap.method = r.Method
-		cap.path = r.URL.Path
-		cap.idem = r.Header.Get("Idempotency-Key")
-		cap.body, _ = io.ReadAll(r.Body)
+		captured.method = r.Method
+		captured.path = r.URL.Path
+		captured.idem = r.Header.Get("Idempotency-Key")
+		captured.body, _ = io.ReadAll(r.Body)
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(status)
 		_, _ = w.Write([]byte(response))
 	}))
-	return srv, cap
+	return srv, captured
 }
 
 // ---------------------- Branding -----------------------------------
 
 func TestBranding_Lookup_HappyPath(t *testing.T) {
 	resp := `{"imo_name":"Acme Agency","imo_logo":"https://cdn.example/logo.png","hide_affiliate_leads":"true","prevent_product_selection":false,"nav_color":"#111"}`
-	srv, cap := newServerCapturing(t, http.StatusOK, resp)
+	srv, captured := newServerCapturing(t, http.StatusOK, resp)
 	defer srv.Close()
 	c := newTestClient(t, srv)
 	result, err := c.Branding.Lookup(context.Background())
@@ -53,8 +53,8 @@ func TestBranding_Lookup_HappyPath(t *testing.T) {
 	if result.PreventProductSelection {
 		t.Errorf("PreventProductSelection=true, want false")
 	}
-	if cap.method != http.MethodGet || cap.path != brandingLookupPath {
-		t.Errorf("captured %s %s, want GET %s", cap.method, cap.path, brandingLookupPath)
+	if captured.method != http.MethodGet || captured.path != brandingLookupPath {
+		t.Errorf("captured %s %s, want GET %s", captured.method, captured.path, brandingLookupPath)
 	}
 }
 
@@ -85,7 +85,7 @@ func TestBranding_Lookup_500Errors(t *testing.T) {
 // ---------------------- Preferences -------------------------------
 
 func TestPreferences_Lookup_ReturnsPrefs(t *testing.T) {
-	srv, cap := newServerCapturing(t, http.StatusOK, `{"prefs":{"theme":"dark"}}`)
+	srv, captured := newServerCapturing(t, http.StatusOK, `{"prefs":{"theme":"dark"}}`)
 	defer srv.Close()
 	c := newTestClient(t, srv)
 	result, err := c.Preferences.Lookup(context.Background())
@@ -95,24 +95,24 @@ func TestPreferences_Lookup_ReturnsPrefs(t *testing.T) {
 	if result.Prefs["theme"] != "dark" {
 		t.Errorf("prefs.theme=%v, want dark", result.Prefs["theme"])
 	}
-	if cap.method != http.MethodGet || cap.path != preferencesPath {
-		t.Errorf("captured %s %s, want GET %s", cap.method, cap.path, preferencesPath)
+	if captured.method != http.MethodGet || captured.path != preferencesPath {
+		t.Errorf("captured %s %s, want GET %s", captured.method, captured.path, preferencesPath)
 	}
 }
 
 func TestPreferences_Set_SerializesAndMintsIdempotencyKey(t *testing.T) {
-	srv, cap := newServerCapturing(t, http.StatusOK, `{"prefs":{"theme":"dark"}}`)
+	srv, captured := newServerCapturing(t, http.StatusOK, `{"prefs":{"theme":"dark"}}`)
 	defer srv.Close()
 	c := newTestClient(t, srv)
 	_, err := c.Preferences.Set(context.Background(), &PreferencesSetInput{Prefs: PreferencesDocument{"theme": "dark"}})
 	if err != nil {
 		t.Fatalf("Set: %v", err)
 	}
-	if cap.idem == "" {
+	if captured.idem == "" {
 		t.Errorf("expected Idempotency-Key header on POST")
 	}
 	var wire prefsWireBody
-	if err := json.Unmarshal(cap.body, &wire); err != nil {
+	if err := json.Unmarshal(captured.body, &wire); err != nil {
 		t.Fatalf("body unmarshal: %v", err)
 	}
 	if wire.Prefs["theme"] != "dark" {
@@ -141,8 +141,7 @@ func TestPreferences_Set_RejectsMissingPrefs(t *testing.T) {
 	if err == nil {
 		t.Fatalf("expected validation error")
 	}
-	var verr *ValidationError
-	if !errors.As(err, &verr) {
+	if _, ok := errors.AsType[*ValidationError](err); !ok {
 		t.Errorf("expected *ValidationError, got %T", err)
 	}
 }
@@ -151,7 +150,7 @@ func TestPreferences_Set_RejectsMissingPrefs(t *testing.T) {
 
 func TestCases_Create_HappyPath(t *testing.T) {
 	resp := `{"object":"case","hash":"abc123","url":"https://share.example/case/abc123","readonly":true,"created_at":"2026-05-20T14:32:01Z"}`
-	srv, cap := newServerCapturing(t, http.StatusOK, resp)
+	srv, captured := newServerCapturing(t, http.StatusOK, resp)
 	defer srv.Close()
 	c := newTestClient(t, srv)
 	result, err := c.Cases.Create(context.Background(), &CaseCreateInput{
@@ -168,14 +167,14 @@ func TestCases_Create_HappyPath(t *testing.T) {
 	if !result.Readonly {
 		t.Errorf("readonly=false, want true")
 	}
-	if cap.method != http.MethodPost || cap.path != caseCreatePath {
-		t.Errorf("captured %s %s, want POST %s", cap.method, cap.path, caseCreatePath)
+	if captured.method != http.MethodPost || captured.path != caseCreatePath {
+		t.Errorf("captured %s %s, want POST %s", captured.method, captured.path, caseCreatePath)
 	}
-	if cap.idem == "" {
+	if captured.idem == "" {
 		t.Errorf("expected Idempotency-Key header on POST")
 	}
 	var wire caseCreateWireBody
-	if err := json.Unmarshal(cap.body, &wire); err != nil {
+	if err := json.Unmarshal(captured.body, &wire); err != nil {
 		t.Fatalf("body unmarshal: %v", err)
 	}
 	if len(wire.Products) != 1 || wire.Products[0] != "senior-life" {
@@ -184,7 +183,7 @@ func TestCases_Create_HappyPath(t *testing.T) {
 }
 
 func TestCases_Create_AcceptsRawXMLInput(t *testing.T) {
-	srv, cap := newServerCapturing(t, http.StatusOK, `{"object":"case","hash":"x","url":"","readonly":false,"created_at":""}`)
+	srv, captured := newServerCapturing(t, http.StatusOK, `{"object":"case","hash":"x","url":"","readonly":false,"created_at":""}`)
 	defer srv.Close()
 	c := newTestClient(t, srv)
 	_, err := c.Cases.Create(context.Background(), &CaseCreateInput{Input: "<applicant/>"})
@@ -192,7 +191,7 @@ func TestCases_Create_AcceptsRawXMLInput(t *testing.T) {
 		t.Fatalf("Create: %v", err)
 	}
 	var wire caseCreateWireBody
-	if err := json.Unmarshal(cap.body, &wire); err != nil {
+	if err := json.Unmarshal(captured.body, &wire); err != nil {
 		t.Fatalf("body unmarshal: %v", err)
 	}
 	if s, ok := wire.Input.(string); !ok || s != "<applicant/>" {
@@ -224,7 +223,7 @@ func TestCases_Create_500Errors(t *testing.T) {
 // ---------------------- Email -------------------------------------
 
 func TestEmail_Enqueue_SerializesBase64Attachment(t *testing.T) {
-	srv, cap := newServerCapturing(t, http.StatusOK, `{"enqueue_id":"eq_1"}`)
+	srv, captured := newServerCapturing(t, http.StatusOK, `{"enqueue_id":"eq_1"}`)
 	defer srv.Close()
 	c := newTestClient(t, srv)
 	result, err := c.Email.Enqueue(context.Background(), &EmailEnqueueInput{
@@ -240,11 +239,11 @@ func TestEmail_Enqueue_SerializesBase64Attachment(t *testing.T) {
 	if result.EnqueueID != "eq_1" {
 		t.Errorf("enqueue_id=%q, want eq_1", result.EnqueueID)
 	}
-	if cap.method != http.MethodPost || cap.path != emailEnqueuePath {
-		t.Errorf("captured %s %s, want POST %s", cap.method, cap.path, emailEnqueuePath)
+	if captured.method != http.MethodPost || captured.path != emailEnqueuePath {
+		t.Errorf("captured %s %s, want POST %s", captured.method, captured.path, emailEnqueuePath)
 	}
-	if !strings.Contains(string(cap.body), "content_base64") {
-		t.Errorf("body missing content_base64 field: %s", string(cap.body))
+	if !strings.Contains(string(captured.body), "content_base64") {
+		t.Errorf("body missing content_base64 field: %s", string(captured.body))
 	}
 }
 
@@ -259,14 +258,14 @@ func TestEmail_Enqueue_RejectsMissingTo(t *testing.T) {
 }
 
 func TestCases_Email_TargetsEnqueueEndpoint(t *testing.T) {
-	srv, cap := newServerCapturing(t, http.StatusOK, `{"enqueue_id":"eq_2"}`)
+	srv, captured := newServerCapturing(t, http.StatusOK, `{"enqueue_id":"eq_2"}`)
 	defer srv.Close()
 	c := newTestClient(t, srv)
 	_, err := c.Cases.Email(context.Background(), &EmailEnqueueInput{To: "jane@smith.com", Subject: "s", BodyHTML: "b"})
 	if err != nil {
 		t.Fatalf("Email: %v", err)
 	}
-	if cap.path != emailEnqueuePath {
-		t.Errorf("captured path=%q, want %s", cap.path, emailEnqueuePath)
+	if captured.path != emailEnqueuePath {
+		t.Errorf("captured path=%q, want %s", captured.path, emailEnqueuePath)
 	}
 }

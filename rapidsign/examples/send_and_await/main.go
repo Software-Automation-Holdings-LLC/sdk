@@ -10,6 +10,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"log"
 	"os"
 	"time"
@@ -17,18 +18,31 @@ import (
 	"github.com/Software-Automation-Holdings-LLC/sdk/rapidsign"
 )
 
+const (
+	signatureTimeout = 24 * time.Hour
+	overallTimeout   = 25 * time.Hour
+	outputPath       = "signed-output.pdf"
+	outputFileMode   = 0o600
+)
+
 func main() {
+	if err := run(); err != nil {
+		log.Fatal(err)
+	}
+}
+
+func run() error {
 	token := os.Getenv("RAPIDSIGN_TOKEN")
 	if len(token) == 0 {
-		log.Fatal("RAPIDSIGN_TOKEN must be set")
+		return errors.New("RAPIDSIGN_TOKEN must be set")
 	}
 
 	rs, err := rapidsign.New(token)
 	if err != nil {
-		log.Fatal("rapidsign.New failed")
+		return errors.New("rapidsign.New failed")
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 25*time.Hour)
+	ctx, cancel := context.WithTimeout(context.Background(), overallTimeout)
 	defer cancel()
 
 	env, err := rs.Documents.Send(ctx, &rapidsign.SendRequest{
@@ -43,22 +57,33 @@ func main() {
 		Metadata:  map[string]string{"applicationId": "app_1234"},
 	})
 	if err != nil {
-		log.Fatal("Send failed")
+		return errors.New("send failed")
 	}
 	log.Println("envelope created")
 
-	if _, err := rs.Documents.AwaitSignature(ctx, env.SignID, rapidsign.AwaitOpts{Timeout: 24 * time.Hour}); err != nil {
-		log.Fatal("AwaitSignature failed")
+	if _, err := rs.Documents.AwaitSignature(ctx, env.SignID, rapidsign.AwaitOpts{Timeout: signatureTimeout}); err != nil {
+		return errors.New("await signature failed")
 	}
 	log.Println("signature captured")
 
 	pdf, err := rs.Documents.Download(ctx, env.SignID)
 	if err != nil {
-		log.Fatal("Download failed")
+		return errors.New("download failed")
 	}
-	const out = "signed-output.pdf"
-	if err := os.WriteFile(out, pdf, 0o600); err != nil {
-		log.Fatal("WriteFile failed")
+	if err := writeOutput(pdf); err != nil {
+		return errors.New("write file failed")
 	}
-	log.Println("wrote signed-output.pdf")
+	log.Println("wrote " + outputPath)
+	return nil
+}
+
+// writeOutput saves the signed PDF inside the working directory, so the
+// output name can never escape it.
+func writeOutput(pdf []byte) error {
+	root, err := os.OpenRoot(".")
+	if err != nil {
+		return err
+	}
+	defer func() { _ = root.Close() }()
+	return root.WriteFile(outputPath, pdf, outputFileMode)
 }

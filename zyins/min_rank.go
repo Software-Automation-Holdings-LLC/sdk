@@ -8,8 +8,9 @@ package zyins
 // MinRankGi are synonyms that share the canonical lowercase wire token. The
 // server compares case-insensitively and also tolerates numeric strings, so
 // option fields stay typed as string rather than MinRank — these constants are
-// for ergonomics and autocomplete, not a hard gate. MinRank is itself a string
-// type, so every constant assigns to a string field without conversion.
+// for ergonomics and autocomplete, not a hard gate. MinRank is a defined string
+// type, so assigning a constant to a string option field takes an explicit
+// conversion: PrequalifyV3Options{MinRank: string(MinRankGuaranteed)}.
 type MinRank string
 
 // MinRank values accepted by the server's min_rank filter.

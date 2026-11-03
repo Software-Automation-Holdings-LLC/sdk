@@ -58,6 +58,12 @@ type Client struct {
 	// memoized defaults. See autocorrector_facade.go.
 	adapters referenceAdapters
 
+	// datasetSource, when non-nil, supplies the reference bundle that
+	// warms the cache-backed Match facades — a local file, an in-memory
+	// bundle, or a resolving chain. nil keeps the API path (DatasetsV3.Get)
+	// as the sole warmer: the unchanged default. See dataset_source.go.
+	datasetSource DatasetSource
+
 	// Prequalify runs the prequalify engine against an applicant. This
 	// is the canonical, unversioned surface: it routes to whichever /vN
 	// the BundledAPIVersions table (or a per-instance pin) selects for
@@ -172,6 +178,9 @@ type options struct {
 	// autocompleteAlgorithm overrides the default reference
 	// autocomplete algorithm.
 	autocompleteAlgorithm reference.AutocompleteAlgorithm
+	// datasetSource supplies the reference bundle from a local artifact
+	// instead of the API. nil keeps the API-fetch default.
+	datasetSource DatasetSource
 }
 
 // WithToken supplies a static bearer token. Equivalent to
@@ -347,6 +356,18 @@ func WithAutocompleteAlgorithm(a reference.AutocompleteAlgorithm) Option {
 	}
 }
 
+// WithDatasetSource installs a local reference-bundle source. When set,
+// the cache-backed Match facades (Conditions/Medications/Concepts),
+// autocomplete, and autocorrect warm from the source instead of a
+// DatasetsV3.Get HTTP call — load a FileDatasetSource for offline use.
+// Passing nil clears the override and restores the API-fetch default.
+func WithDatasetSource(src DatasetSource) Option {
+	return func(o *options) error {
+		o.datasetSource = src
+		return nil
+	}
+}
+
 // NewClient returns a ready-to-use Client. The single required option
 // is WithToken or WithTokenSource; everything else falls back to the
 // SDK defaults.
@@ -418,6 +439,7 @@ func NewClient(opts ...Option) (*Client, error) {
 			matchAlgorithmOverride:        o.matchAlgorithm,
 			autocompleteAlgorithmOverride: o.autocompleteAlgorithm,
 		},
+		datasetSource: o.datasetSource,
 	}
 	c.PrequalifyV1 = &PrequalifyService{client: c}
 	c.QuoteV1 = &QuoteService{client: c}

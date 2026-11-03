@@ -4,9 +4,9 @@
 // The session headers emitted are the wire contract the ISA Platform
 // session verifier admits (shared/go/auth/session/verifier.go):
 //
-//	Authorization:     Bearer <sessionSecret>
+//	Authorization:     Session <sessionSecret>
 //	X-Isa-Session-Id:  <sessionId>
-//	X-Device-ID:       <deviceId>
+//	X-Device-ID:       <deviceId>            (omitted when deviceId is empty)
 //	X-Isa-Timestamp:   <iso8601_z>
 //	X-Isa-Signature:   hex(HMAC-SHA256(sessionSecret, canonical))
 //
@@ -39,7 +39,12 @@ const (
 	HeaderIsaTimestamp  = "X-Isa-Timestamp"
 	HeaderIsaSignature  = "X-Isa-Signature"
 	BearerAuthScheme    = "Bearer"
-	emptyBodySHA256Hex  = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+	// SessionAuthScheme is the Authorization scheme the proxy session
+	// verifier requires. Not BearerAuthScheme — the value is an HMAC
+	// secret, not a bearer token. See
+	// services/proxy/internal/auth/session.go (authzSchemeName).
+	SessionAuthScheme  = "Session"
+	emptyBodySHA256Hex = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
 )
 
 // Errors surfaced by SignRequest.
@@ -71,7 +76,9 @@ type SignedHeaders struct {
 }
 
 // AsMap returns the headers as a map keyed by canonical header names.
-// Useful when passing into http.Header or similar consumers.
+// Useful when passing into http.Header or similar consumers. HeaderDeviceID
+// is present only when h.DeviceID is non-empty — it is not a mandatory
+// member of the session-signing wire contract.
 func (h SignedHeaders) AsMap() map[string]string {
 	headers := map[string]string{
 		HeaderAuthorization: h.Authorization,
@@ -141,7 +148,7 @@ func SignRequest(input SignRequestInput) (SignedHeaders, error) {
 	signature := hex.EncodeToString(mac.Sum(nil))
 
 	return SignedHeaders{
-		Authorization: BearerAuthScheme + " " + input.SessionSecret,
+		Authorization: SessionAuthScheme + " " + input.SessionSecret,
 		IsaSessionID:  input.SessionID,
 		DeviceID:      input.DeviceID,
 		IsaTimestamp:  timestamp,

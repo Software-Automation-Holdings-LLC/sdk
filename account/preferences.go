@@ -71,10 +71,7 @@ func parsePreferences(body []byte) (PreferencesDocument, error) {
 	if len(body) == 0 {
 		return PreferencesDocument{}, nil
 	}
-	data, err := unwrapEnvelope(body)
-	if err != nil {
-		return nil, fmt.Errorf("account: Preferences parse envelope: %w", err)
-	}
+	data := unwrapEnvelope(body)
 	if len(data) == 0 {
 		return PreferencesDocument{}, nil
 	}

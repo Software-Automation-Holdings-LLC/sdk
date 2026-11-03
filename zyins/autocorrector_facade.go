@@ -14,7 +14,6 @@ package zyins
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"sync"
 
@@ -172,14 +171,8 @@ func (c *Client) invalidateAutocorrectorCache() {
 
 // cachedDatasetsBundle returns the v3 bundle backing the cache-backed
 // reference index. Used by Autocorrector and the future adapter facade
-// surfaces.
+// surfaces. Honors a configured DatasetSource (offline file / chain) and
+// otherwise falls back to the API path — see Client.referenceBundle.
 func (c *Client) cachedDatasetsBundle(ctx context.Context) (*DatasetBundleV3, error) {
-	res, err := c.DatasetsV3.Get(ctx, DatasetsV3Options{})
-	if err != nil {
-		return nil, err
-	}
-	if res == nil || res.Bundle == nil {
-		return nil, errors.New("zyins: cached datasets bundle: empty")
-	}
-	return res.Bundle, nil
+	return c.referenceBundle(ctx)
 }

@@ -17,8 +17,10 @@ import (
 // userAgentHeader matches the package version reported in CHANGELOG.md.
 const userAgentHeader = "isa-sdk-account-go/0.4.0"
 
-const jsonContentType = "application/json"
-const idempotencyKeyLen = 16
+const (
+	jsonContentType   = "application/json"
+	idempotencyKeyLen = 16
+)
 
 // callArgs groups the inputs for one signed request.
 type callArgs struct {
@@ -76,7 +78,7 @@ func (c *Client) signedDo(ctx context.Context, args callArgs) ([]byte, error) {
 	if err != nil {
 		return nil, fmt.Errorf("account: %s %s: %w", args.method, args.path, err)
 	}
-	defer drainAndClose(resp.Body)
+	defer drainAndClose(resp)
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return nil, fmt.Errorf("account: reading %s %s response: %w", args.method, args.path, err)
@@ -126,28 +128,28 @@ func (e *HTTPError) Error() string {
 
 // drainAndClose consumes any unread bytes so the keep-alive connection
 // returns to the pool.
-func drainAndClose(rc io.ReadCloser) {
-	if rc == nil {
+func drainAndClose(resp *http.Response) {
+	if resp == nil || resp.Body == nil {
 		return
 	}
-	_, _ = io.Copy(io.Discard, rc)
-	_ = rc.Close()
+	_, _ = io.Copy(io.Discard, resp.Body)
+	_ = resp.Body.Close()
 }
 
 // unwrapEnvelope returns the value under the top-level `data` key when
 // the body is an envelope, or the parsed body itself when not. The
 // caller-passed unmarshal target is left alone if the body is empty.
-func unwrapEnvelope(body []byte) (json.RawMessage, error) {
+func unwrapEnvelope(body []byte) json.RawMessage {
 	if len(body) == 0 {
-		return nil, nil
+		return nil
 	}
 	var env map[string]json.RawMessage
 	if err := json.Unmarshal(body, &env); err != nil {
 		// Not an object — treat the whole body as the payload.
-		return body, nil
+		return body
 	}
 	if data, ok := env["data"]; ok && len(data) > 0 && !bytes.Equal(bytes.TrimSpace(data), []byte("null")) {
-		return data, nil
+		return data
 	}
-	return body, nil
+	return body
 }

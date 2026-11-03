@@ -58,7 +58,7 @@ func newRoutingServer(t *testing.T, body string) (*httptest.Server, *routingCapt
 func newRoutingClient(t *testing.T, srv *httptest.Server, overrides map[string]string) *Client {
 	t.Helper()
 	opts := []Option{
-		WithToken("isa_test_4fjK2nQ7mX1aB8sR9pZ3"),
+		WithToken("isa_test_aaaaaaaaaaaaaaaaaaaa"),
 		WithBaseURL(srv.URL),
 	}
 	if overrides != nil {

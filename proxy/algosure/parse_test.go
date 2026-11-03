@@ -2,6 +2,7 @@ package algosure
 
 import (
 	"errors"
+	"net/http"
 	"net/http/httptest"
 	"strconv"
 	"strings"
@@ -9,7 +10,7 @@ import (
 )
 
 func TestParseAlgosureRequest_MissingSaltID_ReturnsErrMissingSaltID(t *testing.T) {
-	r := httptest.NewRequest("GET", "/x", strings.NewReader(""))
+	r := httptest.NewRequest(http.MethodGet, "/x", strings.NewReader(""))
 	r.Header.Set(headerHost, "h.example")
 	r.Header.Set(headerTimestamp, "1")
 	r.Header.Set(headerSessionID, "sid")
@@ -22,7 +23,7 @@ func TestParseAlgosureRequest_MissingSaltID_ReturnsErrMissingSaltID(t *testing.T
 }
 
 func TestParseAlgosureRequest_InvalidSaltID_ReturnsErrMissingSaltID(t *testing.T) {
-	r := httptest.NewRequest("GET", "/x", strings.NewReader(""))
+	r := httptest.NewRequest(http.MethodGet, "/x", strings.NewReader(""))
 	r.Header.Set(headerHost, "h.example")
 	r.Header.Set(headerTimestamp, "1")
 	r.Header.Set(headerSessionID, "sid")
@@ -36,7 +37,7 @@ func TestParseAlgosureRequest_InvalidSaltID_ReturnsErrMissingSaltID(t *testing.T
 }
 
 func TestParseAlgosureRequest_NonPositiveSaltID_ReturnsErrMissingSaltID(t *testing.T) {
-	r := httptest.NewRequest("GET", "/x", strings.NewReader(""))
+	r := httptest.NewRequest(http.MethodGet, "/x", strings.NewReader(""))
 	r.Header.Set(headerHost, "h.example")
 	r.Header.Set(headerTimestamp, "1")
 	r.Header.Set(headerSessionID, "sid")
@@ -50,7 +51,7 @@ func TestParseAlgosureRequest_NonPositiveSaltID_ReturnsErrMissingSaltID(t *testi
 }
 
 func TestParseAlgosureRequest_LowercaseSaltIdHeaderAccepted(t *testing.T) {
-	r := httptest.NewRequest("GET", "/x", strings.NewReader(""))
+	r := httptest.NewRequest(http.MethodGet, "/x", strings.NewReader(""))
 	r.Header.Set(headerHost, "h.example")
 	r.Header.Set(headerTimestamp, "1")
 	r.Header.Set(headerSessionID, "sid")
@@ -67,7 +68,7 @@ func TestParseAlgosureRequest_LowercaseSaltIdHeaderAccepted(t *testing.T) {
 }
 
 func TestParseAlgosureRequest_ValidSaltID_Parsed(t *testing.T) {
-	r := httptest.NewRequest("GET", "/x", strings.NewReader(""))
+	r := httptest.NewRequest(http.MethodGet, "/x", strings.NewReader(""))
 	r.Header.Set(headerHost, "h.example")
 	r.Header.Set(headerTimestamp, "1")
 	r.Header.Set(headerSessionID, "sid")
