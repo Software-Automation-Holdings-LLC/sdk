@@ -16,7 +16,7 @@ final class ProxyClientTest extends TestCase
 {
     public function testConstructorWiresServicesFromTokenAlone(): void
     {
-        $client = new ProxyClient('isa_test_4fjK2nQ7mX1aB8sR9pZ3');
+        $client = new ProxyClient('isa_test_aaaaaaaaaaaaaaaaaaaa');
         $this->assertTrue($client->auth->isTest());
         $this->assertFalse($client->auth->isLive());
         $this->assertTrue($client->auth->isRecognizedPrefix());

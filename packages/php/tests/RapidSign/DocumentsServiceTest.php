@@ -101,6 +101,44 @@ final class DocumentsServiceTest extends TestCase
         self::assertSame('notify-idem-key', $notify->getHeaderLine('Idempotency-Key'));
     }
 
+    public function testSendNotifyBodyUsesSnakeCaseFormFields(): void
+    {
+        $http = new MockHttpClient();
+        $http->queue(200, '{"document_id":"doc_x","sign_ids":["sig_server_42"],"hashes":{}}');
+        $http->queue(200, '{"sign_id":"sig_server_42","status":"notified"}');
+
+        $ids = new FixedIdempotency(['session-uuid', 'client-sign-uuid', 'caller-idem-key', 'notify-idem-key']);
+        $client = $this->buildClient($http, $ids);
+
+        $client->documents->send(new SendRequest(
+            packet: [new PdfSource('https://example.com/contract.pdf')],
+            recipient: new Recipient('john.doe@acme-agency.com'),
+            idempotencyKey: 'caller-idem-key',
+            formId: 'form_abc123',
+            includeCodeInLink: true,
+        ));
+
+        $notifyBody = json_decode((string) $http->requests[1]->getBody(), true, flags: JSON_THROW_ON_ERROR);
+        self::assertSame('form_abc123', $notifyBody['form_id']);
+        self::assertTrue($notifyBody['include_code_in_link']);
+    }
+
+    public function testSendNotifyBodyOmitsFormFieldsWhenNotSupplied(): void
+    {
+        $http = new MockHttpClient();
+        $http->queue(200, '{"document_id":"doc_x","sign_ids":["sig_server_42"],"hashes":{}}');
+        $http->queue(200, '{"sign_id":"sig_server_42","status":"notified"}');
+
+        $ids = new FixedIdempotency(['session-uuid', 'client-sign-uuid', 'caller-idem-key', 'notify-idem-key']);
+        $client = $this->buildClient($http, $ids);
+
+        $client->documents->send($this->sendRequest(idempotencyKey: 'caller-idem-key'));
+
+        $notifyBody = json_decode((string) $http->requests[1]->getBody(), true, flags: JSON_THROW_ON_ERROR);
+        self::assertArrayNotHasKey('form_id', $notifyBody);
+        self::assertArrayNotHasKey('include_code_in_link', $notifyBody);
+    }
+
     public function testSendCallerSuppliedIdempotencyKeyTakesPriority(): void
     {
         $http = new MockHttpClient();

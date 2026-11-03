@@ -1,6 +1,6 @@
 # Migration — 0.x → 1.0.0-rc.1 (PHP)
 
-The cross-language guide at [`../../MIGRATION.md`](../../MIGRATION.md)
+The cross-language guide at [`../../docs/sdk/MIGRATION.md`](../../docs/sdk/MIGRATION.md)
 covers the full cut (constructor rename, per-surface `apiVersion`,
 v3 wire-shape, `CaseStorage` adapter, bundleless `reference->match`).
 PHP-specific notes:
@@ -49,12 +49,12 @@ PHP-specific notes:
 
 ---
 
-# Historical: per-product packages → `sah/sdk` v0.3.0
+## Historical: per-product packages → `sah/sdk` v0.3.0
 
 The PHP SDK ships as **one Composer package per process**, not four. This
 document explains how to migrate.
 
-## Why
+### Why
 
 Per-product splits cost us:
 
@@ -68,34 +68,34 @@ The bundle-size argument never held — Composer downloads everything you
 require; you cannot tree-shake PHP. Licensing separation is a contract-layer
 concern, not a package-layer concern.
 
-## Composer changes
+### Composer changes
 
-| Before | After |
-|---|---|
-| `composer require sah/sdk-zyins` | `composer require sah/sdk:^0.3.0` |
-| `composer require sah/sdk-rapidsign` | (covered by `sah/sdk:^0.3.0`) |
-| `composer require sah/sdk-proxy` | (covered by `sah/sdk:^0.3.0`) |
-| `composer require isa-sdk/core-transport` | (covered by `sah/sdk:^0.3.0`) |
+| Before                                    | After                             |
+| ----------------------------------------- | --------------------------------- |
+| `composer require sah/sdk-zyins`          | `composer require sah/sdk:^0.3.0` |
+| `composer require sah/sdk-rapidsign`      | (covered by `sah/sdk:^0.3.0`)     |
+| `composer require sah/sdk-proxy`          | (covered by `sah/sdk:^0.3.0`)     |
+| `composer require isa-sdk/core-transport` | (covered by `sah/sdk:^0.3.0`)     |
 
 ```bash
 composer remove sah/sdk-zyins sah/sdk-rapidsign sah/sdk-proxy isa-sdk/core-transport
 composer require sah/sdk:^0.3.0
 ```
 
-## Namespace changes
+### Namespace changes
 
-| Before | After |
-|---|---|
-| `Sah\IsaSdk\ZyINS\…` | `Isa\Sdk\Zyins\…` |
-| `Sah\IsaSdk\RapidSign\…` | `Isa\Sdk\RapidSign\…` |
-| `Sah\IsaSdk\Proxy\…` | `Isa\Sdk\Proxy\…` |
-| `Isa\Sdk\Core\Transport\…` | `Isa\Sdk\Core\…` |
-| `Sah\IsaSdk\ZyINS\Tests\…` | `Isa\Sdk\Tests\Zyins\…` |
-| `Sah\IsaSdk\Proxy\Tests\…` | `Isa\Sdk\Tests\Proxy\…` |
-| `Sah\IsaSdk\RapidSign\Tests\…` | `Isa\Sdk\Tests\RapidSign\…` |
-| `Isa\Sdk\Core\Transport\Tests\…` | `Isa\Sdk\Tests\Core\…` |
+| Before                           | After                       |
+| -------------------------------- | --------------------------- |
+| `Sah\IsaSdk\ZyINS\…`             | `Isa\Sdk\Zyins\…`           |
+| `Sah\IsaSdk\RapidSign\…`         | `Isa\Sdk\RapidSign\…`       |
+| `Sah\IsaSdk\Proxy\…`             | `Isa\Sdk\Proxy\…`           |
+| `Isa\Sdk\Core\Transport\…`       | `Isa\Sdk\Core\…`            |
+| `Sah\IsaSdk\ZyINS\Tests\…`       | `Isa\Sdk\Tests\Zyins\…`     |
+| `Sah\IsaSdk\Proxy\Tests\…`       | `Isa\Sdk\Tests\Proxy\…`     |
+| `Sah\IsaSdk\RapidSign\Tests\…`   | `Isa\Sdk\Tests\RapidSign\…` |
+| `Isa\Sdk\Core\Transport\Tests\…` | `Isa\Sdk\Tests\Core\…`      |
 
-## Entry-point change
+### Entry-point change
 
 The new unified entry point is `Isa\Sdk\Isa`. Per-product clients
 (`ZyInsClient`, `RapidSignClient`, `ProxyClient`) remain available for
@@ -118,7 +118,7 @@ $rapidsign = $isa->rapidsign;   // Isa\Sdk\RapidSign\RapidSignClient
 $proxy = $isa->proxy;           // Isa\Sdk\Proxy\ProxyClient
 ```
 
-## Automated migration with Rector
+### Automated migration with Rector
 
 A scaffold Rector configuration is included as `rector.php`. Run it from
 your project root:
@@ -133,7 +133,7 @@ The supplied rule set covers the namespace renames listed above and the
 committing — Rector's renames are textual and a stray comment containing the
 old namespace will also be rewritten.
 
-## What did not change
+### What did not change
 
 - Method shapes (`prequalify->run`, `documents->send`, `call->invoke`).
 - Idempotency-key behavior (`Idempotency-Key` header, conflict surface via
