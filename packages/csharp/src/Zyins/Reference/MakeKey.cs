@@ -17,28 +17,28 @@ namespace Isa.Sdk.Zyins.Reference;
 
 internal static class MakeKey
 {
-    /// <summary>Normalize free text to the canonical server-side
-    /// <c>MakeKey</c> form.</summary>
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static string Normalize(string? text)
+  /// <summary>Normalize free text to the canonical server-side
+  /// <c>MakeKey</c> form.</summary>
+  [MethodImpl(MethodImplOptions.AggressiveInlining)]
+  public static string Normalize(string? text)
+  {
+    if (string.IsNullOrEmpty(text))
     {
-        if (string.IsNullOrEmpty(text))
-        {
-            return string.Empty;
-        }
-        // Uppercase first so locale-specific casefolding does not change
-        // which bytes survive the alphanumeric strip.
-        var upper = text!.ToUpperInvariant();
-        var buf = new char[upper.Length];
-        var n = 0;
-        for (var i = 0; i < upper.Length; i++)
-        {
-            var ch = upper[i];
-            if ((ch >= '0' && ch <= '9') || (ch >= 'A' && ch <= 'Z'))
-            {
-                buf[n++] = ch;
-            }
-        }
-        return n == 0 ? string.Empty : new string(buf, 0, n);
+      return string.Empty;
     }
+    // Uppercase first so locale-specific casefolding does not change
+    // which bytes survive the alphanumeric strip.
+    var upper = text!.ToUpperInvariant();
+    var buf = new char[upper.Length];
+    var n = 0;
+    for (var i = 0; i < upper.Length; i++)
+    {
+      var ch = upper[i];
+      if ((ch >= '0' && ch <= '9') || (ch >= 'A' && ch <= 'Z'))
+      {
+        buf[n++] = ch;
+      }
+    }
+    return n == 0 ? string.Empty : new string(buf, 0, n);
+  }
 }

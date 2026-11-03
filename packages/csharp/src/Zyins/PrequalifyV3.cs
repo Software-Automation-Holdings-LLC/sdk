@@ -26,14 +26,14 @@ namespace Isa.Sdk.Zyins;
 /// <summary>Underwriting rank bucket. NOT the carrier rate-class label.</summary>
 public enum V3EligibilityCategory
 {
-    /// <summary>Immediate-issue rank.</summary>
-    Immediate,
-    /// <summary>Graded benefit.</summary>
-    Graded,
-    /// <summary>Return-of-premium tier.</summary>
-    Rop,
-    /// <summary>Any other rank the server reports outside the closed set.</summary>
-    Other,
+  /// <summary>Immediate-issue rank.</summary>
+  Immediate,
+  /// <summary>Graded benefit.</summary>
+  Graded,
+  /// <summary>Return-of-premium tier.</summary>
+  Rop,
+  /// <summary>Any other rank the server reports outside the closed set.</summary>
+  Other,
 }
 
 /// <summary>Eligibility for one row of the pricing table.</summary>
@@ -56,10 +56,10 @@ public sealed record V3Amount(long Cents, string Display);
 /// </summary>
 public enum V3Period
 {
-    Monthly,
-    Quarterly,
-    Semiannual,
-    Annual,
+  Monthly,
+  Quarterly,
+  Semiannual,
+  Annual,
 }
 
 /// <summary>
@@ -165,72 +165,72 @@ public sealed record QuoteV3Result(
 /// <summary>Client-side grouping helpers for a flat v3 <c>plans[]</c> list.</summary>
 public static class Grouping
 {
-    /// <summary>
-    /// Group a flat plans list by the requested coverage dimension. When any
-    /// offer carries a <c>Budget</c> (a monthly-budget response) the offers key
-    /// off <c>Budget.Amount.Cents</c>; otherwise off
-    /// <c>DeathBenefit.Amount.Cents</c> (a face-amount response). Grouping
-    /// preserves items within each bucket; callers must not rely on key
-    /// enumeration order (Dictionary does not guarantee it).
-    ///
-    /// In budget mode, an offer missing <c>Budget</c> is skipped (contract
-    /// violation) rather than falling back to DeathBenefit, which would
-    /// mis-bucket mixed offers. In face-amount mode, an offer with a
-    /// <c>null</c> DeathBenefit (a medsup product, which has no face amount) is
-    /// likewise skipped — it has no face-amount dimension to group on.
-    /// </summary>
-    public static IReadOnlyDictionary<long, IReadOnlyList<V3Offer>> ByAmount(
-        IReadOnlyList<V3Offer> plans)
+  /// <summary>
+  /// Group a flat plans list by the requested coverage dimension. When any
+  /// offer carries a <c>Budget</c> (a monthly-budget response) the offers key
+  /// off <c>Budget.Amount.Cents</c>; otherwise off
+  /// <c>DeathBenefit.Amount.Cents</c> (a face-amount response). Grouping
+  /// preserves items within each bucket; callers must not rely on key
+  /// enumeration order (Dictionary does not guarantee it).
+  ///
+  /// In budget mode, an offer missing <c>Budget</c> is skipped (contract
+  /// violation) rather than falling back to DeathBenefit, which would
+  /// mis-bucket mixed offers. In face-amount mode, an offer with a
+  /// <c>null</c> DeathBenefit (a medsup product, which has no face amount) is
+  /// likewise skipped — it has no face-amount dimension to group on.
+  /// </summary>
+  public static IReadOnlyDictionary<long, IReadOnlyList<V3Offer>> ByAmount(
+      IReadOnlyList<V3Offer> plans)
+  {
+    var isBudget = plans.Any(static p => p.Budget is not null);
+    var grouped = new Dictionary<long, List<V3Offer>>();
+    var order = new List<long>();
+    foreach (var offer in plans)
     {
-        var isBudget = plans.Any(static p => p.Budget is not null);
-        var grouped = new Dictionary<long, List<V3Offer>>();
-        var order = new List<long>();
-        foreach (var offer in plans)
-        {
-            var dimension = isBudget ? offer.Budget : offer.DeathBenefit;
-            // Budget mode: missing budget is a contract violation. Face-amount
-            // mode: a null DeathBenefit is a medsup product with no face-amount
-            // dimension. Either way there is nothing to group on, so skip.
-            if (dimension is null)
-            {
-                continue;
-            }
-            var key = dimension.Amount.Cents;
-            if (!grouped.TryGetValue(key, out var bucket))
-            {
-                bucket = new List<V3Offer>();
-                grouped[key] = bucket;
-                order.Add(key);
-            }
-            bucket.Add(offer);
-        }
-        var result = new Dictionary<long, IReadOnlyList<V3Offer>>();
-        foreach (var key in order)
-        {
-            result[key] = grouped[key];
-        }
-        return result;
+      var dimension = isBudget ? offer.Budget : offer.DeathBenefit;
+      // Budget mode: missing budget is a contract violation. Face-amount
+      // mode: a null DeathBenefit is a medsup product with no face-amount
+      // dimension. Either way there is nothing to group on, so skip.
+      if (dimension is null)
+      {
+        continue;
+      }
+      var key = dimension.Amount.Cents;
+      if (!grouped.TryGetValue(key, out var bucket))
+      {
+        bucket = new List<V3Offer>();
+        grouped[key] = bucket;
+        order.Add(key);
+      }
+      bucket.Add(offer);
     }
+    var result = new Dictionary<long, IReadOnlyList<V3Offer>>();
+    foreach (var key in order)
+    {
+      result[key] = grouped[key];
+    }
+    return result;
+  }
 
-    /// <summary>
-    /// The premium facade for an offer — the <see cref="V3Premium"/> of the
-    /// single <c>Primary</c> (best-qualifying) pricing row, or <c>null</c> when
-    /// the offer has no qualifying row (every row ineligible, or the rare
-    /// eligible row whose carrier returned no priceable mode). This is the one
-    /// premium a list UI shows per product without walking
-    /// <see cref="V3Offer.Pricing"/>.
-    /// </summary>
-    public static V3Premium? OfferPremium(V3Offer offer)
+  /// <summary>
+  /// The premium facade for an offer — the <see cref="V3Premium"/> of the
+  /// single <c>Primary</c> (best-qualifying) pricing row, or <c>null</c> when
+  /// the offer has no qualifying row (every row ineligible, or the rare
+  /// eligible row whose carrier returned no priceable mode). This is the one
+  /// premium a list UI shows per product without walking
+  /// <see cref="V3Offer.Pricing"/>.
+  /// </summary>
+  public static V3Premium? OfferPremium(V3Offer offer)
+  {
+    foreach (var row in offer.Pricing)
     {
-        foreach (var row in offer.Pricing)
-        {
-            if (row.Primary)
-            {
-                return row.Premium;
-            }
-        }
-        return null;
+      if (row.Primary)
+      {
+        return row.Premium;
+      }
     }
+    return null;
+  }
 }
 
 /// <summary>Options layered on top of the v3 prequalify / quote request.</summary>
@@ -280,15 +280,15 @@ public record QuoteRequest(
 /// <summary>Surface for <c>POST /v3/prequalify</c>.</summary>
 public interface IPrequalifyV3Service
 {
-    /// <summary>Run a v3 prequalify call.</summary>
-    Task<PrequalifyV3Result> RunAsync(PrequalifyRequest input, CancellationToken ct = default);
+  /// <summary>Run a v3 prequalify call.</summary>
+  Task<PrequalifyV3Result> RunAsync(PrequalifyRequest input, CancellationToken ct = default);
 }
 
 /// <summary>Surface for <c>POST /v3/quote</c>.</summary>
 public interface IQuoteV3Service
 {
-    /// <summary>Run a v3 quote call.</summary>
-    Task<QuoteV3Result> RunAsync(QuoteRequest input, CancellationToken ct = default);
+  /// <summary>Run a v3 quote call.</summary>
+  Task<QuoteV3Result> RunAsync(QuoteRequest input, CancellationToken ct = default);
 }
 
 // ── Implementation ────────────────────────────────────────────────────────────
@@ -296,39 +296,39 @@ public interface IQuoteV3Service
 /// <summary>Sub-client for the v3 prequalify endpoint.</summary>
 public sealed class PrequalifyV3SubClient : IPrequalifyV3Service
 {
-    private const string Path = "/v3/prequalify";
+  private const string Path = "/v3/prequalify";
 
-    private readonly OperationContext _ctx;
-    private readonly Func<string>? _idempotencyKeyFactory;
+  private readonly OperationContext _ctx;
+  private readonly Func<string>? _idempotencyKeyFactory;
 
-    internal PrequalifyV3SubClient(OperationContext ctx, Func<string>? idempotencyKeyFactory = null)
-    {
-        _ctx = ctx;
-        _idempotencyKeyFactory = idempotencyKeyFactory;
-    }
+  internal PrequalifyV3SubClient(OperationContext ctx, Func<string>? idempotencyKeyFactory = null)
+  {
+    _ctx = ctx;
+    _idempotencyKeyFactory = idempotencyKeyFactory;
+  }
 
-    /// <inheritdoc/>
-    public Task<PrequalifyV3Result> RunAsync(PrequalifyRequest input, CancellationToken ct = default) =>
-        RunAsync(input, idempotencyKey: null, ct);
+  /// <inheritdoc/>
+  public Task<PrequalifyV3Result> RunAsync(PrequalifyRequest input, CancellationToken ct = default) =>
+      RunAsync(input, idempotencyKey: null, ct);
 
-    /// <summary>Run a v3 prequalify call with an explicit idempotency key (UUID v4 expected).</summary>
-    public async Task<PrequalifyV3Result> RunAsync(PrequalifyRequest input, string? idempotencyKey, CancellationToken ct = default)
-    {
-        if (input is null) throw new ArgumentNullException(nameof(input));
-        var key = ResolveIdempotencyKey(idempotencyKey);
-        // v3 prequalify takes the `PrequalifyRequest` envelope shape
-        // (applicant + coverage + products[]) — NOT the v2 flat shape
-        // /v3/quote still consumes via `SerializeRequest`. Send
-        // `Api-Version: v3` so server routing is unambiguous even when
-        // a transport-layer middleware rewrites the URL.
-        var body = V3WireBuilder.SerializeV3PrequalifyBody(input.Applicant, input.Coverage, input.Products, V3WireBuilder.OptionsToCommon(input.Options));
-        var response = await V3Dispatcher.PostAsync(_ctx, Path, body, key, apiVersion: "v3", ct).ConfigureAwait(false);
-        return V3ResponseParser.ParsePrequalify(response.Body, key, V3WireBuilder.RetryAttemptsFromHeaders(response.Headers));
-    }
+  /// <summary>Run a v3 prequalify call with an explicit idempotency key (UUID v4 expected).</summary>
+  public async Task<PrequalifyV3Result> RunAsync(PrequalifyRequest input, string? idempotencyKey, CancellationToken ct = default)
+  {
+    if (input is null) throw new ArgumentNullException(nameof(input));
+    var key = ResolveIdempotencyKey(idempotencyKey);
+    // v3 prequalify takes the `PrequalifyRequest` envelope shape
+    // (applicant + coverage + products[]) — NOT the v2 flat shape
+    // /v3/quote still consumes via `SerializeRequest`. Send
+    // `Api-Version: v3` so server routing is unambiguous even when
+    // a transport-layer middleware rewrites the URL.
+    var body = V3WireBuilder.SerializeV3PrequalifyBody(input.Applicant, input.Coverage, input.Products, V3WireBuilder.OptionsToCommon(input.Options));
+    var response = await V3Dispatcher.PostAsync(_ctx, Path, body, key, apiVersion: "v3", ct).ConfigureAwait(false);
+    return V3ResponseParser.ParsePrequalify(response.Body, key, V3WireBuilder.RetryAttemptsFromHeaders(response.Headers));
+  }
 
-    private string ResolveIdempotencyKey(string? explicitKey)
-    {
-        if (!string.IsNullOrWhiteSpace(explicitKey)) return explicitKey!;
-        return _idempotencyKeyFactory?.Invoke() ?? V3WireBuilder.MintUuidV4();
-    }
+  private string ResolveIdempotencyKey(string? explicitKey)
+  {
+    if (!string.IsNullOrWhiteSpace(explicitKey)) return explicitKey!;
+    return _idempotencyKeyFactory?.Invoke() ?? V3WireBuilder.MintUuidV4();
+  }
 }

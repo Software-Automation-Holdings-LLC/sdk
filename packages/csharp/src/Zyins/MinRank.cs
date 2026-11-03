@@ -16,24 +16,24 @@ namespace Isa.Sdk.Zyins;
 /// </summary>
 public static class MinRank
 {
-    /// <summary>Immediate (full) benefit rank.</summary>
-    public const string Immediate = "immediate";
+  /// <summary>Immediate (full) benefit rank.</summary>
+  public const string Immediate = "immediate";
 
-    /// <summary>Graded-benefit rank.</summary>
-    public const string Graded = "graded";
+  /// <summary>Graded-benefit rank.</summary>
+  public const string Graded = "graded";
 
-    /// <summary>Return-of-premium rank. Canonical; see <see cref="ReturnOfPremium"/>.</summary>
-    public const string Rop = "rop";
+  /// <summary>Return-of-premium rank. Canonical; see <see cref="ReturnOfPremium"/>.</summary>
+  public const string Rop = "rop";
 
-    /// <summary>Synonym for <see cref="Rop"/>.</summary>
-    public const string ReturnOfPremium = "rop";
+  /// <summary>Synonym for <see cref="Rop"/>.</summary>
+  public const string ReturnOfPremium = "rop";
 
-    /// <summary>Guaranteed-issue rank. Canonical; see <see cref="GuaranteedIssue"/> and <see cref="Gi"/>.</summary>
-    public const string Guaranteed = "guaranteed";
+  /// <summary>Guaranteed-issue rank. Canonical; see <see cref="GuaranteedIssue"/> and <see cref="Gi"/>.</summary>
+  public const string Guaranteed = "guaranteed";
 
-    /// <summary>Synonym for <see cref="Guaranteed"/>.</summary>
-    public const string GuaranteedIssue = "guaranteed";
+  /// <summary>Synonym for <see cref="Guaranteed"/>.</summary>
+  public const string GuaranteedIssue = "guaranteed";
 
-    /// <summary>Synonym for <see cref="Guaranteed"/>.</summary>
-    public const string Gi = "guaranteed";
+  /// <summary>Synonym for <see cref="Guaranteed"/>.</summary>
+  public const string Gi = "guaranteed";
 }

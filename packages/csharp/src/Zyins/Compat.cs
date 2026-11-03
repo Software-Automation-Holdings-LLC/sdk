@@ -9,23 +9,23 @@ namespace Isa.Sdk.Zyins;
 
 internal static class CompatHex
 {
-    /// <summary>Hex-encode <paramref name="bytes"/> as a lowercase string.</summary>
-    public static string ToLowerHex(byte[] bytes)
-    {
-        if (bytes is null) throw new ArgumentNullException(nameof(bytes));
+  /// <summary>Hex-encode <paramref name="bytes"/> as a lowercase string.</summary>
+  public static string ToLowerHex(byte[] bytes)
+  {
+    if (bytes is null) throw new ArgumentNullException(nameof(bytes));
 #if NETSTANDARD2_0
-        // Manual conversion — Convert.ToHexString lands in .NET 5.
-        const string hexLower = "0123456789abcdef";
-        var chars = new char[bytes.Length * 2];
-        for (var i = 0; i < bytes.Length; i++)
-        {
-            var b = bytes[i];
-            chars[i * 2] = hexLower[b >> 4];
-            chars[i * 2 + 1] = hexLower[b & 0x0F];
-        }
-        return new string(chars);
+    // Manual conversion — Convert.ToHexString lands in .NET 5.
+    const string hexLower = "0123456789abcdef";
+    var chars = new char[bytes.Length * 2];
+    for (var i = 0; i < bytes.Length; i++)
+    {
+      var b = bytes[i];
+      chars[i * 2] = hexLower[b >> 4];
+      chars[i * 2 + 1] = hexLower[b & 0x0F];
+    }
+    return new string(chars);
 #else
         return Convert.ToHexString(bytes).ToLowerInvariant();
 #endif
-    }
+  }
 }

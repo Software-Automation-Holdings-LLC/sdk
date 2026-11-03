@@ -24,7 +24,7 @@ public sealed record RawResponse(
     Uri RequestUri,
     string Body)
 {
-    /// <summary>Construct from the lower-level <see cref="TransportResponse"/> + request URL.</summary>
-    public static RawResponse FromTransport(TransportResponse response, Uri requestUri) =>
-        new(response.Status, response.Headers, requestUri, response.Body);
+  /// <summary>Construct from the lower-level <see cref="TransportResponse"/> + request URL.</summary>
+  public static RawResponse FromTransport(TransportResponse response, Uri requestUri) =>
+      new(response.Status, response.Headers, requestUri, response.Body);
 }

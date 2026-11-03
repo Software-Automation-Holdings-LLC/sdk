@@ -26,11 +26,11 @@ var result = await isa.Zyins.PrequalifyAsync(request);
 
 Three factories cover the three audiences described in [SDK_DESIGN.md §3](https://github.com/Software-Automation-Holdings-LLC/isa-platform/blob/main/docs/SDK_DESIGN.md):
 
-| Factory | Audience | Env vars read |
-|---|---|---|
-| `IsaClient.WithBearer(token?)` | Server-to-server | `ISA_TOKEN` |
+| Factory                               | Audience                      | Env vars read                              |
+| ------------------------------------- | ----------------------------- | ------------------------------------------ |
+| `IsaClient.WithBearer(token?)`        | Server-to-server              | `ISA_TOKEN`                                |
 | `IsaClient.WithLicense(credentials?)` | Agent tools (BPP web/desktop) | `ISA_LICENSE_KEYCODE`, `ISA_LICENSE_EMAIL` |
-| `IsaClient.WithSession(credentials?)` | Embedded forms | `ISA_SESSION_ID`, `ISA_SESSION_SECRET` |
+| `IsaClient.WithSession(credentials?)` | Embedded forms                | `ISA_SESSION_ID`, `ISA_SESSION_SECRET`     |
 
 Missing required env vars throw `IsaConfigException` synchronously at construction; the client never silently misbehaves.
 
