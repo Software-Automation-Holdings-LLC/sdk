@@ -119,7 +119,7 @@ func NewFormAuth(formToken string) FormAuth {
 // SessionAuth is the session-credential auth supplier.
 type SessionAuth struct {
 	SessionID     string
-	SessionSecret string //nolint:gosec // documented credential field
+	SessionSecret string
 }
 
 func (SessionAuth) authKind() string { return "session" }

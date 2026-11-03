@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"slices"
 	"strings"
 )
 
@@ -21,10 +22,6 @@ const DefaultCaseViewerBaseURL = "https://link.isaapi.com"
 
 // fragmentKeyPrefix delimits the path from the fragment key in a share link.
 const fragmentKeyPrefix = "#k="
-
-// legacyCaseRoute is the path segment used by links shared before the
-// single-segment format; parseLink still accepts it.
-const legacyCaseRoute = "c"
 
 // ParsedLink is a case's code and fragment key, parsed out of a share link.
 type ParsedLink struct {
@@ -50,15 +47,15 @@ func ParseLink(link string) (ParsedLink, error) {
 	if link == "" {
 		return ParsedLink{}, errors.New("account: Cases.Open requires a non-empty link")
 	}
-	hashAt := strings.Index(link, fragmentKeyPrefix)
-	if hashAt < 0 {
+	before, after, ok := strings.Cut(link, fragmentKeyPrefix)
+	if !ok {
 		return ParsedLink{}, errors.New("account: Cases.Open link is missing its #k= fragment key")
 	}
-	keyFragment := link[hashAt+len(fragmentKeyPrefix):]
+	keyFragment := after
 	if keyFragment == "" {
 		return ParsedLink{}, errors.New("account: Cases.Open link has an empty #k= fragment key")
 	}
-	code := lastPathSegment(link[:hashAt])
+	code := lastPathSegment(before)
 	if code == "" {
 		return ParsedLink{}, errors.New("account: Cases.Open link must carry a case id before #k=<key>")
 	}
@@ -72,9 +69,9 @@ func ParseLink(link string) (ParsedLink, error) {
 // lastPathSegment returns the final non-empty `/`-delimited segment of path.
 func lastPathSegment(path string) string {
 	segments := strings.Split(path, "/")
-	for i := len(segments) - 1; i >= 0; i-- {
-		if segments[i] != "" {
-			return segments[i]
+	for _, segment := range slices.Backward(segments) {
+		if segment != "" {
+			return segment
 		}
 	}
 	return ""

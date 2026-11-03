@@ -66,6 +66,9 @@ type Client struct {
 	// Webhooks groups webhook-verification helpers. Always non-nil on a
 	// Client returned from New.
 	Webhooks *Webhooks
+	// Voice groups voice-signing operations. Always non-nil on a Client
+	// returned from New.
+	Voice *Voice
 }
 
 // New returns a Client authenticated with the supplied bearer token.
@@ -138,6 +141,7 @@ func New(token string, opts ...Options) (*Client, error) {
 	}
 	c.Documents = &Documents{c: c}
 	c.Webhooks = &Webhooks{c: c}
+	c.Voice = &Voice{c: c}
 	return c, nil
 }
 

@@ -62,6 +62,14 @@ type SendRequest struct {
 	RemoteAllowed *bool             `json:"remote_allowed,omitempty"`
 	TemplateData  map[string]any    `json:"data,omitempty"`
 	Metadata      map[string]string `json:"metadata,omitempty"`
+	// FormID identifies the RapidSign form the notify template should
+	// render for the recipient. Optional; omitted when the signer flow
+	// is not form-driven.
+	FormID string `json:"form_id,omitempty"`
+	// IncludeCodeInLink controls whether the notify email embeds the
+	// signer's access code directly in the sign link (vs requiring it be
+	// entered separately). Defaults to false.
+	IncludeCodeInLink bool `json:"include_code_in_link,omitempty"`
 }
 
 // CancelRequest captures the human-readable reason a signing flow was
@@ -86,17 +94,17 @@ type AwaitOpts struct {
 // fetched to the SHA-256 it observed. CreatedAt and ExpiresAt are
 // derived from the TTL applied at render time.
 type Envelope struct {
-	ID         string            `json:"id"`
-	SignID     string            `json:"sign_id"`
-	SignURL    string            `json:"sign_url"`
-	ViewURL    string            `json:"view_url"`
-	Status     DocumentStatus    `json:"status"`
-	Recipient  Recipient         `json:"recipient"`
-	Hashes     map[string]string `json:"hashes,omitempty"`
-	CreatedAt  time.Time         `json:"created_at"`
-	ExpiresAt  time.Time         `json:"expires_at"`
-	Metadata   map[string]string `json:"metadata,omitempty"`
-	LegalText  string            `json:"legal_text,omitempty"`
+	ID        string            `json:"id"`
+	SignID    string            `json:"sign_id"`
+	SignURL   string            `json:"sign_url"`
+	ViewURL   string            `json:"view_url"`
+	Status    DocumentStatus    `json:"status"`
+	Recipient Recipient         `json:"recipient"`
+	Hashes    map[string]string `json:"hashes,omitempty"`
+	CreatedAt time.Time         `json:"created_at"`
+	ExpiresAt time.Time         `json:"expires_at"`
+	Metadata  map[string]string `json:"metadata,omitempty"`
+	LegalText string            `json:"legal_text,omitempty"`
 }
 
 // Signature is the captured signing event. Signature is the

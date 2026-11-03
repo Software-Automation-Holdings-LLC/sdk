@@ -63,7 +63,7 @@ type scenarioFile struct {
 func loadConformanceScenarios(t *testing.T) []scenario {
 	t.Helper()
 	path := scenariosPath(t)
-	raw, err := os.ReadFile(path)
+	raw, err := os.ReadFile(filepath.Clean(path))
 	if err != nil {
 		t.Fatalf("conformance: read %s: %v", path, err)
 	}
@@ -115,7 +115,6 @@ func TestConformanceScenarios_AgainstIsaMock(t *testing.T) {
 		t.Skipf("isa-mock unreachable at %s; skipping", mockURL)
 	}
 	for _, s := range loadConformanceScenarios(t) {
-		s := s
 		t.Run(s.Name, func(t *testing.T) {
 			runScenario(t, mockURL, s)
 		})

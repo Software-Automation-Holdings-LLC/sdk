@@ -157,7 +157,8 @@ func ByAmount(plans []V3Offer) map[int64][]V3Offer {
 		}
 	}
 	grouped := make(map[int64][]V3Offer, len(plans))
-	for _, offer := range plans {
+	for i := range plans {
+		offer := plans[i]
 		var dimension *V3Money
 		if isBudget {
 			dimension = offer.Budget

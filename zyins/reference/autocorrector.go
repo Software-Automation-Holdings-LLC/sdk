@@ -171,7 +171,7 @@ func (a *DefaultAutocorrector) Correct(_ context.Context, text string, opts Corr
 	// Mirror the JS double-loop: outer over window size minus one
 	// (numWords), inner over start position.
 	for numWords := 0; numWords < len(words); numWords++ {
-		for i := 0; i < len(words); i++ {
+		for i := range words {
 			end := i + numWords + 1
 			if end > len(words) {
 				continue
@@ -197,7 +197,7 @@ func (a *DefaultAutocorrector) Correct(_ context.Context, text string, opts Corr
 		}
 	}
 
-	for i := 0; i < len(words); i++ {
+	for i := range words {
 		if result[i] != "" {
 			continue
 		}

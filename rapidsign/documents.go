@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"math"
 	"net/http"
 	"time"
 
@@ -43,13 +44,13 @@ type SendOptions struct {
 // endpoint server-side so the SDK can drop the staged-call dance.
 func (d *Documents) Send(ctx context.Context, req *SendRequest, opts ...SendOptions) (*Envelope, error) {
 	if req == nil {
-		return nil, fmt.Errorf("rapidsign: Documents.Send requires a non-nil SendRequest")
+		return nil, errors.New("rapidsign: Documents.Send requires a non-nil SendRequest")
 	}
 	if len(req.Packet) == 0 {
-		return nil, fmt.Errorf("rapidsign: Documents.Send requires at least one PdfSource")
+		return nil, errors.New("rapidsign: Documents.Send requires at least one PdfSource")
 	}
 	if req.Recipient.Email == "" {
-		return nil, fmt.Errorf("rapidsign: Documents.Send requires a recipient email")
+		return nil, errors.New("rapidsign: Documents.Send requires a recipient email")
 	}
 
 	var sendOpts SendOptions
@@ -87,7 +88,7 @@ func (d *Documents) Send(ctx context.Context, req *SendRequest, opts ...SendOpti
 		return created, fmt.Errorf("rapidsign: Documents.Send notify-key generation failed after create succeeded: %w", err)
 	}
 
-	if err := d.notify(ctx, created.SignID, sessionID, req.Recipient.Email, notifyKey); err != nil {
+	if err := d.notify(ctx, created.SignID, sessionID, req.Recipient.Email, req.FormID, req.IncludeCodeInLink, notifyKey); err != nil {
 		return created, fmt.Errorf("rapidsign: Documents.Send notify step failed after create succeeded (sign_id=%s): %w", created.SignID, err)
 	}
 	created.Status = DocumentStatusNotified
@@ -220,13 +221,20 @@ func fallbackStatus(s, fallback DocumentStatus) DocumentStatus {
 }
 
 type notifyDocumentRequest struct {
-	SessionID string `json:"session_id"`
-	To        string `json:"to"`
-	Key       string `json:"key,omitempty"`
+	SessionID         string `json:"session_id"`
+	To                string `json:"to"`
+	Key               string `json:"key,omitempty"`
+	FormID            string `json:"form_id,omitempty"`
+	IncludeCodeInLink bool   `json:"include_code_in_link,omitempty"`
 }
 
-func (d *Documents) notify(ctx context.Context, signID, sessionID, to, idempotencyKey string) error {
-	body := notifyDocumentRequest{SessionID: sessionID, To: to}
+func (d *Documents) notify(ctx context.Context, signID, sessionID, to, formID string, includeCodeInLink bool, idempotencyKey string) error {
+	body := notifyDocumentRequest{
+		SessionID:         sessionID,
+		To:                to,
+		FormID:            formID,
+		IncludeCodeInLink: includeCodeInLink,
+	}
 	url := fmt.Sprintf("%s/v1/documents/%s/notify", d.c.baseURL, signID)
 	resp, err := internal.JSONRequest(ctx, d.c.doer, http.MethodPost, url, body, internal.RequestOptions{
 		IdempotencyKey: idempotencyKey,
@@ -262,7 +270,7 @@ type getDocumentResponse struct {
 // switch on *NotFoundError via errors.As to handle that case.
 func (d *Documents) Get(ctx context.Context, signID string) (*Signature, error) {
 	if signID == "" {
-		return nil, fmt.Errorf("rapidsign: Documents.Get requires a non-empty sign id")
+		return nil, errors.New("rapidsign: Documents.Get requires a non-empty sign id")
 	}
 	url := fmt.Sprintf("%s/v1/documents/%s", d.c.baseURL, signID)
 	resp, err := internal.JSONRequest(ctx, d.c.doer, http.MethodGet, url, nil, internal.RequestOptions{
@@ -318,7 +326,7 @@ type downloadDocumentResponse struct {
 // disk or hand it to a PDF library.
 func (d *Documents) Download(ctx context.Context, signID string) ([]byte, error) {
 	if signID == "" {
-		return nil, fmt.Errorf("rapidsign: Documents.Download requires a non-empty sign id")
+		return nil, errors.New("rapidsign: Documents.Download requires a non-empty sign id")
 	}
 	url := fmt.Sprintf("%s/v1/documents/%s/download", d.c.baseURL, signID)
 	resp, err := internal.JSONRequest(ctx, d.c.doer, http.MethodGet, url, nil, internal.RequestOptions{
@@ -351,9 +359,9 @@ func (d *Documents) Download(ctx context.Context, signID string) ([]byte, error)
 // (tracked in #38). Today it returns *NotImplementedError so callers
 // can ship code against the eventual surface without conditional
 // dispatch.
-func (d *Documents) Cancel(ctx context.Context, signID string, req *CancelRequest) error {
+func (d *Documents) Cancel(_ context.Context, signID string, _ *CancelRequest) error {
 	if signID == "" {
-		return fmt.Errorf("rapidsign: Documents.Cancel requires a non-empty sign id")
+		return errors.New("rapidsign: Documents.Cancel requires a non-empty sign id")
 	}
 	return &NotImplementedError{
 		Err: &Error{
@@ -375,7 +383,7 @@ func (d *Documents) Cancel(ctx context.Context, signID string, req *CancelReques
 // hammer the server.
 func (d *Documents) AwaitSignature(ctx context.Context, signID string, opts AwaitOpts) (*Signature, error) {
 	if signID == "" {
-		return nil, fmt.Errorf("rapidsign: Documents.AwaitSignature requires a non-empty sign id")
+		return nil, errors.New("rapidsign: Documents.AwaitSignature requires a non-empty sign id")
 	}
 	deadline := time.Time{}
 	if opts.Timeout > 0 {
@@ -408,7 +416,7 @@ func (d *Documents) AwaitSignature(ctx context.Context, signID string, opts Awai
 					return nil, awaitSignatureTimeoutError(opts.Timeout, signID)
 				}
 				return nil, fmt.Errorf(
-					"rapidsign: AwaitSignature cancelled while waiting on sign_id=%s: %w",
+					"rapidsign: AwaitSignature canceled while waiting on sign_id=%s: %w",
 					signID, ctx.Err(),
 				)
 			}
@@ -433,7 +441,7 @@ func (d *Documents) AwaitSignature(ctx context.Context, signID string, opts Awai
 			}
 		}
 		if completed := d.c.sleeper.Sleep(stop, wait); !completed {
-			return nil, fmt.Errorf("rapidsign: AwaitSignature cancelled while waiting on sign_id=%s: %w", signID, ctx.Err())
+			return nil, fmt.Errorf("rapidsign: AwaitSignature canceled while waiting on sign_id=%s: %w", signID, ctx.Err())
 		}
 		interval *= 2
 		if interval > pollMaxInterval {
@@ -459,11 +467,12 @@ func pollIntervalWithJitter(base time.Duration, r io.Reader) time.Duration {
 	if _, err := io.ReadFull(r, buf[:]); err != nil {
 		return base
 	}
-	maxJitter := uint64(base) * pollJitterNumerator / pollJitterDenominator
+	maxJitter := int64(base) * pollJitterNumerator / pollJitterDenominator
 	if maxJitter == 0 {
 		return base
 	}
-	return base + time.Duration(binary.BigEndian.Uint64(buf[:])%maxJitter)
+	random := int64(binary.BigEndian.Uint64(buf[:]) & math.MaxInt64)
+	return base + time.Duration(random%maxJitter)
 }
 
 // isPollMiss reports whether err is a transient "not signed yet"

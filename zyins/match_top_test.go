@@ -239,11 +239,11 @@ func TestClient_Match_ConcurrentCallsCoalesce(t *testing.T) {
 
 // matchTopBlockingDoer models a real HTTP transport: it holds the
 // request open until released, and aborts with the request context's
-// error if that context is cancelled first (exactly what
+// error if that context is canceled first (exactly what
 // net/http.Client.Do does). This lets a test force a genuine overlap
 // window — caller A's fetch is in flight (entered closed, blocked on
 // release) while caller B coalesces onto it — and then prove the shared
-// fetch survives caller A cancelling its context.
+// fetch survives caller A canceling its context.
 type matchTopBlockingDoer struct {
 	body    string
 	entered chan struct{} // closed when Do is first invoked (fetch in flight)
@@ -296,8 +296,8 @@ func TestClient_Match_BundleFetchErrorSurfaces(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected bundle-fetch error")
 	}
-	if !strings.Contains(err.Error(), "reference index fetch") {
-		t.Errorf("error %q missing 'reference index fetch' wrap", err)
+	if !strings.Contains(err.Error(), "reference bundle fetch") {
+		t.Errorf("error %q missing 'reference bundle fetch' wrap", err)
 	}
 }
 

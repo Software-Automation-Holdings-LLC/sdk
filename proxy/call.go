@@ -44,7 +44,7 @@ const defaultHTTPTimeout = 30 * time.Second
 // by the parent Isa client at construction; tests build it directly.
 type SessionBinding struct {
 	SessionID     string
-	SessionSecret string //nolint:gosec // documented credential field
+	SessionSecret string
 	DeviceID      string
 	ProxyOrigin   string
 }
@@ -110,7 +110,7 @@ func Call(ctx context.Context, b SessionBinding, opts CallOptions) ([]byte, erro
 	if err != nil {
 		return nil, fmt.Errorf("proxy.Call: HTTP request failed: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 	raw, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return nil, fmt.Errorf("proxy.Call: read response body: %w", err)
@@ -193,11 +193,12 @@ func signedHeaders(b SessionBinding, body []byte, opts CallOptions) (map[string]
 	}
 	out := signed.AsMap()
 	out["Content-Type"] = "application/json"
-	if opts.IdempotencyKey != "" {
+	switch {
+	case opts.IdempotencyKey != "":
 		out["Idempotency-Key"] = opts.IdempotencyKey
-	} else if opts.UUIDFactory != nil {
+	case opts.UUIDFactory != nil:
 		out["Idempotency-Key"] = opts.UUIDFactory()
-	} else {
+	default:
 		out["Idempotency-Key"] = mintUUIDv4()
 	}
 	return out, nil

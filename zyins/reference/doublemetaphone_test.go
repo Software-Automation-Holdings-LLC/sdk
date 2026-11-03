@@ -19,7 +19,7 @@ type doubleMetaphoneVector struct {
 func loadDoubleMetaphoneVectors(t *testing.T) []doubleMetaphoneVector {
 	t.Helper()
 	path := filepath.Join("testdata", "double_metaphone_vectors.json")
-	raw, err := os.ReadFile(path)
+	raw, err := os.ReadFile(filepath.Clean(path))
 	if err != nil {
 		t.Fatalf("failed to read vector fixture %q: %v", path, err)
 	}

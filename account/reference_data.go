@@ -114,17 +114,14 @@ func parseReference(body []byte) (ReferenceDataResult, error) {
 	if len(body) == 0 {
 		return ReferenceDataResult{}, nil
 	}
-	data, err := unwrapEnvelope(body)
-	if err != nil {
-		return nil, fmt.Errorf("account: ReferenceData envelope: %w", err)
-	}
+	data := unwrapEnvelope(body)
 	if len(data) == 0 {
 		return ReferenceDataResult{}, nil
 	}
 	out := ReferenceDataResult{}
-	if err := json.Unmarshal(data, &out); err != nil {
-		// Fallback: wrap non-object payload under "data".
-		return ReferenceDataResult{"data": json.RawMessage(data)}, nil
+	if err := json.Unmarshal(data, &out); err == nil {
+		return out, nil
 	}
-	return out, nil
+	// Fallback: wrap non-object payload under "data".
+	return ReferenceDataResult{"data": data}, nil
 }

@@ -62,10 +62,7 @@ func parseCaseDetail(body []byte) (string, CaseEnvelope, error) {
 // caseRecord unwraps the response envelope and parses the data payload into a
 // string-keyed record, with operation-tagged errors.
 func caseRecord(body []byte, operation string) (map[string]json.RawMessage, error) {
-	data, err := unwrapEnvelope(body)
-	if err != nil {
-		return nil, fmt.Errorf("account: %s envelope: %w", operation, err)
-	}
+	data := unwrapEnvelope(body)
 	if len(data) == 0 {
 		return nil, fmt.Errorf("account: %s response body was empty", operation)
 	}

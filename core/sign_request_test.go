@@ -1,6 +1,7 @@
 package core
 
 import (
+	"errors"
 	"regexp"
 	"strings"
 	"testing"
@@ -89,8 +90,11 @@ func TestSignRequest_CrossSDKKnownGoodSignature(t *testing.T) {
 	if headers.IsaSignature != vectorExpectedSig {
 		t.Fatalf("signature: got %s want %s", headers.IsaSignature, vectorExpectedSig)
 	}
-	if headers.Authorization != "Bearer "+vectorSecret() {
+	if headers.Authorization != "Session "+vectorSecret() {
 		t.Fatalf("authorization: got %s", headers.Authorization)
+	}
+	if !strings.HasPrefix(headers.Authorization, "Session ") {
+		t.Fatalf("authorization scheme: got %s, want Session prefix", headers.Authorization)
 	}
 	if headers.IsaSessionID != vectorSessionID {
 		t.Fatalf("session-id header: got %s", headers.IsaSessionID)
@@ -163,7 +167,7 @@ func TestSignRequest_RejectsEmptySessionID(t *testing.T) {
 		SessionID:     "",
 		SessionSecret: "x",
 	})
-	if err != ErrEmptySessionID {
+	if !errors.Is(err, ErrEmptySessionID) {
 		t.Fatalf("expected ErrEmptySessionID, got %v", err)
 	}
 }
@@ -175,7 +179,7 @@ func TestSignRequest_RejectsEmptySessionSecret(t *testing.T) {
 		SessionID:     "sess_x",
 		SessionSecret: "",
 	})
-	if err != ErrEmptySessionSecret {
+	if !errors.Is(err, ErrEmptySessionSecret) {
 		t.Fatalf("expected ErrEmptySessionSecret, got %v", err)
 	}
 }

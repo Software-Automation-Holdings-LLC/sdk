@@ -9,22 +9,24 @@ import (
 	"time"
 )
 
-// buildResponse constructs an *http.Response for the error parser.
-func buildResponse(status int, body string, headers map[string]string) *http.Response {
+// parseErrorResponse runs errorFromResponse over a synthetic response and
+// closes its body, returning the typed error.
+func parseErrorResponse(status int, body string, headers map[string]string) error {
 	resp := &http.Response{
 		StatusCode: status,
 		Body:       io.NopCloser(strings.NewReader(body)),
 		Header:     http.Header{},
 	}
+	defer func() { _ = resp.Body.Close() }()
 	for k, v := range headers {
 		resp.Header.Set(k, v)
 	}
-	return resp
+	return errorFromResponse(resp)
 }
 
 func TestErrorFromResponse_ProblemDetailsValidation(t *testing.T) {
 	body := `{"code":"validation_error","detail":"email is required","param":"email","status":400}`
-	err := errorFromResponse(buildResponse(http.StatusBadRequest, body, nil))
+	err := parseErrorResponse(http.StatusBadRequest, body, nil)
 	var ve *ValidationError
 	if !errors.As(err, &ve) {
 		t.Fatalf("expected *ValidationError, got %T: %v", err, err)
@@ -38,9 +40,8 @@ func TestErrorFromResponse_ProblemDetailsValidation(t *testing.T) {
 }
 
 func TestErrorFromResponse_AuthOnHTTPStatus(t *testing.T) {
-	err := errorFromResponse(buildResponse(http.StatusUnauthorized, "denied", nil))
-	var ae *AuthError
-	if !errors.As(err, &ae) {
+	err := parseErrorResponse(http.StatusUnauthorized, "denied", nil)
+	if _, ok := errors.AsType[*AuthError](err); !ok {
 		t.Fatalf("expected *AuthError, got %T: %v", err, err)
 	}
 	if !errors.Is(err, ErrAuth) {
@@ -49,9 +50,9 @@ func TestErrorFromResponse_AuthOnHTTPStatus(t *testing.T) {
 }
 
 func TestErrorFromResponse_RateLimitWithRetryAfter(t *testing.T) {
-	err := errorFromResponse(buildResponse(http.StatusTooManyRequests, "slow down", map[string]string{
+	err := parseErrorResponse(http.StatusTooManyRequests, "slow down", map[string]string{
 		"Retry-After": "5",
-	}))
+	})
 	var rle *RateLimitError
 	if !errors.As(err, &rle) {
 		t.Fatalf("expected *RateLimitError, got %T: %v", err, err)
@@ -62,7 +63,7 @@ func TestErrorFromResponse_RateLimitWithRetryAfter(t *testing.T) {
 }
 
 func TestErrorFromResponse_LegacyErrToken(t *testing.T) {
-	err := errorFromResponse(buildResponse(http.StatusForbidden, "ERR_LOCKED", nil))
+	err := parseErrorResponse(http.StatusForbidden, "ERR_LOCKED", nil)
 	var le *LicenseError
 	if !errors.As(err, &le) {
 		t.Fatalf("expected *LicenseError, got %T: %v", err, err)
@@ -73,7 +74,7 @@ func TestErrorFromResponse_LegacyErrToken(t *testing.T) {
 }
 
 func TestErrorFromResponse_FallbackKeepsBody(t *testing.T) {
-	err := errorFromResponse(buildResponse(http.StatusInternalServerError, "boom", nil))
+	err := parseErrorResponse(http.StatusInternalServerError, "boom", nil)
 	if err == nil {
 		t.Fatalf("expected an error")
 	}

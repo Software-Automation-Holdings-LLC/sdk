@@ -69,7 +69,7 @@ func TestDebugLogger_RedactsAuthorizationHeader(t *testing.T) {
 
 	logger := &captureLogger{}
 	c, err := NewClient(
-		WithToken("isa_test_4fjK2nQ7mX1aB8sR9pZ3"),
+		WithToken("isa_test_aaaaaaaaaaaaaaaaaaaa"),
 		WithBaseURL(srv.URL),
 		WithMaxRetryAttempts(1),
 		WithLogger(logger),

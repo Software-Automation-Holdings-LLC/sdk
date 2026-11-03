@@ -19,8 +19,8 @@ import (
 // canned bootstrap response for POST /v1/sessions and a 200 with the
 // signed headers echoed for everything else.
 type recordingMockDoer struct {
-	bootstrapHits int32
-	productHits   int32
+	bootstrapHits atomic.Int32
+	productHits   atomic.Int32
 	// expireFirstProduct causes the first product response to return
 	// 401 session_expired so the retry path can be exercised.
 	expireFirstProduct atomic.Bool
@@ -29,7 +29,7 @@ type recordingMockDoer struct {
 
 func (r *recordingMockDoer) Do(req *http.Request) (*http.Response, error) {
 	if req.URL.Path == "/v1/sessions" {
-		atomic.AddInt32(&r.bootstrapHits, 1)
+		r.bootstrapHits.Add(1)
 		// Slow the bootstrap call slightly so concurrent product
 		// requests collapse onto the single-flight result.
 		time.Sleep(20 * time.Millisecond)
@@ -43,16 +43,16 @@ func (r *recordingMockDoer) Do(req *http.Request) (*http.Response, error) {
 		}
 		raw, _ := json.Marshal(body)
 		return &http.Response{
-			StatusCode: 200,
+			StatusCode: http.StatusOK,
 			Body:       io.NopCloser(bytes.NewReader(raw)),
 			Header:     http.Header{"Content-Type": []string{"application/json"}},
 		}, nil
 	}
-	atomic.AddInt32(&r.productHits, 1)
+	r.productHits.Add(1)
 	if r.expireFirstProduct.Swap(false) {
 		raw, _ := json.Marshal(map[string]string{"code": "session_expired", "type": "about:blank"})
 		return &http.Response{
-			StatusCode: 401,
+			StatusCode: http.StatusUnauthorized,
 			Body:       io.NopCloser(bytes.NewReader(raw)),
 			Header:     http.Header{"Content-Type": []string{"application/problem+json"}},
 		}, nil
@@ -60,13 +60,13 @@ func (r *recordingMockDoer) Do(req *http.Request) (*http.Response, error) {
 	if r.revokeFirstProduct.Swap(false) {
 		raw, _ := json.Marshal(map[string]string{"code": "session_revoked", "type": "about:blank"})
 		return &http.Response{
-			StatusCode: 401,
+			StatusCode: http.StatusUnauthorized,
 			Body:       io.NopCloser(bytes.NewReader(raw)),
 			Header:     http.Header{"Content-Type": []string{"application/problem+json"}},
 		}, nil
 	}
 	return &http.Response{
-		StatusCode: 200,
+		StatusCode: http.StatusOK,
 		Body:       io.NopCloser(strings.NewReader(`{"ok":true}`)),
 		Header:     http.Header{"Content-Type": []string{"application/json"}},
 	}, nil
@@ -100,10 +100,10 @@ func TestSessionInterceptor_ConcurrentProductCalls_TriggerExactlyOneBootstrap(t 
 	const concurrency = 10
 	var wg sync.WaitGroup
 	wg.Add(concurrency)
-	for i := 0; i < concurrency; i++ {
+	for range concurrency {
 		go func() {
 			defer wg.Done()
-			req, _ := http.NewRequestWithContext(context.Background(), "POST", "https://api.example.test/v1/prequalify", strings.NewReader(`{"x":1}`))
+			req, _ := http.NewRequestWithContext(context.Background(), http.MethodPost, "https://api.example.test/v1/prequalify", strings.NewReader(`{"x":1}`))
 			resp, doErr := interceptor.Do(req)
 			if doErr != nil {
 				t.Errorf("Do: %v", doErr)
@@ -113,10 +113,10 @@ func TestSessionInterceptor_ConcurrentProductCalls_TriggerExactlyOneBootstrap(t 
 		}()
 	}
 	wg.Wait()
-	if got := atomic.LoadInt32(&mock.bootstrapHits); got != 1 {
+	if got := mock.bootstrapHits.Load(); got != 1 {
 		t.Fatalf("expected exactly 1 bootstrap under single-flight, got %d", got)
 	}
-	if got := atomic.LoadInt32(&mock.productHits); got != concurrency {
+	if got := mock.productHits.Load(); got != concurrency {
 		t.Fatalf("expected %d product hits, got %d", concurrency, got)
 	}
 }
@@ -132,19 +132,19 @@ func TestSessionInterceptor_RetryOn401SessionExpired(t *testing.T) {
 	if ctorErr != nil {
 		t.Fatalf("NewSessionInterceptor: %v", ctorErr)
 	}
-	req, _ := http.NewRequestWithContext(context.Background(), "POST", "https://api.example.test/v1/prequalify", strings.NewReader(`{"x":1}`))
+	req, _ := http.NewRequestWithContext(context.Background(), http.MethodPost, "https://api.example.test/v1/prequalify", strings.NewReader(`{"x":1}`))
 	resp, doErr := interceptor.Do(req)
 	if doErr != nil {
 		t.Fatalf("Do: %v", doErr)
 	}
-	defer resp.Body.Close()
-	if resp.StatusCode != 200 {
+	defer func() { _ = resp.Body.Close() }()
+	if resp.StatusCode != http.StatusOK {
 		t.Fatalf("expected final 200 after retry, got %d", resp.StatusCode)
 	}
-	if got := atomic.LoadInt32(&mock.bootstrapHits); got != 2 {
+	if got := mock.bootstrapHits.Load(); got != 2 {
 		t.Fatalf("expected 2 bootstraps (cold + retry), got %d", got)
 	}
-	if got := atomic.LoadInt32(&mock.productHits); got != 2 {
+	if got := mock.productHits.Load(); got != 2 {
 		t.Fatalf("expected 2 product hits (401 + replay), got %d", got)
 	}
 }
@@ -157,22 +157,22 @@ func TestSessionInterceptor_InvalidatesWithoutRetryOn401SessionRevoked(t *testin
 	if ctorErr != nil {
 		t.Fatalf("NewSessionInterceptor: %v", ctorErr)
 	}
-	req, _ := http.NewRequestWithContext(context.Background(), "POST", "https://api.example.test/v1/prequalify", strings.NewReader(`{"x":1}`))
+	req, _ := http.NewRequestWithContext(context.Background(), http.MethodPost, "https://api.example.test/v1/prequalify", strings.NewReader(`{"x":1}`))
 	resp, doErr := interceptor.Do(req)
 	if doErr != nil {
 		t.Fatalf("Do: %v", doErr)
 	}
-	defer resp.Body.Close()
-	if resp.StatusCode != 401 {
+	defer func() { _ = resp.Body.Close() }()
+	if resp.StatusCode != http.StatusUnauthorized {
 		t.Fatalf("expected revoked response to be returned, got %d", resp.StatusCode)
 	}
 	if store.CurrentSecret() != nil {
 		t.Fatalf("expected revoked session to be invalidated")
 	}
-	if got := atomic.LoadInt32(&mock.bootstrapHits); got != 1 {
+	if got := mock.bootstrapHits.Load(); got != 1 {
 		t.Fatalf("expected 1 bootstrap before revoked response, got %d", got)
 	}
-	if got := atomic.LoadInt32(&mock.productHits); got != 1 {
+	if got := mock.productHits.Load(); got != 1 {
 		t.Fatalf("expected no retry for revoked session, got %d product hits", got)
 	}
 }
@@ -180,7 +180,7 @@ func TestSessionInterceptor_InvalidatesWithoutRetryOn401SessionRevoked(t *testin
 func TestSessionProblemCode_PreservesLargeBody(t *testing.T) {
 	body := `{"code":"session_expired"}` + strings.Repeat(" ", maxProblemBodyBytes*2)
 	resp := &http.Response{
-		StatusCode: 401,
+		StatusCode: http.StatusUnauthorized,
 		Body:       io.NopCloser(strings.NewReader(body)),
 		Header:     http.Header{"Content-Type": []string{"application/problem+json"}},
 	}
@@ -204,14 +204,14 @@ func TestSessionInterceptor_OnActivity_ProactiveRefresh(t *testing.T) {
 	if onErr := store.OnActivity(context.Background()); onErr != nil {
 		t.Fatalf("OnActivity cold: %v", onErr)
 	}
-	if got := atomic.LoadInt32(&mock.bootstrapHits); got != 1 {
+	if got := mock.bootstrapHits.Load(); got != 1 {
 		t.Fatalf("expected 1 bootstrap from OnActivity cold-start, got %d", got)
 	}
 	store.Invalidate()
 	if onErr := store.OnActivity(context.Background()); onErr != nil {
 		t.Fatalf("OnActivity after invalidation: %v", onErr)
 	}
-	if got := atomic.LoadInt32(&mock.bootstrapHits); got != 2 {
+	if got := mock.bootstrapHits.Load(); got != 2 {
 		t.Fatalf("expected second bootstrap after invalidation, got %d", got)
 	}
 }
@@ -235,7 +235,58 @@ func TestSessionStore_BootstrapCachesAfterCallerCancellation(t *testing.T) {
 		case <-tick.C:
 		}
 	}
-	if got := atomic.LoadInt32(&mock.bootstrapHits); got != 1 {
+	if got := mock.bootstrapHits.Load(); got != 1 {
 		t.Fatalf("expected canceled caller to trigger one bootstrap, got %d", got)
+	}
+}
+
+// headerCapturingDoer records the headers of every product request.
+type headerCapturingDoer struct {
+	recordingMockDoer
+	productHeaders []http.Header
+}
+
+func (h *headerCapturingDoer) Do(req *http.Request) (*http.Response, error) {
+	if req.URL.Path != "/v1/sessions" {
+		h.productHeaders = append(h.productHeaders, req.Header.Clone())
+	}
+	return h.recordingMockDoer.Do(req)
+}
+
+// TestSessionInterceptor_SendsDeviceBindingAndUniqueRequestID guards the
+// server contract: sessions are device-bound (missing X-Device-ID ->
+// session_invalid) and replay-protected by a unique X-Isa-Request-Id.
+func TestSessionInterceptor_SendsDeviceBindingAndUniqueRequestID(t *testing.T) {
+	mock := &headerCapturingDoer{}
+	store := newTestStore(t, mock)
+	interceptor, ctorErr := NewSessionInterceptor(store, mock)
+	if ctorErr != nil {
+		t.Fatalf("NewSessionInterceptor: %v", ctorErr)
+	}
+	// One call whose first attempt is rejected: the captured headers are the
+	// initial attempt and its retry, so a request ID reused across attempts fails.
+	mock.expireFirstProduct.Store(true)
+	req, _ := http.NewRequestWithContext(context.Background(), http.MethodPost, "https://api.example.test/v1/prequalify", strings.NewReader(`{"x":1}`))
+	resp, doErr := interceptor.Do(req)
+	if doErr != nil {
+		t.Fatalf("Do: %v", doErr)
+	}
+	_ = resp.Body.Close()
+	if len(mock.productHeaders) != 2 {
+		t.Fatalf("expected initial attempt + retry, got %d product requests", len(mock.productHeaders))
+	}
+	ids := map[string]bool{}
+	for _, h := range mock.productHeaders {
+		if got := h.Get("X-Device-ID"); got != "device-abc-123" {
+			t.Fatalf("X-Device-ID = %q, want device-abc-123", got)
+		}
+		id := h.Get("X-Isa-Request-Id")
+		if id == "" {
+			t.Fatal("X-Isa-Request-Id missing")
+		}
+		ids[id] = true
+	}
+	if len(ids) != 2 {
+		t.Fatalf("X-Isa-Request-Id not unique per request: %v", ids)
 	}
 }

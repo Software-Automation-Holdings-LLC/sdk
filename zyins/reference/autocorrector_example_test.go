@@ -13,12 +13,12 @@ import (
 func ExampleNewDefaultAutocorrector() {
 	typoMap := map[string]string{
 		"HYPRTENSION":  "HYPERTENSION",
-		"HOSPITILIZED": "HOSPITALIZED",
+		"HOSPITALIZED": "HOSPITALIZED",
 	}
 	ac := reference.NewDefaultAutocorrector(typoMap,
 		reference.WithAutocorrectorVersionTag("2026.05.29"),
 	)
-	out := ac.Correct(context.Background(), "Patient HOSPITILIZED last year",
+	out := ac.Correct(context.Background(), "Patient HOSPITALIZED last year",
 		reference.CorrectOptions{Mode: reference.AutocorrectModeSubmit})
 	fmt.Println(out)
 	fmt.Println(ac.VersionTag())

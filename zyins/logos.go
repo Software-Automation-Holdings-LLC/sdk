@@ -10,10 +10,9 @@ import (
 	"strings"
 )
 
-// logosPath is the canonical path prefix for the carrier-logo asset
-// endpoint. The server also accepts the legacy singular form
-// (/v1/logo/{carrier}) — both routes resolve to the same handler since
-// zyins #303 merged. The SDK uses the canonical plural per api-standards.
+// logosPath is the path prefix for the carrier-logo asset endpoint.
+// The server currently responds on the singular form; the canonical
+// plural (/v1/logos) will be accepted once the server-side alias lands.
 const logosPath = "/v1/logo"
 
 // LogosGetOptions captures the optional inputs for Logos.Get.
@@ -76,11 +75,13 @@ func (s *LogosService) Get(ctx context.Context, carrier string, opts ...LogosGet
 	} else {
 		req.Header.Set("Accept", "image/*")
 	}
-	resp, err := s.client.doer.Do(req)
+	// The logo endpoint is public and non-credentialed. Use bootstrapDoer so
+	// no Authorization header is attached (api-standards.md GET allowlist).
+	resp, err := s.client.bootstrapDoer.Do(req)
 	if err != nil {
 		return nil, "", fmt.Errorf("zyins: Logos.Get %s: %w", endpoint, err)
 	}
-	defer drainAndClose(resp.Body)
+	defer drainAndClose(resp)
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return nil, "", fmt.Errorf("zyins: Logos.Get reading body: %w", err)

@@ -138,16 +138,17 @@ func (s *QuoteService) RunEnvelope(ctx context.Context, input *QuoteInput, opts 
 
 	var wireBody any
 	path := quotePath
-	if legacyWireEnabled() {
+	switch {
+	case legacyWireEnabled():
 		amount := defaultLegacyFaceAmount(input.Coverage)
 		wireBody = legacyQuoteBodyFromApplicant(input.Applicant, amount)
 		path = legacyQuotePath
-	} else if input.ProductToken == "" {
+	case input.ProductToken == "":
 		return nil, &ValidationError{Base: &Error{
 			Code:    ErrorCodeValidationError,
 			Message: "zyins: QuoteInput.ProductToken is required",
 		}}
-	} else {
+	default:
 		wireBody = buildQuoteBody(input)
 	}
 
@@ -215,14 +216,14 @@ func (s *QuoteService) RunWithRawResponse(
 		idempotencyKey: ro.idempotencyKey,
 	})
 	if err != nil {
-		return nil, captureRawResponse(httpResp), fmt.Errorf("zyins: Quote.RunWithRawResponse: %w", err)
+		return nil, httpResp, fmt.Errorf("zyins: Quote.RunWithRawResponse: %w", err)
 	}
 	result, err := decodeQuoteResponse(raw)
 	if err != nil {
-		return nil, captureRawResponse(httpResp), err
+		return nil, httpResp, err
 	}
 	env := newEnvelope[*QuoteResult](result, raw, httpResp)
-	return env, captureRawResponse(httpResp), nil
+	return env, httpResp, nil
 }
 
 // quoteWireBody is the on-wire JSON shape for the quote request.

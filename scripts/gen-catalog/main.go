@@ -20,9 +20,10 @@ import (
 // one level above the platform repo. All three are overridable so the generator
 // runs identically on a laptop, in the parity harness, and in CI — never bound
 // to one developer's absolute paths.
-//   SDK_CATALOG_OUT_DIR — where to write the generated catalog package.
-//   SDK_PLATFORM_REPO    — isa-platform root (holds shared/schemas, shared/go).
-//   SDK_INSURANCE_REPO   — engine repo root (holds v2_*.json).
+//
+//	SDK_CATALOG_OUT_DIR — where to write the generated catalog package.
+//	SDK_PLATFORM_REPO    — isa-platform root (holds shared/schemas, shared/go).
+//	SDK_INSURANCE_REPO   — engine repo root (holds v2_*.json).
 var (
 	outDir   = envOr("SDK_CATALOG_OUT_DIR", filepath.Join(platformRepoDefault(), "packages", "go", "catalog"))
 	platRepo = envOr("SDK_PLATFORM_REPO", platformRepoDefault())
@@ -56,7 +57,6 @@ func main() {
 	os.MkdirAll(outDir, 0o755)
 	genStates()
 	genProductsAndCarriers()
-	genMedications()
 	genScopesAndErrors()
 	genSignEvents()
 	genIndex()
@@ -191,21 +191,62 @@ type stateRow struct {
 }
 
 var statesTable = []stateRow{
-	{"Alabama", "AL", false}, {"Alaska", "AK", false}, {"Arizona", "AZ", false}, {"Arkansas", "AR", false},
-	{"California", "CA", false}, {"Colorado", "CO", false}, {"Connecticut", "CT", false}, {"Delaware", "DE", false},
-	{"Florida", "FL", false}, {"Georgia", "GA", false}, {"Hawaii", "HI", false}, {"Idaho", "ID", false},
-	{"Illinois", "IL", false}, {"Indiana", "IN", false}, {"Iowa", "IA", false}, {"Kansas", "KS", false},
-	{"Kentucky", "KY", false}, {"Louisiana", "LA", false}, {"Maine", "ME", false}, {"Maryland", "MD", false},
-	{"Massachusetts", "MA", false}, {"Michigan", "MI", false}, {"Minnesota", "MN", false}, {"Mississippi", "MS", false},
-	{"Missouri", "MO", false}, {"Montana", "MT", false}, {"Nebraska", "NE", false}, {"Nevada", "NV", false},
-	{"New Hampshire", "NH", false}, {"New Jersey", "NJ", false}, {"New Mexico", "NM", false}, {"New York", "NY", false},
-	{"North Carolina", "NC", false}, {"North Dakota", "ND", false}, {"Ohio", "OH", false}, {"Oklahoma", "OK", false},
-	{"Oregon", "OR", false}, {"Pennsylvania", "PA", false}, {"Rhode Island", "RI", false}, {"South Carolina", "SC", false},
-	{"South Dakota", "SD", false}, {"Tennessee", "TN", false}, {"Texas", "TX", false}, {"Utah", "UT", false},
-	{"Vermont", "VT", false}, {"Virginia", "VA", false}, {"Washington", "WA", false}, {"West Virginia", "WV", false},
-	{"Wisconsin", "WI", false}, {"Wyoming", "WY", false}, {"District of Columbia", "DC", false},
-	{"American Samoa", "AS", true}, {"Guam", "GU", true}, {"Northern Mariana Islands", "MP", true},
-	{"Puerto Rico", "PR", true}, {"United States Virgin Islands", "VI", true},
+	{"Alabama", "AL", false},
+	{"Alaska", "AK", false},
+	{"Arizona", "AZ", false},
+	{"Arkansas", "AR", false},
+	{"California", "CA", false},
+	{"Colorado", "CO", false},
+	{"Connecticut", "CT", false},
+	{"Delaware", "DE", false},
+	{"Florida", "FL", false},
+	{"Georgia", "GA", false},
+	{"Hawaii", "HI", false},
+	{"Idaho", "ID", false},
+	{"Illinois", "IL", false},
+	{"Indiana", "IN", false},
+	{"Iowa", "IA", false},
+	{"Kansas", "KS", false},
+	{"Kentucky", "KY", false},
+	{"Louisiana", "LA", false},
+	{"Maine", "ME", false},
+	{"Maryland", "MD", false},
+	{"Massachusetts", "MA", false},
+	{"Michigan", "MI", false},
+	{"Minnesota", "MN", false},
+	{"Mississippi", "MS", false},
+	{"Missouri", "MO", false},
+	{"Montana", "MT", false},
+	{"Nebraska", "NE", false},
+	{"Nevada", "NV", false},
+	{"New Hampshire", "NH", false},
+	{"New Jersey", "NJ", false},
+	{"New Mexico", "NM", false},
+	{"New York", "NY", false},
+	{"North Carolina", "NC", false},
+	{"North Dakota", "ND", false},
+	{"Ohio", "OH", false},
+	{"Oklahoma", "OK", false},
+	{"Oregon", "OR", false},
+	{"Pennsylvania", "PA", false},
+	{"Rhode Island", "RI", false},
+	{"South Carolina", "SC", false},
+	{"South Dakota", "SD", false},
+	{"Tennessee", "TN", false},
+	{"Texas", "TX", false},
+	{"Utah", "UT", false},
+	{"Vermont", "VT", false},
+	{"Virginia", "VA", false},
+	{"Washington", "WA", false},
+	{"West Virginia", "WV", false},
+	{"Wisconsin", "WI", false},
+	{"Wyoming", "WY", false},
+	{"District of Columbia", "DC", false},
+	{"American Samoa", "AS", true},
+	{"Guam", "GU", true},
+	{"Northern Mariana Islands", "MP", true},
+	{"Puerto Rico", "PR", true},
+	{"United States Virgin Islands", "VI", true},
 }
 
 func genStates() {
@@ -450,68 +491,6 @@ type CarrierMetadata struct {
 	writeFile("carriers.go", cv.String())
 }
 
-// ---------- Medications ----------
-
-func genMedications() {
-	sources := []string{"insurance/v2_medications.json"}
-	var meds []map[string]any
-	if !tryJSON(filepath.Join(insRepo, "v2_medications.json"), &meds) {
-		// Same contract as Products: the committed medications.go is the
-		// published source of truth (~1865 uses) and CI does not check out the
-		// engine repo, so preserve it instead of clobbering it with an empty
-		// catalog. Fail loud only when there is nothing committed to preserve.
-		preserveOrFail([]string{"medications.go"}, "MedicationUses", "v2_medications.json")
-		return
-	}
-	uses := map[string]map[string]bool{}
-	for _, m := range meds {
-		name, _ := m["name"].(string)
-		if name == "" {
-			continue
-		}
-		us, _ := m["uses"].([]any)
-		for _, u := range us {
-			um, ok := u.(map[string]any)
-			if !ok {
-				continue
-			}
-			cond, _ := um["condition"].(string)
-			if cond == "" {
-				continue
-			}
-			if uses[cond] == nil {
-				uses[cond] = map[string]bool{}
-			}
-			uses[cond][name] = true
-		}
-	}
-	names := make([]string, 0, len(uses))
-	for k := range uses {
-		names = append(names, k)
-	}
-	sort.Strings(names)
-	var b strings.Builder
-	b.WriteString(header(sources))
-	b.WriteString("// MedicationUseMetadata lists the medications recorded as treating one\n// canonical condition (engine wire format).\ntype MedicationUseMetadata struct {\n\tDisplayName string\n\tMedications []string\n}\n\n")
-	b.WriteString("var medicationUseMetadata = map[string]MedicationUseMetadata{\n")
-	for _, u := range names {
-		ml := make([]string, 0, len(uses[u]))
-		for m := range uses[u] {
-			ml = append(ml, m)
-		}
-		sort.Strings(ml)
-		fmt.Fprintf(&b, "\t%q: {DisplayName: %q, Medications: %s},\n", u, u, quoted(ml))
-	}
-	b.WriteString("}\n\nvar allMedicationUses = []string{\n")
-	for _, u := range names {
-		fmt.Fprintf(&b, "\t%q,\n", u)
-	}
-	b.WriteString("}\n\ntype medicationUsesAPI struct{}\n\n// MedicationUses is the catalog accessor.\nvar MedicationUses medicationUsesAPI\n\n")
-	b.WriteString("// Values returns every use name, sorted alphabetically.\nfunc (medicationUsesAPI) Values() []string { return append([]string(nil), allMedicationUses...) }\n\n")
-	b.WriteString("// Metadata returns the metadata for use and whether use is known.\nfunc (medicationUsesAPI) Metadata(use string) (MedicationUseMetadata, bool) {\n\tm, ok := medicationUseMetadata[use]\n\treturn m, ok\n}\n")
-	writeFile("medications.go", b.String())
-}
-
 // ---------- Scopes + Errors ----------
 
 func genScopesAndErrors() {
@@ -705,5 +684,5 @@ func genSignEvents() {
 // ---------- Index ----------
 
 func genIndex() {
-	writeFile("doc.go", "// Package catalog exposes the auto-" + "generated catalogs of Products,\n// States, Carriers, MedicationUses, Scopes, SignEvents, and ErrorCodes.\n//\n// Sources are regenerated from the platform's reference data; do not\n// hand-edit. The empty-but-typed shape is honored for any source the\n// generator could not resolve.\npackage catalog\n")
+	writeFile("doc.go", "// Package catalog exposes the auto-"+"generated catalogs of Products,\n// States, Carriers, Scopes, SignEvents, and ErrorCodes.\n//\n// Sources are regenerated from the platform's reference data; do not\n// hand-edit. The empty-but-typed shape is honored for any source the\n// generator could not resolve.\npackage catalog\n")
 }

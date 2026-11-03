@@ -12,8 +12,10 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
+	"strconv"
 )
 
 const (
@@ -102,7 +104,7 @@ func (s *PrequalifyV3Service) Run(ctx context.Context, req *PrequalifyV3Request,
 			return nil, fmt.Errorf("zyins: PrequalifyV3.Run mint idempotency key: %w", err)
 		}
 	}
-	raw, httpResp, err := s.client.doJSONRaw(ctx, requestArgs{
+	raw, _, err := s.client.doJSONRaw(ctx, requestArgs{
 		method:         http.MethodPost,
 		path:           prequalifyV3Path,
 		body:           json.RawMessage(body),
@@ -116,12 +118,6 @@ func (s *PrequalifyV3Service) Run(ctx context.Context, req *PrequalifyV3Request,
 	result, err := decodePrequalifyV3Envelope(raw, key)
 	if err != nil {
 		return nil, fmt.Errorf("zyins: PrequalifyV3.Run decode: %w", err)
-	}
-	if httpResp != nil {
-		// Reserved for future header-derived fields (retry attempts,
-		// rate-limit metadata). The base envelope carries everything
-		// the TS surface returns today.
-		_ = httpResp
 	}
 	return result, nil
 }
@@ -294,7 +290,7 @@ func buildV3Coverage(cov Coverage, state, zip string) map[string]any {
 	if cov.IsMulti() {
 		amounts := make([]string, len(cov.Amounts))
 		for i, a := range cov.Amounts {
-			amounts[i] = fmt.Sprintf("%d", a)
+			amounts[i] = strconv.Itoa(a)
 		}
 		return withLocale(map[string]any{
 			"quote_options": map[string]any{
@@ -311,7 +307,7 @@ func buildV3Coverage(cov Coverage, state, zip string) map[string]any {
 		return withLocale(map[string]any{
 			"quote_options": map[string]any{
 				"quote_type": "monthly_budget",
-				"amounts":    []string{fmt.Sprintf("%d", cov.Amount)},
+				"amounts":    []string{strconv.Itoa(cov.Amount)},
 			},
 		})
 	}
@@ -453,7 +449,7 @@ func buildV3WireBody(app Applicant, cov Coverage, products ProductSelection, opt
 		"medications":    meds,
 		"quote_options": map[string]any{
 			"quote_type": quoteType,
-			"amounts":    []string{fmt.Sprintf("%d", cov.Amount)},
+			"amounts":    []string{strconv.Itoa(cov.Amount)},
 		},
 		"products": products.wireIDs(),
 	}
@@ -519,14 +515,14 @@ type v3EnvelopeHeader struct {
 
 func decodePrequalifyV3Envelope(body []byte, sentKey string) (*PrequalifyV3Result, error) {
 	if len(body) == 0 {
-		return nil, fmt.Errorf("zyins: prequalify_v3 response body was empty")
+		return nil, errors.New("zyins: prequalify_v3 response body was empty")
 	}
 	var env v3EnvelopeHeader
 	if err := json.Unmarshal(body, &env); err != nil {
 		return nil, fmt.Errorf("zyins: failed to decode prequalify_v3 envelope: %w", err)
 	}
 	if len(env.Data) == 0 || isJSONNull(env.Data) {
-		return nil, fmt.Errorf("zyins: prequalify_v3 envelope missing data field")
+		return nil, errors.New("zyins: prequalify_v3 envelope missing data field")
 	}
 	echoKey := env.IdempotencyKey
 	if echoKey == "" {
@@ -559,7 +555,7 @@ func decodeV3Plans(data json.RawMessage) ([]V3Offer, error) {
 	}
 	plansRaw, hasPlans := parsed["plans"]
 	if !hasPlans {
-		return nil, fmt.Errorf("zyins: missing plans field in v3 response")
+		return nil, errors.New("zyins: missing plans field in v3 response")
 	}
 	var plansList []json.RawMessage
 	if err := json.Unmarshal(plansRaw, &plansList); err != nil {
@@ -578,14 +574,14 @@ func decodeV3Plans(data json.RawMessage) ([]V3Offer, error) {
 
 func decodeQuoteV3Envelope(body []byte, sentKey string) (*QuoteV3Result, error) {
 	if len(body) == 0 {
-		return nil, fmt.Errorf("zyins: quote_v3 response body was empty")
+		return nil, errors.New("zyins: quote_v3 response body was empty")
 	}
 	var env v3EnvelopeHeader
 	if err := json.Unmarshal(body, &env); err != nil {
 		return nil, fmt.Errorf("zyins: failed to decode quote_v3 envelope: %w", err)
 	}
 	if len(env.Data) == 0 || isJSONNull(env.Data) {
-		return nil, fmt.Errorf("zyins: quote_v3 envelope missing data field")
+		return nil, errors.New("zyins: quote_v3 envelope missing data field")
 	}
 	plans, err := decodeV3Plans(env.Data)
 	if err != nil {

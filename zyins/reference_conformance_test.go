@@ -64,7 +64,7 @@ type refVectorFile struct {
 
 func loadReferenceVectors(t *testing.T) *refVectorFile {
 	t.Helper()
-	raw, err := os.ReadFile(referenceVectorsPath)
+	raw, err := os.ReadFile(filepath.Clean(referenceVectorsPath))
 	if err != nil {
 		t.Fatalf("zyins: failed to read reference vectors at %s: %v", referenceVectorsPath, err)
 	}
@@ -78,11 +78,11 @@ func loadReferenceVectors(t *testing.T) *refVectorFile {
 func bundleFromFixture(f *refBundleFixture) *DatasetBundleV3 {
 	conditions := make([]ReferenceEntity, len(f.Conditions))
 	for i, c := range f.Conditions {
-		conditions[i] = ReferenceEntity{ID: c.ID, Name: c.Name}
+		conditions[i] = ReferenceEntity(c)
 	}
 	medications := make([]ReferenceEntity, len(f.Medications))
 	for i, m := range f.Medications {
-		medications[i] = ReferenceEntity{ID: m.ID, Name: m.Name}
+		medications[i] = ReferenceEntity(m)
 	}
 	// Translate the legacy fixture maps-shape into the v3 inline-row
 	// relation edges. The cross-language conformance corpus still
@@ -112,7 +112,6 @@ func bundleFromFixture(f *refBundleFixture) *DatasetBundleV3 {
 func TestReferenceMakeKey_ParityVectors(t *testing.T) {
 	vectors := loadReferenceVectors(t)
 	for _, vec := range vectors.MakeKey {
-		vec := vec
 		t.Run(vec.Input, func(t *testing.T) {
 			if got := makeKey(vec.Input); got != vec.Expected {
 				t.Errorf("makeKey(%q) = %q, want %q", vec.Input, got, vec.Expected)
@@ -130,7 +129,6 @@ func TestReferenceMatch_Scenarios(t *testing.T) {
 	svc := newReferenceService()
 
 	for _, scenario := range vectors.Matches {
-		scenario := scenario
 		t.Run(scenario.Name, func(t *testing.T) {
 			var got Concept
 			switch scenario.Matcher {

@@ -18,10 +18,10 @@ func (f *logoFakeDoer) Do(req *http.Request) (*http.Response, error) {
 	return f.resp, nil
 }
 
-func newLogoClient(t *testing.T, body string, status int, ct string) (*Client, *logoFakeDoer) {
+func newLogoClient(t *testing.T, body, ct string) (*Client, *logoFakeDoer) {
 	t.Helper()
 	doer := &logoFakeDoer{resp: &http.Response{
-		StatusCode: status,
+		StatusCode: http.StatusOK,
 		Body:       io.NopCloser(strings.NewReader(body)),
 		Header:     http.Header{"Content-Type": []string{ct}},
 	}}
@@ -29,12 +29,15 @@ func newLogoClient(t *testing.T, body string, status int, ct string) (*Client, *
 	if err != nil {
 		t.Fatalf("NewClient: %v", err)
 	}
+	// Logos uses bootstrapDoer (no auth). Also override doer so other
+	// services that rely on bearer-injected calls can still use the fake.
 	c.doer = doer
+	c.bootstrapDoer = doer
 	return c, doer
 }
 
 func TestLogos_Get_RawBytes(t *testing.T) {
-	c, doer := newLogoClient(t, "PNGDATA", 200, "image/png")
+	c, doer := newLogoClient(t, "PNGDATA", "image/png")
 	body, dataURI, err := c.Logos.Get(context.Background(), "aetna")
 	if err != nil {
 		t.Fatalf("Get: %v", err)
@@ -54,7 +57,7 @@ func TestLogos_Get_RawBytes(t *testing.T) {
 }
 
 func TestLogos_Get_DataURI(t *testing.T) {
-	c, doer := newLogoClient(t, "data:image/png;base64,AAAA", 200, "text/plain")
+	c, doer := newLogoClient(t, "data:image/png;base64,AAAA", "text/plain")
 	body, dataURI, err := c.Logos.Get(context.Background(), "aetna", WithDataURI(true))
 	if err != nil {
 		t.Fatalf("Get: %v", err)
@@ -71,14 +74,14 @@ func TestLogos_Get_DataURI(t *testing.T) {
 }
 
 func TestLogos_Get_RejectsEmptyCarrier(t *testing.T) {
-	c, _ := newLogoClient(t, "", 200, "")
+	c, _ := newLogoClient(t, "", "")
 	if _, _, err := c.Logos.Get(context.Background(), ""); err == nil {
 		t.Fatal("expected error for empty carrier")
 	}
 }
 
 func TestLogos_Get_NonImageDataURIRejected(t *testing.T) {
-	c, _ := newLogoClient(t, "not a data uri", 200, "text/plain")
+	c, _ := newLogoClient(t, "not a data uri", "text/plain")
 	if _, _, err := c.Logos.Get(context.Background(), "aetna", WithDataURI(true)); err == nil {
 		t.Fatal("expected error for non-data-URI body")
 	}

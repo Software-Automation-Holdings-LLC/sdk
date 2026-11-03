@@ -339,13 +339,13 @@ func ResolveIsaOptions(opts IsaOptions) (ResolvedIsaOptions, error)
 
 type SessionAuth struct {
 	SessionID     string
-	SessionSecret string //nolint:gosec // documented credential field
+	SessionSecret string
 }
     SessionAuth is the session-credential auth supplier.
 
 type SessionOptions struct {
 	SessionID     string
-	SessionSecret string //nolint:gosec // documented credential field
+	SessionSecret string
 	APIVersion    map[string]string
 	CaseStorage   zcases.CaseStorage
 }
@@ -374,6 +374,11 @@ const (
 	HeaderIsaTimestamp  = "X-Isa-Timestamp"
 	HeaderIsaSignature  = "X-Isa-Signature"
 	BearerAuthScheme    = "Bearer"
+	// SessionAuthScheme is the Authorization scheme the proxy session
+	// verifier requires. Not BearerAuthScheme — the value is an HMAC
+	// secret, not a bearer token. See
+	// services/proxy/internal/auth/session.go (authzSchemeName).
+	SessionAuthScheme = "Session"
 )
     Header names produced by SignRequest. Exported so callers don't rebuild the
     literal in five places.
@@ -471,8 +476,10 @@ func SignRequest(input SignRequestInput) (SignedHeaders, error)
     outbound request. A zero Now value uses time.Now().UTC().
 
 func (h SignedHeaders) AsMap() map[string]string
-    AsMap returns the headers as a map keyed by canonical header names. Useful
-    when passing into http.Header or similar consumers.
+    AsMap returns the headers as a map keyed by canonical header names.
+    Useful when passing into http.Header or similar consumers. HeaderDeviceID is
+    present only when h.DeviceID is non-empty — it is not a mandatory member of
+    the session-signing wire contract.
 
 
 === package core/replay ===
@@ -977,8 +984,20 @@ func NewProductSelectionOf(products ...catalog.Product) (ProductSelection, error
 
     sel, err := zyins.NewProductSelectionOf(catalog.Products.Fex.AetnaAccendo())
 
+func NewResolvingDatasetSource(sources []DatasetSource, onMissing OnMissingHook) (*ResolvingDatasetSource, error)
+    NewResolvingDatasetSource builds a chain. onMissing may be nil.
+
 func NewWeight(pounds int) (Weight, error)
     NewWeight constructs a Weight from a positive pound count.
+
+func ParseDatasetBundle(body []byte) (*DatasetBundleV3, error)
+    ParseDatasetBundle decodes a raw GET /v3/datasets response body — the full
+    envelope shape {"data": {...}} — into a *DatasetBundleV3. Exported so a
+    local DatasetSource can reuse the exact parser the HTTP path uses; there is
+    intentionally no second parser. Accepts both the slim reference-bundle.json
+    and the full datasets.json — both carry the same data.datasets shape;
+    the reference layer reads only the reference fields. The parsed bundle's
+    ETag is empty (a file has none).
 
 func ResolveAPIVersion(overrides map[string]string, surface string) string
     ResolveAPIVersion returns the version pinned for surface, applying
@@ -1037,6 +1056,20 @@ func WithSession() (Option, error)
 
 TYPES
 
+type APIDatasetSource struct {
+	// Has unexported fields.
+}
+    APIDatasetSource loads the bundle from a caller-supplied fetcher — the
+    current DatasetsV3.Get HTTP path. Uses the already-configured client
+    credential; it introduces no new service key.
+
+func NewAPIDatasetSource(fetch func(ctx context.Context) (*DatasetBundleV3, error)) *APIDatasetSource
+    NewAPIDatasetSource wraps a bundle fetcher (typically a client's
+    DatasetsV3.Get) as a DatasetSource.
+
+func (s *APIDatasetSource) Load(ctx context.Context) (*DatasetBundleV3, error)
+    Load invokes the fetcher.
+
 type Applicant struct {
 	// DOB is the date of birth as an ISO 8601 date string ("1962-04-18").
 	DOB string `json:"dob"`
@@ -1056,9 +1089,6 @@ type Applicant struct {
 	Zip string `json:"zip,omitempty"`
 	// NicotineUse is the underlying fact; mapped to the wire shape by the
 	// prequalify builder. Set via NicotineUsageInput for 0.5.1+.
-	//
-	// Deprecated: NicotineUsageLegacy accepts the old NicotineUsage enum.
-	// Will be removed in v0.7.0.
 	NicotineUse NicotineUsageInput `json:"-"`
 	// NicotineUsageLegacy holds the deprecated three-value enum when the
 	// caller has not yet migrated to NicotineUsageInput.
@@ -1652,6 +1682,15 @@ type DatasetPlan struct {
 }
     DatasetPlan is one plan row in the plans dataset.
 
+type DatasetSource interface {
+	// Load resolves the bundle. Returns a descriptive error naming the
+	// source and the failing input when the bundle cannot be produced.
+	Load(ctx context.Context) (*DatasetBundleV3, error)
+}
+    DatasetSource resolves a *DatasetBundleV3 for the reference layer.
+    Implementations resolve the bundle however they like — HTTP, a local file,
+    an in-memory value — and surface one method.
+
 type DatasetsService struct {
 	// Has unexported fields.
 }
@@ -1842,6 +1881,30 @@ const (
 	ErrorCodeGatewayTimeout      ErrorCode = "gateway_timeout"
 	ErrorCodeServiceDown         ErrorCode = "service_unavailable"
 )
+type FileDatasetSource struct {
+	// Has unexported fields.
+}
+    FileDatasetSource loads the bundle from a local file and parses it with the
+    shared ParseDatasetBundle. Accepts the slim reference-bundle.json OR the
+    full datasets.json — both carry the same data.datasets shape; the reference
+    layer reads only the reference fields.
+
+func NewFileDatasetSource(path string) *FileDatasetSource
+    NewFileDatasetSource builds a file-backed source reading from the OS
+    filesystem.
+
+func NewFileDatasetSourceWith(path string, read FileReader) *FileDatasetSource
+    NewFileDatasetSourceWith builds a file-backed source with an injected reader
+    (tests supply an in-memory reader).
+
+func (s *FileDatasetSource) Load(_ context.Context) (*DatasetBundleV3, error)
+    Load reads and parses the file.
+
+type FileReader func(path string) ([]byte, error)
+    FileReader reads a file's bytes by path. Injectable so the file source stays
+    testable without touching the disk. The name describes WHAT (read a file)
+    not HOW (which syscall backs it).
+
 type HealthService struct {
 	// Has unexported fields.
 }
@@ -2157,9 +2220,11 @@ type MinRank string
     and MinRankGuaranteed; MinRankReturnOfPremium, MinRankGuaranteedIssue,
     and MinRankGi are synonyms that share the canonical lowercase wire token.
     The server compares case-insensitively and also tolerates numeric strings,
-    so option fields stay typed as string rather than MinRank — these constants
-    are for ergonomics and autocomplete, not a hard gate. MinRank is itself a
-    string type, so every constant assigns to a string field without conversion.
+    so option fields stay typed as string rather than MinRank — these
+    constants are for ergonomics and autocomplete, not a hard gate.
+    MinRank is a defined string type, so assigning a constant to a string
+    option field takes an explicit conversion: PrequalifyV3Options{MinRank:
+    string(MinRankGuaranteed)}.
 
 type NicotineDuration string
     NicotineDuration is the seven-bucket duration encoding for nicotine use
@@ -2211,6 +2276,10 @@ type NicotineUsageInput struct {
     NicotineUsageInput is the structured, duration-aware nicotine input for the
     0.5.1 wire. Prefer this over the deprecated NicotineUsage enum for new code.
 
+type OnMissingHook func(ctx context.Context) error
+    OnMissingHook is invoked between the first source's failure and the next
+    source in a ResolvingDatasetSource chain.
+
 type Option func(*options) error
     Option mutates an *options block during NewClient. The functional- options
     pattern keeps the public constructor signature compact while allowing
@@ -2245,6 +2314,13 @@ func WithCaseStorage(storage cases.CaseStorage) Option
     WithCaseStorage swaps the default zero-knowledge case store. Passing nil
     resets to the default (cases.NewZeroKnowledgeCaseStorage wrapping the
     underlying client).
+
+func WithDatasetSource(src DatasetSource) Option
+    WithDatasetSource installs a local reference-bundle source. When set, the
+    cache-backed Match facades (Conditions/Medications/Concepts), autocomplete,
+    and autocorrect warm from the source instead of a DatasetsV3.Get HTTP call
+    — load a FileDatasetSource for offline use. Passing nil clears the override
+    and restores the API-fetch default.
 
 func WithHTTPClient(c *http.Client) Option
     WithHTTPClient overrides the SDK's default *http.Client. The supplied
@@ -2687,6 +2763,8 @@ type RawResponse struct {
 	Header http.Header
 	// URL is the absolute URL the request was sent to.
 	URL *url.URL
+
+	// Has unexported fields.
 }
     RawResponse exposes the underlying HTTP response metadata after the body has
     already been consumed and parsed. The body itself is NOT re-exposed — the
@@ -2805,6 +2883,18 @@ type RelationEdge struct {
     inline observation count used to drive SortMostCommonFirst — equal to 0 when
     the wire row did not carry one.
 
+type ResolvingDatasetSource struct {
+	// Has unexported fields.
+}
+    ResolvingDatasetSource tries each source in order; the first that resolves
+    wins. The documented chain is local file → optional generate hook → API
+    fallback: pass the generate hook as the OnMissing option and it runs once,
+    after the first source fails and before the next is tried. When every source
+    fails, Load returns an error naming each attempt.
+
+func (s *ResolvingDatasetSource) Load(ctx context.Context) (*DatasetBundleV3, error)
+    Load walks the chain.
+
 type RunOption func(*runOptions)
     RunOption customizes a single Prequalify.Run call without affecting the
     surrounding Client.
@@ -2826,7 +2916,7 @@ const (
 
 type SessionCredential struct {
 	SessionID     string
-	SessionSecret string //nolint:gosec // documented credential field; consumers expect this name
+	SessionSecret string
 }
     SessionCredential captures the session id + signing secret the Session auth
     mode signs requests with.
@@ -2861,6 +2951,17 @@ type State = catalog.State
     Untyped string constants (`State: "NC"`) keep compiling — Go assigns untyped
     strings to named string types implicitly. The typed form catches typos like
     `"North Carolina"` at the catalog lookup edge.
+
+type StaticDatasetSource struct {
+	// Has unexported fields.
+}
+    StaticDatasetSource serves a bundle already in memory.
+
+func NewStaticDatasetSource(bundle *DatasetBundleV3) *StaticDatasetSource
+    NewStaticDatasetSource wraps an in-memory bundle.
+
+func (s *StaticDatasetSource) Load(_ context.Context) (*DatasetBundleV3, error)
+    Load returns the wrapped bundle.
 
 type StaticToken string
     StaticToken is a TokenSource that returns the same token forever. Suitable
@@ -3103,6 +3204,9 @@ type Client struct {
 	// Webhooks groups webhook-verification helpers. Always non-nil on a
 	// Client returned from New.
 	Webhooks *Webhooks
+	// Voice groups voice-signing operations. Always non-nil on a Client
+	// returned from New.
+	Voice *Voice
 	// Has unexported fields.
 }
     Client is the top-level RapidSign API client. Construct one with New and
@@ -3164,7 +3268,7 @@ func (d *Documents) AwaitSignature(ctx context.Context, signID string, opts Awai
     The polling cadence is intentionally not configurable — callers describe how
     long they will wait, not how aggressively to hammer the server.
 
-func (d *Documents) Cancel(ctx context.Context, signID string, req *CancelRequest) error
+func (d *Documents) Cancel(_ context.Context, signID string, _ *CancelRequest) error
     Cancel is reserved for the future server-side cancel endpoint (tracked in
     #38). Today it returns *NotImplementedError so callers can ship code against
     the eventual surface without conditional dispatch.
@@ -3274,6 +3378,18 @@ func (e *InvalidTokenError) Error() string
 func (e *InvalidTokenError) Unwrap() error
     Unwrap exposes the base *Error for errors.As traversal.
 
+type MintCodeRequest struct {
+	SessionID string
+	SecretKey string
+	Form      string
+	Signer    string
+	// Script, when supplied, publishes the voice script for Form before
+	// minting the code. Omit to mint against an already-published
+	// script.
+	Script *VoiceScript
+}
+    MintCodeRequest is the input to Voice.MintCode.
+
 type NotFoundError struct{ Err *Error }
     NotFoundError wraps 404 responses.
 
@@ -3356,6 +3472,14 @@ type SendRequest struct {
 	RemoteAllowed *bool             `json:"remote_allowed,omitempty"`
 	TemplateData  map[string]any    `json:"data,omitempty"`
 	Metadata      map[string]string `json:"metadata,omitempty"`
+	// FormID identifies the RapidSign form the notify template should
+	// render for the recipient. Optional; omitted when the signer flow
+	// is not form-driven.
+	FormID string `json:"form_id,omitempty"`
+	// IncludeCodeInLink controls whether the notify email embeds the
+	// signer's access code directly in the sign link (vs requiring it be
+	// entered separately). Defaults to false.
+	IncludeCodeInLink bool `json:"include_code_in_link,omitempty"`
 }
     SendRequest is the input to Documents.Send.
 
@@ -3420,6 +3544,64 @@ func (e *ValidationError) Error() string
 func (e *ValidationError) Unwrap() error
     Unwrap exposes the base *Error for errors.As traversal.
 
+type Voice struct {
+	// Has unexported fields.
+}
+    Voice groups the voice-signing operations on a Client. A voice ceremony
+    still resolves to the same signing envelope every other ceremony type
+    produces (SAH-4608): once the signer completes the phone call, the
+    resulting signature and PDF are fetched exactly as for any other sign_id,
+    via Documents.Get / Documents.AwaitSignature / Documents.Download.
+    Voice adds exactly one new step ahead of that shared lifecycle — minting the
+    single-use code the signer dials in with.
+
+func (v *Voice) MintCode(ctx context.Context, signID string, req *MintCodeRequest) (*VoiceCode, error)
+    MintCode mints a single-use voice-sign application code bound to signID and
+    notifies nobody — the caller is responsible for delivering the code to the
+    signer through its own channel. The signer dials the ceremony's universal
+    number and enters the code to begin the call; once the call completes,
+    drive the rest of the lifecycle the same way as any other ceremony:
+    Documents.AwaitSignature (or Documents.Get) for the signature,
+    Documents.Download for the PDF.
+
+type VoiceCode struct {
+	SignID    string    `json:"sign_id"`
+	Code      string    `json:"code"`
+	ExpiresAt time.Time `json:"expires_at"`
+}
+    VoiceCode is a freshly minted, single-use code a signer dials into the
+    ceremony's universal number with.
+
+type VoiceScript struct {
+	DisclosureText     string      `json:"disclosure_text,omitempty"`
+	Steps              []VoiceStep `json:"steps"`
+	ExpectedSignerName string      `json:"expected_signer_name,omitempty"`
+}
+    VoiceScript is the ordered step list plus the mandatory recording-disclosure
+    copy a voice ceremony opens with. Pass a Script on MintCodeRequest to
+    publish (or republish) the script for a form; omit it to mint against
+    whatever was published earlier for the same Form.
+
+type VoiceStep struct {
+	Kind     VoiceStepKind `json:"kind"`
+	Text     string        `json:"text,omitempty"`
+	AudioURL string        `json:"audio_url,omitempty"`
+}
+    VoiceStep is one carrier-configured ceremony step.
+
+type VoiceStepKind string
+    VoiceStepKind names one step behavior in a voice script. Mirrors
+    api.rapidsign.v1's voice-sign step kinds; kept as a string type so future
+    server-side additions do not require a client release.
+
+const (
+	VoiceStepSay         VoiceStepKind = "say"
+	VoiceStepPlay        VoiceStepKind = "play"
+	VoiceStepConfirm     VoiceStepKind = "confirm"
+	VoiceStepCaptureName VoiceStepKind = "capture-name"
+)
+    Documented step kinds.
+
 type WebhookEvent struct {
 	ID        string         `json:"id"`
 	Type      string         `json:"type"`
@@ -3438,7 +3620,7 @@ type Webhooks struct {
     method is reserved for the upcoming HMAC signature surface and returns
     *NotImplementedError until that surface lands.
 
-func (w *Webhooks) Verify(rawBody []byte, headers http.Header, secret string) (*WebhookEvent, error)
+func (w *Webhooks) Verify(_ []byte, _ http.Header, _ string) (*WebhookEvent, error)
     Verify will check the HMAC signature on a raw webhook body, parse the JSON
     envelope, and return the typed event. The server-side signing surface is
     still being designed (#38); for now this method returns *NotImplementedError
@@ -3507,10 +3689,9 @@ type CallOptions struct {
 
 type SessionBinding struct {
 	SessionID     string
-	SessionSecret string //nolint:gosec // documented credential field
+	SessionSecret string
 	DeviceID      string
 	ProxyOrigin   string
 }
     SessionBinding carries the credentials and origin a Call needs. Built by the
     parent Isa client at construction; tests build it directly.
-

@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"strconv"
 )
 
 // prequalifyPath is the canonical path for the prequalify operation.
@@ -250,14 +251,14 @@ func (s *PrequalifyService) RunWithRawResponse(
 		idempotencyKey: ro.idempotencyKey,
 	})
 	if err != nil {
-		return nil, captureRawResponse(httpResp), fmt.Errorf("zyins: Prequalify.RunWithRawResponse: %w", err)
+		return nil, httpResp, fmt.Errorf("zyins: Prequalify.RunWithRawResponse: %w", err)
 	}
 	result, err := decodePrequalifyResponse(raw)
 	if err != nil {
-		return nil, captureRawResponse(httpResp), err
+		return nil, httpResp, err
 	}
 	env := newEnvelope[*PrequalifyResult](result, raw, httpResp)
-	return env, captureRawResponse(httpResp), nil
+	return env, httpResp, nil
 }
 
 // prequalifyWireBody is the flat on-wire JSON shape for the prequalify
@@ -314,21 +315,12 @@ func buildPrequalifyBody(in *PrequalifyInput) (prequalifyWireBody, error) {
 
 	conds := make([]prequalifyCondition, len(in.Applicant.Conditions))
 	for i, c := range in.Applicant.Conditions {
-		conds[i] = prequalifyCondition{
-			Name:          c.Name,
-			WasDiagnosed:  c.WasDiagnosed,
-			LastTreatment: c.LastTreatment,
-		}
+		conds[i] = prequalifyCondition(c)
 	}
 
 	meds := make([]prequalifyMedication, len(in.Applicant.Medications))
 	for i, m := range in.Applicant.Medications {
-		meds[i] = prequalifyMedication{
-			Name:      m.Name,
-			Use:       m.Use,
-			FirstFill: m.FirstFill,
-			LastFill:  m.LastFill,
-		}
+		meds[i] = prequalifyMedication(m)
 	}
 
 	quoteType := "face_amounts"
@@ -348,7 +340,7 @@ func buildPrequalifyBody(in *PrequalifyInput) (prequalifyWireBody, error) {
 		Conditions:    conds,
 		Medications:   meds,
 		QuoteOptions: prequalifyQuoteOptions{
-			Amounts:   []string{fmt.Sprintf("%d", in.Coverage.Amount)},
+			Amounts:   []string{strconv.Itoa(in.Coverage.Amount)},
 			QuoteType: quoteType,
 		},
 	}

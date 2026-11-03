@@ -161,7 +161,7 @@ func v3TestRequest(t *testing.T) *PrequalifyV3Request {
 func newV3PinnedClient(t *testing.T, srv *httptest.Server) *Client {
 	t.Helper()
 	c, err := NewClient(
-		WithToken("isa_test_4fjK2nQ7mX1aB8sR9pZ3"),
+		WithToken("isa_test_aaaaaaaaaaaaaaaaaaaa"),
 		WithBaseURL(srv.URL),
 		WithMaxRetryAttempts(1),
 		WithAPIVersionOverrides(map[string]string{

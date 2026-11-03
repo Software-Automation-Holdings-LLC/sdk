@@ -17,8 +17,8 @@
 package reference
 
 import (
+	"slices"
 	"sort"
-	"sync"
 )
 
 // sortStable wraps sort.SliceStable so the index-permutation helpers
@@ -118,8 +118,6 @@ type catalog struct {
 	// freqMedForCondition[medicationID][conditionID] = inline
 	// prescription_count from a medication row's used_for edge.
 	freqMedForCondition map[string]map[string]int
-
-	reverseOnce sync.Once
 }
 
 func buildCatalog(d *DatasetsResponse) *catalog {
@@ -202,12 +200,7 @@ func deriveMissingReverse(c *catalog) {
 }
 
 func contains(s []string, v string) bool {
-	for _, x := range s {
-		if x == v {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(s, v)
 }
 
 func (c *catalog) conditionName(id string) (string, bool) {

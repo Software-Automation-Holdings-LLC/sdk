@@ -15,6 +15,7 @@ package zyins
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"net/url"
@@ -74,7 +75,7 @@ func (s *DatasetsV3Service) Get(ctx context.Context, opts DatasetsV3Options) (*D
 		extraHeaders: extra,
 	})
 	if err != nil {
-		if httpResp != nil && httpResp.StatusCode == http.StatusNotModified {
+		if httpResp != nil && httpResp.Status == http.StatusNotModified {
 			etag := httpResp.Header.Get("ETag")
 			if etag == "" {
 				etag = opts.IfNoneMatch
@@ -165,9 +166,20 @@ type datasetsV3WireEnvelope struct {
 	Data json.RawMessage `json:"data"`
 }
 
+// ParseDatasetBundle decodes a raw GET /v3/datasets response body — the
+// full envelope shape {"data": {...}} — into a *DatasetBundleV3. Exported
+// so a local DatasetSource can reuse the exact parser the HTTP path uses;
+// there is intentionally no second parser. Accepts both the slim
+// reference-bundle.json and the full datasets.json — both carry the same
+// data.datasets shape; the reference layer reads only the reference
+// fields. The parsed bundle's ETag is empty (a file has none).
+func ParseDatasetBundle(body []byte) (*DatasetBundleV3, error) {
+	return decodeDatasetsV3Envelope(body)
+}
+
 func decodeDatasetsV3Envelope(body []byte) (*DatasetBundleV3, error) {
 	if len(body) == 0 {
-		return nil, fmt.Errorf("zyins: datasets_v3 response body was empty")
+		return nil, errors.New("zyins: datasets_v3 response body was empty")
 	}
 	var env datasetsV3WireEnvelope
 	if err := json.Unmarshal(body, &env); err != nil {
@@ -176,7 +188,7 @@ func decodeDatasetsV3Envelope(body []byte) (*DatasetBundleV3, error) {
 	target := body
 	if len(env.Data) > 0 {
 		if isJSONNull(env.Data) {
-			return nil, fmt.Errorf("zyins: datasets_v3 returned null data envelope")
+			return nil, errors.New("zyins: datasets_v3 returned null data envelope")
 		}
 		target = env.Data
 	}
@@ -263,7 +275,7 @@ func productsByFamilyFromWire(raw json.RawMessage) map[string][]ReferenceEntity 
 			if row.ID == "" {
 				continue
 			}
-			entities = append(entities, ReferenceEntity{ID: row.ID, Name: row.Name})
+			entities = append(entities, ReferenceEntity(row))
 		}
 		out[family] = entities
 	}
@@ -337,7 +349,8 @@ func datasetsV3EntitiesFromWire(rows []datasetsV3WireRow) []ReferenceEntity {
 		return nil
 	}
 	out := make([]ReferenceEntity, len(rows))
-	for i, r := range rows {
+	for i := range rows {
+		r := &rows[i]
 		out[i] = ReferenceEntity{ID: r.ID, Name: r.Name}
 	}
 	return out
@@ -345,7 +358,8 @@ func datasetsV3EntitiesFromWire(rows []datasetsV3WireRow) []ReferenceEntity {
 
 func relationsFromConditionRows(rows []datasetsV3WireRow) []RelationEdge {
 	var edges []RelationEdge
-	for _, row := range rows {
+	for i := range rows {
+		row := &rows[i]
 		for _, rel := range row.TreatedWith {
 			edges = append(edges, RelationEdge{
 				FromID:            row.ID,
@@ -360,7 +374,8 @@ func relationsFromConditionRows(rows []datasetsV3WireRow) []RelationEdge {
 
 func relationsFromMedicationRows(rows []datasetsV3WireRow) []RelationEdge {
 	var edges []RelationEdge
-	for _, row := range rows {
+	for i := range rows {
+		row := &rows[i]
 		for _, rel := range row.UsedFor {
 			edges = append(edges, RelationEdge{
 				FromID:            row.ID,
@@ -378,7 +393,8 @@ func nicotineOptionsFromRows(rows []datasetsV3WireRow) []NicotineOption {
 		return nil
 	}
 	out := make([]NicotineOption, len(rows))
-	for i, r := range rows {
+	for i := range rows {
+		r := &rows[i]
 		out[i] = NicotineOption{ID: r.ID, Name: r.Name, Type: r.Type}
 	}
 	return out
@@ -389,7 +405,8 @@ func spellingCorrectionsFromRows(rows []datasetsV3WireRow) []SpellingCorrection 
 		return nil
 	}
 	out := make([]SpellingCorrection, len(rows))
-	for i, r := range rows {
+	for i := range rows {
+		r := &rows[i]
 		out[i] = SpellingCorrection{ID: r.ID, From: r.From, To: r.To}
 	}
 	return out

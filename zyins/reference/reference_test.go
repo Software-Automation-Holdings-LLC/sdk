@@ -371,7 +371,7 @@ func TestRank_Fuzzy_ExactAndPrefixRankAboveFuzzy(t *testing.T) {
 }
 
 func TestRank_Fuzzy_OptOut_SubstringOnly(t *testing.T) {
-	// WithAutocompleteFuzzy(false) restores substring-only behaviour: a
+	// WithAutocompleteFuzzy(false) restores substring-only behavior: a
 	// transposition has no substring match, so it returns nothing. The
 	// make_key fix (FIX #1) is independent and still applies.
 	algo := NewDefaultAutocompleteAlgorithm(WithAutocompleteFuzzy(false))

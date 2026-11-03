@@ -87,12 +87,12 @@ func TestRetryTransport_HappyPath_NoRetry(t *testing.T) {
 	if err != nil {
 		t.Fatalf("ctor: %v", err)
 	}
-	resp, err := rt.Do(httptest.NewRequest("GET", "/v1/x", nil))
+	status, err := doClosing(rt, httptest.NewRequest(http.MethodGet, "/v1/x", nil))
 	if err != nil {
 		t.Fatalf("Do: %v", err)
 	}
-	if resp.StatusCode != 200 {
-		t.Fatalf("status = %d, want 200", resp.StatusCode)
+	if status != http.StatusOK {
+		t.Fatalf("status = %d, want 200", status)
 	}
 	if doer.idx != 1 {
 		t.Fatalf("expected 1 attempt, got %d", doer.idx)
@@ -113,12 +113,12 @@ func TestRetryTransport_429_RetriesUntilSuccess(t *testing.T) {
 	if err != nil {
 		t.Fatalf("ctor: %v", err)
 	}
-	resp, err := rt.Do(httptest.NewRequest("GET", "/v1/x", nil))
+	status, err := doClosing(rt, httptest.NewRequest(http.MethodGet, "/v1/x", nil))
 	if err != nil {
 		t.Fatalf("Do: %v", err)
 	}
-	if resp.StatusCode != 200 {
-		t.Fatalf("final status = %d, want 200", resp.StatusCode)
+	if status != http.StatusOK {
+		t.Fatalf("final status = %d, want 200", status)
 	}
 	if doer.idx != 3 {
 		t.Fatalf("expected 3 attempts, got %d", doer.idx)
@@ -146,12 +146,12 @@ func TestRetryTransport_TransportErrorAfterRetryable_ClearsRetryAfterForNextDela
 	if err != nil {
 		t.Fatalf("ctor: %v", err)
 	}
-	resp, err := rt.Do(httptest.NewRequest("GET", "/v1/x", nil))
+	status, err := doClosing(rt, httptest.NewRequest(http.MethodGet, "/v1/x", nil))
 	if err != nil {
 		t.Fatalf("Do: %v", err)
 	}
-	if resp.StatusCode != 200 {
-		t.Fatalf("final status = %d, want 200", resp.StatusCode)
+	if status != http.StatusOK {
+		t.Fatalf("final status = %d, want 200", status)
 	}
 	want := []time.Duration{1 * time.Second, 2 * testBaseDelay}
 	if len(sleeper.calls) != len(want) {
@@ -175,7 +175,7 @@ func TestRetryTransport_5xx_FallsBackToExponentialWhenNoRetryAfter(t *testing.T)
 	if err != nil {
 		t.Fatalf("ctor: %v", err)
 	}
-	if _, err := rt.Do(httptest.NewRequest("GET", "/v1/x", nil)); err != nil {
+	if _, err := doClosing(rt, httptest.NewRequest(http.MethodGet, "/v1/x", nil)); err != nil {
 		t.Fatalf("Do: %v", err)
 	}
 	// First retry: BaseDelay (10ms). Second retry: 10ms * 2 = 20ms.
@@ -195,7 +195,7 @@ func TestRetryTransport_HTTPDateRetryAfter_HonoredVsClock(t *testing.T) {
 	if err != nil {
 		t.Fatalf("ctor: %v", err)
 	}
-	if _, err := rt.Do(httptest.NewRequest("GET", "/v1/x", nil)); err != nil {
+	if _, err := doClosing(rt, httptest.NewRequest(http.MethodGet, "/v1/x", nil)); err != nil {
 		t.Fatalf("Do: %v", err)
 	}
 	if len(sleeper.calls) != 1 {
@@ -217,7 +217,7 @@ func TestRetryTransport_ExhaustsAttemptsAndReturnsLastError(t *testing.T) {
 	if err != nil {
 		t.Fatalf("ctor: %v", err)
 	}
-	_, err = rt.Do(httptest.NewRequest("GET", "/v1/x", nil))
+	_, err = doClosing(rt, httptest.NewRequest(http.MethodGet, "/v1/x", nil))
 	if !errors.Is(err, netErr) {
 		t.Fatalf("expected wrapped netErr, got %v", err)
 	}
@@ -236,7 +236,7 @@ func TestRetryTransport_NegativeRetryAfter_FallsThroughToExponential(t *testing.
 	if err != nil {
 		t.Fatalf("ctor: %v", err)
 	}
-	if _, err := rt.Do(httptest.NewRequest("GET", "/v1/x", nil)); err != nil {
+	if _, err := doClosing(rt, httptest.NewRequest(http.MethodGet, "/v1/x", nil)); err != nil {
 		t.Fatalf("Do: %v", err)
 	}
 	if len(sleeper.calls) != 1 || sleeper.calls[0] != 10*time.Millisecond {
@@ -256,10 +256,11 @@ func TestRetryTransport_AllRetriable_Exhausted_ReturnsLastResponseWithReadableBo
 	if err != nil {
 		t.Fatalf("ctor: %v", err)
 	}
-	resp, err := rt.Do(httptest.NewRequest("GET", "/v1/x", nil))
+	resp, err := rt.Do(httptest.NewRequest(http.MethodGet, "/v1/x", nil))
 	if err != nil {
 		t.Fatalf("Do: %v", err)
 	}
+	defer func() { _ = resp.Body.Close() }()
 	if resp.StatusCode != http.StatusTooManyRequests {
 		t.Fatalf("final status = %d, want 429", resp.StatusCode)
 	}
@@ -278,7 +279,7 @@ func TestRetryTransport_NonRewindableBody_ReturnsErrorBeforeSecondAttempt(t *tes
 		t.Fatalf("parse url: %v", err)
 	}
 	req := (&http.Request{
-		Method: "POST",
+		Method: http.MethodPost,
 		URL:    u,
 		Header: make(http.Header),
 		Body:   io.NopCloser(strings.NewReader("payload")),
@@ -294,7 +295,7 @@ func TestRetryTransport_NonRewindableBody_ReturnsErrorBeforeSecondAttempt(t *tes
 	if err != nil {
 		t.Fatalf("ctor: %v", err)
 	}
-	_, err = rt.Do(req)
+	_, err = doClosing(rt, req)
 	if err == nil {
 		t.Fatalf("expected error when body cannot rewind for retry")
 	}
