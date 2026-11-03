@@ -96,7 +96,14 @@ final readonly class DatasetsV3
         return $parts === [] ? '' : '?' . implode('&', $parts);
     }
 
-    private static function parseEnvelope(string $body, ?string $etag): DatasetBundleV3
+    /**
+     * Parse a raw `GET /v3/datasets` response body — the full envelope
+     * shape `{"data": {...}}` — into a {@see DatasetBundleV3}. Public so a
+     * local {@see \Isa\Sdk\Zyins\DatasetSource} can reuse the exact parser
+     * the HTTP path uses; there is intentionally no second parser. Accepts
+     * both the slim `reference-bundle.json` and the full `datasets.json`.
+     */
+    public static function parseEnvelope(string $body, ?string $etag): DatasetBundleV3
     {
         if ($body === '') {
             return self::emptyBundle($etag);

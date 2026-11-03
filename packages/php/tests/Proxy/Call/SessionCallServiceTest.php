@@ -136,7 +136,7 @@ final class SessionCallServiceTest extends TestCase
         $svc = $this->service($http);
         $svc->call(integrationUuid: 'int_abc', params: []);
         $req = $http->requests[0];
-        $this->assertSame('Bearer ' . self::fixtureSecret(), $req->getHeaderLine('Authorization'));
+        $this->assertSame('Session ' . self::fixtureSecret(), $req->getHeaderLine('Authorization'));
         $this->assertSame(self::SESSION_ID, $req->getHeaderLine('X-Isa-Session-Id'));
         $this->assertMatchesRegularExpression('/^\d{4}-\d{2}-\d{2}T/', $req->getHeaderLine('X-Isa-Timestamp'));
         $this->assertMatchesRegularExpression('/^[0-9a-f]{64}$/', $req->getHeaderLine('X-Isa-Signature'));

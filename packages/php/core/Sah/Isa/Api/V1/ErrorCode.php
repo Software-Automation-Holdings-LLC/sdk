@@ -122,6 +122,13 @@ class ErrorCode
      * Generated from protobuf enum <code>ERROR_CODE_NOT_IMPLEMENTED = 15;</code>
      */
     const ERROR_CODE_NOT_IMPLEMENTED = 15;
+    /**
+     * Idempotency key conflict: same key sent with a different body.
+     * Client must retry with a new idempotency key.
+     *
+     * Generated from protobuf enum <code>ERROR_CODE_IDEMPOTENCY_CONFLICT = 16;</code>
+     */
+    const ERROR_CODE_IDEMPOTENCY_CONFLICT = 16;
 
     private static $valueToName = [
         self::ERROR_CODE_UNSPECIFIED => 'ERROR_CODE_UNSPECIFIED',
@@ -140,6 +147,7 @@ class ErrorCode
         self::ERROR_CODE_GATEWAY_TIMEOUT => 'ERROR_CODE_GATEWAY_TIMEOUT',
         self::ERROR_CODE_SERVICE_UNAVAILABLE => 'ERROR_CODE_SERVICE_UNAVAILABLE',
         self::ERROR_CODE_NOT_IMPLEMENTED => 'ERROR_CODE_NOT_IMPLEMENTED',
+        self::ERROR_CODE_IDEMPOTENCY_CONFLICT => 'ERROR_CODE_IDEMPOTENCY_CONFLICT',
     ];
 
     public static function name($value)
