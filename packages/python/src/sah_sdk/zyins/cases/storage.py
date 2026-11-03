@@ -86,9 +86,7 @@ class CaseStorage(Protocol):
         """Store ``record`` and return the assigned id + recall token."""
         ...
 
-    def get(
-        self, id: str, recall_token: str | None = None
-    ) -> CaseRecord | None:
+    def get(self, id: str, recall_token: str | None = None) -> CaseRecord | None:
         """Fetch the record at ``id``, decrypting with ``recall_token``.
 
         ``recall_token`` is required iff :meth:`put` returned one.

@@ -46,6 +46,15 @@ from .cases import (
 )
 from .client import DEFAULT_BASE_URL, ZyInsClient
 from .coverage import Coverage, CoverageType, QuoteType
+from .dataset_source import (
+    ApiDatasetSource,
+    DatasetSource,
+    DatasetSourceError,
+    FileDatasetSource,
+    ResolvingDatasetSource,
+    StaticDatasetSource,
+    to_dataset_source,
+)
 from .datasets import Dataset
 from .health import ProbeResult, ReadinessResult
 from .isa_options import (
@@ -146,6 +155,7 @@ def __getattr__(name: str) -> Any:
 __all__ = [
     "DEFAULT_BASE_URL",
     "DEFAULT_TIMEOUT_SECONDS",
+    "ApiDatasetSource",
     "Applicant",
     "AuthError",
     "BearerAuth",
@@ -157,10 +167,13 @@ __all__ = [
     "Coverage",
     "CoverageType",
     "Dataset",
+    "DatasetSource",
+    "DatasetSourceError",
     "Eligibility",
     "EmailEnqueueInput",
     "EmailEnqueueResult",
     "Envelope",
+    "FileDatasetSource",
     "FormAuth",
     "Height",
     "HeightParseError",
@@ -222,8 +235,10 @@ __all__ = [
     "ReferenceDataResponse",
     "RemoteEngine",
     "ResolvedIsaOptions",
+    "ResolvingDatasetSource",
     "SessionAuth",
     "Sex",
+    "StaticDatasetSource",
     "UsageSummary",
     "V3Offer",
     "ValidationError",
@@ -235,4 +250,5 @@ __all__ = [
     "coerce_plan_info",
     "resolve_isa_options",
     "title_case_label",
+    "to_dataset_source",
 ]

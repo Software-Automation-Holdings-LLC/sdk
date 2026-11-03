@@ -162,7 +162,8 @@ def _nicotine_usage_to_wire(
         result: dict[str, Any] = {"last_used": nicotine_use.last_used.value}
         if nicotine_use.product_usage:
             result["product_usage"] = [
-                {"type": p.type, "frequency": p.frequency} for p in nicotine_use.product_usage
+                {"type": p.type, "frequency": p.frequency}
+                for p in nicotine_use.product_usage
             ]
         return result
     # Deprecated NicotineUsage enum — map to nearest NicotineDuration bucket.

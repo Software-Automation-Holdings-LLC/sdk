@@ -114,9 +114,7 @@ def _resolve(matcher_name: str, text: str) -> reference_v3.Concept:
     raise AssertionError(f"unknown matcher in vectors: {matcher_name!r}")
 
 
-@pytest.mark.parametrize(
-    "scenario", _VECTORS["matches"], ids=lambda s: s["name"]
-)
+@pytest.mark.parametrize("scenario", _VECTORS["matches"], ids=lambda s: s["name"])
 def test_match_scenarios(scenario: Mapping[str, Any]) -> None:
     concept = _resolve(scenario["matcher"], scenario["input"])
 

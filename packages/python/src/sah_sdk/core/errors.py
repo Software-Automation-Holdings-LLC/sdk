@@ -168,7 +168,7 @@ class ValidationError(ISAError):
 
 
 class AuthError(ISAError):
-    """401/403 — bearer token rejected or insufficient scope."""
+    """401 — bearer token rejected or missing."""
 
     def __init__(
         self,
@@ -276,8 +276,20 @@ def from_http_response(
             retry_after_seconds=retry_after_seconds,
             request_id=request_id,
         )
-    if status in (401, 403):
+    if status == 401:
         return AuthError(
+            trimmed or f"HTTP {status}", http_status=status, request_id=request_id
+        )
+    if status == 403:
+        # Parse a problem-details body first so a specific ``code`` (and its
+        # detail message) is preserved; fall back to the generic permission
+        # error only when the body is not problem-details JSON.
+        forbidden_problem = _try_parse_problem_details(trimmed)
+        if forbidden_problem is not None:
+            return from_problem_details(
+                forbidden_problem, http_status=status, request_id=request_id
+            )
+        return IsaPermissionError(
             trimmed or f"HTTP {status}", http_status=status, request_id=request_id
         )
 
@@ -330,6 +342,12 @@ def from_problem_details(
     if code == "license_locked":
         return LicenseError(
             "locked", message, http_status=status, request_id=request_id
+        )
+    if code == "permission_denied":
+        return IsaPermissionError(
+            message or "permission denied",
+            http_status=status or 403,
+            request_id=request_id,
         )
     if code == "validation_error":
         return ValidationError(

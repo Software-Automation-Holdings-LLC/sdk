@@ -85,7 +85,12 @@ def test_branding_lookup_accepts_envelope() -> None:
 
 def test_branding_lookup_500_raises() -> None:
     body = json.dumps(
-        {"type": "about:blank", "title": "server", "status": 500, "code": "server_error"}
+        {
+            "type": "about:blank",
+            "title": "server",
+            "status": 500,
+            "code": "server_error",
+        }
     )
     transport = RecordingTransport(response_status=500, response_body=body)
     with pytest.raises(ISAError):
@@ -126,7 +131,12 @@ def test_preferences_set_empty_body_falls_back_to_request() -> None:
 
 def test_preferences_set_401_raises() -> None:
     body = json.dumps(
-        {"type": "about:blank", "title": "unauthorized", "status": 401, "code": "unauthorized"}
+        {
+            "type": "about:blank",
+            "title": "unauthorized",
+            "status": 401,
+            "code": "unauthorized",
+        }
     )
     transport = RecordingTransport(response_status=401, response_body=body)
     with pytest.raises(ISAError):
@@ -186,7 +196,12 @@ def test_cases_create_rejects_empty_input() -> None:
 
 def test_cases_create_500_raises() -> None:
     body = json.dumps(
-        {"type": "about:blank", "title": "server", "status": 500, "code": "server_error"}
+        {
+            "type": "about:blank",
+            "title": "server",
+            "status": 500,
+            "code": "server_error",
+        }
     )
     transport = RecordingTransport(response_status=500, response_body=body)
     with pytest.raises(ISAError):

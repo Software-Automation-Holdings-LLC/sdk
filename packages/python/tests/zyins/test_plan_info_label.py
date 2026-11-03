@@ -113,7 +113,9 @@ class TestCoercePlanInfo:
         items = coerce_plan_info(wire)
         assert len(items) == 2
         assert items[0] == PlanInfoItem(key="eapp", label="eApp", values=("yes",))
-        assert items[1] == PlanInfoItem(key="telesales", label="Telesales", values=("no",))
+        assert items[1] == PlanInfoItem(
+            key="telesales", label="Telesales", values=("no",)
+        )
 
     def test_typed_array_synthesizes_label_when_missing(self) -> None:
         wire = [{"key": "rate_class_notes", "values": ["A"]}]

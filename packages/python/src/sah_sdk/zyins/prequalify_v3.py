@@ -83,7 +83,9 @@ class V3Amount:
 #: billing cycles.
 V3Period = Literal["monthly", "quarterly", "semiannual", "annual"]
 
-_V3_PERIODS: frozenset[str] = frozenset({"monthly", "quarterly", "semiannual", "annual"})
+_V3_PERIODS: frozenset[str] = frozenset(
+    {"monthly", "quarterly", "semiannual", "annual"}
+)
 
 
 @dataclass(frozen=True, slots=True)
@@ -414,7 +416,9 @@ def _serialize_v3_nicotine_specificity(p: NicotineProductUsage) -> dict[str, Any
     """
     return {
         "text": p.type,
-        "frequency": _V3_NICOTINE_FREQUENCY.get(p.frequency, _V3_NICOTINE_DEFAULT_FREQUENCY),
+        "frequency": _V3_NICOTINE_FREQUENCY.get(
+            p.frequency, _V3_NICOTINE_DEFAULT_FREQUENCY
+        ),
     }
 
 
@@ -432,7 +436,8 @@ def _serialize_v3_nicotine(
         result: dict[str, Any] = {"last_used": nicotine_use.last_used.value}
         if nicotine_use.product_usage:
             result["specificity"] = [
-                _serialize_v3_nicotine_specificity(p) for p in nicotine_use.product_usage
+                _serialize_v3_nicotine_specificity(p)
+                for p in nicotine_use.product_usage
             ]
         return result
     legacy_map = {
@@ -443,7 +448,9 @@ def _serialize_v3_nicotine(
     return {"last_used": legacy_map.get(nicotine_use, NicotineDuration.NEVER).value}
 
 
-def _serialize_v3_coverage(coverage: Coverage, state: str, zip_code: str | None) -> dict[str, Any]:
+def _serialize_v3_coverage(
+    coverage: Coverage, state: str, zip_code: str | None
+) -> dict[str, Any]:
     """Build the v3 coverage envelope from the input shape.
 
     Single face amount keeps the proven ``{face_amount_cents}`` shape
@@ -522,9 +529,13 @@ def serialize_v3_prequalify_body(
         "nicotine": _serialize_v3_nicotine(applicant.nicotine_use),
     }
     if applicant.conditions:
-        applicant_wire["conditions"] = [_serialize_v3_condition(c) for c in applicant.conditions]
+        applicant_wire["conditions"] = [
+            _serialize_v3_condition(c) for c in applicant.conditions
+        ]
     if applicant.medications:
-        applicant_wire["medications"] = [_serialize_v3_medication(m) for m in applicant.medications]
+        applicant_wire["medications"] = [
+            _serialize_v3_medication(m) for m in applicant.medications
+        ]
     payload: dict[str, Any] = {
         "applicant": applicant_wire,
         "coverage": _serialize_v3_coverage(coverage, applicant.state, applicant.zip),
@@ -558,7 +569,9 @@ def _apply_v3_shared_options(
     if options.show_unreleased is not None:
         payload["show_unreleased"] = options.show_unreleased
     if options.skip_health_based_underwriting is not None:
-        payload["skip_health_based_underwriting"] = options.skip_health_based_underwriting
+        payload["skip_health_based_underwriting"] = (
+            options.skip_health_based_underwriting
+        )
 
 
 # ---------------------------------------------------------------------------
@@ -625,7 +638,8 @@ def _serialize_nicotine_usage(
         result: dict[str, Any] = {"last_used": nicotine_use.last_used.value}
         if nicotine_use.product_usage:
             result["product_usage"] = [
-                {"type": p.type, "frequency": p.frequency} for p in nicotine_use.product_usage
+                {"type": p.type, "frequency": p.frequency}
+                for p in nicotine_use.product_usage
             ]
         return result
     legacy_map = {
@@ -652,7 +666,9 @@ def parse_prequalify_v3_envelope(
     try:
         parsed = json.loads(body)
     except json.JSONDecodeError as exc:
-        raise ValueError(f"ZyIns prequalify_v3: failed to parse response body: {exc.msg}") from exc
+        raise ValueError(
+            f"ZyIns prequalify_v3: failed to parse response body: {exc.msg}"
+        ) from exc
     root = parsed if isinstance(parsed, dict) else {}
     request_id = _to_str(root.get("request_id"))
     echo_key = _to_str(root.get("idempotency_key")) or idempotency_key
@@ -729,7 +745,9 @@ def coerce_amount(raw: object) -> V3Amount:
     """Coerce the leaf ``{cents, display}`` amount (OpenAPI ``AmountResponse``)."""
     if not isinstance(raw, dict):
         return V3Amount(cents=0, display="")
-    return V3Amount(cents=_to_int(raw.get("cents")), display=_to_str(raw.get("display")))
+    return V3Amount(
+        cents=_to_int(raw.get("cents")), display=_to_str(raw.get("display"))
+    )
 
 
 def coerce_money(raw: object) -> V3Money:
@@ -758,7 +776,9 @@ def coerce_carrier(raw: object) -> V3OfferCarrier:
 
 def coerce_product(raw: object) -> V3OfferProduct:
     if not isinstance(raw, dict):
-        return V3OfferProduct(id="", slug="", name="", display_name="", type="", wire_token="")
+        return V3OfferProduct(
+            id="", slug="", name="", display_name="", type="", wire_token=""
+        )
     return V3OfferProduct(
         id=_to_str(raw.get("id")),
         slug=_to_str(raw.get("slug")),
@@ -847,7 +867,9 @@ def _coerce_offer(raw: object) -> V3Offer:
     # Money object for life products. Preserve None rather than coercing it into
     # a zero-cents Money, so consumers null-check medsup correctly.
     death_benefit_raw = obj.get("death_benefit")
-    death_benefit = coerce_money(death_benefit_raw) if isinstance(death_benefit_raw, dict) else None
+    death_benefit = (
+        coerce_money(death_benefit_raw) if isinstance(death_benefit_raw, dict) else None
+    )
     return V3Offer(
         object="plan_offer",
         id=_to_str(obj.get("id")),

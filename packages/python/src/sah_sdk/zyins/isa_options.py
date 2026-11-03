@@ -307,7 +307,9 @@ def resolve_isa_options(opts: IsaCreateOptions) -> ResolvedIsaOptions:
     """
     engine = opts.engine if opts.engine is not None else RemoteEngine.default()
     base_url = _engine_base_url(engine)
-    proxy_origin = engine.proxy_origin if isinstance(engine, ProxyEngineSelector) else None
+    proxy_origin = (
+        engine.proxy_origin if isinstance(engine, ProxyEngineSelector) else None
+    )
     return ResolvedIsaOptions(
         auth=opts.auth,
         engine=engine,

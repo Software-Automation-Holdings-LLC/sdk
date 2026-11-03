@@ -106,7 +106,9 @@ class FuzzyMatchAlgorithm:
         """
         next_version_tag = overrides.get("version_tag", self._version_tag)
         next_frequencies = overrides.get("frequencies", self._frequencies)
-        return FuzzyMatchAlgorithm(frequencies=next_frequencies, version_tag=next_version_tag)
+        return FuzzyMatchAlgorithm(
+            frequencies=next_frequencies, version_tag=next_version_tag
+        )
 
     def match(self, query: str, candidates: Sequence[Concept]) -> Concept:
         """Resolve ``query`` against ``candidates``. Never raises.
@@ -193,7 +195,9 @@ class FuzzyMatchAlgorithm:
             return cached
         codes: dict[int, str] = {}
         for candidate in candidates:
-            codes[id(candidate)] = double_metaphone(_normalize_for_compare(candidate.name)).primary
+            codes[id(candidate)] = double_metaphone(
+                _normalize_for_compare(candidate.name)
+            ).primary
         self._metaphone_cache[cache_key] = codes
         return codes
 
@@ -203,7 +207,9 @@ def _normalize_for_compare(text: str) -> str:
     return unicodedata.normalize("NFC", text).lower()
 
 
-def _collect_exact(query_key: str, candidates: Sequence[Concept]) -> list[_ScoredCandidate]:
+def _collect_exact(
+    query_key: str, candidates: Sequence[Concept]
+) -> list[_ScoredCandidate]:
     hits: list[_ScoredCandidate] = []
     for candidate in candidates:
         if _make_key(candidate.name) == query_key:
@@ -214,7 +220,9 @@ def _collect_exact(query_key: str, candidates: Sequence[Concept]) -> list[_Score
     return hits
 
 
-def _collect_prefix(query_key: str, candidates: Sequence[Concept]) -> list[_ScoredCandidate]:
+def _collect_prefix(
+    query_key: str, candidates: Sequence[Concept]
+) -> list[_ScoredCandidate]:
     hits: list[_ScoredCandidate] = []
     for candidate in candidates:
         name_key = _make_key(candidate.name)
@@ -230,7 +238,9 @@ def _collect_prefix(query_key: str, candidates: Sequence[Concept]) -> list[_Scor
     return hits
 
 
-def _collect_damerau(query_key: str, candidates: Sequence[Concept]) -> list[_ScoredCandidate]:
+def _collect_damerau(
+    query_key: str, candidates: Sequence[Concept]
+) -> list[_ScoredCandidate]:
     threshold = fuzzy_threshold_for_length(len(query_key))
     hits: list[_ScoredCandidate] = []
     for candidate in candidates:
@@ -243,7 +253,9 @@ def _collect_damerau(query_key: str, candidates: Sequence[Concept]) -> list[_Sco
     return hits
 
 
-def _collect_synonym(query: str, candidates: Sequence[Concept]) -> list[_ScoredCandidate]:
+def _collect_synonym(
+    query: str, candidates: Sequence[Concept]
+) -> list[_ScoredCandidate]:
     """Alias tier. Inert until :class:`Concept` surfaces ``aliases``.
 
     Reads ``aliases`` defensively via ``getattr`` so the cross-language

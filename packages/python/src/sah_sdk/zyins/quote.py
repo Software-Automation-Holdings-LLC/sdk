@@ -14,7 +14,11 @@ from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from ..core.wire import applicant_to_wire_dict, load_json_object, request_id_from_envelope
+from ..core.wire import (
+    applicant_to_wire_dict,
+    load_json_object,
+    request_id_from_envelope,
+)
 from .applicant import Applicant
 from .coverage import Coverage
 from .product import ProductSelection

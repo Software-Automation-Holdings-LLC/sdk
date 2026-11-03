@@ -256,7 +256,9 @@ class DefaultAutocompleteAlgorithm:
             and not options.starts_with_only
             and len(pre_filtered) <= _FUZZY_FALLBACK_THRESHOLD
         ):
-            fuzzy_matches = _collect_fuzzy(query_key, words_in_input, filtered, pre_filtered)
+            fuzzy_matches = _collect_fuzzy(
+                query_key, words_in_input, filtered, pre_filtered
+            )
 
         if not pre_filtered and not fuzzy_matches:
             return []
@@ -285,7 +287,9 @@ class DefaultAutocompleteAlgorithm:
                 buckets[1].append(candidate)
             elif is_superset:
                 no_tol_by_d.setdefault(length_diff, []).append(candidate)
-            elif words_in_input and all(w in cleaned_name.upper() for w in words_in_input):
+            elif words_in_input and all(
+                w in cleaned_name.upper() for w in words_in_input
+            ):
                 independent_intersection.append(candidate)
             elif same_length:
                 buckets[4].append(candidate)
@@ -502,7 +506,9 @@ def _collect_fuzzy(
     for candidate in candidates:
         if (candidate.id or f"_unk:{candidate.name}") in matched:
             continue
-        if _fuzzy_matches_any_token(query_units, query_codes, _tokenize(candidate.name)):
+        if _fuzzy_matches_any_token(
+            query_units, query_codes, _tokenize(candidate.name)
+        ):
             hits.append(candidate)
     return hits
 

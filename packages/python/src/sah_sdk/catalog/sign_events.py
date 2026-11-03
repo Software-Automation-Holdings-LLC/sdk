@@ -3,6 +3,7 @@
 Produced by ``packages/python/scripts/gen_catalog.py``.
 Regenerate with ``python packages/python/scripts/gen_catalog.py``.
 """
+
 # Source data:
 #   - isa-platform/shared/go/events/registry.go
 from __future__ import annotations
@@ -16,9 +17,9 @@ class SignEvent(str, Enum):
     The wire string is the EventBridge ``detail-type`` value the platform emits.
     """
 
-    DocumentSigned = 'document.signed'
+    DocumentSigned = "document.signed"
 
 
 SignEventLabels: dict[str, str] = {
-    'document.signed': 'DocumentSigned',
+    "document.signed": "DocumentSigned",
 }

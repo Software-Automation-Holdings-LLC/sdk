@@ -96,7 +96,10 @@ def _sample_envelope() -> str:
                             "wire_token": "fex",
                         },
                         "plan_info": [{"label": "Riders", "value": "ADB"}],
-                        "death_benefit": {"amount": {"cents": 1000000, "display": "$10,000"}, "period": None},
+                        "death_benefit": {
+                            "amount": {"cents": 1000000, "display": "$10,000"},
+                            "period": None,
+                        },
                         "pricing": [
                             {
                                 "rate_class": "preferred",

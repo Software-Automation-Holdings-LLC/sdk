@@ -62,7 +62,9 @@ def build_license_header(license_key: str, order_id: str, email: str) -> str:
     the identity header without the per-request HMAC signature; new code
     SHOULD use :func:`build_license_hmac_headers`.
     """
-    payload = f"{strip_quotes(license_key)}:{strip_quotes(order_id)}:{strip_quotes(email)}"
+    payload = (
+        f"{strip_quotes(license_key)}:{strip_quotes(order_id)}:{strip_quotes(email)}"
+    )
     return f"License {_b64_utf8(payload)}"
 
 
@@ -74,7 +76,9 @@ def compute_device_signature(body: str, device_id: str) -> str:
     ``computeDeviceSignature`` byte-for-byte.
     """
     clean = strip_quotes(device_id)
-    return hmac.new(clean.encode("utf-8"), body.encode("utf-8"), hashlib.sha256).hexdigest()
+    return hmac.new(
+        clean.encode("utf-8"), body.encode("utf-8"), hashlib.sha256
+    ).hexdigest()
 
 
 @dataclass(frozen=True, slots=True)

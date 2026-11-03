@@ -57,9 +57,13 @@ def _load_expected() -> list[dict]:  # type: ignore[type-arg]
 def test_cross_sdk_equivalence_prequalify_v3() -> None:
     """Decoded V3 triples match the shared expected.json for all plans."""
     if not _FIXTURE_PATH.exists():
-        pytest.fail(f"fixture not found at {_FIXTURE_PATH} — missing file is a gate failure, not a skip")
+        pytest.fail(
+            f"fixture not found at {_FIXTURE_PATH} — missing file is a gate failure, not a skip"
+        )
     if not _EXPECTED_PATH.exists():
-        pytest.fail(f"expected triples not found at {_EXPECTED_PATH} — missing file is a gate failure, not a skip")
+        pytest.fail(
+            f"expected triples not found at {_EXPECTED_PATH} — missing file is a gate failure, not a skip"
+        )
 
     fixture_body = _FIXTURE_PATH.read_text(encoding="utf-8")
     expected_plans = _load_expected()

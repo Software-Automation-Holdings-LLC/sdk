@@ -44,9 +44,7 @@ def _load() -> dict[str, Any]:
 
 
 def _envelope(raw: dict[str, str]) -> CaseEnvelope:
-    return CaseEnvelope(
-        ciphertext=raw["ciphertext"], iv=raw["iv"], tag=raw["tag"]
-    )
+    return CaseEnvelope(ciphertext=raw["ciphertext"], iv=raw["iv"], tag=raw["tag"])
 
 
 def test_assemble_link_single_segment_matches_shared_fixture() -> None:
@@ -97,7 +95,5 @@ def test_decrypt_wrong_product_fails_authentication() -> None:
 def test_encrypt_round_trip() -> None:
     fx = _load()
     encrypted = encrypt_case(fx["product"], fx["payload"])
-    payload = decrypt_case(
-        fx["product"], encrypted.envelope, encrypted.key_fragment
-    )
+    payload = decrypt_case(fx["product"], encrypted.envelope, encrypted.key_fragment)
     assert payload == fx["payload"]

@@ -198,7 +198,9 @@ class ReferenceIndex:
     def _ordered_concepts(
         self, entity_ids: Sequence[str], sort: Sort, anchor_id: str
     ) -> tuple[Concept, ...]:
-        concepts = [self._concept_by_id[eid] for eid in entity_ids if eid in self._concept_by_id]
+        concepts = [
+            self._concept_by_id[eid] for eid in entity_ids if eid in self._concept_by_id
+        ]
         if sort is Sort.ALPHABETICAL:
             concepts.sort(key=lambda c: c.name.lower())
         else:

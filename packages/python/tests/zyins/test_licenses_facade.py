@@ -20,7 +20,9 @@ class StubTransport:
     """Per-call programmable transport — supports a queue of canned responses."""
 
     responses: list[TransportResponse] = field(default_factory=list)
-    calls: list[tuple[str, str, dict[str, str], str | None]] = field(default_factory=list)
+    calls: list[tuple[str, str, dict[str, str], str | None]] = field(
+        default_factory=list
+    )
 
     def request(
         self,
@@ -43,7 +45,9 @@ class ClosingTransport(StubTransport):
         self.closed = True
 
 
-def _isa_with(transport: StubTransport, store: InMemoryCredentialStore | None = None) -> Isa:
+def _isa_with(
+    transport: StubTransport, store: InMemoryCredentialStore | None = None
+) -> Isa:
     return Isa.with_license(
         "ABC-123-XYZ",
         "john.doe@acme-agency.com",
@@ -59,7 +63,13 @@ def test_activate_zero_args_uses_instance_state() -> None:
             TransportResponse(
                 status=200,
                 body=json.dumps(
-                    {"data": {"status": "active", "licenseKey": "lk-fresh", "remainingActivations": 4}}
+                    {
+                        "data": {
+                            "status": "active",
+                            "licenseKey": "lk-fresh",
+                            "remainingActivations": 4,
+                        }
+                    }
                 ),
                 headers={},
             )
@@ -89,7 +99,9 @@ def test_activate_device_override_matches_header() -> None:
         responses=[
             TransportResponse(
                 status=200,
-                body=json.dumps({"data": {"status": "active", "licenseKey": "lk-fresh"}}),
+                body=json.dumps(
+                    {"data": {"status": "active", "licenseKey": "lk-fresh"}}
+                ),
                 headers={},
             )
         ]
@@ -197,7 +209,9 @@ def test_on_license_refreshed_fires() -> None:
         responses=[
             TransportResponse(
                 status=200,
-                body=json.dumps({"data": {"status": "active", "licenseKey": "lk-fresh"}}),
+                body=json.dumps(
+                    {"data": {"status": "active", "licenseKey": "lk-fresh"}}
+                ),
                 headers={},
             )
         ]
