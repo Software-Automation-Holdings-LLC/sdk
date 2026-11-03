@@ -105,9 +105,7 @@ class ZeroKnowledgeCaseStorage(CaseStorage):
         case_id = _parse_created_id(_response_body(response))
         return PutResult(id=case_id, recall_token=_bytes_to_urlsafe_b64(key))
 
-    def get(
-        self, id: str, recall_token: str | None = None
-    ) -> CaseRecord | None:
+    def get(self, id: str, recall_token: str | None = None) -> CaseRecord | None:
         if not id:
             raise ValueError("ZeroKnowledgeCaseStorage.get: id is required")
         if recall_token is None or not recall_token:
@@ -207,9 +205,7 @@ def _parse_created_id(body: str) -> str:
     if isinstance(root, dict) and isinstance(root.get("data"), dict):
         root = root["data"]
     if not isinstance(root, dict):
-        raise ValueError(
-            "ZeroKnowledgeCaseStorage.put: response was not a JSON object"
-        )
+        raise ValueError("ZeroKnowledgeCaseStorage.put: response was not a JSON object")
     case_id = root.get("id")
     if not isinstance(case_id, str) or not case_id:
         raise ValueError("ZeroKnowledgeCaseStorage.put: response missing 'id'")
@@ -223,9 +219,7 @@ def _parse_envelope(body: str) -> tuple[dict[str, str], str]:
     if isinstance(root, dict) and isinstance(root.get("data"), dict):
         root = root["data"]
     if not isinstance(root, dict):
-        raise ValueError(
-            "ZeroKnowledgeCaseStorage.get: response was not a JSON object"
-        )
+        raise ValueError("ZeroKnowledgeCaseStorage.get: response was not a JSON object")
     fields = ("ciphertext", "iv", "tag", "product")
     missing = [f for f in fields if not isinstance(root.get(f), str)]
     if missing:

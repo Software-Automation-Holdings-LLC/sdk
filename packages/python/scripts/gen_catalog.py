@@ -7,7 +7,6 @@ byte-stable for identical input bytes.
 
 Sources:
     - ``insurance/v2_products.json``    → Products + ProductCarriers
-    - ``insurance/v2_medications.json`` → MedicationUses
     - ``isa-platform/shared/schemas/api/isa/v1/common.proto`` → Scope, ErrorCode
     - ``isa-platform/shared/go/events/registry.go``           → SignEvent
 
@@ -154,11 +153,13 @@ def gen_products() -> None:
     sources = ["insurance/v2_products.json"]
     raw = _try_read_json(INSURANCE_REPO / "v2_products.json")
     if not raw:
-        _preserve_or_fail(["products.py", "carriers.py"], "Products", "v2_products.json")
+        _preserve_or_fail(
+            ["products.py", "carriers.py"], "Products", "v2_products.json"
+        )
         return
 
     # Family name → PascalCase namespace key (mirrors TS productsByType.ts).
-    _FAMILY_NAMESPACE: dict[str, str] = {
+    family_namespace: dict[str, str] = {
         "fex": "Fex",
         "medsup": "Medsup",
         "preneed": "Preneed",
@@ -176,17 +177,17 @@ def gen_products() -> None:
                 continue
             raw_id = p.get("id")
             if not raw_id:
-                raise ValueError(
-                    f"gen_catalog: product entry missing 'id': {p!r}"
-                )
+                raise ValueError(f"gen_catalog: product entry missing 'id': {p!r}")
             ident = str(p.get("identifier") or "")
             if not ident:
                 continue
-            ns = _FAMILY_NAMESPACE.get(family_key, _pascal(family_key))
+            ns = family_namespace.get(family_key, _pascal(family_key))
             # Strip the family prefix from the slug so `Products.Fex.AetnaAccendo`
             # reads naturally — the namespace already carries the family name.
             strip_prefix = family_key + "-"
-            attr_slug = ident[len(strip_prefix):] if ident.startswith(strip_prefix) else ident
+            attr_slug = (
+                ident[len(strip_prefix) :] if ident.startswith(strip_prefix) else ident
+            )
             row = {
                 "id": f"prod_{raw_id}",
                 "slug": ident,
@@ -208,7 +209,7 @@ def gen_products() -> None:
     # Emit one frozen constant per product inside its family class.
     family_blocks: list[str] = []
     for family_key in sorted(by_family.keys()):
-        ns = _FAMILY_NAMESPACE.get(family_key, _pascal(family_key))
+        ns = family_namespace.get(family_key, _pascal(family_key))
         rows = by_family[family_key]
         member_lines = "\n".join(
             f"    {r['attr_name']}: Product = Product("
@@ -217,9 +218,7 @@ def gen_products() -> None:
             for r in rows
         )
         family_blocks.append(
-            f"class _{ns}Products:\n"
-            f"    __slots__ = ()\n\n"
-            f"{member_lines}\n"
+            f"class _{ns}Products:\n    __slots__ = ()\n\n{member_lines}\n"
         )
 
     family_block_text = "\n\n".join(family_blocks)
@@ -233,8 +232,8 @@ def gen_products() -> None:
     # _ProductsAPI attribute declarations (no __slots__ — class-level family attrs).
     family_keys_sorted = sorted(by_family.keys())
     family_attrs = "\n".join(
-        f"    {_FAMILY_NAMESPACE.get(fk, _pascal(fk))}: _{_FAMILY_NAMESPACE.get(fk, _pascal(fk))}Products"
-        f" = _{_FAMILY_NAMESPACE.get(fk, _pascal(fk))}Products()"
+        f"    {family_namespace.get(fk, _pascal(fk))}: _{family_namespace.get(fk, _pascal(fk))}Products"
+        f" = _{family_namespace.get(fk, _pascal(fk))}Products()"
         for fk in family_keys_sorted
     )
 
@@ -315,12 +314,14 @@ __all__ = ["Product", "Products"]
         for c in carriers
     )
     all_carriers_tuple = (
-        "(" + ", ".join(f"{c['slug']!r}" for c in carriers) + (",)" if len(carriers) == 1 else ")")
+        "("
+        + ", ".join(f"{c['slug']!r}" for c in carriers)
+        + (",)" if len(carriers) == 1 else ")")
     )
 
     # Import every family class used in this file.
     used_namespaces = sorted(
-        {_FAMILY_NAMESPACE.get(fk, _pascal(fk)) for fk in by_family}
+        {family_namespace.get(fk, _pascal(fk)) for fk in by_family}
     )
     ns_imports = ", ".join(f"_{ns}Products" for ns in used_namespaces)
 
@@ -371,33 +372,70 @@ ProductCarriers = _ProductCarriersAPI()
 # ---------------------------------------------------------------------------
 
 _STATES: list[tuple[str, str, bool]] = [
-    ("Alabama", "AL", False), ("Alaska", "AK", False), ("Arizona", "AZ", False),
-    ("Arkansas", "AR", False), ("California", "CA", False), ("Colorado", "CO", False),
-    ("Connecticut", "CT", False), ("Delaware", "DE", False), ("Florida", "FL", False),
-    ("Georgia", "GA", False), ("Hawaii", "HI", False), ("Idaho", "ID", False),
-    ("Illinois", "IL", False), ("Indiana", "IN", False), ("Iowa", "IA", False),
-    ("Kansas", "KS", False), ("Kentucky", "KY", False), ("Louisiana", "LA", False),
-    ("Maine", "ME", False), ("Maryland", "MD", False), ("Massachusetts", "MA", False),
-    ("Michigan", "MI", False), ("Minnesota", "MN", False), ("Mississippi", "MS", False),
-    ("Missouri", "MO", False), ("Montana", "MT", False), ("Nebraska", "NE", False),
-    ("Nevada", "NV", False), ("New Hampshire", "NH", False), ("New Jersey", "NJ", False),
-    ("New Mexico", "NM", False), ("New York", "NY", False), ("North Carolina", "NC", False),
-    ("North Dakota", "ND", False), ("Ohio", "OH", False), ("Oklahoma", "OK", False),
-    ("Oregon", "OR", False), ("Pennsylvania", "PA", False), ("Rhode Island", "RI", False),
-    ("South Carolina", "SC", False), ("South Dakota", "SD", False), ("Tennessee", "TN", False),
-    ("Texas", "TX", False), ("Utah", "UT", False), ("Vermont", "VT", False),
-    ("Virginia", "VA", False), ("Washington", "WA", False), ("West Virginia", "WV", False),
-    ("Wisconsin", "WI", False), ("Wyoming", "WY", False),
+    ("Alabama", "AL", False),
+    ("Alaska", "AK", False),
+    ("Arizona", "AZ", False),
+    ("Arkansas", "AR", False),
+    ("California", "CA", False),
+    ("Colorado", "CO", False),
+    ("Connecticut", "CT", False),
+    ("Delaware", "DE", False),
+    ("Florida", "FL", False),
+    ("Georgia", "GA", False),
+    ("Hawaii", "HI", False),
+    ("Idaho", "ID", False),
+    ("Illinois", "IL", False),
+    ("Indiana", "IN", False),
+    ("Iowa", "IA", False),
+    ("Kansas", "KS", False),
+    ("Kentucky", "KY", False),
+    ("Louisiana", "LA", False),
+    ("Maine", "ME", False),
+    ("Maryland", "MD", False),
+    ("Massachusetts", "MA", False),
+    ("Michigan", "MI", False),
+    ("Minnesota", "MN", False),
+    ("Mississippi", "MS", False),
+    ("Missouri", "MO", False),
+    ("Montana", "MT", False),
+    ("Nebraska", "NE", False),
+    ("Nevada", "NV", False),
+    ("New Hampshire", "NH", False),
+    ("New Jersey", "NJ", False),
+    ("New Mexico", "NM", False),
+    ("New York", "NY", False),
+    ("North Carolina", "NC", False),
+    ("North Dakota", "ND", False),
+    ("Ohio", "OH", False),
+    ("Oklahoma", "OK", False),
+    ("Oregon", "OR", False),
+    ("Pennsylvania", "PA", False),
+    ("Rhode Island", "RI", False),
+    ("South Carolina", "SC", False),
+    ("South Dakota", "SD", False),
+    ("Tennessee", "TN", False),
+    ("Texas", "TX", False),
+    ("Utah", "UT", False),
+    ("Vermont", "VT", False),
+    ("Virginia", "VA", False),
+    ("Washington", "WA", False),
+    ("West Virginia", "WV", False),
+    ("Wisconsin", "WI", False),
+    ("Wyoming", "WY", False),
     ("District of Columbia", "DC", False),
-    ("American Samoa", "AS", True), ("Guam", "GU", True),
-    ("Northern Mariana Islands", "MP", True), ("Puerto Rico", "PR", True),
+    ("American Samoa", "AS", True),
+    ("Guam", "GU", True),
+    ("Northern Mariana Islands", "MP", True),
+    ("Puerto Rico", "PR", True),
     ("United States Virgin Islands", "VI", True),
 ]
 
 
 def gen_states() -> None:
     sources = ["ISO 3166-2:US (50 states + DC + 5 inhabited territories)"]
-    enum_lines = "\n".join(f"    {_pascal(name)} = {abbr!r}" for name, abbr, _ in _STATES)
+    enum_lines = "\n".join(
+        f"    {_pascal(name)} = {abbr!r}" for name, abbr, _ in _STATES
+    )
     meta_lines = "\n".join(
         f"    {abbr!r}: StateMetadata(abbreviation={abbr!r}, name={name!r}, is_territory={is_terr}),"
         for name, abbr, is_terr in _STATES
@@ -472,13 +510,12 @@ States = _StatesAPI()
 
 
 # ---------------------------------------------------------------------------
-# Conditions + MedicationUses
+# Conditions
 # ---------------------------------------------------------------------------
 
 
-def gen_conditions_and_medications() -> None:
-    sources = ["insurance/v2_conditions.json", "insurance/v2_medications.json"]
-    meds_raw = _try_read_json(INSURANCE_REPO / "v2_medications.json")
+def gen_conditions() -> None:
+    sources = ["insurance/v2_conditions.json"]
 
     GAPS.append(
         "ConditionCategories: source data (v2_conditions.json) does not expose taxonomic categories. Emitting empty catalog."
@@ -520,78 +557,6 @@ ConditionCategories = _ConditionCategoriesAPI()
 '''
     _write_file("conditions.py", cond_module)
 
-    if not isinstance(meds_raw, list):
-        # Same contract as Products: the committed medications.py is the
-        # published source of truth (~1865 uses) and CI does not check out the
-        # engine repo, so preserve it instead of clobbering it with an empty
-        # catalog. Fail loud only when there is nothing committed to preserve.
-        _preserve_or_fail(["medications.py"], "MedicationUses", "v2_medications.json")
-        return
-
-    use_to_meds: dict[str, set[str]] = {}
-    for m in meds_raw:
-        if not isinstance(m, dict):
-            continue
-        name = str(m.get("name") or "")
-        uses = m.get("uses") or []
-        if not isinstance(uses, list):
-            continue
-        for u in uses:
-            if not isinstance(u, dict):
-                continue
-            cond = str(u.get("condition") or "")
-            if not cond or not name:
-                continue
-            use_to_meds.setdefault(cond, set()).add(name)
-
-    use_names = sorted(use_to_meds.keys())
-    use_entries = "\n".join(
-        f"    {u!r}: MedicationUseMetadata("
-        f"display_name={u!r}, "
-        f"medications=tuple({sorted(use_to_meds[u])!r})),"
-        for u in use_names
-    )
-
-    meds_module = f'''{_header(sources)}from dataclasses import dataclass
-
-
-@dataclass(frozen=True, slots=True)
-class MedicationUseMetadata:
-    """A "use" is a canonical condition name treated by at least one medication.
-
-    The ``medications`` tuple lists every medication recorded as treating
-    that use. Catalog size is large (~3000 uses; ~6000 medications); only
-    the names you import are retained.
-    """
-
-    display_name: str
-    medications: tuple[str, ...]
-
-
-_USES: dict[str, MedicationUseMetadata] = {{
-{use_entries}
-}}
-
-_ALL_USES: tuple[str, ...] = tuple(sorted(_USES.keys()))
-
-
-class _MedicationUsesAPI:
-    __slots__ = ()
-
-    def values(self) -> tuple[str, ...]:
-        return _ALL_USES
-
-    def metadata(self, u: str) -> MedicationUseMetadata:
-        m = _USES.get(u)
-        if m is None:
-            raise KeyError(f"MedicationUses.metadata: unknown use {{u!r}}")
-        return m
-
-
-MedicationUses = _MedicationUsesAPI()
-'''
-    _write_file("medications.py", meds_module)
-
 
 # ---------------------------------------------------------------------------
 # Scopes (parse common.proto)
@@ -600,7 +565,9 @@ MedicationUses = _MedicationUsesAPI()
 
 def gen_scopes() -> None:
     sources = ["isa-platform/shared/schemas/api/isa/v1/common.proto"]
-    text = _try_read_text(PLATFORM_REPO / "shared" / "schemas" / "api" / "isa" / "v1" / "common.proto")
+    text = _try_read_text(
+        PLATFORM_REPO / "shared" / "schemas" / "api" / "isa" / "v1" / "common.proto"
+    )
     scopes: list[tuple[str, str, str]] = []  # (enum_name, wire, doc)
     if text:
         block = re.search(r"enum Scope \{([\s\S]*?)\}\s*$", text, re.MULTILINE)
@@ -623,18 +590,24 @@ def gen_scopes() -> None:
                         continue
                     wire = wire_m.group(1)
                     doc = re.sub(r"`[^`]+`\s*—?\s*", "", pending).strip()
-                    enum_name = "".join(p[:1].upper() + p[1:].lower() for p in re.split(r"[:\-]", wire))
+                    enum_name = "".join(
+                        p[:1].upper() + p[1:].lower() for p in re.split(r"[:\-]", wire)
+                    )
                     scopes.append((enum_name, wire, doc))
                     pending = ""
                 elif trimmed == "":
                     pending = ""
 
     if not scopes:
-        GAPS.append("Scope: failed to parse common.proto Scope enum — emitting empty catalog.")
+        GAPS.append(
+            "Scope: failed to parse common.proto Scope enum — emitting empty catalog."
+        )
     scopes.sort(key=lambda x: x[1])
 
     members = "\n".join(
-        f'    """{doc}"""\n    {enum_name} = {wire!r}' if doc else f"    {enum_name} = {wire!r}"
+        f'    """{doc}"""\n    {enum_name} = {wire!r}'
+        if doc
+        else f"    {enum_name} = {wire!r}"
         for enum_name, wire, doc in scopes
     )
     desc_entries = "\n".join(f"    {wire!r}: {doc!r}," for _, wire, doc in scopes)
@@ -669,7 +642,9 @@ def gen_sign_events() -> None:
     text = _try_read_text(PLATFORM_REPO / "shared" / "go" / "events" / "registry.go")
     events: list[tuple[str, str]] = []
     if text:
-        for m in re.finditer(r'EventType[A-Za-z0-9]+\s+EventType\s*=\s*"([^"]+)"', text):
+        for m in re.finditer(
+            r'EventType[A-Za-z0-9]+\s+EventType\s*=\s*"([^"]+)"', text
+        ):
             wire = m.group(1)
             if not re.match(r"^(document|signer)\.", wire):
                 continue
@@ -726,7 +701,9 @@ _ADVICE_MAP: dict[str, str] = {
 
 def gen_errors() -> None:
     sources = ["isa-platform/shared/schemas/api/isa/v1/common.proto"]
-    text = _try_read_text(PLATFORM_REPO / "shared" / "schemas" / "api" / "isa" / "v1" / "common.proto")
+    text = _try_read_text(
+        PLATFORM_REPO / "shared" / "schemas" / "api" / "isa" / "v1" / "common.proto"
+    )
     codes: list[tuple[str, str, str]] = []
     if text:
         block = re.search(r"enum ErrorCode \{([\s\S]*?)\}", text, re.MULTILINE)
@@ -744,14 +721,18 @@ def gen_errors() -> None:
                         pending = ""
                         continue
                     wire = symbol.lower()
-                    enum_name = "".join(p[:1].upper() + p[1:].lower() for p in symbol.split("_"))
+                    enum_name = "".join(
+                        p[:1].upper() + p[1:].lower() for p in symbol.split("_")
+                    )
                     codes.append((enum_name, wire, pending.strip()))
                     pending = ""
                 elif trimmed == "":
                     pending = ""
 
     if not codes:
-        GAPS.append("ErrorCode: failed to parse common.proto ErrorCode enum — emitting empty catalog.")
+        GAPS.append(
+            "ErrorCode: failed to parse common.proto ErrorCode enum — emitting empty catalog."
+        )
     codes.sort(key=lambda x: x[1])
 
     members = "\n".join(
@@ -807,7 +788,6 @@ from __future__ import annotations
 from .carriers import ProductCarrierMetadata, ProductCarriers
 from .conditions import ConditionCategories, ConditionCategoryMetadata
 from .errors import ErrorAdviceCodes, ErrorCode, ErrorDocUrls
-from .medications import MedicationUseMetadata, MedicationUses
 from .products import Product, Products
 from .scopes import Scope, ScopeDescriptions
 from .sign_events import SignEvent, SignEventLabels
@@ -819,8 +799,6 @@ __all__ = [
     "ErrorAdviceCodes",
     "ErrorCode",
     "ErrorDocUrls",
-    "MedicationUseMetadata",
-    "MedicationUses",
     "Product",
     "ProductCarrierMetadata",
     "ProductCarriers",
@@ -841,7 +819,7 @@ def main() -> int:
     CATALOG_DIR.mkdir(parents=True, exist_ok=True)
     gen_states()
     gen_products()
-    gen_conditions_and_medications()
+    gen_conditions()
     gen_scopes()
     gen_sign_events()
     gen_errors()

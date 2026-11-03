@@ -110,7 +110,10 @@ def _sample_envelope() -> str:
                                     "amount": {"cents": 8742, "display": "$87.42"},
                                     "default_mode": "MONTHLY-EFT",
                                     "modes": {
-                                        "MONTHLY-EFT": {"cents": 8742, "display": "$87.42"},
+                                        "MONTHLY-EFT": {
+                                            "cents": 8742,
+                                            "display": "$87.42",
+                                        },
                                     },
                                 },
                             }
@@ -123,7 +126,9 @@ def _sample_envelope() -> str:
 
 
 def test_parse_envelope_returns_flat_plans() -> None:
-    result = parse_quote_v3_envelope(_sample_envelope(), idempotency_key="x", retry_attempts=0)
+    result = parse_quote_v3_envelope(
+        _sample_envelope(), idempotency_key="x", retry_attempts=0
+    )
     assert result.request_id == "req_01HZK2N5GQR9T8X4B6FJW3Y1AS"
     assert len(result.plans) == 1
     offer = result.plans[0]

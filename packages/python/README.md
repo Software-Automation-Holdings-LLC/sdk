@@ -14,8 +14,12 @@ pip install isa-sdk
 
 ```python
 from isa_sdk.zyins import (
-    Isa, Applicant, Coverage, Sex,
-    NicotineUsageInput, NicotineDuration,
+    Isa,
+    Applicant,
+    Coverage,
+    Sex,
+    NicotineUsageInput,
+    NicotineDuration,
 )
 from isa_sdk.zyins.prequalify_v3 import PrequalifyRequest
 from isa_sdk.zyins.product import Product, ProductSelection, ProductType
@@ -25,23 +29,27 @@ from isa_sdk.zyins.product import Product, ProductSelection, ProductType
 # the explicit, typed entry point. Both resolve to an envelope.
 isa = Isa.with_bearer()
 
-result = isa.zyins.prequalify(PrequalifyRequest(
-    applicant=Applicant(
-        dob="1962-04-18",
-        sex=Sex.MALE,
-        height_inches=70,
-        weight_pounds=195,
-        state="NC",
-        nicotine_use=NicotineUsageInput(last_used=NicotineDuration.NEVER),
-    ),
-    coverage=Coverage.face_value(100_000),
-    products=ProductSelection.of(Product(
-        brand="aetna-accendo",
-        type=ProductType.FINAL_EXPENSE,
-        wire_token="fex",
-        display_name="Final Expense",
-    )),
-))
+result = isa.zyins.prequalify(
+    PrequalifyRequest(
+        applicant=Applicant(
+            dob="1962-04-18",
+            sex=Sex.MALE,
+            height_inches=70,
+            weight_pounds=195,
+            state="NC",
+            nicotine_use=NicotineUsageInput(last_used=NicotineDuration.NEVER),
+        ),
+        coverage=Coverage.face_value(100_000),
+        products=ProductSelection.of(
+            Product(
+                brand="aetna-accendo",
+                type=ProductType.FINAL_EXPENSE,
+                wire_token="fex",
+                display_name="Final Expense",
+            )
+        ),
+    )
+)
 
 for offer in result.data.plans:
     headline = next((row for row in offer.pricing if row.primary), None)
@@ -63,17 +71,26 @@ isa = Isa.with_keycode(
     keycode="ABC-123-XYZ",
     email="john.doe@acme-agency.com",
 )
-result = isa.zyins.prequalify(PrequalifyRequest(
-    applicant=Applicant(
-        dob="1962-04-18", sex=Sex.MALE,
-        height_inches=70, weight_pounds=195, state="NC",
-    ),
-    coverage=Coverage.face_value(25_000),
-    products=ProductSelection.of(Product(
-        brand="aetna-accendo", type=ProductType.FINAL_EXPENSE,
-        wire_token="fex", display_name="Final Expense",
-    )),
-))
+result = isa.zyins.prequalify(
+    PrequalifyRequest(
+        applicant=Applicant(
+            dob="1962-04-18",
+            sex=Sex.MALE,
+            height_inches=70,
+            weight_pounds=195,
+            state="NC",
+        ),
+        coverage=Coverage.face_value(25_000),
+        products=ProductSelection.of(
+            Product(
+                brand="aetna-accendo",
+                type=ProductType.FINAL_EXPENSE,
+                wire_token="fex",
+                display_name="Final Expense",
+            )
+        ),
+    )
+)
 first = result.data.plans[0]
 headline = offer_premium(first)
 print(first.carrier.name, headline.amount.display if headline else None)
@@ -108,7 +125,7 @@ Pin individual surfaces with a per-surface `api_version` map. There is **no**
 isa = Isa.with_keycode(
     keycode="ABC-123-XYZ",
     email="john.doe@acme-agency.com",
-    api_version={"quote": "v2"},   # pin only quote; everything else bundled
+    api_version={"quote": "v2"},  # pin only quote; everything else bundled
 )
 ```
 
@@ -155,8 +172,9 @@ ID. To plug a carrier-controlled store, pass your adapter at construction:
 
 ```python
 isa = Isa.with_keycode(
-    keycode=..., email=...,
-    case_storage=CarrierCaseStorage(),   # optional; default = ZeroKnowledgeCaseStorage
+    keycode=...,
+    email=...,
+    case_storage=CarrierCaseStorage(),  # optional; default = ZeroKnowledgeCaseStorage
 )
 ```
 
@@ -174,15 +192,15 @@ This is the intentional simplification called out in the platform's
 
 ## Surface
 
-| TypeScript                                | Python                              |
-| ----------------------------------------- | ----------------------------------- |
-| `client.prequalify(req)`                  | `client.prequalify.run(input)`      |
-| `client.license.activate/deactivate/check`| `client.license.*` (mirrored)       |
-| `client.case.email(req)`                  | `client.case.email(input)`          |
-| (new)                                     | `client.quote.run(input)`           |
-| (new)                                     | `client.datasets.list/get`          |
-| (new)                                     | `client.reference_data.get(kind)`   |
-| (new)                                     | `client.usage.summary(period)`      |
+| TypeScript                                 | Python                            |
+| ------------------------------------------ | --------------------------------- |
+| `client.prequalify(req)`                   | `client.prequalify.run(input)`    |
+| `client.license.activate/deactivate/check` | `client.license.*` (mirrored)     |
+| `client.case.email(req)`                   | `client.case.email(input)`        |
+| (new)                                      | `client.quote.run(input)`         |
+| (new)                                      | `client.datasets.list/get`        |
+| (new)                                      | `client.reference_data.get(kind)` |
+| (new)                                      | `client.usage.summary(period)`    |
 
 Errors mirror the TS hierarchy: `ISAError` (alias `ZyInsError`, also
 exported as `IsaApiError`) → `LicenseError`, `PrequalifyError`,
@@ -222,9 +240,9 @@ parsed envelope and the underlying HTTP metadata:
 
 ```python
 env, raw = isa.zyins.prequalify.with_raw_response(req)
-raw.status     # int
-raw.url        # str
-raw.headers    # read-only mapping
+raw.status  # int
+raw.url  # str
+raw.headers  # read-only mapping
 ```
 
 ### Debug logging
@@ -266,8 +284,10 @@ from isa_sdk.zyins import Isa
 
 isa = Isa.with_bearer()
 
+
 async def one(req):
     return isa.zyins.prequalify(req)
+
 
 results = await asyncio.gather(*(one(r) for r in batch))
 # Each result.request_id is distinct.

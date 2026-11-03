@@ -355,7 +355,9 @@ class _ReferenceNamespace:
 
     Sort: ClassVar[type[_sort_module.Sort]] = _sort_module.Sort
     Concept: ClassVar[type[_concept_module.Concept]] = _concept_module.Concept
-    ConceptKind: ClassVar[type[_concept_module.ConceptKind]] = _concept_module.ConceptKind
+    ConceptKind: ClassVar[type[_concept_module.ConceptKind]] = (
+        _concept_module.ConceptKind
+    )
     # ``MedicationConcept`` / ``ConditionConcept`` are runtime-checkable
     # Protocols, not concrete classes. We expose them as ``type[Protocol]``
     # for ``isinstance`` narrowing on the consumer side; mypy's

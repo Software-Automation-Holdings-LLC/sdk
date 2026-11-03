@@ -68,7 +68,9 @@ class TestDoubleMetaphoneVectors:
         [(v["term"], v["primary"], v["alternate"]) for v in _VECTORS],
         ids=[v["term"] for v in _VECTORS],
     )
-    def test_encodes_term_identically_to_ts(self, term: str, primary: str, alternate: str) -> None:
+    def test_encodes_term_identically_to_ts(
+        self, term: str, primary: str, alternate: str
+    ) -> None:
         code = double_metaphone(term)
         assert code.primary == primary
         assert code.alternate == alternate

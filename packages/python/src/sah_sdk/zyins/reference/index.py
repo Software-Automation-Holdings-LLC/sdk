@@ -176,9 +176,7 @@ class ReferenceIndex:
             name_of=self.condition_name,
             frequency_of=lambda cid: self._frequency(medication_id, cid),
         )
-        return tuple(
-            self._build_condition_concept(cid, input_text) for cid in ordered
-        )
+        return tuple(self._build_condition_concept(cid, input_text) for cid in ordered)
 
     def medications_for_condition(
         self, condition_id: str, input_text: str, sort: Sort
@@ -191,9 +189,7 @@ class ReferenceIndex:
             name_of=self.medication_name,
             frequency_of=lambda mid: self._frequency(mid, condition_id),
         )
-        return tuple(
-            self._build_medication_concept(mid, input_text) for mid in ordered
-        )
+        return tuple(self._build_medication_concept(mid, input_text) for mid in ordered)
 
     # ------------------------------------------------------------------
     # ``.list()`` sugar.

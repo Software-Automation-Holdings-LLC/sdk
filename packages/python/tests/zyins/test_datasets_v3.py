@@ -57,7 +57,9 @@ _SAMPLE_BODY = json.dumps(
                 "conditions": {
                     "version": "3.0",
                     "item_count": 1,
-                    "items": [{"id": "HIGHBLOODPRESSURE", "name": "High Blood Pressure"}],
+                    "items": [
+                        {"id": "HIGHBLOODPRESSURE", "name": "High Blood Pressure"}
+                    ],
                 },
                 "medications": {
                     "version": "3.0",
@@ -313,7 +315,9 @@ def test_get_returns_bundle_on_200() -> None:
 
 def test_get_returns_not_modified_on_304() -> None:
     transport = _RecordingTransport(
-        response_status=304, response_body="", response_headers={"etag": 'W/"unchanged"'}
+        response_status=304,
+        response_body="",
+        response_headers={"etag": 'W/"unchanged"'},
     )
     result = get_datasets_v3(
         DatasetsV3GetOptions(if_none_match='W/"unchanged"'),

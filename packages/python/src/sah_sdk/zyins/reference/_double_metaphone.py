@@ -83,7 +83,10 @@ class _CodeBuilder:
         self._alternate += primary if alternate is None else alternate
 
     def done(self) -> bool:
-        return len(self._primary) >= self._max_length and len(self._alternate) >= self._max_length
+        return (
+            len(self._primary) >= self._max_length
+            and len(self._alternate) >= self._max_length
+        )
 
     def build(self) -> DoubleMetaphoneCode:
         return DoubleMetaphoneCode(
@@ -133,7 +136,9 @@ class _Word:
         return target in candidates
 
 
-def double_metaphone(text: str, max_length: int = _DEFAULT_MAX_CODE_LEN) -> DoubleMetaphoneCode:
+def double_metaphone(
+    text: str, max_length: int = _DEFAULT_MAX_CODE_LEN
+) -> DoubleMetaphoneCode:
     """Encode ``text`` into its Double Metaphone primary + alternate codes.
 
     Non-letters are dropped before encoding; an empty or letter-free
@@ -257,7 +262,9 @@ def _step_c(word: _Word, code: _CodeBuilder, index: int) -> int:
     code.append("K")
     if word.contains(index + 1, 2, " C", " Q", " G"):
         return index + 3
-    if word.contains(index + 1, 1, "C", "K", "Q") and not word.contains(index + 1, 2, "CE", "CI"):
+    if word.contains(index + 1, 1, "C", "K", "Q") and not word.contains(
+        index + 1, 2, "CE", "CI"
+    ):
         return index + 2
     return index + 1
 
@@ -276,7 +283,9 @@ def _condition_c0(word: _Word, index: int) -> bool:
 
 
 def _step_cc(word: _Word, code: _CodeBuilder, index: int) -> int:
-    if word.contains(index + 2, 1, "I", "E", "H") and not word.contains(index + 2, 2, "HU"):
+    if word.contains(index + 2, 1, "I", "E", "H") and not word.contains(
+        index + 2, 2, "HU"
+    ):
         if (index == 1 and word.at(index - 1) == "A") or word.contains(
             index - 1, 5, "UCCEE", "UCCES"
         ):
@@ -348,7 +357,8 @@ def _step_g(word: _Word, code: _CodeBuilder, index: int) -> int:
         code.append("KL", "L")
         return index + 2
     if index == 0 and (
-        word.at(index + 1) == "Y" or word.contains(index + 1, 2, *_ES_EP_EB_EL_EY_IB_IL_IN_IE_EI_ER)
+        word.at(index + 1) == "Y"
+        or word.contains(index + 1, 2, *_ES_EP_EB_EL_EY_IB_IL_IN_IE_EI_ER)
     ):
         code.append("K", "J")
         return index + 2
@@ -360,7 +370,9 @@ def _step_g(word: _Word, code: _CodeBuilder, index: int) -> int:
     ):
         code.append("K", "J")
         return index + 2
-    if word.contains(index + 1, 1, "E", "I", "Y") or word.contains(index - 1, 4, "AGGI", "OGGI"):
+    if word.contains(index + 1, 1, "E", "I", "Y") or word.contains(
+        index - 1, 4, "AGGI", "OGGI"
+    ):
         if (
             word.contains(0, 4, "VAN ", "VON ")
             or word.contains(0, 3, "SCH")
@@ -460,7 +472,8 @@ def _condition_l0(word: _Word, index: int) -> bool:
     if index == word.length - 3 and word.contains(index - 1, 4, "ILLO", "ILLA", "ALLE"):
         return True
     return (
-        word.contains(word.length - 2, 2, "AS", "OS") or word.contains(word.length - 1, 1, "A", "O")
+        word.contains(word.length - 2, 2, "AS", "OS")
+        or word.contains(word.length - 1, 1, "A", "O")
     ) and word.contains(index - 1, 4, "ALLE")
 
 
@@ -492,7 +505,9 @@ def _step_s(word: _Word, code: _CodeBuilder, index: int) -> int:
         code.append("X", "S")
         return index + 1
     if word.contains(index, 2, "SH"):
-        code.append("S" if word.contains(index + 1, 4, "HEIM", "HOEK", "HOLM", "HOLZ") else "X")
+        code.append(
+            "S" if word.contains(index + 1, 4, "HEIM", "HOEK", "HOLM", "HOLZ") else "X"
+        )
         return index + 2
     if word.contains(index, 3, "SIO", "SIA") or word.contains(index, 4, "SIAN"):
         # The reference primary is ``isSlavoGermanic() ? 'S' : 'S'`` — always
@@ -500,9 +515,9 @@ def _step_s(word: _Word, code: _CodeBuilder, index: int) -> int:
         # linter does not flag the no-op ternary; behavior is identical.
         code.append("S", "S" if word.is_slavo_germanic() else "X")
         return index + 3
-    if (index == 0 and word.contains(index + 1, 1, "M", "N", "L", "W")) or word.contains(
-        index + 1, 1, "Z"
-    ):
+    if (
+        index == 0 and word.contains(index + 1, 1, "M", "N", "L", "W")
+    ) or word.contains(index + 1, 1, "Z"):
         code.append("S", "X")
         return index + 2 if word.at(index + 1) == "Z" else index + 1
     if word.contains(index, 2, "SC"):
@@ -577,7 +592,10 @@ def _step_w(word: _Word, code: _CodeBuilder, index: int) -> int:
 def _step_x(word: _Word, code: _CodeBuilder, index: int) -> int:
     if not (
         index == word.length - 1
-        and (word.contains(index - 3, 3, "IAU", "EAU") or word.contains(index - 2, 2, "AU", "OU"))
+        and (
+            word.contains(index - 3, 3, "IAU", "EAU")
+            or word.contains(index - 2, 2, "AU", "OU")
+        )
     ):
         code.append("KS")
     return index + 2 if word.contains(index + 1, 1, "C", "X") else index + 1

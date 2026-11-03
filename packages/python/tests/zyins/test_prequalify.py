@@ -368,7 +368,9 @@ def test_empty_product_selection_rejected() -> None:
 
 
 def test_parse_response_lenient_on_missing_fields() -> None:
-    result = parse_prequalify_response('{"plans": [{"brand": "x"}], "request_id": "req_1"}')
+    result = parse_prequalify_response(
+        '{"plans": [{"brand": "x"}], "request_id": "req_1"}'
+    )
     assert result.request_id == "req_1"
     assert len(result.plans) == 1
     assert result.plans[0].brand == "x"

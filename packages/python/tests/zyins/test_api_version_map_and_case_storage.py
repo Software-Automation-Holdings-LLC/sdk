@@ -51,8 +51,9 @@ def test_with_keycode_accepts_per_surface_api_version_map() -> None:
     )
     assert isa._api_versions == {"quote": "v2"}
     assert resolve_api_version(isa._api_versions, "quote") == "v2"
-    assert resolve_api_version(isa._api_versions, "prequalify") == (
-        BUNDLED_API_VERSIONS["prequalify"]
+    assert (
+        resolve_api_version(isa._api_versions, "prequalify")
+        == (BUNDLED_API_VERSIONS["prequalify"])
     )
 
 
@@ -118,9 +119,7 @@ class _InMemoryStorage(CaseStorage):
         self.records[case_id] = record
         return PutResult(id=case_id, recall_token=_STUB_RECALL_TOKEN)
 
-    def get(
-        self, id: str, recall_token: str | None = None
-    ) -> CaseRecord | None:
+    def get(self, id: str, recall_token: str | None = None) -> CaseRecord | None:
         return self.records.get(id)
 
     def delete(self, id: str) -> None:

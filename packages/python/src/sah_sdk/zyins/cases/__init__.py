@@ -214,9 +214,7 @@ class CasesFacade:
         """
         return self._storage_provider().put(record)
 
-    def recall(
-        self, id: str, recall_token: str | None = None
-    ) -> CaseRecord | None:
+    def recall(self, id: str, recall_token: str | None = None) -> CaseRecord | None:
         """Resolve a previously-saved record.
 
         ``recall_token`` is required iff :meth:`save` returned one.

@@ -50,9 +50,7 @@ def test_email_enqueue_with_attachments_passes_through_base64() -> None:
             to="agent@example.com",
             subject="case",
             body="see attached",
-            attachments=(
-                EmailAttachment(filename="case.pdf", content="aGVsbG8="),
-            ),
+            attachments=(EmailAttachment(filename="case.pdf", content="aGVsbG8="),),
         )
     )
     _, _, _, body = transport.calls[0]

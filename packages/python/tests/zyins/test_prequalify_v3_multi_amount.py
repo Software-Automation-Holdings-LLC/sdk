@@ -51,14 +51,24 @@ def _face_offer(amount_cents: int, display: str, premium_cents: int) -> dict:
         "eligible": True,
         "plan_info": [],
         "metadata": {},
-        "death_benefit": {"amount": {"cents": amount_cents, "display": display}, "period": None},
+        "death_benefit": {
+            "amount": {"cents": amount_cents, "display": display},
+            "period": None,
+        },
         "pricing": [
             {
                 "rate_class": "Preferred",
                 "primary": True,
-                "eligibility": {"category": "immediate", "eligible": True, "reasons": []},
+                "eligibility": {
+                    "category": "immediate",
+                    "eligible": True,
+                    "reasons": [],
+                },
                 "premium": {
-                    "amount": {"cents": premium_cents, "display": f"${premium_cents / 100:.2f}"},
+                    "amount": {
+                        "cents": premium_cents,
+                        "display": f"${premium_cents / 100:.2f}",
+                    },
                     "default_mode": "MONTHLY-EFT",
                     "modes": {
                         "MONTHLY-EFT": {
@@ -75,7 +85,10 @@ def _face_offer(amount_cents: int, display: str, premium_cents: int) -> dict:
 
 def _budget_offer(budget_cents: int, display: str) -> dict:
     offer = _face_offer(5_000_000, "$50,000", 4_500)
-    offer["budget"] = {"amount": {"cents": budget_cents, "display": display}, "period": "monthly"}
+    offer["budget"] = {
+        "amount": {"cents": budget_cents, "display": display},
+        "period": "monthly",
+    }
     return offer
 
 
@@ -85,7 +98,12 @@ _FLAT_FACE_RESPONSE = json.dumps(
         "request_id": "req_01HZK2N5GQR9T8X4B6FJW3Y1AS",
         "idempotency_key": "550e8400-e29b-41d4-a716-446655440000",
         "livemode": True,
-        "data": {"plans": [_face_offer(2_500_000, "$25,000", 4_500), _face_offer(5_000_000, "$50,000", 8_100)]},
+        "data": {
+            "plans": [
+                _face_offer(2_500_000, "$25,000", 4_500),
+                _face_offer(5_000_000, "$50,000", 8_100),
+            ]
+        },
     }
 )
 
@@ -95,7 +113,9 @@ _FLAT_BUDGET_RESPONSE = json.dumps(
         "request_id": "r",
         "idempotency_key": "k",
         "livemode": True,
-        "data": {"plans": [_budget_offer(5_000, "$50.00"), _budget_offer(7_500, "$75.00")]},
+        "data": {
+            "plans": [_budget_offer(5_000, "$50.00"), _budget_offer(7_500, "$75.00")]
+        },
     }
 )
 

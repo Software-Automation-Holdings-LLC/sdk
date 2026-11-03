@@ -80,9 +80,7 @@ def test_check_tolerates_adr012_envelope() -> None:
         response_body=json.dumps({"data": {"status": "inactive"}})
     )
     client = ZyInsClient(_TOKEN, transport=transport)
-    result = client.license.check(
-        LicenseCheckInput(email="x@x", keycode="ABC-123-XYZ")
-    )
+    result = client.license.check(LicenseCheckInput(email="x@x", keycode="ABC-123-XYZ"))
     assert result.status == "inactive"
 
 

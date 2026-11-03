@@ -22,7 +22,9 @@ from sah_sdk.zyins import (
 
 # Persona-token from CLAUDE.md (fake, documentation-only). Loaded via env
 # so static-analysis tools that flag string-literal tokens stay quiet.
-_TOKEN = os.environ.get("ZYINS_FAKE_TEST_TOKEN", "isa_test_" + "fakepersona" + "1234567890")
+_TOKEN = os.environ.get(
+    "ZYINS_FAKE_TEST_TOKEN", "isa_test_" + "fakepersona" + "1234567890"
+)
 
 
 @dataclass
@@ -32,7 +34,9 @@ class RecordingTransport:
     response_status: int = 200
     response_body: str = "{}"
     response_headers: dict[str, str] = field(default_factory=dict)
-    calls: list[tuple[str, str, dict[str, str], str | None]] = field(default_factory=list)
+    calls: list[tuple[str, str, dict[str, str], str | None]] = field(
+        default_factory=list
+    )
 
     def request(
         self,

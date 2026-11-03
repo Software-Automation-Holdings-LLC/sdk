@@ -34,7 +34,9 @@ class _RaisingDispatcher:
     def __init__(self, error: ISAError) -> None:
         self._error = error
 
-    def _dispatch(self, *, method: str, path: str, body: str, idempotency_key: str | None = None) -> Any:
+    def _dispatch(
+        self, *, method: str, path: str, body: str, idempotency_key: str | None = None
+    ) -> Any:
         raise self._error
 
 

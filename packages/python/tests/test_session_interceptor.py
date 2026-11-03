@@ -89,7 +89,9 @@ class RecordingTransport:
         if expire:
             return TransportResponse(
                 status=401,
-                body=json.dumps({"code": self.product_error_code, "type": "about:blank"}),
+                body=json.dumps(
+                    {"code": self.product_error_code, "type": "about:blank"}
+                ),
                 headers={"Content-Type": "application/problem+json"},
             )
         return TransportResponse(
@@ -100,7 +102,9 @@ class RecordingTransport:
 
 
 @pytest.fixture
-def fixture_store_and_interceptor() -> tuple[SessionStore, SessionInterceptor, RecordingTransport]:
+def fixture_store_and_interceptor() -> tuple[
+    SessionStore, SessionInterceptor, RecordingTransport
+]:
     transport = RecordingTransport()
     store = SessionStore(
         transport=transport,
@@ -117,7 +121,9 @@ def fixture_store_and_interceptor() -> tuple[SessionStore, SessionInterceptor, R
 
 
 def test_concurrent_product_calls_trigger_exactly_one_bootstrap(
-    fixture_store_and_interceptor: tuple[SessionStore, SessionInterceptor, RecordingTransport],
+    fixture_store_and_interceptor: tuple[
+        SessionStore, SessionInterceptor, RecordingTransport
+    ],
 ) -> None:
     """10 concurrent product calls from a cold start ⇒ 1 bootstrap."""
     _, interceptor, transport = fixture_store_and_interceptor
@@ -148,11 +154,15 @@ def test_concurrent_product_calls_trigger_exactly_one_bootstrap(
 
 
 def test_retry_on_401_unauthorized_near_expiry(
-    fixture_store_and_interceptor: tuple[SessionStore, SessionInterceptor, RecordingTransport],
+    fixture_store_and_interceptor: tuple[
+        SessionStore, SessionInterceptor, RecordingTransport
+    ],
 ) -> None:
     """The proxy's expired-session 401 triggers bootstrap + replay."""
     _, interceptor, transport = fixture_store_and_interceptor
-    transport.bootstrap_expires_at = datetime.now(tz=timezone.utc) + timedelta(minutes=4)
+    transport.bootstrap_expires_at = datetime.now(tz=timezone.utc) + timedelta(
+        minutes=4
+    )
     transport.expire_next_product = True
     resp = interceptor.request(
         "POST",
@@ -166,7 +176,9 @@ def test_retry_on_401_unauthorized_near_expiry(
 
 
 def test_401_unauthorized_refreshes_fresh_session(
-    fixture_store_and_interceptor: tuple[SessionStore, SessionInterceptor, RecordingTransport],
+    fixture_store_and_interceptor: tuple[
+        SessionStore, SessionInterceptor, RecordingTransport
+    ],
 ) -> None:
     _, interceptor, transport = fixture_store_and_interceptor
     transport.expire_next_product = True
@@ -288,7 +300,9 @@ def test_failed_session_expired_refresh_clears_rejected_session() -> None:
 
 
 def test_on_activity_cold_start_bootstraps(
-    fixture_store_and_interceptor: tuple[SessionStore, SessionInterceptor, RecordingTransport],
+    fixture_store_and_interceptor: tuple[
+        SessionStore, SessionInterceptor, RecordingTransport
+    ],
 ) -> None:
     """``on_activity`` from cold state mints the session proactively."""
     store, _, transport = fixture_store_and_interceptor
@@ -322,7 +336,9 @@ def test_on_activity_failed_refresh_preserves_current_session() -> None:
 
 
 def test_failed_bootstrap_backs_off_second_attempt(
-    fixture_store_and_interceptor: tuple[SessionStore, SessionInterceptor, RecordingTransport],
+    fixture_store_and_interceptor: tuple[
+        SessionStore, SessionInterceptor, RecordingTransport
+    ],
 ) -> None:
     _, interceptor, transport = fixture_store_and_interceptor
     transport.fail_next_bootstrap = True
@@ -336,7 +352,9 @@ def test_failed_bootstrap_backs_off_second_attempt(
 
 
 def test_invalidate_preserves_newer_session(
-    fixture_store_and_interceptor: tuple[SessionStore, SessionInterceptor, RecordingTransport],
+    fixture_store_and_interceptor: tuple[
+        SessionStore, SessionInterceptor, RecordingTransport
+    ],
 ) -> None:
     store, _, _ = fixture_store_and_interceptor
     old = store.bootstrap()
@@ -353,7 +371,9 @@ def test_invalidate_preserves_newer_session(
 
 
 def test_session_signing_uses_path_without_query(
-    fixture_store_and_interceptor: tuple[SessionStore, SessionInterceptor, RecordingTransport],
+    fixture_store_and_interceptor: tuple[
+        SessionStore, SessionInterceptor, RecordingTransport
+    ],
 ) -> None:
     _, interceptor, transport = fixture_store_and_interceptor
 
