@@ -28,5 +28,5 @@ require (
 	connectrpc.com/connect v1.20.0
 	golang.org/x/text v0.37.0
 	google.golang.org/genproto/googleapis/api v0.0.0-20260622175928-b703f567277d
-	google.golang.org/protobuf v1.36.11
+	google.golang.org/protobuf v1.36.12
 )
