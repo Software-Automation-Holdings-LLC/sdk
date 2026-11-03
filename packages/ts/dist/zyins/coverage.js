@@ -36,39 +36,39 @@ function ensurePositive(label, amount) {
 export const Coverage = {
     /** Single face-value coverage. */
     faceValue(amount) {
-        return { type: 'face_value', amount: ensurePositive('Coverage.faceValue', amount) };
+        return { type: "face_value", amount: ensurePositive("Coverage.faceValue", amount) };
     },
     /** Multiple face-value coverages probed in one call. */
     faceValues(amounts) {
         if (amounts.length === 0) {
-            throw new Error('Coverage.faceValues: at least one amount required');
+            throw new Error("Coverage.faceValues: at least one amount required");
         }
         return {
-            type: 'face_value',
-            amounts: amounts.map((a) => ensurePositive('Coverage.faceValues', a)),
+            type: "face_value",
+            amounts: amounts.map((a) => ensurePositive("Coverage.faceValues", a)),
         };
     },
     /** Single monthly-budget coverage. */
     monthlyBudget(amount) {
-        return { type: 'monthly_budget', amount: ensurePositive('Coverage.monthlyBudget', amount) };
+        return { type: "monthly_budget", amount: ensurePositive("Coverage.monthlyBudget", amount) };
     },
     /** Multiple monthly-budget coverages probed in one call. */
     monthlyBudgets(amounts) {
         if (amounts.length === 0) {
-            throw new Error('Coverage.monthlyBudgets: at least one amount required');
+            throw new Error("Coverage.monthlyBudgets: at least one amount required");
         }
         return {
-            type: 'monthly_budget',
-            amounts: amounts.map((a) => ensurePositive('Coverage.monthlyBudgets', a)),
+            type: "monthly_budget",
+            amounts: amounts.map((a) => ensurePositive("Coverage.monthlyBudgets", a)),
         };
     },
     /** Type guard — true when the input is a face-value coverage. */
     isFaceValue(c) {
-        return c.type === 'face_value' && !isMulti(c);
+        return c.type === "face_value" && !isMulti(c);
     },
     /** Type guard — true when the input is a monthly-budget coverage. */
     isMonthlyBudget(c) {
-        return c.type === 'monthly_budget' && !isMulti(c);
+        return c.type === "monthly_budget" && !isMulti(c);
     },
     /** Type guard — true when the input is a multi-amount coverage. */
     isMulti,

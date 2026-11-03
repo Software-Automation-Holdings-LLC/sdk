@@ -11,13 +11,13 @@
  * browser `btoa` paths).
  */
 
-import { type AuthContext } from './auth.js';
-import { type Transport } from './transport.js';
-import { fromHttpResponse } from './errors.js';
-import { buildLicenseHMACHeaders } from '../core/index.js';
-import { base64EncodeUtf8, type Clock, systemClock } from '../core/index.js';
+import { buildLicenseHMACHeaders } from "../core/index.js";
+import { base64EncodeUtf8, type Clock, systemClock } from "../core/index.js";
+import { type AuthContext } from "./auth.js";
+import { fromHttpResponse } from "./errors.js";
+import { type Transport } from "./transport.js";
 
-const EMAIL_PATH = '/v1/email/enqueue';
+const EMAIL_PATH = "/v1/email/enqueue";
 
 /** Inputs for `case.email`. */
 export interface CaseEmailRequest {
@@ -64,7 +64,7 @@ export async function email(
     ctx.auth.licenseKey,
     ctx.auth.orderId,
     ctx.auth.email,
-    'POST',
+    "POST",
     EMAIL_PATH,
     body,
     ctx.auth.deviceId,
@@ -72,8 +72,8 @@ export async function email(
   );
   const response = await ctx.transport({
     url: `${ctx.baseUrl}${EMAIL_PATH}`,
-    method: 'POST',
-    headers: { ...headers, 'Content-Type': 'application/json' },
+    method: "POST",
+    headers: { ...headers, "Content-Type": "application/json" },
     body,
   });
   if (response.status >= 200 && response.status < 300) {
@@ -85,7 +85,7 @@ export async function email(
 function parseEmailResponse(body: string): CaseEmailResult {
   try {
     const parsed = JSON.parse(body) as { enqueue_id?: unknown };
-    const enqueueId = typeof parsed.enqueue_id === 'string' ? parsed.enqueue_id : '';
+    const enqueueId = typeof parsed.enqueue_id === "string" ? parsed.enqueue_id : "";
     return { enqueueId };
   } catch (err) {
     throw new Error(`ZyIns case.email: failed to parse response body: ${(err as Error).message}`);

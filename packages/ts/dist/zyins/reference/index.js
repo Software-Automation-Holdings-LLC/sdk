@@ -21,12 +21,12 @@
  * const ranked = await isa.zyins.medications.autocomplete('lisi', { limit: 5 });
  * ```
  */
-import { buildFrequencyMap, buildTypoMap } from '../datasets-v3.js';
-import { ReferenceIndex, buildUnknownConcept } from './referenceIndex.js';
-import { Sort } from './Sort.js';
-import { DefaultAutocorrector } from './Autocorrector.js';
-import { DefaultMatchAlgorithm } from './MatchAlgorithm.js';
-import { DefaultAutocompleteAlgorithm } from './AutocompleteAlgorithm.js';
+import { buildFrequencyMap, buildTypoMap } from "../datasets-v3.js";
+import { DefaultAutocompleteAlgorithm, } from "./AutocompleteAlgorithm.js";
+import { DefaultAutocorrector } from "./Autocorrector.js";
+import { DefaultMatchAlgorithm } from "./MatchAlgorithm.js";
+import { buildUnknownConcept, ReferenceIndex } from "./referenceIndex.js";
+import { Sort } from "./Sort.js";
 /**
  * Shared bundle cache. One instance per `ZyInsNamespace`; the
  * `DatasetsFacade.getV3()` call writes the latest bundle here, and the
@@ -90,7 +90,7 @@ export class ReferenceBundleCache {
 }
 const EMPTY_MAP = new Map();
 const EMPTY_NUM_MAP = new Map();
-const UNVERSIONED_BUNDLE_TAG_PREFIX = 'unversioned';
+const UNVERSIONED_BUNDLE_TAG_PREFIX = "unversioned";
 const bundleGenerations = new WeakMap();
 const defaultFastPathFacades = new WeakSet();
 function sameVersion(a, b) {
@@ -99,9 +99,9 @@ function sameVersion(a, b) {
     return aVersion !== undefined && bVersion !== undefined && aVersion === bVersion;
 }
 function bundleVersionTag(bundle) {
-    if (bundle.etag !== undefined && bundle.etag !== '')
+    if (bundle.etag !== undefined && bundle.etag !== "")
         return bundle.etag;
-    if (bundle.version !== '')
+    if (bundle.version !== "")
         return bundle.version;
     return undefined;
 }
@@ -201,7 +201,7 @@ export class ReferenceMedicationsFacade {
         const result = this.matcher.match(text, candidates);
         if (!result.isKnown)
             return buildUnknownConcept(text);
-        if (result.kind !== 'medication')
+        if (result.kind !== "medication")
             return buildUnknownConcept(text);
         return idx.lookupResolvedConcept(result, text);
     }
@@ -219,7 +219,7 @@ export class ReferenceMedicationsFacade {
             return [];
         return this.ranker.rank(query, idx.listMedications(), {
             limit: options.limit ?? DEFAULT_LIMIT,
-            kinds: options.kinds ?? ['medication'],
+            kinds: options.kinds ?? ["medication"],
             frequencies: options.frequencies ?? this.cache.currentFrequencyMap(),
             ...(options.sort !== undefined && { sort: options.sort }),
         });
@@ -253,7 +253,7 @@ export class ReferenceConditionsFacade {
         const result = this.matcher.match(text, candidates);
         if (!result.isKnown)
             return buildUnknownConcept(text);
-        if (result.kind !== 'condition')
+        if (result.kind !== "condition")
             return buildUnknownConcept(text);
         return idx.lookupResolvedConcept(result, text);
     }
@@ -263,7 +263,7 @@ export class ReferenceConditionsFacade {
             return [];
         return this.ranker.rank(query, idx.listConditions(), {
             limit: options.limit ?? DEFAULT_LIMIT,
-            kinds: options.kinds ?? ['condition'],
+            kinds: options.kinds ?? ["condition"],
             frequencies: options.frequencies ?? this.cache.currentFrequencyMap(),
             ...(options.sort !== undefined && { sort: options.sort }),
         });
@@ -322,10 +322,10 @@ export class ReferenceConceptsFacade {
 }
 const DEFAULT_LIMIT = 25;
 // Re-export public types for consumers reaching them via the namespace.
-export { Sort } from './Sort.js';
-export { DefaultAutocorrector } from './Autocorrector.js';
-export { DefaultMatchAlgorithm } from './MatchAlgorithm.js';
-export { FuzzyMatchAlgorithm } from './FuzzyMatchAlgorithm.js';
-export { DefaultAutocompleteAlgorithm } from './AutocompleteAlgorithm.js';
-export { buildSuggestion } from './Suggestion.js';
+export { DefaultAutocompleteAlgorithm, } from "./AutocompleteAlgorithm.js";
+export { DefaultAutocorrector, } from "./Autocorrector.js";
+export { FuzzyMatchAlgorithm } from "./FuzzyMatchAlgorithm.js";
+export { DefaultMatchAlgorithm } from "./MatchAlgorithm.js";
+export { Sort } from "./Sort.js";
+export { buildSuggestion } from "./Suggestion.js";
 //# sourceMappingURL=index.js.map

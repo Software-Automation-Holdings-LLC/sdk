@@ -20,11 +20,11 @@
  * and returns the typed offer envelope. `'v1'` preserves the legacy
  * contract for callers still wired against the old envelope.
  */
-import type { CredentialStore } from '../core/index.js';
-import type { LicenseRefreshedListener } from './credentialState.js';
-import { type Transport } from './transport.js';
-import { type IsaApiVersion, type IsaApiVersionOverride, type IsaApiSurface, BundledApiVersions, resolveApiVersions } from './bundledApiVersions.js';
-export type { IsaApiVersion, IsaApiVersionOverride, IsaApiSurface };
+import type { CredentialStore } from "../core/index.js";
+import { BundledApiVersions, type IsaApiSurface, type IsaApiVersion, type IsaApiVersionOverride, resolveApiVersions } from "./bundledApiVersions.js";
+import type { LicenseRefreshedListener } from "./credentialState.js";
+import { type Transport } from "./transport.js";
+export type { IsaApiSurface, IsaApiVersion, IsaApiVersionOverride };
 export { BundledApiVersions, resolveApiVersions };
 /**
  * Tagged auth supplier accepted by {@link IsaCreateOptions.auth}. Each
@@ -32,10 +32,10 @@ export { BundledApiVersions, resolveApiVersions };
  * dispatch in `Isa.create` picks the correct legacy factory.
  */
 export type IsaAuthSupplier = {
-    readonly kind: 'bearer';
+    readonly kind: "bearer";
     readonly token?: string;
 } | {
-    readonly kind: 'license';
+    readonly kind: "license";
     readonly keycode?: string;
     readonly email?: string;
     readonly orderId?: string;
@@ -43,10 +43,10 @@ export type IsaAuthSupplier = {
     readonly credentialStore?: CredentialStore;
     readonly onLicenseRefreshed?: LicenseRefreshedListener;
 } | {
-    readonly kind: 'form';
+    readonly kind: "form";
     readonly formToken: string;
 } | {
-    readonly kind: 'session';
+    readonly kind: "session";
     readonly sessionId: string;
     readonly sessionSecret: string;
 };
@@ -84,16 +84,16 @@ export declare const FormAuth: {
  * (and proxyOrigin where applicable).
  */
 export type IsaEngine = {
-    readonly kind: 'remote';
+    readonly kind: "remote";
     readonly baseUrl: string;
 } | {
-    readonly kind: 'local';
+    readonly kind: "local";
     readonly baseUrl: string;
 } | {
-    readonly kind: 'proxy';
+    readonly kind: "proxy";
     readonly proxyOrigin: string;
 } | {
-    readonly kind: 'in_memory';
+    readonly kind: "in_memory";
     readonly transport: Transport;
 };
 /** Production ZyINS endpoint (`https://zyins.isaapi.com`). */
@@ -155,7 +155,7 @@ export interface IsaCreateOptions {
      * key as the recall token. Carrier adapters may substitute a portal-
      * backed store; the SDK only sees the {@link CaseStorage} interface.
      */
-    caseStorage?: import('./cases/CaseStorage.js').CaseStorage;
+    caseStorage?: import("./cases/CaseStorage.js").CaseStorage;
 }
 /** Resolved view of `IsaCreateOptions` with defaults applied. */
 export interface ResolvedIsaOptions {
@@ -169,7 +169,7 @@ export interface ResolvedIsaOptions {
     readonly transport: Transport | undefined;
     readonly baseUrl: string;
     readonly proxyOrigin: string | undefined;
-    readonly caseStorage: import('./cases/CaseStorage.js').CaseStorage | undefined;
+    readonly caseStorage: import("./cases/CaseStorage.js").CaseStorage | undefined;
 }
 /**
  * Resolve `IsaCreateOptions` into a fully-defaulted view. Pure — no side

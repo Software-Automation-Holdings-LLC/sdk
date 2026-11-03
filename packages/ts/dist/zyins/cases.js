@@ -12,9 +12,9 @@
  * It is never logged, never put on a telemetry payload, and never attached to
  * a thrown error. See `../account/cases` for the enforced guarantee.
  */
-import { create as opaqueCreate, } from '../account/cases.js';
+import { create as opaqueCreate } from "../account/cases.js";
 /** zyins routing tag pinned by {@link share}. */
-const ZYINS_PRODUCT = 'zyins';
+const ZYINS_PRODUCT = "zyins";
 /**
  * Share a zyins case: encrypt `{ input, results?, products? }` under a fresh
  * key, store the opaque envelope, and return the fragment-keyed link.
@@ -30,13 +30,13 @@ const ZYINS_PRODUCT = 'zyins';
  */
 export async function share(request, ctx) {
     if (!request || request.input === undefined || request.input === null) {
-        throw new Error('zyins: cases.share requires input');
+        throw new Error("zyins: cases.share requires input");
     }
     const payload = { input: request.input };
     if (request.results !== undefined)
-        payload['results'] = request.results;
+        payload["results"] = request.results;
     if (request.products !== undefined)
-        payload['products'] = request.products;
+        payload["products"] = request.products;
     const result = await opaqueCreate({ product: ZYINS_PRODUCT, payload }, ctx);
     return { id: result.id, link: result.link };
 }

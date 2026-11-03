@@ -14,7 +14,7 @@
  * and Tier 3 is allowed to assume the protocol layer above it is reliable.
  */
 /** Method shape Tier 3 emits. The wire supports more; this is what we use. */
-export type HttpMethod = 'GET' | 'POST' | 'PUT' | 'DELETE';
+export type HttpMethod = "GET" | "POST" | "PUT" | "DELETE";
 /** Inbound request as seen by the transport facade. */
 export interface TransportRequest {
     url: string;

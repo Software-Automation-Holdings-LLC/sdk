@@ -13,7 +13,7 @@ export function _makeKey(text) {
     // Uppercase first so locale-specific casefolding does not change which
     // bytes survive the alphanumeric strip.
     const upper = text.toUpperCase();
-    let out = '';
+    let out = "";
     for (let i = 0; i < upper.length; i++) {
         const ch = upper.charCodeAt(i);
         const isDigit = ch >= 0x30 && ch <= 0x39;

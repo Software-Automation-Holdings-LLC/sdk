@@ -11,10 +11,10 @@
  * `Stripe.responseHandler` pattern: the envelope code is generic; the
  * per-endpoint validator is specific.
  */
-export const ERR_ENVELOPE_MISSING_DATA = 'transport: response envelope has no data field';
-export const ERR_ENVELOPE_SHAPE = 'transport: response body is not a JSON object';
+export const ERR_ENVELOPE_MISSING_DATA = "transport: response envelope has no data field";
+export const ERR_ENVELOPE_SHAPE = "transport: response body is not a JSON object";
 function isJSONObject(value) {
-    return typeof value === 'object' && value !== null && !Array.isArray(value);
+    return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 function readEnvelope(parsed) {
     if (!isJSONObject(parsed)) {
@@ -30,13 +30,13 @@ function readEnvelope(parsed) {
  */
 export async function extractData(response, validator) {
     if (!response) {
-        throw new Error('transport: extractData requires a Response');
+        throw new Error("transport: extractData requires a Response");
     }
     if (!validator) {
-        throw new Error('transport: extractData requires a DataValidator (use generated validator from sdk/<product>)');
+        throw new Error("transport: extractData requires a DataValidator (use generated validator from sdk/<product>)");
     }
     const env = readEnvelope(await response.json());
-    if (!('data' in env) || env.data === undefined || env.data === null) {
+    if (!("data" in env) || env.data === undefined || env.data === null) {
         throw new Error(ERR_ENVELOPE_MISSING_DATA);
     }
     return validator(env.data);
@@ -49,13 +49,13 @@ export async function extractData(response, validator) {
  */
 export async function extractEnvelope(response) {
     if (!response) {
-        throw new Error('transport: extractEnvelope requires a Response');
+        throw new Error("transport: extractEnvelope requires a Response");
     }
     const env = readEnvelope(await response.json());
     return {
-        object: typeof env.object === 'string' ? env.object : '',
-        livemode: typeof env.livemode === 'boolean' ? env.livemode : false,
-        request_id: typeof env.request_id === 'string' ? env.request_id : '',
+        object: typeof env.object === "string" ? env.object : "",
+        livemode: typeof env.livemode === "boolean" ? env.livemode : false,
+        request_id: typeof env.request_id === "string" ? env.request_id : "",
         data: env.data,
     };
 }

@@ -3,8 +3,8 @@
  * License-HMAC header construction + transport call so each operation in
  * `cases.ts` only assembles its body and routes status codes.
  */
-import { deriveIdempotencyKey } from '../zyins/idempotency.js';
-import { buildLicenseHMACHeaders, systemClock } from '../core/index.js';
+import { buildLicenseHMACHeaders, systemClock } from "../core/index.js";
+import { deriveIdempotencyKey } from "../zyins/idempotency.js";
 /**
  * Build License-HMAC headers and dispatch one `/v1/case` request, eliminating
  * the per-operation header/transport boilerplate. The caller routes status
@@ -12,17 +12,16 @@ import { buildLicenseHMACHeaders, systemClock } from '../core/index.js';
  */
 export async function signedCaseRequest(spec, ctx) {
     const headers = await buildLicenseHMACHeaders(ctx.auth.licenseKey, ctx.auth.orderId, ctx.auth.email, spec.method, spec.path, spec.body, ctx.auth.deviceId, ctx.clock ?? systemClock);
-    const requestHeaders = { ...headers, Accept: 'application/json' };
-    if (spec.method === 'POST')
-        requestHeaders['Content-Type'] = 'application/json';
+    const requestHeaders = { ...headers, Accept: "application/json" };
+    if (spec.method === "POST")
+        requestHeaders["Content-Type"] = "application/json";
     if (spec.idempotencyOp !== undefined) {
-        requestHeaders['Idempotency-Key'] =
-            ctx.idempotencyKey ??
-                (await deriveIdempotencyKey({
-                    deviceId: ctx.auth.deviceId,
-                    op: spec.idempotencyOp,
-                    body: spec.body,
-                }));
+        requestHeaders["Idempotency-Key"] = ctx.idempotencyKey
+            ?? (await deriveIdempotencyKey({
+                deviceId: ctx.auth.deviceId,
+                op: spec.idempotencyOp,
+                body: spec.body,
+            }));
     }
     return ctx.transport({
         url: `${ctx.baseUrl}${spec.path}`,

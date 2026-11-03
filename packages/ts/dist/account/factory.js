@@ -9,12 +9,12 @@
  * license callers receive a stub namespace whose first method call throws
  * `IsaConfigError` with a description of what's missing.
  */
-import { IsaConfigError } from '../zyins/apiError.js';
-import { DEFAULT_ZYINS_BASE_URL } from '../zyins/client.js';
-import { AccountNamespace } from './index.js';
+import { IsaConfigError } from "../zyins/apiError.js";
+import { DEFAULT_ZYINS_BASE_URL } from "../zyins/client.js";
+import { AccountNamespace } from "./index.js";
 /** Build the `isa.account` namespace from the unified `Isa` options. */
 export function buildAccountNamespace(opts) {
-    if (opts.identity.mode !== 'license') {
+    if (opts.identity.mode !== "license") {
         return throwingNamespace(`isa.account.* methods currently require Isa.withKeycode() — bearer and session transport wiring lands in Phase 3 of SDK_DESIGN.md`);
     }
     if (!opts.deviceId) {

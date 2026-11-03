@@ -28,11 +28,11 @@
  * for (const s of ranked) console.log(s.rank, s.name, s.score);
  * ```
  */
-import { Sort } from './Sort.js';
-import { buildSuggestion } from './Suggestion.js';
-import { _makeKey } from './_makeKey.js';
-import { doubleMetaphone } from './_doubleMetaphone.js';
-import { FUZZY_MEDIUM_LEN, FUZZY_SHORT_LEN, optimalStringAlignmentDistance } from './_damerauOsa.js';
+import { FUZZY_MEDIUM_LEN, FUZZY_SHORT_LEN, optimalStringAlignmentDistance } from "./_damerauOsa.js";
+import { doubleMetaphone } from "./_doubleMetaphone.js";
+import { _makeKey } from "./_makeKey.js";
+import { Sort } from "./Sort.js";
+import { buildSuggestion } from "./Suggestion.js";
 /**
  * Default ranker. Bucket + frequency-boost algorithm ported from the
  * bpp2.0 picker hook.
@@ -82,7 +82,7 @@ function tokenize(s) {
     return String(s)
         .toUpperCase()
         .split(/\s+/)
-        .map((x) => x.replace(/[^A-Z0-9]/g, ''))
+        .map((x) => x.replace(/[^A-Z0-9]/g, ""))
         .filter(Boolean);
 }
 const MAX_LIMIT = 250;
@@ -116,19 +116,22 @@ function rankSync(query, candidates, options, startOnly, fuzzy) {
     const limit = Math.min(options.limit, MAX_LIMIT);
     if (limit <= 0)
         return [];
-    // An empty / whitespace-only query has zero tokens and resolves to no
-    // suggestions — guard explicitly so the substring pre-filter (which treats
-    // '' as matching every candidate) cannot leak the full catalog. Mirrors the
-    // Python reference adapter and the documented contract.
-    if (query.trim() === '')
-        return [];
-    const queryUpper = query.toUpperCase();
-    const queryClean = queryUpper.replace(/\(/g, '');
-    const queryTokens = tokenize(query);
     // make_key form: uppercase, strip ALL non-alphanumeric. This is what the
     // engine matches on server-side, so `crohns` must reach `Crohn's Disease`
-    // — the literal `(`-only strip above leaves the apostrophe in and breaks it.
+    // — the literal `(`-only strip below leaves the apostrophe in and breaks it.
     const queryKey = _makeKey(query);
+    // A query with no surviving alphanumerics — empty, whitespace-only, or
+    // punctuation-only like "(" or "!!!" — resolves to no suggestions. Guard on
+    // the make_key form (empty iff nothing survives) so the substring pre-filter
+    // (which treats '' as matching every candidate) cannot leak the full
+    // catalog. Mirrors the Python reference adapter and the documented contract.
+    // Checked before deriving queryUpper/queryClean/queryTokens below so a
+    // punctuation-only query does no unnecessary work.
+    if (queryKey === "")
+        return [];
+    const queryUpper = query.toUpperCase();
+    const queryClean = queryUpper.replace(/\(/g, "");
+    const queryTokens = tokenize(query);
     const kindFilter = options.kinds.length > 0 ? new Set(options.kinds) : undefined;
     const inKind = (c) => !kindFilter || kindFilter.has(c.kind);
     // 1. Filter to plausible candidates.
@@ -136,7 +139,7 @@ function rankSync(query, candidates, options, startOnly, fuzzy) {
     for (const c of candidates) {
         if (!inKind(c))
             continue;
-        const nameUpper = c.name.toUpperCase().replace(/\(/g, '');
+        const nameUpper = c.name.toUpperCase().replace(/\(/g, "");
         if (startOnly) {
             if (nameUpper.startsWith(queryClean))
                 filtered.push(c);
@@ -165,7 +168,9 @@ function rankSync(query, candidates, options, startOnly, fuzzy) {
     // `diabetis` → Diabetes, `tylonol` → Tylenol). Default ON; the
     // `{ fuzzy: false }` opt-out and `startOnly` mode both skip it.
     const filteredKeys = new Set(filtered.map((c) => c.id ?? `__unknown:${c.inputText}:${c.name}`));
-    const fuzzyMatches = fuzzy && !startOnly && filtered.length <= FUZZY_FALLBACK_THRESHOLD ? collectFuzzy(queryKey, queryTokens, candidates, inKind, filteredKeys) : [];
+    const fuzzyMatches = fuzzy && !startOnly && filtered.length <= FUZZY_FALLBACK_THRESHOLD
+        ? collectFuzzy(queryKey, queryTokens, candidates, inKind, filteredKeys)
+        : [];
     // 2. Bucket.
     const buckets = {
         startsWith: [],
@@ -177,7 +182,7 @@ function rankSync(query, candidates, options, startOnly, fuzzy) {
         fuzzy: fuzzyMatches,
     };
     for (const c of filtered) {
-        const cleanedName = c.name.replace(/\(/g, '');
+        const cleanedName = c.name.replace(/\(/g, "");
         const optTokens = tokenize(cleanedName);
         const optSet = new Set(optTokens);
         const querySet = new Set(queryTokens);
@@ -186,7 +191,8 @@ function rankSync(query, candidates, options, startOnly, fuzzy) {
         const lengthDiff = Math.abs(queryTokens.length - optTokens.length);
         const supersetOfInput = queryTokens.every((t) => optSet.has(t));
         const sameSet = querySet.size === optSet.size && [...querySet].every((x) => optSet.has(x));
-        const independentWordIntersection = !supersetOfInput && queryTokens.every((t) => cleanedName.toUpperCase().includes(t));
+        const independentWordIntersection = !supersetOfInput
+            && queryTokens.every((t) => cleanedName.toUpperCase().includes(t));
         if (isStart) {
             buckets.startsWith.push(c);
         }
@@ -214,7 +220,15 @@ function rankSync(query, candidates, options, startOnly, fuzzy) {
     const withTol = withTolKeys.flatMap((k) => buckets.wordCountWithTolerance.get(k) ?? []);
     // Fuzzy hits occupy the strict lowest bucket — always below every literal
     // (exact / prefix / substring / word-tolerance) match.
-    let groups = [startsWithSorted, buckets.sameWords, buckets.independentWordIntersection, noTol, buckets.sameNumWithTolerance, withTol, buckets.fuzzy];
+    let groups = [
+        startsWithSorted,
+        buckets.sameWords,
+        buckets.independentWordIntersection,
+        noTol,
+        buckets.sameNumWithTolerance,
+        withTol,
+        buckets.fuzzy,
+    ];
     // 4. Order within the matched set. Alphabetical flattens every bucket into
     // one A→Z group (the relevance filter already decided membership); the
     // default boosts by frequency within each bucket and keeps bucket priority.
@@ -278,7 +292,7 @@ function flattenAlphabetical(groups) {
             return -1;
         if (a.name > b.name)
             return 1;
-        return (a.id ?? '') < (b.id ?? '') ? -1 : (a.id ?? '') > (b.id ?? '') ? 1 : 0;
+        return (a.id ?? "") < (b.id ?? "") ? -1 : (a.id ?? "") > (b.id ?? "") ? 1 : 0;
     });
     return flat;
 }
@@ -316,11 +330,11 @@ function collectFuzzy(queryKey, queryTokens, candidates, inKind, alreadyMatched)
 }
 function fuzzyMatchesAnyToken(queryUnits, queryCodes, candidateTokens) {
     for (let u = 0; u < queryUnits.length; u++) {
-        const unit = queryUnits[u] ?? '';
+        const unit = queryUnits[u] ?? "";
         if (unit.length === 0)
             continue;
         const threshold = autocompleteFuzzyThreshold(unit.length);
-        const code = queryCodes[u] ?? '';
+        const code = queryCodes[u] ?? "";
         for (const token of candidateTokens) {
             if (token.length === 0)
                 continue;
@@ -395,7 +409,7 @@ function computeSpan(name, queryKey) {
     const normalized = [];
     const sourceIndices = [];
     for (let i = 0; i < name.length; i++) {
-        const ch = name[i]?.toUpperCase() ?? '';
+        const ch = name[i]?.toUpperCase() ?? "";
         const code = ch.charCodeAt(0);
         const isAlnum = (code >= 0x30 && code <= 0x39) || (code >= 0x41 && code <= 0x5a);
         if (!isAlnum)
@@ -403,7 +417,7 @@ function computeSpan(name, queryKey) {
         normalized.push(ch);
         sourceIndices.push(i);
     }
-    const idx = normalized.join('').indexOf(queryKey);
+    const idx = normalized.join("").indexOf(queryKey);
     if (idx < 0)
         return [0, 0];
     const endSourceIndex = sourceIndices[idx + queryKey.length - 1];

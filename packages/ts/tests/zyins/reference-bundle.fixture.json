@@ -1,0 +1,72 @@
+{
+  "object": "datasets_catalog",
+  "data": {
+    "catalog_version": "fixture-3.0",
+    "datasets": {
+      "conditions": {
+        "version": "fixture-c1",
+        "item_count": 2,
+        "items": [
+          {
+            "id": "HIGHBLOODPRESSURE",
+            "name": "High Blood Pressure",
+            "treated_with": [
+              { "id": "LISINOPRIL", "name": "Lisinopril", "prescription_count": 8200 },
+              { "id": "LOSARTAN", "name": "Losartan", "prescription_count": 4120 }
+            ]
+          },
+          {
+            "id": "DIABETESTYPE2",
+            "name": "Type 2 Diabetes",
+            "treated_with": [
+              { "id": "METFORMIN", "name": "Metformin", "prescription_count": 9100 }
+            ]
+          }
+        ]
+      },
+      "medications": {
+        "version": "fixture-m1",
+        "item_count": 3,
+        "items": [
+          {
+            "id": "LISINOPRIL",
+            "name": "Lisinopril",
+            "used_for": [
+              { "id": "HIGHBLOODPRESSURE", "name": "High Blood Pressure", "prescription_count": 8200 }
+            ]
+          },
+          {
+            "id": "LOSARTAN",
+            "name": "Losartan",
+            "used_for": [
+              { "id": "HIGHBLOODPRESSURE", "name": "High Blood Pressure", "prescription_count": 4120 }
+            ]
+          },
+          {
+            "id": "METFORMIN",
+            "name": "Metformin",
+            "used_for": [
+              { "id": "DIABETESTYPE2", "name": "Type 2 Diabetes", "prescription_count": 9100 }
+            ]
+          }
+        ]
+      },
+      "nicotine_options": {
+        "version": "fixture-n1",
+        "item_count": 2,
+        "items": [
+          { "id": "CIGARETTES", "name": "Cigarettes", "type": "smoked" },
+          { "id": "NICOTINEPATCH", "name": "Nicotine Patch", "type": "smokeless" }
+        ]
+      },
+      "spelling_corrections": {
+        "version": "fixture-s1",
+        "item_count": 2,
+        "items": [
+          { "id": "spl_001", "name": "HYPRTENSION", "from": "HYPRTENSION", "to": "HYPERTENSION" },
+          { "id": "spl_002", "name": "DIABETIES", "from": "DIABETIES", "to": "DIABETES" }
+        ]
+      }
+    }
+  }
+}

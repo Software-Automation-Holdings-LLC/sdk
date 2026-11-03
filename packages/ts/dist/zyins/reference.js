@@ -9,9 +9,9 @@
  * New code should use `isa.zyins.reference.medications.match(text)` —
  * the bundle is cached inside the facade.
  */
-import { ReferenceIndex, buildUnknownConcept, } from './reference/referenceIndex.js';
-import { _makeKey } from './reference/_makeKey.js';
-export { Sort } from './reference/Sort.js';
+import { _makeKey } from "./reference/_makeKey.js";
+import { buildUnknownConcept, ReferenceIndex } from "./reference/referenceIndex.js";
+export { Sort } from "./reference/Sort.js";
 // Bundle-scoped index cache so repeated `matchMedication` calls against
 // the same bundle reuse one ReferenceIndex.
 const INDEX_CACHE = new WeakMap();

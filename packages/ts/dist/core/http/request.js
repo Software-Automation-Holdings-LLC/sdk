@@ -6,10 +6,10 @@
  * behind injectable facades so the same primitive serves web, React Native,
  * and Node.
  */
-import { DEFAULT_FETCH_TIMEOUT_MS, REQUEST, RETURN_TYPE } from './constants.js';
-import { resolveFetch as resolveFetchFacade } from '../internal/crypto.js';
+import { resolveFetch as resolveFetchFacade } from "../internal/crypto.js";
+import { DEFAULT_FETCH_TIMEOUT_MS, REQUEST, RETURN_TYPE, } from "./constants.js";
 /** Context label passed to runtime resolvers for error attribution. */
-const HTTP_CONTEXT = 'http';
+const HTTP_CONTEXT = "http";
 /** Status codes whose bodies MUST be empty per RFC 7230/9110. */
 const EMPTY_BODY_STATUSES = new Set([204, 205, 304]);
 const noopLogger = {
@@ -34,7 +34,7 @@ export class HttpRequestError extends Error {
     originalError;
     constructor(message, opts = {}) {
         super(message);
-        this.name = 'HttpRequestError';
+        this.name = "HttpRequestError";
         if (opts.status !== undefined)
             this.status = opts.status;
         if (opts.statusText !== undefined)
@@ -62,11 +62,11 @@ export class HttpRequestError extends Error {
  * - 5xx responses: surfaced with `status`, transient (safe to retry).
  */
 export async function httpRequest(opts) {
-    const { url, method = REQUEST.GET, body, otherArgs = {}, returnType = RETURN_TYPE.JSON, debug = false, timeout = DEFAULT_FETCH_TIMEOUT_MS, applyAuthHeaders, fetchImpl, logger = noopLogger, timer = systemTimer } = opts;
+    const { url, method = REQUEST.GET, body, otherArgs = {}, returnType = RETURN_TYPE.JSON, debug = false, timeout = DEFAULT_FETCH_TIMEOUT_MS, applyAuthHeaders, fetchImpl, logger = noopLogger, timer = systemTimer, } = opts;
     if (!url) {
-        const err = new HttpRequestError('URL is required for httpRequest');
+        const err = new HttpRequestError("URL is required for httpRequest");
         if (debug)
-            logger.error('httpRequest error', { error: err, method, body, otherArgs });
+            logger.error("httpRequest error", { error: err, method, body, otherArgs });
         throw err;
     }
     const f = resolveFetchFacade(fetchImpl, HTTP_CONTEXT);
@@ -76,11 +76,11 @@ export async function httpRequest(opts) {
     const { signal, cleanup: cleanupSignal } = composeSignals(timeoutController.signal, callerSignal);
     try {
         const hasBody = body != null && method !== REQUEST.GET && method !== REQUEST.HEAD;
-        const encoded = hasBody ? encodeBody(body) : { wireBody: undefined, authBody: '', contentType: undefined };
+        const encoded = hasBody ? encodeBody(body) : { wireBody: undefined, authBody: "", contentType: undefined };
         const requestInit = {
             method,
-            mode: 'cors',
-            credentials: 'omit',
+            mode: "cors",
+            credentials: "omit",
             ...otherArgs,
             signal,
         };
@@ -92,7 +92,9 @@ export async function httpRequest(opts) {
         if (encoded.contentType !== undefined) {
             requestInit.headers = withDefaultContentType(requestInit.headers, encoded.contentType);
         }
-        requestInit.headers = applyAuthHeaders ? await applyAuthHeaders(url, requestInit.headers, encoded.authBody) : requestInit.headers;
+        requestInit.headers = applyAuthHeaders
+            ? await applyAuthHeaders(url, requestInit.headers, encoded.authBody)
+            : requestInit.headers;
         if (debug) {
             logger.debug(`Making ${method} request to: ${url}`, {
                 method,
@@ -149,8 +151,12 @@ function composeSignals(timeoutSignal, callerSignal) {
     if (!callerSignal)
         return { signal: timeoutSignal, cleanup: () => undefined };
     const anyFactory = AbortSignal.any;
-    if (typeof anyFactory === 'function')
-        return { signal: anyFactory([timeoutSignal, callerSignal]), cleanup: () => undefined };
+    if (typeof anyFactory === "function") {
+        return {
+            signal: anyFactory([timeoutSignal, callerSignal]),
+            cleanup: () => undefined,
+        };
+    }
     const controller = new AbortController();
     let timeoutHandler;
     let callerHandler;
@@ -160,7 +166,7 @@ function composeSignals(timeoutSignal, callerSignal) {
             return;
         }
         const handler = () => controller.abort(src.reason);
-        src.addEventListener('abort', handler, { once: true });
+        src.addEventListener("abort", handler, { once: true });
         if (src === timeoutSignal) {
             timeoutHandler = handler;
         }
@@ -172,9 +178,9 @@ function composeSignals(timeoutSignal, callerSignal) {
     relay(callerSignal);
     const cleanup = () => {
         if (timeoutHandler)
-            timeoutSignal.removeEventListener('abort', timeoutHandler);
+            timeoutSignal.removeEventListener("abort", timeoutHandler);
         if (callerHandler)
-            callerSignal.removeEventListener('abort', callerHandler);
+            callerSignal.removeEventListener("abort", callerHandler);
     };
     return { signal: controller.signal, cleanup };
 }
@@ -192,12 +198,12 @@ function composeSignals(timeoutSignal, callerSignal) {
  *   JSON string that goes on the wire.
  */
 function encodeBody(body) {
-    if (typeof body === 'string')
+    if (typeof body === "string")
         return { wireBody: body, authBody: body, contentType: undefined };
     if (isNativeBodyInit(body))
-        return { wireBody: body, authBody: '', contentType: undefined };
+        return { wireBody: body, authBody: "", contentType: undefined };
     const json = JSON.stringify(body);
-    return { wireBody: json, authBody: json, contentType: 'application/json' };
+    return { wireBody: json, authBody: json, contentType: "application/json" };
 }
 /**
  * Applies `Content-Type: <value>` to `headers` only if no Content-Type (in any
@@ -206,33 +212,33 @@ function encodeBody(body) {
  */
 function withDefaultContentType(headers, value) {
     if (!headers)
-        return { 'Content-Type': value };
+        return { "Content-Type": value };
     if (headers instanceof Headers) {
-        if (headers.has('Content-Type'))
+        if (headers.has("Content-Type"))
             return headers;
         const cloned = new Headers(headers);
-        cloned.set('Content-Type', value);
+        cloned.set("Content-Type", value);
         return cloned;
     }
     if (Array.isArray(headers)) {
-        const hasCT = headers.some(([k]) => k.toLowerCase() === 'content-type');
-        return hasCT ? headers : [...headers, ['Content-Type', value]];
+        const hasCT = headers.some(([k]) => k.toLowerCase() === "content-type");
+        return hasCT ? headers : [...headers, ["Content-Type", value]];
     }
     const record = headers;
-    const hasCT = Object.keys(record).some((k) => k.toLowerCase() === 'content-type');
-    return hasCT ? record : { ...record, 'Content-Type': value };
+    const hasCT = Object.keys(record).some((k) => k.toLowerCase() === "content-type");
+    return hasCT ? record : { ...record, "Content-Type": value };
 }
 function isNativeBodyInit(value) {
-    if (value === null || typeof value !== 'object')
+    if (value === null || typeof value !== "object")
         return false;
     const g = globalThis;
-    if (typeof g.Blob === 'function' && value instanceof g.Blob)
+    if (typeof g.Blob === "function" && value instanceof g.Blob)
         return true;
-    if (typeof g.FormData === 'function' && value instanceof g.FormData)
+    if (typeof g.FormData === "function" && value instanceof g.FormData)
         return true;
-    if (typeof g.URLSearchParams === 'function' && value instanceof g.URLSearchParams)
+    if (typeof g.URLSearchParams === "function" && value instanceof g.URLSearchParams)
         return true;
-    if (typeof g.ReadableStream === 'function' && value instanceof g.ReadableStream)
+    if (typeof g.ReadableStream === "function" && value instanceof g.ReadableStream)
         return true;
     if (value instanceof ArrayBuffer)
         return true;
@@ -259,7 +265,7 @@ async function safeReadText(response) {
         return await response.text();
     }
     catch {
-        return '';
+        return "";
     }
 }
 async function parseResponse(response, returnType, url, logger, debug) {
@@ -279,7 +285,9 @@ async function parseResponse(response, returnType, url, logger, debug) {
         }
     }
     catch (parseError) {
-        const err = new HttpRequestError(`Failed to parse ${returnType} response from ${url}`, { originalError: parseError });
+        const err = new HttpRequestError(`Failed to parse ${returnType} response from ${url}`, {
+            originalError: parseError,
+        });
         if (debug) {
             logger.error(`Error parsing response from ${url}`, {
                 error: err,
@@ -299,14 +307,16 @@ function enhanceError(error, ctx) {
     // Timeout vs. caller-initiated abort: attribute to the caller only when a
     // caller signal exists and is the one that fired. If no caller signal was
     // supplied, any AbortError originated from our timeout.
-    if (error instanceof DOMException && error.name === 'AbortError') {
+    if (error instanceof DOMException && error.name === "AbortError") {
         // Priority order: if the caller's signal has aborted, attribute to the
         // caller (retry is NOT safe — the caller asked us to stop). Otherwise
         // attribute to the timeout. This avoids retrying a cancelled request
         // merely because a coincident deadline also fired.
         const callerAborted = ctx.callerSignal?.aborted ?? false;
         const timedOut = !callerAborted;
-        const message = timedOut ? `Request to ${ctx.url} timed out after ${ctx.timeout}ms` : `Request to ${ctx.url} was aborted by caller`;
+        const message = timedOut
+            ? `Request to ${ctx.url} timed out after ${ctx.timeout}ms`
+            : `Request to ${ctx.url} was aborted by caller`;
         const abortErr = new HttpRequestError(message, { originalError: error, isTransient: timedOut });
         if (ctx.debug)
             ctx.logger.error(`Abort for ${ctx.url}`, { error: abortErr, timedOut });
@@ -315,8 +325,9 @@ function enhanceError(error, ctx) {
     // Network / CORS — TypeError is the signal in browsers and most runtimes.
     if (error instanceof TypeError) {
         const msg = error.message.toLowerCase();
-        const isNetwork = msg.includes('load failed') || msg.includes('network request failed') || msg.includes('failed to fetch');
-        const isCORS = msg.includes('cors') || msg.includes('blocked by cors policy');
+        const isNetwork = msg.includes("load failed") || msg.includes("network request failed")
+            || msg.includes("failed to fetch");
+        const isCORS = msg.includes("cors") || msg.includes("blocked by cors policy");
         const hostname = extractHostname(ctx.url);
         if (isCORS) {
             const corsErr = new HttpRequestError(`CORS error: ${hostname} is not configured to allow cross-origin requests from this domain`, { originalError: error, isCORS: true, isTransient: false });
@@ -326,13 +337,16 @@ function enhanceError(error, ctx) {
                 ctx.logger.error(`CORS error for ${ctx.url}`, {
                     error: corsErr,
                     hostname,
-                    suggestion: 'The server needs to add Access-Control-Allow-Origin headers',
+                    suggestion: "The server needs to add Access-Control-Allow-Origin headers",
                 });
             }
             return corsErr;
         }
         if (isNetwork) {
-            const netErr = new HttpRequestError(`Network error loading resource from ${hostname}: ${error.message}`, { originalError: error, isTransient: true });
+            const netErr = new HttpRequestError(`Network error loading resource from ${hostname}: ${error.message}`, {
+                originalError: error,
+                isTransient: true,
+            });
             if (error.stack)
                 netErr.stack = error.stack;
             if (ctx.debug)

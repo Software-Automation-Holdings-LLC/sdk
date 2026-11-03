@@ -9,17 +9,17 @@
  * Vue installed do not pull it into their bundle.
  */
 
-import { inject, provide, type InjectionKey } from 'vue';
-import { type AuthContext } from '../auth.js';
-import { ZyInsClient, type ZyInsClientOptions } from '../client.js';
+import { inject, type InjectionKey, provide } from "vue";
+import { type AuthContext } from "../auth.js";
+import { ZyInsClient, type ZyInsClientOptions } from "../client.js";
 
 /** Provider config shape mirrors the React provider's. */
-export interface ZyInsProviderConfig extends Omit<ZyInsClientOptions, 'auth'> {
+export interface ZyInsProviderConfig extends Omit<ZyInsClientOptions, "auth"> {
   auth: AuthContext;
 }
 
 /** Symbol-keyed injection slot. */
-export const ZyInsKey: InjectionKey<ZyInsClient> = Symbol('zyins:client');
+export const ZyInsKey: InjectionKey<ZyInsClient> = Symbol("zyins:client");
 
 /**
  * Provide a `ZyInsClient` to descendants. Call from `setup()` of a root
@@ -38,7 +38,7 @@ export function provideZyIns(config: ZyInsProviderConfig): ZyInsClient {
 export function useZyIns(): ZyInsClient {
   const client = inject(ZyInsKey, null);
   if (!client) {
-    throw new Error('useZyIns: called outside provideZyIns(). Call provideZyIns({ auth }) from your root setup().');
+    throw new Error("useZyIns: called outside provideZyIns(). Call provideZyIns({ auth }) from your root setup().");
   }
   return client;
 }

@@ -62,17 +62,17 @@ export class Height {
     /** Construct a height from a feet+inches pair (the natural US input). */
     static fromFeetInches(feet, inches) {
         if (!Number.isFinite(feet) || !Number.isFinite(inches)) {
-            throw new Error('Height.fromFeetInches: feet and inches must be finite numbers');
+            throw new Error("Height.fromFeetInches: feet and inches must be finite numbers");
         }
         if (feet < 0 || inches < 0) {
-            throw new Error('Height.fromFeetInches: feet and inches must be non-negative');
+            throw new Error("Height.fromFeetInches: feet and inches must be non-negative");
         }
         return new Height(Math.round(feet * INCHES_PER_FOOT + inches));
     }
     /** Construct a height from a total inch count (rare; for parity tests). */
     static fromInches(totalInches) {
         if (!Number.isFinite(totalInches) || totalInches < 0) {
-            throw new Error('Height.fromInches: totalInches must be a non-negative number');
+            throw new Error("Height.fromInches: totalInches must be a non-negative number");
         }
         return new Height(Math.round(totalInches));
     }
@@ -91,7 +91,7 @@ export class Weight {
     /** Construct from a pound value (the natural US input). */
     static fromPounds(pounds) {
         if (!Number.isFinite(pounds) || pounds <= 0) {
-            throw new Error('Weight.fromPounds: pounds must be a positive number');
+            throw new Error("Weight.fromPounds: pounds must be a positive number");
         }
         return new Weight(Math.round(pounds));
     }

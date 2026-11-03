@@ -9,10 +9,10 @@
  * license callers receive a stub namespace whose first method call throws
  * `IsaConfigError` with a description of what's missing.
  */
-import { type IsaIdentity } from '../zyins/envFactory.js';
-import { type IsaCredentialState } from '../zyins/credentialState.js';
-import { type Transport } from '../zyins/transport.js';
-import { AccountNamespace } from './index.js';
+import { type IsaCredentialState } from "../zyins/credentialState.js";
+import { type IsaIdentity } from "../zyins/envFactory.js";
+import { type Transport } from "../zyins/transport.js";
+import { AccountNamespace } from "./index.js";
 /** Inputs the unified `Isa` factory hands down for namespace construction. */
 export interface AccountFactoryOptions {
     identity: IsaIdentity;

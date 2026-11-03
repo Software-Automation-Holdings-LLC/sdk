@@ -12,9 +12,9 @@
  * It is never logged, never put on a telemetry payload, and never attached to
  * a thrown error. See `../account/cases` for the enforced guarantee.
  */
-import { type AuthContext } from './auth.js';
-import { type Transport } from './transport.js';
-import { type Clock } from '../core/index.js';
+import { type Clock } from "../core/index.js";
+import { type AuthContext } from "./auth.js";
+import { type Transport } from "./transport.js";
 /**
  * Inputs for `cases.share`. `input` is the quote payload; `results` and
  * `products` are an optional analysis snapshot. All three are encrypted

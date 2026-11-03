@@ -22,71 +22,135 @@
  */
 
 // --- Unified facade ------------------------------------------------------
-export { Isa, ZyInsNamespace, RapidSignNamespace, ProxyNamespace, SESSIONS_REISSUE_PATH, type IsaOptions, type IsaFactoryOptions, type IsaAuthArgs } from './zyins/isa.js';
+export {
+  Isa,
+  type IsaAuthArgs,
+  type IsaFactoryOptions,
+  type IsaOptions,
+  ProxyNamespace,
+  RapidSignNamespace,
+  SESSIONS_PATH,
+  SESSIONS_REISSUE_PATH,
+  ZyInsNamespace,
+} from "./zyins/isa.js";
 
 // --- Account namespace --------------------------------------------------
 export {
-    AccountNamespace,
-    AccountBranding,
-    AccountPreferences,
-    AccountCases,
-    AccountEmail,
-    type AccountNamespaceOptions,
-    type BrandingDetail as AccountBrandingDetail,
-    type BrandingLookupRequest as AccountBrandingLookupRequest,
-    type PreferencesLookupRequest as AccountPreferencesLookupRequest,
-    type PreferencesLookupResult as AccountPreferencesLookupResult,
-    type PreferencesSetRequest as AccountPreferencesSetRequest,
-    type PreferencesSetResult as AccountPreferencesSetResult,
-    type CaseCreateRequest as AccountCaseCreateRequest,
-    type CaseCreateResult as AccountCaseCreateResult,
-    type CaseOpenResult as AccountCaseOpenResult,
-    type CaseEmailRequest as AccountCaseEmailRequest,
-    type CaseEmailResult as AccountCaseEmailResult,
-    type CaseSummary as AccountCaseSummary,
-    type TCaseProduct,
-    type EmailEnqueueRequest as AccountEmailEnqueueRequest,
-    type EmailEnqueueResult as AccountEmailEnqueueResult,
-} from './account/index.js';
+  AccountBranding,
+  AccountCases,
+  AccountEmail,
+  AccountNamespace,
+  type AccountNamespaceOptions,
+  AccountPreferences,
+  type BrandingDetail as AccountBrandingDetail,
+  type BrandingLookupRequest as AccountBrandingLookupRequest,
+  type CaseCreateRequest as AccountCaseCreateRequest,
+  type CaseCreateResult as AccountCaseCreateResult,
+  type CaseEmailRequest as AccountCaseEmailRequest,
+  type CaseEmailResult as AccountCaseEmailResult,
+  type CaseOpenResult as AccountCaseOpenResult,
+  type CaseSummary as AccountCaseSummary,
+  type EmailEnqueueRequest as AccountEmailEnqueueRequest,
+  type EmailEnqueueResult as AccountEmailEnqueueResult,
+  type PreferencesLookupRequest as AccountPreferencesLookupRequest,
+  type PreferencesLookupResult as AccountPreferencesLookupResult,
+  type PreferencesSetRequest as AccountPreferencesSetRequest,
+  type PreferencesSetResult as AccountPreferencesSetResult,
+  type TCaseProduct,
+} from "./account/index.js";
 
 // --- Auth / identity / env factory --------------------------------------
 // `SessionIdentity` and `resolveSessionIdentity` are intentionally omitted
 // from the public surface — sessions are SDK-internal refresh state minted
 // by `Isa.withKeycode` / `Isa.forForm`, not a consumer-constructed auth
 // mode (sdk-syntax-proposal.md §4 + §6).
-export { type IsaIdentity, type BearerIdentity, type LicenseIdentity, resolveBearerIdentity, resolveLicenseIdentity, ENV_VAR_NAMES } from './zyins/envFactory.js';
+export { type AuthContext, isAuthContext } from "./zyins/auth.js";
+export {
+  type BearerIdentity,
+  ENV_VAR_NAMES,
+  type IsaIdentity,
+  type LicenseIdentity,
+  resolveBearerIdentity,
+  resolveLicenseIdentity,
+} from "./zyins/envFactory.js";
 
 // --- Errors -------------------------------------------------------------
 // One hierarchy: every error descends from `IsaError`; the product and failure
 // kind live in `code`, not in a parallel class tree (Stripe/AWS convention).
 export {
-    IsaError,
-    IsaApiError,
-    IsaConfigError,
-    IsaCaseExpiredError,
-    IsaIdempotencyConflictError,
-    IsaLicenseError,
-    IsaNotActivatedError,
-    IsaRateLimitError,
-    IsaTimeoutError,
-    IsaUnauthorizedError,
-    IsaValidationError,
-    type IsaLicenseErrorCode,
-    type IsaNotActivatedCode,
-} from './zyins/apiError.js';
+  IsaApiError,
+  IsaCaseExpiredError,
+  IsaConfigError,
+  IsaError,
+  IsaIdempotencyConflictError,
+  IsaLicenseError,
+  type IsaLicenseErrorCode,
+  type IsaNotActivatedCode,
+  IsaNotActivatedError,
+  isApiError,
+  IsaRateLimitError,
+  IsaTimeoutError,
+  IsaUnauthorizedError,
+  IsaValidationError,
+  isIdempotencyConflictError,
+  isNotActivatedError,
+} from "./zyins/apiError.js";
 
 // --- Case crypto (zero-knowledge envelope) ------------------------------
-export { encryptCase, decryptCase, IsaCaseDecryptError, type TCaseEnvelope, type TEncryptedCase, type TCaseCryptoOptions } from './account/caseCrypto.js';
+export {
+  decryptCase,
+  encryptCase,
+  IsaCaseDecryptError,
+  type TCaseCryptoOptions,
+  type TCaseEnvelope,
+  type TEncryptedCase,
+} from "./account/caseCrypto.js";
 
 // --- Envelope -----------------------------------------------------------
-export { type Envelope, type RawResponse, type RawResponseResult } from './zyins/envelope.js';
-export { canonicalString, formatTimestamp, signRequest, type SignClock, type SignRequestHeaders, type SignRequestInput, type SignRequestResult } from './core/auth/signRequest.js';
+export {
+  canonicalString,
+  formatTimestamp,
+  type SignClock,
+  signRequest,
+  type SignRequestHeaders,
+  type SignRequestInput,
+  type SignRequestResult,
+} from "./core/auth/signRequest.js";
+export { type Envelope, type RawResponse, type RawResponseResult } from "./zyins/envelope.js";
 
 // --- Value types / domain primitives (zyins-flavored, public) ----------
-export { Sex, NicotineUsage, NicotineDuration, Height, Weight, type Applicant, type Medication, type Condition, type NicotineUsageInput, type NicotineProductUsage } from './zyins/applicant.js';
-export { Coverage, QuoteType, isMulti, type CoverageInput, type CoverageType, type SingleCoverage, type MultiCoverage, type FaceValueCoverage, type MonthlyBudgetCoverage } from './zyins/coverage.js';
-export { ProductSelection, ProductClass, ProductType, Products, type Product, type ProductClassValue } from './zyins/product.js';
-export { MinRank, type MinRankValue } from './zyins/minRank.js';
+export {
+  type Applicant,
+  type Condition,
+  Height,
+  type Medication,
+  NicotineDuration,
+  type NicotineProductUsage,
+  NicotineUsage,
+  type NicotineUsageInput,
+  Sex,
+  Weight,
+} from "./zyins/applicant.js";
+export {
+  Coverage,
+  type CoverageInput,
+  type CoverageType,
+  type FaceValueCoverage,
+  isMulti,
+  type MonthlyBudgetCoverage,
+  type MultiCoverage,
+  QuoteType,
+  type SingleCoverage,
+} from "./zyins/coverage.js";
+export { MinRank, type MinRankValue } from "./zyins/minRank.js";
+export {
+  type Product,
+  ProductClass,
+  type ProductClassValue,
+  Products,
+  ProductSelection,
+  ProductType,
+} from "./zyins/product.js";
 
 // --- Reference catalog (typed concepts, sort, adapters) ----------------
 // `ReferenceSort` + the concept/adapter types are the surface bpp2.0 (and
@@ -95,147 +159,171 @@ export { MinRank, type MinRankValue } from './zyins/minRank.js';
 // resolves without a per-consumer shim; the `./zyins` subpath in
 // `package.json#exports` exposes the same names under a namespaced path.
 export {
-    ReferenceSort,
-    type DatasetBundleV3,
-    type DatasetCategory,
-    type DatasetEntry,
-    type ReferenceEntity,
-    type ConditionEntity,
-    type ConditionTreatedWith,
-    type MedicationEntity,
-    type MedicationUsedFor,
-    type NicotineOptionEntity,
-    type SpellingCorrectionEntity,
-    type Concept,
-    type ConceptKind,
-    type ConditionConcept,
-    type MedicationConcept,
-    type UnknownConcept,
-    type Suggestion,
-    type Autocorrector,
-    type AutocorrectOptions,
-    type MatchAlgorithm,
-    // `FuzzyMatchAlgorithm` is the opt-in typo-tolerant matcher. The class
-    // (not just its type) is re-exported here so integrators can construct
-    // it from the package root — `new FuzzyMatchAlgorithm({ frequencies })`
-    // — and pass it to `Isa.withKeycode({ matchAlgorithm })`. The default
-    // matcher stays `DefaultMatchAlgorithm`; this is purely additive.
-    FuzzyMatchAlgorithm,
-    type FuzzyMatchAlgorithmOptions,
-    type AutocompleteAlgorithm,
-    type AutocompleteOptions,
-    type ReferenceAdapters,
-} from './zyins/index.js';
+  ApiDatasetSource,
+  type AutocompleteAlgorithm,
+  type AutocompleteOptions,
+  type AutocorrectOptions,
+  type Autocorrector,
+  type Concept,
+  type ConceptKind,
+  type ConditionConcept,
+  type ConditionEntity,
+  type ConditionTreatedWith,
+  type DatasetBundleV3,
+  type DatasetCategory,
+  type DatasetEntry,
+  type DatasetSource,
+  DatasetSourceError,
+  type DatasetSourceInput,
+  // Pluggable dataset source — load the reference bundle from a local
+  // file (offline `conditions.match`) instead of the API. Purely
+  // additive; the API path stays the default.
+  FileDatasetSource,
+  type FileReader,
+  // `FuzzyMatchAlgorithm` is the opt-in typo-tolerant matcher. The class
+  // (not just its type) is re-exported here so integrators can construct
+  // it from the package root — `new FuzzyMatchAlgorithm({ frequencies })`
+  // — and pass it to `Isa.withKeycode({ matchAlgorithm })`. The default
+  // matcher stays `DefaultMatchAlgorithm`; this is purely additive.
+  FuzzyMatchAlgorithm,
+  type FuzzyMatchAlgorithmOptions,
+  type MatchAlgorithm,
+  type MedicationConcept,
+  type MedicationEntity,
+  type MedicationUsedFor,
+  type NicotineOptionEntity,
+  type OnMissingHook,
+  platformFileReader,
+  type ReferenceAdapters,
+  type ReferenceEntity,
+  ReferenceSort,
+  ResolvingDatasetSource,
+  type SpellingCorrectionEntity,
+  StaticDatasetSource,
+  type Suggestion,
+  toDatasetSource,
+  type UnknownConcept,
+} from "./zyins/index.js";
 
 // --- Prequalify v2 (typed offer surface) -------------------------------
 export {
-    type PrequalifyV2Request,
-    type PrequalifyV2Result,
-    type PrequalifyV2Options,
-    type PlanOffer,
-    type OtherOffer,
-    type OfferEligibility,
-    type OfferCategory,
-    type OfferCarrier,
-    type OfferProduct,
-    type OfferPlanInfo,
-    type OfferPlanInfoItem,
-    type OfferPlanInfoLegacy,
-    type OfferDeathBenefit,
-    type OfferPremium,
-    type OfferMoney,
-} from './zyins/prequalify-v2.js';
+  type OfferCarrier,
+  type OfferCategory,
+  type OfferDeathBenefit,
+  type OfferEligibility,
+  type OfferMoney,
+  type OfferPlanInfo,
+  type OfferPlanInfoItem,
+  type OfferPlanInfoLegacy,
+  type OfferPremium,
+  type OfferProduct,
+  type OtherOffer,
+  type PlanOffer,
+  type PrequalifyV2Options,
+  type PrequalifyV2Request,
+  type PrequalifyV2Result,
+} from "./zyins/prequalify-v2.js";
 
 // --- Prequalify (canonical, de-versioned) ------------------------------
 // The unversioned surface integrators import from the package root. The SDK
 // routes these to the active /vN internally; the call site never changes.
 export {
-    type PrequalifyRequest,
-    type PrequalifyResult,
-    type PrequalifyPlan,
-    type Plan,
-    type PrequalifyOptions,
-    type PrequalifyResultMeta,
-    type SinglePrequalifyResult,
-    type MultiPrequalifyResult,
-} from './zyins/prequalify.js';
+  type MultiPrequalifyResult,
+  type Plan,
+  type PrequalifyOptions,
+  type PrequalifyPlan,
+  type PrequalifyRequest,
+  type PrequalifyResult,
+  type PrequalifyResultMeta,
+  type SinglePrequalifyResult,
+} from "./zyins/prequalify.js";
 
 // --- Prequalify v3 (request + pricing surface) -------------------------
 // The v3 surface integrators import from the package root: the request type
 // they construct and the result/pricing types they read.
+export { formatMoney, type FormatMoneyOptions } from "./zyins/money.js";
 export {
-    byAmount,
-    offerPremium,
-    type PrequalifyV3Request,
-    type PrequalifyV3Result,
-    type PrequalifyV3Options,
-    type V3Offer,
-    type V3Eligibility,
-    type V3EligibilityCategory,
-    type V3Amount,
-    type V3Money,
-    type V3Period,
-    type V3Premium,
-    type V3PricingRow,
-} from './zyins/prequalify-v3.js';
+  byAmount,
+  offerPremium,
+  type PrequalifyV3Options,
+  type PrequalifyV3Request,
+  type PrequalifyV3Result,
+  type V3Amount,
+  type V3Eligibility,
+  type V3EligibilityCategory,
+  type V3Money,
+  type V3Offer,
+  type V3Period,
+  type V3Premium,
+  type V3PricingRow,
+} from "./zyins/prequalify-v3.js";
 
 // --- IsaOptions sugar constructor -------------------------------------
+export type { CaseRecord, CaseStorage, CaseStoragePutResult } from "./zyins/cases/CaseStorage.js";
+export { ZeroKnowledgeCaseStorage } from "./zyins/cases/ZeroKnowledgeCaseStorage.js";
 export {
-    BearerAuth,
-    LicenseAuth,
-    FormAuth,
-    RemoteEngine,
-    LocalEngine,
-    ProxyEngine,
-    InMemoryEngine,
-    inMemoryEngineWith,
-    resolveIsaOptions,
-    DEFAULT_TIMEOUT_MS,
-    BundledApiVersions,
-    resolveApiVersions,
-    type IsaApiVersion,
-    type IsaApiVersionOverride,
-    type IsaApiSurface,
-    type IsaAuthSupplier,
-    type IsaEngine,
-    type IsaCreateOptions,
-    type ResolvedIsaOptions,
-} from './zyins/isaOptions.js';
-export type { CaseStorage, CaseRecord, CaseStoragePutResult } from './zyins/cases/CaseStorage.js';
-export { ZeroKnowledgeCaseStorage } from './zyins/cases/ZeroKnowledgeCaseStorage.js';
+  BearerAuth,
+  BundledApiVersions,
+  DEFAULT_TIMEOUT_MS,
+  FormAuth,
+  InMemoryEngine,
+  inMemoryEngineWith,
+  type IsaApiSurface,
+  type IsaApiVersion,
+  type IsaApiVersionOverride,
+  type IsaAuthSupplier,
+  type IsaCreateOptions,
+  type IsaEngine,
+  LicenseAuth,
+  LocalEngine,
+  ProxyEngine,
+  RemoteEngine,
+  resolveApiVersions,
+  type ResolvedIsaOptions,
+  resolveIsaOptions,
+} from "./zyins/isaOptions.js";
 
 // --- Logos (public images; no auth) ------------------------------------
-export { type LogosGetOptions, type LogosFetch, type LogosResponse } from './zyins/logos.js';
+export { type LogosFetch, type LogosGetOptions, type LogosResponse } from "./zyins/logos.js";
 
 // --- Generated catalogs -------------------------------------------------
 // Every name in this block is produced by `scripts/gen-catalog.mjs`. See
 // `src/catalog/` for the source modules and `docs/SDK_DESIGN.md` §5.1
 // for the named-export contract.
 export {
-    // Legacy flat slug enum + accessor from `src/catalog/products.ts`.
-    // The typed Product interface and nested `Products` namespace exported
-    // above (from `./zyins/product`) shadow these names; consumers needing the
-    // legacy flat enum should import from `./catalog/products` directly.
-    Product as ProductSlug,
-    Products as ProductSlugs,
-    type ProductMetadata,
-    State,
-    States,
-    type StateMetadata,
-    ProductCarriers,
-    type ProductCarrierMetadata,
-    ConditionCategories,
-    type ConditionCategoryMetadata,
-    MedicationUses,
-    type MedicationUseMetadata,
-    Scope,
-    ScopeDescriptions,
-    SignEvent,
-    SignEventLabels,
-    ErrorCode,
-    ErrorAdviceCodes,
-    ErrorDocUrls,
-} from './catalog/index.js';
+  ConditionCategories,
+  type ConditionCategoryMetadata,
+  ErrorAdviceCodes,
+  ErrorCode,
+  ErrorDocUrls,
+  // Legacy flat slug enum + accessor from `src/catalog/products.ts`.
+  // The typed Product interface and nested `Products` namespace exported
+  // above (from `./zyins/product`) shadow these names; consumers needing the
+  // legacy flat enum should import from `./catalog/products` directly.
+  Product as ProductSlug,
+  type ProductCarrierMetadata,
+  ProductCarriers,
+  type ProductMetadata,
+  Products as ProductSlugs,
+  Scope,
+  ScopeDescriptions,
+  SignEvent,
+  SignEventLabels,
+  State,
+  type StateMetadata,
+  States,
+} from "./catalog/index.js";
 
 // --- Debug logger / env reader -----------------------------------------
-export { type DebugLogger, type EnvReader, type LogSink, debugLoggerFromEnv, makeLogger, redactHeaders, redactBody, redactBodyString, processEnv, stderrSink } from './zyins/logger.js';
+export {
+  type DebugLogger,
+  debugLoggerFromEnv,
+  type EnvReader,
+  type LogSink,
+  makeLogger,
+  processEnv,
+  redactBody,
+  redactBodyString,
+  redactHeaders,
+  stderrSink,
+} from "./zyins/logger.js";

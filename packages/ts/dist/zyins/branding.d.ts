@@ -11,9 +11,9 @@
  * Returns a zero-value `BrandingDetail` when no row exists; the server
  * deliberately does NOT 404 for missing branding rows.
  */
-import { type AuthContext } from './auth.js';
-import { type Transport } from './transport.js';
-import { type Clock } from '../core/index.js';
+import { type Clock } from "../core/index.js";
+import { type AuthContext } from "./auth.js";
+import { type Transport } from "./transport.js";
 /** Whitelabel detail returned by `branding.lookup`. */
 export interface BrandingDetail {
     imoName: string;

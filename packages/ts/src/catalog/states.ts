@@ -198,16 +198,18 @@ const BY_NAME: Readonly<Record<string, string>> = Object.freeze({
 const ALL_STATES: readonly State[] = Object.freeze(Object.values(State) as State[]);
 
 export const States = Object.freeze({
+  /** Return every state and territory abbreviation in display-name order. */
   values(): readonly State[] {
     return ALL_STATES;
   },
+  /** Return state metadata entries in display-name order. */
   entries(): ReadonlyArray<readonly [State, StateMetadata]> {
     return ALL_STATES.map((s) => [s, METADATA[s]!] as const);
   },
+  /** Return metadata for a state abbreviation, or throw for unknown input. */
   metadata(s: State): StateMetadata {
-    const m = METADATA[s];
-    if (!m) throw new Error(`States.metadata: unknown state '${s}'`);
-    return m;
+    if (!Object.hasOwn(METADATA, s)) throw new Error(`States.metadata: unknown state '${s}'`);
+    return METADATA[s]!;
   },
   /**
    * Look up a state by its ISO abbreviation (case-insensitive) or by its
@@ -216,8 +218,8 @@ export const States = Object.freeze({
    */
   byAbbreviation(abbr: string): State | undefined {
     const upper = abbr.toUpperCase();
-    if (upper in METADATA) return upper as State;
-    const fromName = BY_NAME[abbr.toLowerCase()];
-    return fromName ? (fromName as State) : undefined;
+    if (Object.hasOwn(METADATA, upper)) return upper as State;
+    const lower = abbr.toLowerCase();
+    return Object.hasOwn(BY_NAME, lower) ? (BY_NAME[lower] as State) : undefined;
   },
 });

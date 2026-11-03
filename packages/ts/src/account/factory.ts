@@ -10,12 +10,12 @@
  * `IsaConfigError` with a description of what's missing.
  */
 
-import { type IsaIdentity } from '../zyins/envFactory.js';
-import { IsaConfigError } from '../zyins/apiError.js';
-import { type IsaCredentialState } from '../zyins/credentialState.js';
-import { DEFAULT_ZYINS_BASE_URL } from '../zyins/client.js';
-import { type Transport } from '../zyins/transport.js';
-import { AccountNamespace } from './index.js';
+import { IsaConfigError } from "../zyins/apiError.js";
+import { DEFAULT_ZYINS_BASE_URL } from "../zyins/client.js";
+import { type IsaCredentialState } from "../zyins/credentialState.js";
+import { type IsaIdentity } from "../zyins/envFactory.js";
+import { type Transport } from "../zyins/transport.js";
+import { AccountNamespace } from "./index.js";
 
 /** Inputs the unified `Isa` factory hands down for namespace construction. */
 export interface AccountFactoryOptions {
@@ -37,7 +37,7 @@ export interface AccountFactoryOptions {
 
 /** Build the `isa.account` namespace from the unified `Isa` options. */
 export function buildAccountNamespace(opts: AccountFactoryOptions): AccountNamespace {
-  if (opts.identity.mode !== 'license') {
+  if (opts.identity.mode !== "license") {
     return throwingNamespace(
       `isa.account.* methods currently require Isa.withKeycode() — bearer and session transport wiring lands in Phase 3 of SDK_DESIGN.md`,
     );

@@ -1,13 +1,13 @@
 /**
  * Wire helpers for the zero-knowledge case store: share-link assembly +
  * parsing, and response decoding for `/v1/case`. Kept separate from the
- * operation logic in `cases.ts` so each file stays focused (link/​parse vs.
+ * operation logic in `cases.ts` so each file stays focused (link/parse vs.
  * transport orchestration).
  *
  * The link is the capability: it carries the case id in the path and the
  * decryption key in the `#k=` fragment. These helpers never log it.
  */
-import { type TCaseEnvelope } from './caseCrypto.js';
+import { type TCaseEnvelope } from "./caseCrypto.js";
 /** A case's id and fragment key, parsed out of a share link. */
 export interface TParsedLink {
     id: string;

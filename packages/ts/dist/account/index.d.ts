@@ -17,13 +17,13 @@
  * deprecated `isa.account.referenceData` surface has been removed per
  * `/tmp/sdk-syntax-proposal.md` post-lock correction #3.
  */
-import { type AuthContext } from './auth.js';
-import { type Transport } from '../zyins/transport.js';
-import { type Clock } from '../core/index.js';
-import { type BrandingDetail, type BrandingLookupRequest } from './branding.js';
-import { type PreferencesLookupRequest, type PreferencesLookupResult, type PreferencesSetRequest, type PreferencesSetResult } from './preferences.js';
-import { type CaseCreateRequest, type CaseCreateResult, type CaseOpenResult, type CaseEmailRequest, type CaseEmailResult, type CaseSummary, type TCaseProduct } from './cases.js';
-import { type EmailEnqueueRequest, type EmailEnqueueResult } from './email.js';
+import { type Clock } from "../core/index.js";
+import { type Transport } from "../zyins/transport.js";
+import { type AuthContext } from "./auth.js";
+import { type BrandingDetail, type BrandingLookupRequest } from "./branding.js";
+import { type CaseCreateRequest, type CaseCreateResult, type CaseEmailRequest, type CaseEmailResult, type CaseOpenResult, type CaseSummary, type TCaseProduct } from "./cases.js";
+import { type EmailEnqueueRequest, type EmailEnqueueResult } from "./email.js";
+import { type PreferencesLookupRequest, type PreferencesLookupResult, type PreferencesSetRequest, type PreferencesSetResult } from "./preferences.js";
 /** Construction options for {@link AccountNamespace}. */
 export interface AccountNamespaceOptions {
     auth: AuthContext;
@@ -123,5 +123,5 @@ export declare class AccountEmail {
     constructor(ctx: OperationContext);
     enqueue(request: EmailEnqueueRequest): Promise<EmailEnqueueResult>;
 }
-export type { BrandingDetail, BrandingLookupRequest, PreferencesLookupRequest, PreferencesLookupResult, PreferencesSetRequest, PreferencesSetResult, CaseCreateRequest, CaseCreateResult, CaseOpenResult, CaseEmailRequest, CaseEmailResult, CaseSummary, TCaseProduct, EmailEnqueueRequest, EmailEnqueueResult, };
+export type { BrandingDetail, BrandingLookupRequest, CaseCreateRequest, CaseCreateResult, CaseEmailRequest, CaseEmailResult, CaseOpenResult, CaseSummary, EmailEnqueueRequest, EmailEnqueueResult, PreferencesLookupRequest, PreferencesLookupResult, PreferencesSetRequest, PreferencesSetResult, TCaseProduct, };
 //# sourceMappingURL=index.d.ts.map

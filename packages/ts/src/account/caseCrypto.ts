@@ -15,14 +15,14 @@
  */
 
 import {
-  resolveSubtle,
   base64ToBytes,
   bytesToBase64,
   bytesToBase64Url,
-  systemRandomBytes,
   type RandomBytes,
-} from '../core/index.js';
-import { IsaError } from '../zyins/apiError.js';
+  resolveSubtle,
+  systemRandomBytes,
+} from "../core/index.js";
+import { IsaError } from "../zyins/apiError.js";
 
 /** AES-128 data-key length in bytes used for fresh case keys. Decrypt is
  * length-agnostic, so 256-bit (32-byte) keys from earlier envelopes still
@@ -35,10 +35,10 @@ const TAG_BITS = 128;
 /** AES-GCM authentication-tag length in bytes. */
 const TAG_BYTES = TAG_BITS / 8;
 /** WebCrypto algorithm name for the data-key import + AES-GCM operations. */
-const ALGORITHM = 'AES-GCM';
+const ALGORITHM = "AES-GCM";
 
 /** Context label passed to runtime resolvers for error attribution. */
-const CASE_CRYPTO_CONTEXT = 'CaseCrypto';
+const CASE_CRYPTO_CONTEXT = "CaseCrypto";
 
 /** The opaque crypto fields the server stores, all base64 (std alphabet). */
 export interface TCaseEnvelope {
@@ -74,7 +74,7 @@ export interface TCaseCryptoOptions {
 export class IsaCaseDecryptError extends IsaError {
   constructor(message: string) {
     super(message);
-    this.name = 'IsaCaseDecryptError';
+    this.name = "IsaCaseDecryptError";
   }
 }
 
@@ -99,10 +99,10 @@ export async function encryptCase(
   const random = options.randomBytes ?? systemRandomBytes;
   const rawKey = random(KEY_BYTES);
   const iv = random(IV_BYTES);
-  const key = await importKey(subtle, rawKey, ['encrypt']);
+  const key = await importKey(subtle, rawKey, ["encrypt"]);
   const serialized = JSON.stringify(payload);
   if (serialized === undefined) {
-    throw new Error('CaseCrypto: payload must be JSON-serializable');
+    throw new Error("CaseCrypto: payload must be JSON-serializable");
   }
   const plaintext = new TextEncoder().encode(serialized);
   const sealed = new Uint8Array(
@@ -138,7 +138,7 @@ export async function decryptCase(
   const subtle = resolveSubtle(options.subtle, CASE_CRYPTO_CONTEXT);
   const rawKey = base64ToBytes(keyFragment);
   const iv = base64ToBytes(envelope.iv);
-  const key = await importKey(subtle, rawKey, ['decrypt']);
+  const key = await importKey(subtle, rawKey, ["decrypt"]);
   const sealed = concat(base64ToBytes(envelope.ciphertext), base64ToBytes(envelope.tag));
   const plaintext = await openSealed(subtle, key, iv, product, sealed);
   return JSON.parse(new TextDecoder().decode(plaintext)) as unknown;
@@ -150,7 +150,7 @@ function importKey(
   rawKey: Uint8Array,
   usages: readonly KeyUsage[],
 ): Promise<CryptoKey> {
-  return subtle.importKey('raw', toArrayBuffer(rawKey), { name: ALGORITHM }, false, [...usages]);
+  return subtle.importKey("raw", toArrayBuffer(rawKey), { name: ALGORITHM }, false, [...usages]);
 }
 
 /** Builds the AES-GCM parameter bag with `product` bound as AEAD data. */
@@ -187,7 +187,9 @@ async function openSealed(
     return new Uint8Array(await subtle.decrypt(gcmParams(iv, product), key, toArrayBuffer(sealed)));
   } catch (err) {
     throw new IsaCaseDecryptError(
-      `case envelope failed authentication for product ${product}: wrong key, wrong product, or tampered ciphertext (${(err as Error).message})`,
+      `case envelope failed authentication for product ${product}: wrong key, wrong product, or tampered ciphertext (${
+        (err as Error).message
+      })`,
     );
   }
 }

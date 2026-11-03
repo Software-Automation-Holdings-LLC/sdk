@@ -11,17 +11,11 @@
  * @see go/zyins/server/device_signature.go
  */
 
-import {
-  base64EncodeUtf8,
-  resolveSubtle,
-  arrayBufferToHex,
-  type Clock,
-  systemClock,
-} from '../internal/crypto.js';
+import { arrayBufferToHex, base64EncodeUtf8, type Clock, resolveSubtle, systemClock } from "../internal/crypto.js";
 
-const QUOTE_CHAR = '"';
+const QUOTE_CHAR = "\"";
 /** Module label used for error attribution by runtime resolvers. */
-const LICENSE_CONTEXT = 'License';
+const LICENSE_CONTEXT = "License";
 /** Prefix for errors raised inside the License module. */
 const LICENSE_ERROR_PREFIX = `${LICENSE_CONTEXT}: `;
 
@@ -52,13 +46,13 @@ export const computeDeviceSignature = async (
   const cleanDeviceId = stripQuotes(deviceId);
   const encoder = new TextEncoder();
   const key = await cryptoSubtle.importKey(
-    'raw',
+    "raw",
     encoder.encode(cleanDeviceId),
-    { name: 'HMAC', hash: 'SHA-256' },
+    { name: "HMAC", hash: "SHA-256" },
     false,
-    ['sign'],
+    ["sign"],
   );
-  const signature = await cryptoSubtle.sign('HMAC', key, encoder.encode(body));
+  const signature = await cryptoSubtle.sign("HMAC", key, encoder.encode(body));
   return arrayBufferToHex(signature);
 };
 
@@ -88,11 +82,11 @@ export const buildLicenseHeader = (
  */
 export interface LicenseHMACHeaders {
   Authorization: string;
-  'X-Device-ID': string;
-  'X-Device-Signature': string;
-  'X-License-Method': string;
-  'X-License-URI': string;
-  'X-License-Timestamp': string;
+  "X-Device-ID": string;
+  "X-Device-Signature": string;
+  "X-License-Method": string;
+  "X-License-URI": string;
+  "X-License-Timestamp": string;
 }
 
 /**
@@ -133,11 +127,11 @@ export const buildLicenseHMACHeaders = async (
   const signature = await computeDeviceSignature(body, deviceId, subtle);
   return {
     Authorization: buildLicenseHeader(licenseKey, orderId, email),
-    'X-Device-ID': stripQuotes(deviceId),
-    'X-Device-Signature': signature,
-    'X-License-Method': method,
-    'X-License-URI': requestURI,
-    'X-License-Timestamp': timestamp,
+    "X-Device-ID": stripQuotes(deviceId),
+    "X-Device-Signature": signature,
+    "X-License-Method": method,
+    "X-License-URI": requestURI,
+    "X-License-Timestamp": timestamp,
   };
 };
 

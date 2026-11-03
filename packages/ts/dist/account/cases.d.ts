@@ -19,8 +19,8 @@
  * caller already holds. Downstream consumers (bpp2.0, Phase 3) must scrub
  * `location.hash` before any telemetry call.
  */
-import { type TCaseListEntry } from './caseWire.js';
-import { type TCaseRequestContext } from './caseTransport.js';
+import { type TCaseRequestContext } from "./caseTransport.js";
+import { type TCaseListEntry } from "./caseWire.js";
 /**
  * Default share-link viewer origin. The SDK appends `/<code>#k=<key>`; any
  * product prefix rides inside this base URL so a deployment can point the
@@ -32,7 +32,7 @@ export declare const DEFAULT_CASE_VIEWER_BASE_URL = "https://link.isaapi.com";
  * mirrors the known zyins #363 product set while preserving server-side
  * forward compatibility for future product values.
  */
-export type TCaseProduct = 'zyins' | 'eapp' | 'rapidsign' | (string & {});
+export type TCaseProduct = "zyins" | "eapp" | "rapidsign" | (string & {});
 /** Inputs for `account.cases.create`. */
 export interface CaseCreateRequest {
     /** Routing tag stored cleartext and bound as AEAD data during encryption. */

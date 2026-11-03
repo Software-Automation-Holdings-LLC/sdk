@@ -11,17 +11,17 @@
  * Build-time guarantee that nothing reintroduces a `documents.get` verb.
  */
 
-import { describe, expectTypeOf, it } from 'vitest';
-import { Isa } from '../../src';
+import { describe, expectTypeOf, it } from "vitest";
+import { Isa } from "../../src";
 
-describe('documents.get is intentionally absent (Appendix B.5)', () => {
-    type Isa$ = InstanceType<typeof Isa>;
-    type RapidSign = Isa$['rapidsign'];
-    type Documents = RapidSign extends { documents: infer D } ? D : never;
+describe("documents.get is intentionally absent (Appendix B.5)", () => {
+  type Isa$ = InstanceType<typeof Isa>;
+  type RapidSign = Isa$["rapidsign"];
+  type Documents = RapidSign extends { documents: infer D } ? D : never;
 
-    it('rapidsign.documents has no `get` member', () => {
-        // TODO: green after feat/sdk-locked-syntax lands — current shim may still expose .get.
-        type HasGet = Documents extends { get: unknown } ? true : false;
-        expectTypeOf<HasGet>().toEqualTypeOf<false>();
-    });
+  it("rapidsign.documents has no `get` member", () => {
+    // TODO: green after feat/sdk-locked-syntax lands — current shim may still expose .get.
+    type HasGet = Documents extends { get: unknown } ? true : false;
+    expectTypeOf<HasGet>().toEqualTypeOf<false>();
+  });
 });

@@ -69,10 +69,10 @@ export function optimalStringAlignmentDistance(
         (prev[j - 1] ?? 0) + cost, // substitution
       );
       if (
-        i > 1 &&
-        j > 1 &&
-        a.charAt(i - 1) === b.charAt(j - 2) &&
-        a.charAt(i - 2) === b.charAt(j - 1)
+        i > 1
+        && j > 1
+        && a.charAt(i - 1) === b.charAt(j - 2)
+        && a.charAt(i - 2) === b.charAt(j - 1)
       ) {
         value = Math.min(value, (prevPrev[j - 2] ?? 0) + 1); // transposition
       }

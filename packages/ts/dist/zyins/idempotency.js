@@ -11,12 +11,12 @@
  * custom key for advanced cases (replay testing); the default never asks
  * the caller to "make one up".
  */
-import { arrayBufferToHex, resolveSubtle } from '../core/index.js';
+import { arrayBufferToHex, resolveSubtle } from "../core/index.js";
 /** Derive the deterministic idempotency key for a Tier 3 operation. */
 export async function deriveIdempotencyKey(args) {
-    const subtle = resolveSubtle(args.subtle, 'ZyInsIdempotency');
+    const subtle = resolveSubtle(args.subtle, "ZyInsIdempotency");
     const canonical = `${args.deviceId}:${args.op}:${args.body}`;
-    const digest = await subtle.digest('SHA-256', new TextEncoder().encode(canonical));
+    const digest = await subtle.digest("SHA-256", new TextEncoder().encode(canonical));
     return arrayBufferToHex(digest);
 }
 //# sourceMappingURL=idempotency.js.map

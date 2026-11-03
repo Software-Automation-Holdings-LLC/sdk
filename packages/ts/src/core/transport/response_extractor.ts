@@ -13,14 +13,14 @@
  */
 
 export interface Envelope<T = unknown> {
-    object: string;
-    livemode: boolean;
-    request_id: string;
-    data: T;
+  object: string;
+  livemode: boolean;
+  request_id: string;
+  data: T;
 }
 
-export const ERR_ENVELOPE_MISSING_DATA = 'transport: response envelope has no data field';
-export const ERR_ENVELOPE_SHAPE = 'transport: response body is not a JSON object';
+export const ERR_ENVELOPE_MISSING_DATA = "transport: response envelope has no data field";
+export const ERR_ENVELOPE_SHAPE = "transport: response body is not a JSON object";
 
 /**
  * Validator narrows an unknown JSON value into a typed payload. Throws
@@ -34,14 +34,14 @@ export const ERR_ENVELOPE_SHAPE = 'transport: response body is not a JSON object
 export type DataValidator<T> = (raw: unknown) => T;
 
 function isJSONObject(value: unknown): value is Record<string, unknown> {
-    return typeof value === 'object' && value !== null && !Array.isArray(value);
+  return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
 function readEnvelope(parsed: unknown): Record<string, unknown> {
-    if (!isJSONObject(parsed)) {
-        throw new Error(ERR_ENVELOPE_SHAPE);
-    }
-    return parsed;
+  if (!isJSONObject(parsed)) {
+    throw new Error(ERR_ENVELOPE_SHAPE);
+  }
+  return parsed;
 }
 
 /**
@@ -51,17 +51,17 @@ function readEnvelope(parsed: unknown): Record<string, unknown> {
  * propagating into application code.
  */
 export async function extractData<T>(response: Response, validator: DataValidator<T>): Promise<T> {
-    if (!response) {
-        throw new Error('transport: extractData requires a Response');
-    }
-    if (!validator) {
-        throw new Error('transport: extractData requires a DataValidator (use generated validator from sdk/<product>)');
-    }
-    const env = readEnvelope(await response.json());
-    if (!('data' in env) || env.data === undefined || env.data === null) {
-        throw new Error(ERR_ENVELOPE_MISSING_DATA);
-    }
-    return validator(env.data);
+  if (!response) {
+    throw new Error("transport: extractData requires a Response");
+  }
+  if (!validator) {
+    throw new Error("transport: extractData requires a DataValidator (use generated validator from sdk/<product>)");
+  }
+  const env = readEnvelope(await response.json());
+  if (!("data" in env) || env.data === undefined || env.data === null) {
+    throw new Error(ERR_ENVELOPE_MISSING_DATA);
+  }
+  return validator(env.data);
 }
 
 /**
@@ -71,14 +71,14 @@ export async function extractData<T>(response: Response, validator: DataValidato
  * code MUST narrow before using it.
  */
 export async function extractEnvelope(response: Response): Promise<Envelope<unknown>> {
-    if (!response) {
-        throw new Error('transport: extractEnvelope requires a Response');
-    }
-    const env = readEnvelope(await response.json());
-    return {
-        object: typeof env.object === 'string' ? env.object : '',
-        livemode: typeof env.livemode === 'boolean' ? env.livemode : false,
-        request_id: typeof env.request_id === 'string' ? env.request_id : '',
-        data: env.data,
-    };
+  if (!response) {
+    throw new Error("transport: extractEnvelope requires a Response");
+  }
+  const env = readEnvelope(await response.json());
+  return {
+    object: typeof env.object === "string" ? env.object : "",
+    livemode: typeof env.livemode === "boolean" ? env.livemode : false,
+    request_id: typeof env.request_id === "string" ? env.request_id : "",
+    data: env.data,
+  };
 }

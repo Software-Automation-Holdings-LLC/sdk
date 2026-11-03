@@ -13,8 +13,8 @@
  * contract carries `ciphertext` and `tag` separately (mirroring zyins #363),
  * so this module splits on encrypt and rejoins on decrypt.
  */
-import { type RandomBytes } from '../core/index.js';
-import { IsaError } from '../zyins/apiError.js';
+import { type RandomBytes } from "../core/index.js";
+import { IsaError } from "../zyins/apiError.js";
 /** The opaque crypto fields the server stores, all base64 (std alphabet). */
 export interface TCaseEnvelope {
     /** Base64 AES-GCM ciphertext (auth tag stripped). */

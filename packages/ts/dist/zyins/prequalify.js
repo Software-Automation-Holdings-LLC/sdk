@@ -14,16 +14,16 @@
  *  - Server response shape is `{ data: { meta, results: { <amount>: [...] } },
  *    request_id, idempotency_key }`.
  */
-import { NicotineUsage, NicotineDuration } from './applicant.js';
-import { QuoteType, isMulti, } from './coverage.js';
-import { Products } from './product.js';
-import { fromHttpResponse } from './errors.js';
-import { deriveIdempotencyKey } from './idempotency.js';
-import { buildLicenseHMACHeaders } from '../core/index.js';
-import { systemClock } from '../core/index.js';
-import { coercePlanInfo } from './planInfo.js';
-import { retryAttemptsFromHeaders } from './retryAttempts.js';
-const PREQUALIFY_PATH = '/v1/prequalify';
+import { buildLicenseHMACHeaders } from "../core/index.js";
+import { systemClock } from "../core/index.js";
+import { NicotineDuration, NicotineUsage } from "./applicant.js";
+import { isMulti, QuoteType } from "./coverage.js";
+import { fromHttpResponse } from "./errors.js";
+import { deriveIdempotencyKey } from "./idempotency.js";
+import { coercePlanInfo } from "./planInfo.js";
+import { Products } from "./product.js";
+import { retryAttemptsFromHeaders } from "./retryAttempts.js";
+const PREQUALIFY_PATH = "/v1/prequalify";
 /**
  * Run a prequalify call. Builds the wire body, derives the idempotency key,
  * signs the request, and parses the response into typed plans.
@@ -33,8 +33,8 @@ export async function prequalify(request, ctx) {
     return executePrequalify(body, request, ctx);
 }
 async function executePrequalify(body, request, ctx) {
-    const idempotencyKey = ctx.idempotencyKey ??
-        (await deriveIdempotencyKey({ deviceId: ctx.auth.deviceId, op: 'prequalify', body }));
+    const idempotencyKey = ctx.idempotencyKey
+        ?? (await deriveIdempotencyKey({ deviceId: ctx.auth.deviceId, op: "prequalify", body }));
     const headers = await buildPrequalifyHeaders({
         auth: ctx.auth,
         body,
@@ -42,7 +42,7 @@ async function executePrequalify(body, request, ctx) {
         clock: ctx.clock,
     });
     const url = `${ctx.baseUrl}${PREQUALIFY_PATH}`;
-    const response = await ctx.transport({ url, method: 'POST', headers, body });
+    const response = await ctx.transport({ url, method: "POST", headers, body });
     if (response.status >= 200 && response.status < 300) {
         return parsePrequalifyResponse(response.body, request.coverage, idempotencyKey, retryAttemptsFromHeaders(response.headers));
     }
@@ -64,30 +64,30 @@ function serializeWireBody(request) {
         conditions: applicant.conditions ?? [],
         medications: applicant.medications ?? [],
         quote_options: {
-            quote_type: coverage.type === 'face_value' ? QuoteType.FaceAmounts : QuoteType.MonthlyBudget,
+            quote_type: coverage.type === "face_value" ? QuoteType.FaceAmounts : QuoteType.MonthlyBudget,
             amounts: extractAmounts(coverage).map((n) => String(n)),
         },
         ...products.toWireFields(),
     };
     if (applicant.zip !== undefined) {
-        payload['zip'] = applicant.zip;
+        payload["zip"] = applicant.zip;
     }
     if (options) {
         if (options.onlyProductClass !== undefined) {
-            payload['only_product_class'] = options.onlyProductClass.wireToken;
+            payload["only_product_class"] = options.onlyProductClass.wireToken;
         }
         if (options.includeProductClass !== undefined && options.includeProductClass.length > 0) {
             // Merge with ProductSelection-emitted include_product_class.
-            const fromSelection = payload['include_product_class'];
+            const fromSelection = payload["include_product_class"];
             const extra = options.includeProductClass.map((t) => t.wireToken);
-            payload['include_product_class'] = [...new Set([...(fromSelection ?? []), ...extra])];
+            payload["include_product_class"] = [...new Set([...(fromSelection ?? []), ...extra])];
         }
         if (options.minRank !== undefined)
-            payload['min_rank'] = options.minRank;
+            payload["min_rank"] = options.minRank;
         if (options.showUnreleased !== undefined)
-            payload['show_unreleased'] = options.showUnreleased;
+            payload["show_unreleased"] = options.showUnreleased;
         if (options.skipHealthBasedUnderwriting !== undefined) {
-            payload['skip_health_based_underwriting'] = options.skipHealthBasedUnderwriting;
+            payload["skip_health_based_underwriting"] = options.skipHealthBasedUnderwriting;
         }
     }
     return JSON.stringify(payload);
@@ -96,7 +96,7 @@ function extractAmounts(coverage) {
     return isMulti(coverage) ? coverage.amounts : [coverage.amount];
 }
 function serializeNicotineUsage(nicotineUse) {
-    if (typeof nicotineUse === 'object' && nicotineUse !== null) {
+    if (typeof nicotineUse === "object" && nicotineUse !== null) {
         const input = nicotineUse;
         const result = {
             last_used: input.lastUsed,
@@ -122,16 +122,16 @@ function serializeNicotineUsage(nicotineUse) {
     }
 }
 async function buildPrequalifyHeaders(args) {
-    const licenseHeaders = await buildLicenseHMACHeaders(args.auth.licenseKey, args.auth.orderId, args.auth.email, 'POST', PREQUALIFY_PATH, args.body, args.auth.deviceId, args.clock ?? systemClock);
+    const licenseHeaders = await buildLicenseHMACHeaders(args.auth.licenseKey, args.auth.orderId, args.auth.email, "POST", PREQUALIFY_PATH, args.body, args.auth.deviceId, args.clock ?? systemClock);
     return {
         ...licenseHeaders,
-        'Content-Type': 'application/json',
-        'Idempotency-Key': args.idempotencyKey,
+        "Content-Type": "application/json",
+        "Idempotency-Key": args.idempotencyKey,
     };
 }
-const isRecord = (v) => v !== null && typeof v === 'object' && !Array.isArray(v);
-const toStr = (v) => (typeof v === 'string' ? v : '');
-const toNum = (v) => (typeof v === 'number' ? v : 0);
+const isRecord = (v) => v !== null && typeof v === "object" && !Array.isArray(v);
+const toStr = (v) => (typeof v === "string" ? v : "");
+const toNum = (v) => (typeof v === "number" ? v : 0);
 const toBool = (v) => v === true;
 /**
  * Parse the server response into either `SinglePrequalifyResult` or
@@ -153,12 +153,12 @@ function parsePrequalifyResponse(body, coverage, idempotencyKey, retryAttempts) 
         throw new Error(`ZyIns prequalify: failed to parse response body: ${err.message}`);
     }
     const root = isRecord(parsed) ? parsed : {};
-    const requestId = toStr(root['request_id']);
-    const echoKey = toStr(root['idempotency_key']) || idempotencyKey;
-    const livemode = root['livemode'] === undefined ? true : toBool(root['livemode']);
-    const data = isRecord(root['data']) ? root['data'] : {};
-    const meta = parseMeta(data['meta']);
-    const results = isRecord(data['results']) ? data['results'] : {};
+    const requestId = toStr(root["request_id"]);
+    const echoKey = toStr(root["idempotency_key"]) || idempotencyKey;
+    const livemode = root["livemode"] === undefined ? true : toBool(root["livemode"]);
+    const data = isRecord(root["data"]) ? root["data"] : {};
+    const meta = parseMeta(data["meta"]);
+    const results = isRecord(data["results"]) ? data["results"] : {};
     const byAmount = new Map();
     for (const [amtKey, plansRaw] of Object.entries(results)) {
         const amt = Number(amtKey);
@@ -177,13 +177,13 @@ function parsePrequalifyResponse(body, coverage, idempotencyKey, retryAttempts) 
                 flat.push(p);
         }
         return {
-            kind: 'multi',
+            kind: "multi",
             amounts,
             byAmount,
             plans: flat,
             forAmount(n) {
                 if (!amounts.includes(n)) {
-                    throw new Error(`MultiPrequalifyResult.forAmount: amount ${n} not requested; available: ${amounts.join(', ')}`);
+                    throw new Error(`MultiPrequalifyResult.forAmount: amount ${n} not requested; available: ${amounts.join(", ")}`);
                 }
                 return byAmount.get(n) ?? fallbackPlans ?? [];
             },
@@ -202,7 +202,7 @@ function parsePrequalifyResponse(body, coverage, idempotencyKey, retryAttempts) 
         plans = byAmount.values().next().value;
     }
     return {
-        kind: 'single',
+        kind: "single",
         amount,
         plans: plans ?? [],
         meta,
@@ -214,19 +214,19 @@ function parsePrequalifyResponse(body, coverage, idempotencyKey, retryAttempts) 
 }
 function parseMeta(raw) {
     if (!isRecord(raw)) {
-        return { amounts: [], processingTimeMs: 0, quoteType: 'face_value', totalProducts: 0 };
+        return { amounts: [], processingTimeMs: 0, quoteType: "face_value", totalProducts: 0 };
     }
-    const amountsRaw = Array.isArray(raw['amounts']) ? raw['amounts'] : [];
+    const amountsRaw = Array.isArray(raw["amounts"]) ? raw["amounts"] : [];
     const amounts = amountsRaw
         .map((v) => Number(v))
         .filter((n) => Number.isFinite(n));
-    const quoteTypeRaw = toStr(raw['quote_type']);
-    const quoteType = quoteTypeRaw === 'monthly_budget' ? 'monthly_budget' : 'face_value';
+    const quoteTypeRaw = toStr(raw["quote_type"]);
+    const quoteType = quoteTypeRaw === "monthly_budget" ? "monthly_budget" : "face_value";
     return {
         amounts,
-        processingTimeMs: toNum(raw['processing_time_ms']),
+        processingTimeMs: toNum(raw["processing_time_ms"]),
         quoteType,
-        totalProducts: toNum(raw['total_products']),
+        totalProducts: toNum(raw["total_products"]),
     };
 }
 /**
@@ -236,7 +236,7 @@ function parseMeta(raw) {
  * they don't quote. The SDK normalizes all of these to the same `"N/A"`
  * display so consumers can render with a single conditional.
  */
-const PRICE_NA_DISPLAY = 'N/A';
+const PRICE_NA_DISPLAY = "N/A";
 /**
  * Parse a server price into a `PriceEntry`.
  *
@@ -253,20 +253,20 @@ function parsePriceEntry(raw) {
     if (raw === null || raw === undefined) {
         return { cents: 0, display: PRICE_NA_DISPLAY };
     }
-    if (typeof raw === 'number') {
+    if (typeof raw === "number") {
         if (!Number.isFinite(raw) || raw === 0) {
             return { cents: 0, display: PRICE_NA_DISPLAY };
         }
         return { cents: Math.round(raw * 100), display: `$${raw.toFixed(2)}` };
     }
-    if (typeof raw !== 'string') {
+    if (typeof raw !== "string") {
         return { cents: 0, display: PRICE_NA_DISPLAY };
     }
     const trimmed = raw.trim();
-    if (trimmed === '' || trimmed === '0' || /^na$/i.test(trimmed) || /^n\/a$/i.test(trimmed)) {
+    if (trimmed === "" || trimmed === "0" || /^na$/i.test(trimmed) || /^n\/a$/i.test(trimmed)) {
         return { cents: 0, display: PRICE_NA_DISPLAY };
     }
-    const cleaned = trimmed.replace(/[$,]/g, '');
+    const cleaned = trimmed.replace(/[$,]/g, "");
     const parsed = parseFloat(cleaned);
     if (!Number.isFinite(parsed) || parsed === 0) {
         return { cents: 0, display: PRICE_NA_DISPLAY };
@@ -294,9 +294,9 @@ function buildClasses(pricingRaw) {
     return classes;
 }
 /** Default rate-class key used when neither server nor classes can supply one. */
-const DEFAULT_RATE_CLASS = 'default';
+const DEFAULT_RATE_CLASS = "default";
 /** Preferred mode fallback when no `default_pricing_key` is present. */
-const FALLBACK_MODE = 'MONTHLY';
+const FALLBACK_MODE = "MONTHLY";
 /**
  * Apply the resolution rules from the spec:
  *  - rate_class: prefer `"default"` → first-class-in-order → `"default"` empty.
@@ -310,7 +310,7 @@ function resolveDefaultPricing(classes, serverDefaultKey) {
         return {
             cents: 0,
             display: PRICE_NA_DISPLAY,
-            mode: '',
+            mode: "",
             rate_class: DEFAULT_RATE_CLASS,
             classes,
             modes: {},
@@ -320,7 +320,7 @@ function resolveDefaultPricing(classes, serverDefaultKey) {
     const modes = classes[rate_class];
     const modeNames = Object.keys(modes);
     let mode;
-    if (serverDefaultKey !== '' && serverDefaultKey in modes) {
+    if (serverDefaultKey !== "" && serverDefaultKey in modes) {
         mode = serverDefaultKey;
     }
     else if (FALLBACK_MODE in modes) {
@@ -330,9 +330,9 @@ function resolveDefaultPricing(classes, serverDefaultKey) {
         mode = modeNames[0];
     }
     else {
-        mode = '';
+        mode = "";
     }
-    const entry = mode === '' ? undefined : modes[mode];
+    const entry = mode === "" ? undefined : modes[mode];
     return {
         cents: entry?.cents ?? 0,
         display: entry?.display ?? PRICE_NA_DISPLAY,
@@ -351,10 +351,10 @@ function parsePricingRanks(raw) {
         if (v === null || v === undefined) {
             out[k] = null;
         }
-        else if (typeof v === 'number' && Number.isFinite(v)) {
+        else if (typeof v === "number" && Number.isFinite(v)) {
             out[k] = v;
         }
-        else if (typeof v === 'string') {
+        else if (typeof v === "string") {
             const n = Number(v);
             out[k] = Number.isFinite(n) ? n : null;
         }
@@ -366,26 +366,26 @@ function parsePricingRanks(raw) {
 }
 function coercePlan(raw) {
     const r = isRecord(raw) ? raw : {};
-    const id = toStr(r['id']);
-    const planInfoCoerced = coercePlanInfo(r['plan_info']);
-    const pricingRaw = isRecord(r['pricing']) ? r['pricing'] : {};
+    const id = toStr(r["id"]);
+    const planInfoCoerced = coercePlanInfo(r["plan_info"]);
+    const pricingRaw = isRecord(r["pricing"]) ? r["pricing"] : {};
     const classes = buildClasses(pricingRaw);
-    const serverDefaultKey = toStr(r['default_pricing_key']);
+    const serverDefaultKey = toStr(r["default_pricing_key"]);
     const pricing = resolveDefaultPricing(classes, serverDefaultKey);
-    const pricingRanks = parsePricingRanks(r['pricing_ranks']);
+    const pricingRanks = parsePricingRanks(r["pricing_ranks"]);
     const plan = {
-        brand: toStr(r['brand']),
-        name: toStr(r['name']),
-        plan: toStr(r['plan']),
-        planGroup: typeof r['plan_group'] === 'string' ? toStr(r['plan_group']) : null,
-        deathBenefit: toNum(r['death_benefit']),
+        brand: toStr(r["brand"]),
+        name: toStr(r["name"]),
+        plan: toStr(r["plan"]),
+        planGroup: typeof r["plan_group"] === "string" ? toStr(r["plan_group"]) : null,
+        deathBenefit: toNum(r["death_benefit"]),
         pricing,
         pricingRanks,
         defaultPricingKey: pricing.mode,
         id,
-        index: toNum(r['index']),
-        isExcluded: toBool(r['is_excluded']),
-        logoUrl: toStr(r['logo_url']),
+        index: toNum(r["index"]),
+        isExcluded: toBool(r["is_excluded"]),
+        logoUrl: toStr(r["logo_url"]),
         planInfo: planInfoCoerced.array,
         planInfoLegacy: planInfoCoerced.legacy,
         raw: r,

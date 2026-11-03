@@ -10,7 +10,7 @@
  * The facade is injectable via `Decompressor`; tests substitute a stub so
  * they exercise the surrounding wire-decoding logic without a live zlib.
  */
-import { gunzipSync } from 'node:zlib';
+import { gunzipSync } from "node:zlib";
 /** Default decompressor uses Node's synchronous zlib. */
 export const defaultDecompressor = (gzipped) => gunzipSync(gzipped);
 /**
@@ -19,7 +19,7 @@ export const defaultDecompressor = (gzipped) => gunzipSync(gzipped);
  * the server.
  */
 export function decodeGzipBase64(base64, decompressor = defaultDecompressor) {
-    const gzipped = Buffer.from(base64, 'base64');
+    const gzipped = Buffer.from(base64, "base64");
     return decompressor(gzipped);
 }
 //# sourceMappingURL=decompress.js.map

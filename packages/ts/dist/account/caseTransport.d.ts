@@ -3,9 +3,9 @@
  * License-HMAC header construction + transport call so each operation in
  * `cases.ts` only assembles its body and routes status codes.
  */
-import { type AuthContext } from './auth.js';
-import { type Transport } from '../zyins/transport.js';
-import { type Clock } from '../core/index.js';
+import { type Clock } from "../core/index.js";
+import { type Transport } from "../zyins/transport.js";
+import { type AuthContext } from "./auth.js";
 /** The auth + transport context a signed case request needs. */
 export interface TCaseRequestContext {
     baseUrl: string;
@@ -16,7 +16,7 @@ export interface TCaseRequestContext {
 }
 /** A single signed `/v1/case` request: method, path, body, and idempotency. */
 export interface TSignedRequestSpec {
-    method: 'GET' | 'POST';
+    method: "GET" | "POST";
     path: string;
     body: string;
     /** When set, an `Idempotency-Key` is derived (or taken from ctx) for the op. */

@@ -29,7 +29,7 @@
  * ```
  */
 
-import type { Concept } from './Concept.js';
+import type { Concept } from "./Concept.js";
 
 /**
  * One ranked suggestion produced by an `AutocompleteAlgorithm`.

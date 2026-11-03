@@ -9,7 +9,7 @@
  * Returns milliseconds. Throws `RapidSignError.ValidationError` on malformed
  * input so callers can handle SDK validation failures consistently.
  */
-import { RapidSignError } from '../errors.js';
+import { RapidSignError } from "../errors.js";
 const SECOND_MS = 1_000;
 const MINUTE_MS = 60 * SECOND_MS;
 const HOUR_MS = 60 * MINUTE_MS;
@@ -28,7 +28,7 @@ export function isIso8601Duration(spec) {
 }
 /** Parse a duration spec into milliseconds. */
 export function parseDuration(spec) {
-    if (typeof spec === 'number') {
+    if (typeof spec === "number") {
         if (!Number.isFinite(spec) || spec < 0) {
             throw durationValidationError(`parseDuration: invalid millisecond value: ${spec}`);
         }
@@ -36,14 +36,14 @@ export function parseDuration(spec) {
     }
     const trimmed = spec.trim();
     if (trimmed.length === 0) {
-        throw durationValidationError('parseDuration: empty duration string');
+        throw durationValidationError("parseDuration: empty duration string");
     }
     const shorthand = SHORTHAND_RE.exec(trimmed);
     if (shorthand) {
         const value = Number.parseInt(shorthand[1], 10);
         return value * unitMs(shorthand[2]);
     }
-    if (trimmed.startsWith('P') || trimmed.startsWith('p')) {
+    if (trimmed.startsWith("P") || trimmed.startsWith("p")) {
         const normalized = trimmed.toUpperCase();
         const iso = ISO8601_RE.exec(normalized);
         if (iso && isValidIsoDurationMatch(normalized, iso)) {
@@ -54,15 +54,15 @@ export function parseDuration(spec) {
 }
 function unitMs(unit) {
     switch (unit.toLowerCase()) {
-        case 'ms':
+        case "ms":
             return 1;
-        case 's':
+        case "s":
             return SECOND_MS;
-        case 'm':
+        case "m":
             return MINUTE_MS;
-        case 'h':
+        case "h":
             return HOUR_MS;
-        case 'd':
+        case "d":
             return DAY_MS;
         default:
             throw durationValidationError(`parseDuration: unknown unit: ${unit}`);
@@ -70,26 +70,26 @@ function unitMs(unit) {
 }
 function isoDurationTotalMs(match) {
     const [, d, h, m, s] = match;
-    return (Number.parseInt(d ?? '0', 10) * DAY_MS +
-        Number.parseInt(h ?? '0', 10) * HOUR_MS +
-        Number.parseInt(m ?? '0', 10) * MINUTE_MS +
-        Number.parseInt(s ?? '0', 10) * SECOND_MS);
+    return (Number.parseInt(d ?? "0", 10) * DAY_MS
+        + Number.parseInt(h ?? "0", 10) * HOUR_MS
+        + Number.parseInt(m ?? "0", 10) * MINUTE_MS
+        + Number.parseInt(s ?? "0", 10) * SECOND_MS);
 }
 function hasIsoTimeComponents(match) {
     const [, , h, m, s] = match;
     return h !== undefined || m !== undefined || s !== undefined;
 }
 function isValidIsoDurationMatch(normalized, match) {
-    if (normalized.includes('T') && !hasIsoTimeComponents(match)) {
+    if (normalized.includes("T") && !hasIsoTimeComponents(match)) {
         return false;
     }
     const total = isoDurationTotalMs(match);
-    return total > 0 || normalized === 'PT0S' || normalized === 'P0D';
+    return total > 0 || normalized === "PT0S" || normalized === "P0D";
 }
 function durationValidationError(message) {
     return new RapidSignError.ValidationError(message, {
         httpStatus: 400,
-        requestId: '',
+        requestId: "",
     });
 }
 //# sourceMappingURL=duration.js.map

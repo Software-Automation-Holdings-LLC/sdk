@@ -73,13 +73,13 @@ export function isObfuscated(value, threshold = DEFAULT_OBFUSCATION_THRESHOLD) {
 }
 function xorTransform(input, key) {
     if (!key) {
-        throw new Error('obfuscation key must be a non-empty string');
+        throw new Error("obfuscation key must be a non-empty string");
     }
     const s = `${input}`;
     if (!s)
         return s;
     const keyLen = key.length;
-    let out = '';
+    let out = "";
     for (let i = 0; i < s.length; i++) {
         const keyCode = key.charCodeAt(i % keyLen);
         out += String.fromCharCode(s.charCodeAt(i) ^ keyCode);

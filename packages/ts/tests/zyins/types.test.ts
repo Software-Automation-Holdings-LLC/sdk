@@ -1,16 +1,8 @@
 import { describe, expect, it } from "vitest";
-import {
-  Height,
-  Weight,
-  Sex,
-} from "../../src/zyins/applicant";
-import { Coverage } from "../../src/zyins/coverage";
+import { Height, Sex, Weight } from "../../src/zyins/applicant";
 import { isAuthContext } from "../../src/zyins/auth";
-import {
-  ProductClass,
-  Products,
-  ProductSelection,
-} from "../../src/zyins/product";
+import { Coverage } from "../../src/zyins/coverage";
+import { ProductClass, Products, ProductSelection } from "../../src/zyins/product";
 
 describe("Height / Weight factories", () => {
   it("Height.fromFeetInches sums to total inches", () => {
@@ -61,21 +53,21 @@ describe("Coverage discriminated union", () => {
 describe("Products catalog and ProductSelection", () => {
   it("looks up a product by id", () => {
     // Aetna Accendo FEX — stable prod_<uuid>
-    const product = Products.byId('prod_d7b57156-3e83-506b-8936-0692c1193dc7');
-    expect(product?.id).toBe('prod_d7b57156-3e83-506b-8936-0692c1193dc7');
+    const product = Products.byId("prod_d7b57156-3e83-506b-8936-0692c1193dc7");
+    expect(product?.id).toBe("prod_d7b57156-3e83-506b-8936-0692c1193dc7");
     expect(product?.productType).toBe(ProductClass.FinalExpense);
   });
 
   it("returns undefined for unknown id", () => {
-    expect(Products.byId('prod_does-not-exist')).toBeUndefined();
-    expect(Products.byId('fex-aetna-accendo')).toBeUndefined();
+    expect(Products.byId("prod_does-not-exist")).toBeUndefined();
+    expect(Products.byId("fex-aetna-accendo")).toBeUndefined();
   });
 
   it("emits prod_<uuid> ids in toWireFields()", () => {
-    const aetna = Products.Fex['AetnaAccendo'];
-    const americo = Products.Fex['AmericoEaglePremier'];
+    const aetna = Products.Fex["AetnaAccendo"];
+    const americo = Products.Fex["AmericoEaglePremier"];
     if (!aetna || !americo) {
-      throw new Error('Missing expected Fex fixtures in generated Products catalog');
+      throw new Error("Missing expected Fex fixtures in generated Products catalog");
     }
     const fields = ProductSelection.of([aetna, americo]).toWireFields();
     expect(fields.products).toEqual([aetna.id, americo.id]);

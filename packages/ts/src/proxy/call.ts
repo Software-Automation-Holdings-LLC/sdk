@@ -17,17 +17,17 @@
  * HMAC and is handled server-side — see ADR-035 (amended in this PR).
  */
 
-import { type SessionIdentity } from '../zyins/envFactory.js';
+import { type SignClock, signRequest } from "../core/auth/signRequest.js";
 import {
   IsaApiError,
   IsaConfigError,
   IsaIdempotencyConflictError,
   IsaUnauthorizedError,
   IsaValidationError,
-} from '../zyins/apiError.js';
-import { type SignClock, signRequest } from '../core/auth/signRequest.js';
+} from "../zyins/apiError.js";
+import { type SessionIdentity } from "../zyins/envFactory.js";
 
-const PROXY_CALL_PATH = '/v1/call';
+const PROXY_CALL_PATH = "/v1/call";
 
 /** Inputs to {@link proxyCall}. Exactly one of integrationUuid/integrationId. */
 export interface ProxyCallOptions {
@@ -72,21 +72,21 @@ export async function proxyCall(
   const body = buildEnvelopeBody(opts);
   const idempotencyKey = opts.idempotencyKey ?? mintUuidV4(opts.uuid);
   const { headers: signed } = await signRequest({
-    method: 'POST',
+    method: "POST",
     path: PROXY_CALL_PATH,
     body,
     sessionId: binding.identity.sessionId,
     sessionSecret: binding.identity.sessionSecret,
     ...(opts.clock !== undefined ? { clock: opts.clock } : {}),
   });
-  const url = `${binding.proxyOrigin.replace(/\/$/, '')}${PROXY_CALL_PATH}`;
+  const url = `${binding.proxyOrigin.replace(/\/$/, "")}${PROXY_CALL_PATH}`;
   const headers: Record<string, string> = {
     ...signed,
-    'Content-Type': 'application/json',
-    'Idempotency-Key': idempotencyKey,
+    "Content-Type": "application/json",
+    "Idempotency-Key": idempotencyKey,
   };
   const fetchFn = opts.fetchImpl ?? fetch;
-  const response = await fetchFn(url, { method: 'POST', headers, body });
+  const response = await fetchFn(url, { method: "POST", headers, body });
   return handleResponse(response);
 }
 
@@ -95,20 +95,20 @@ function validateIdentifier(opts: ProxyCallOptions): void {
   const hasID = hasIntegrationId(opts.integrationId);
   if (opts.integrationId !== undefined && !hasID) {
     throw new IsaValidationError({
-      message: 'proxy.call: integrationId must be a positive integer',
-      param: 'integration_id',
+      message: "proxy.call: integrationId must be a positive integer",
+      param: "integration_id",
     });
   }
   if (hasUUID && hasID) {
     throw new IsaValidationError({
-      message: 'proxy.call: supply exactly one of integrationUuid or integrationId',
-      param: 'integration_uuid',
+      message: "proxy.call: supply exactly one of integrationUuid or integrationId",
+      param: "integration_uuid",
     });
   }
   if (!hasUUID && !hasID) {
     throw new IsaValidationError({
-      message: 'proxy.call: supply exactly one of integrationUuid or integrationId',
-      param: 'integration_uuid',
+      message: "proxy.call: supply exactly one of integrationUuid or integrationId",
+      param: "integration_uuid",
     });
   }
 }
@@ -125,17 +125,17 @@ function buildEnvelopeBody(opts: ProxyCallOptions): string {
   } else {
     envelope.integration_id = opts.integrationId;
   }
-  envelope.method = opts.method ?? 'POST';
+  envelope.method = opts.method ?? "POST";
   envelope.params = opts.params ?? null;
   return JSON.stringify(envelope);
 }
 
 function hasIntegrationUuid(value: string | undefined): value is string {
-  return typeof value === 'string' && value.length > 0;
+  return typeof value === "string" && value.length > 0;
 }
 
 function hasIntegrationId(value: number | undefined): value is number {
-  return typeof value === 'number' && Number.isInteger(value) && value > 0;
+  return typeof value === "number" && Number.isInteger(value) && value > 0;
 }
 
 /**
@@ -167,7 +167,7 @@ async function handleResponse(response: Response): Promise<ProxyCallResult> {
       raw: parsed,
     });
   }
-  if (response.status === 409 && code === 'idempotency_conflict') {
+  if (response.status === 409 && code === "idempotency_conflict") {
     throw new IsaIdempotencyConflictError({
       message: detail,
       key: extractKey(parsed),
@@ -178,7 +178,7 @@ async function handleResponse(response: Response): Promise<ProxyCallResult> {
   }
   throw new IsaApiError({
     message: detail,
-    code: code ?? 'api_error',
+    code: code ?? "api_error",
     status: response.status,
     ...(requestId !== undefined && { requestId }),
     raw: parsed,
@@ -195,53 +195,53 @@ function parseJsonOrUndefined(text: string): unknown {
 }
 
 function extractCode(parsed: unknown): string | undefined {
-  if (parsed && typeof parsed === 'object' && 'code' in parsed) {
+  if (parsed && typeof parsed === "object" && "code" in parsed) {
     const v = (parsed as Record<string, unknown>).code;
-    return typeof v === 'string' ? v : undefined;
+    return typeof v === "string" ? v : undefined;
   }
   return undefined;
 }
 
 function extractDetail(parsed: unknown, fallback: string): string {
-  if (parsed && typeof parsed === 'object') {
+  if (parsed && typeof parsed === "object") {
     const obj = parsed as Record<string, unknown>;
-    if (typeof obj.detail === 'string') return obj.detail;
-    if (typeof obj.message === 'string') return obj.message;
+    if (typeof obj.detail === "string") return obj.detail;
+    if (typeof obj.message === "string") return obj.message;
   }
-  return fallback || 'proxy.call failed';
+  return fallback || "proxy.call failed";
 }
 
 function extractRequestId(parsed: unknown): string | undefined {
-  if (parsed && typeof parsed === 'object') {
+  if (parsed && typeof parsed === "object") {
     const v = (parsed as Record<string, unknown>).request_id;
-    return typeof v === 'string' ? v : undefined;
+    return typeof v === "string" ? v : undefined;
   }
   return undefined;
 }
 
 function extractKey(parsed: unknown): string {
-  if (parsed && typeof parsed === 'object') {
+  if (parsed && typeof parsed === "object") {
     const v = (parsed as Record<string, unknown>).key;
-    if (typeof v === 'string') return v;
+    if (typeof v === "string") return v;
   }
-  return '';
+  return "";
 }
 
 function extractFirstSeenAt(parsed: unknown): string {
-  if (parsed && typeof parsed === 'object') {
+  if (parsed && typeof parsed === "object") {
     const v = (parsed as Record<string, unknown>).first_seen_at;
-    if (typeof v === 'string') return v;
+    if (typeof v === "string") return v;
   }
-  return '';
+  return "";
 }
 
 /** Validate the binding identity is session-mode; throw IsaConfigError otherwise. */
 export function assertSessionIdentityForProxyCall(
   identity: { mode: string },
 ): asserts identity is SessionIdentity {
-  if (identity.mode !== 'session') {
+  if (identity.mode !== "session") {
     throw new IsaConfigError(
-      'proxy.call requires a Session identity; exchange your bearer/license credentials via account.sessions.create first',
+      "proxy.call requires a Session identity; exchange your bearer/license credentials via account.sessions.create first",
     );
   }
 }
@@ -255,22 +255,22 @@ export function assertSessionIdentityForProxyCall(
 function mintUuidV4(injected?: () => string): string {
   if (injected) return injected();
   const g = globalThis as { crypto?: { randomUUID?: () => string } };
-  if (g.crypto && typeof g.crypto.randomUUID === 'function') {
+  if (g.crypto && typeof g.crypto.randomUUID === "function") {
     return g.crypto.randomUUID();
   }
   return fallbackUuidV4();
 }
 
 function fallbackUuidV4(): string {
-  const hex = '0123456789abcdef';
-  let out = '';
+  const hex = "0123456789abcdef";
+  let out = "";
   for (let i = 0; i < 36; i++) {
     if (i === 8 || i === 13 || i === 18 || i === 23) {
-      out += '-';
+      out += "-";
       continue;
     }
     if (i === 14) {
-      out += '4';
+      out += "4";
       continue;
     }
     const r = Math.floor(Math.random() * 16);

@@ -7,9 +7,9 @@
  * the server lands.
  */
 
-import { RapidSignError } from './errors.js';
+import { RapidSignError } from "./errors.js";
 
-const ISSUE_URL = 'https://github.com/Software-Automation-Holdings-LLC/isa-platform/issues/38';
+const ISSUE_URL = "https://github.com/Software-Automation-Holdings-LLC/isa-platform/issues/38";
 
 /** Decoded webhook event. The concrete payload shape lands with the server. */
 export interface WebhookEvent {
@@ -31,7 +31,7 @@ export class WebhooksService {
   verify(_rawBody: string | Buffer, _headers: Record<string, string>, _secret: string): WebhookEvent {
     throw new RapidSignError.NotImplemented(
       `rapidsign.webhooks.verify is not yet implemented; webhook surface tracking: ${ISSUE_URL}`,
-      { httpStatus: 501, requestId: '' },
+      { httpStatus: 501, requestId: "" },
     );
   }
 }

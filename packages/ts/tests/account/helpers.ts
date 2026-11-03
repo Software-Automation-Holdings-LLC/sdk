@@ -1,8 +1,8 @@
-import { AccountNamespace } from '../../src/account';
-import type { Transport, TransportRequest } from '../../src/zyins/transport';
-import { TEST_AUTH, FIXED_CLOCK } from '../zyins/fixtures';
+import { AccountNamespace } from "../../src/account";
+import type { Transport, TransportRequest } from "../../src/zyins/transport";
+import { FIXED_CLOCK, TEST_AUTH } from "../zyins/fixtures";
 
-export const TEST_BASE_URL = 'https://test.example';
+export const TEST_BASE_URL = "https://test.example";
 
 /** A scripted transport that records requests and returns the given response. */
 export function recordingTransport(
@@ -28,7 +28,7 @@ export function account(transport: Transport): AccountNamespace {
 }
 
 /** Viewer origin used by case share-link tests. */
-export const TEST_CASE_VIEWER_BASE_URL = 'https://viewer.example';
+export const TEST_CASE_VIEWER_BASE_URL = "https://viewer.example";
 
 /** Build an `AccountNamespace` with an explicit case viewer base URL. */
 export function accountWithViewer(

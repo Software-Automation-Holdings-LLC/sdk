@@ -10,21 +10,21 @@
  * elevation. When session credentials replace License-HMAC the SDK surface
  * stays unchanged.
  */
-import { fromHttpResponse } from './errors.js';
-import { deriveIdempotencyKey } from './idempotency.js';
-import { isRecord, parseJsonResponse, unwrapEnvelope } from './response.js';
-import { buildLicenseHMACHeaders } from '../core/index.js';
-import { systemClock } from '../core/index.js';
-const PREFERENCES_RESTORE_PATH = '/v2/preferences/restore';
-const PREFERENCES_BACKUP_PATH = '/v2/preferences/backup';
+import { buildLicenseHMACHeaders } from "../core/index.js";
+import { systemClock } from "../core/index.js";
+import { fromHttpResponse } from "./errors.js";
+import { deriveIdempotencyKey } from "./idempotency.js";
+import { isRecord, parseJsonResponse, unwrapEnvelope } from "./response.js";
+const PREFERENCES_RESTORE_PATH = "/v2/preferences/restore";
+const PREFERENCES_BACKUP_PATH = "/v2/preferences/backup";
 /** Fetch the caller's preferences document. */
 export async function lookup(ctx) {
-    const headers = await buildLicenseHMACHeaders(ctx.auth.licenseKey, ctx.auth.orderId, ctx.auth.email, 'GET', PREFERENCES_RESTORE_PATH, '', ctx.auth.deviceId, ctx.clock ?? systemClock);
+    const headers = await buildLicenseHMACHeaders(ctx.auth.licenseKey, ctx.auth.orderId, ctx.auth.email, "GET", PREFERENCES_RESTORE_PATH, "", ctx.auth.deviceId, ctx.clock ?? systemClock);
     const response = await ctx.transport({
         url: `${ctx.baseUrl}${PREFERENCES_RESTORE_PATH}`,
-        method: 'GET',
-        headers: { ...headers, Accept: 'application/json' },
-        body: '',
+        method: "GET",
+        headers: { ...headers, Accept: "application/json" },
+        body: "",
     });
     if (response.status >= 200 && response.status < 300) {
         return { prefs: parsePrefsBody(response.body) };
@@ -34,20 +34,20 @@ export async function lookup(ctx) {
 /** Upsert the caller's preferences document. */
 export async function set(request, ctx) {
     if (!request || !isRecord(request.prefs)) {
-        throw new Error('zyins: preferences.set requires a prefs object');
+        throw new Error("zyins: preferences.set requires a prefs object");
     }
     const body = JSON.stringify({ prefs: request.prefs });
-    const idempotencyKey = ctx.idempotencyKey ??
-        (await deriveIdempotencyKey({ deviceId: ctx.auth.deviceId, op: 'preferences_set', body }));
-    const headers = await buildLicenseHMACHeaders(ctx.auth.licenseKey, ctx.auth.orderId, ctx.auth.email, 'POST', PREFERENCES_BACKUP_PATH, body, ctx.auth.deviceId, ctx.clock ?? systemClock);
+    const idempotencyKey = ctx.idempotencyKey
+        ?? (await deriveIdempotencyKey({ deviceId: ctx.auth.deviceId, op: "preferences_set", body }));
+    const headers = await buildLicenseHMACHeaders(ctx.auth.licenseKey, ctx.auth.orderId, ctx.auth.email, "POST", PREFERENCES_BACKUP_PATH, body, ctx.auth.deviceId, ctx.clock ?? systemClock);
     const response = await ctx.transport({
         url: `${ctx.baseUrl}${PREFERENCES_BACKUP_PATH}`,
-        method: 'POST',
+        method: "POST",
         headers: {
             ...headers,
-            'Content-Type': 'application/json',
-            Accept: 'application/json',
-            'Idempotency-Key': idempotencyKey,
+            "Content-Type": "application/json",
+            Accept: "application/json",
+            "Idempotency-Key": idempotencyKey,
         },
         body,
     });
@@ -64,9 +64,9 @@ export async function set(request, ctx) {
 function parsePrefsBody(body, fallback) {
     if (!body)
         return fallback ?? {};
-    const parsed = parseJsonResponse(body, 'preferences');
+    const parsed = parseJsonResponse(body, "preferences");
     const root = unwrapEnvelope(parsed);
-    if (isRecord(root) && 'prefs' in root) {
+    if (isRecord(root) && "prefs" in root) {
         const prefs = root.prefs;
         if (isRecord(prefs)) {
             return prefs;

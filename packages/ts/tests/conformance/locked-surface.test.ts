@@ -41,106 +41,106 @@
  * Persona: John Doe / SDV-HWH-WDD / john.doe@acme-agency.com / Mountain Life MYGA.
  */
 
-import { describe, expectTypeOf, it } from 'vitest';
-import * as sdk from '../../src';
+import { describe, expectTypeOf, it } from "vitest";
+import * as sdk from "../../src";
 
-describe('Section 2.1 — single IsaError tree', () => {
-    it('exports IsaError as the canonical error tree', () => {
-        expectTypeOf(sdk.IsaError).not.toBeAny();
-    });
+describe("Section 2.1 — single IsaError tree", () => {
+  it("exports IsaError as the canonical error tree", () => {
+    expectTypeOf(sdk.IsaError).not.toBeAny();
+  });
 
-    it('IsaError subclasses are reachable via the tree (LicenseLocked / MaxActivationsExceeded / LicenseActiveElsewhere)', () => {
-        // Locked spec § Flow 1: typed subclasses on the IsaError namespace.
-        // These names are LOCKED — drift here is a public-surface break.
-        type Tree = typeof sdk.IsaError;
-        // TODO: green after feat/sdk-locked-syntax lands; the locked tree
-        // shape promises these subclasses live on the IsaError namespace.
-        expectTypeOf<Tree>().toHaveProperty('LicenseLocked');
-        expectTypeOf<Tree>().toHaveProperty('MaxActivationsExceeded');
-        expectTypeOf<Tree>().toHaveProperty('LicenseActiveElsewhere');
-        expectTypeOf<Tree>().toHaveProperty('Network');
-        expectTypeOf<Tree>().toHaveProperty('InternalError');
-        expectTypeOf<Tree>().toHaveProperty('IdempotencyConflict');
-        expectTypeOf<Tree>().toHaveProperty('DeadlineExceeded');
-        expectTypeOf<Tree>().toHaveProperty('SignerDeclined');
-    });
+  it("IsaError subclasses are reachable via the tree (LicenseLocked / MaxActivationsExceeded / LicenseActiveElsewhere)", () => {
+    // Locked spec § Flow 1: typed subclasses on the IsaError namespace.
+    // These names are LOCKED — drift here is a public-surface break.
+    type Tree = typeof sdk.IsaError;
+    // TODO: green after feat/sdk-locked-syntax lands; the locked tree
+    // shape promises these subclasses live on the IsaError namespace.
+    expectTypeOf<Tree>().toHaveProperty("LicenseLocked");
+    expectTypeOf<Tree>().toHaveProperty("MaxActivationsExceeded");
+    expectTypeOf<Tree>().toHaveProperty("LicenseActiveElsewhere");
+    expectTypeOf<Tree>().toHaveProperty("Network");
+    expectTypeOf<Tree>().toHaveProperty("InternalError");
+    expectTypeOf<Tree>().toHaveProperty("IdempotencyConflict");
+    expectTypeOf<Tree>().toHaveProperty("DeadlineExceeded");
+    expectTypeOf<Tree>().toHaveProperty("SignerDeclined");
+  });
 
-    it('IsaError.match exists as opt-in sugar', () => {
-        // TODO: green after feat/sdk-locked-syntax lands.
-        type Tree = typeof sdk.IsaError;
-        expectTypeOf<Tree>().toHaveProperty('match');
-    });
+  it("IsaError.match exists as opt-in sugar", () => {
+    // TODO: green after feat/sdk-locked-syntax lands.
+    type Tree = typeof sdk.IsaError;
+    expectTypeOf<Tree>().toHaveProperty("match");
+  });
 });
 
-describe('Section 2.3 — response metadata via underscore-prefix props (no .withRawResponse)', () => {
-    it('the public surface does NOT export `withRawResponse` / `RawResponse` wrapper helper', () => {
-        // Appendix B.1 post-lock correction: OpenAI SDK pattern; result._requestId
-        // lives ON the data object, not on a wrapper.
-        type Surface = keyof typeof sdk;
-        // `RawResponse` may persist transiently as a removed-alias shim during migration.
-        // The wrapper METHOD `withRawResponse` must not be a public export.
-        type HasWithRawResponse = 'withRawResponse' extends Surface ? true : false;
-        expectTypeOf<HasWithRawResponse>().toEqualTypeOf<false>();
-    });
+describe("Section 2.3 — response metadata via underscore-prefix props (no .withRawResponse)", () => {
+  it("the public surface does NOT export `withRawResponse` / `RawResponse` wrapper helper", () => {
+    // Appendix B.1 post-lock correction: OpenAI SDK pattern; result._requestId
+    // lives ON the data object, not on a wrapper.
+    type Surface = keyof typeof sdk;
+    // `RawResponse` may persist transiently as a removed-alias shim during migration.
+    // The wrapper METHOD `withRawResponse` must not be a public export.
+    type HasWithRawResponse = "withRawResponse" extends Surface ? true : false;
+    expectTypeOf<HasWithRawResponse>().toEqualTypeOf<false>();
+  });
 });
 
-describe('Section 2.4 — singular license, plural cases', () => {
-    it('Appendix B.3 — Isa exposes `zyins.license` (singular), not `zyins.licenses`', () => {
-        // The Isa class composes namespaces; the locked surface is singular.
-        // TODO: green after feat/sdk-locked-syntax lands.
-        type Isa = InstanceType<typeof sdk.Isa>;
-        type ZyIns = Isa['zyins'];
-        expectTypeOf<ZyIns>().toHaveProperty('license');
-        expectTypeOf<ZyIns>().toHaveProperty('cases');
-    });
+describe("Section 2.4 — singular license, plural cases", () => {
+  it("Appendix B.3 — Isa exposes `zyins.license` (singular), not `zyins.licenses`", () => {
+    // The Isa class composes namespaces; the locked surface is singular.
+    // TODO: green after feat/sdk-locked-syntax lands.
+    type Isa = InstanceType<typeof sdk.Isa>;
+    type ZyIns = Isa["zyins"];
+    expectTypeOf<ZyIns>().toHaveProperty("license");
+    expectTypeOf<ZyIns>().toHaveProperty("cases");
+  });
 });
 
-describe('Section 4 Flow B — Isa.forForm', () => {
-    it('exposes Isa.forForm as a static factory', () => {
-        // TODO: green after feat/sdk-locked-syntax lands.
-        type IsaStatic = typeof sdk.Isa;
-        expectTypeOf<IsaStatic>().toHaveProperty('forForm');
-    });
+describe("Section 4 Flow B — Isa.forForm", () => {
+  it("exposes Isa.forForm as a static factory", () => {
+    // TODO: green after feat/sdk-locked-syntax lands.
+    type IsaStatic = typeof sdk.Isa;
+    expectTypeOf<IsaStatic>().toHaveProperty("forForm");
+  });
 });
 
-describe('Section 4 Flow C — Duration value object', () => {
-    it('exports Duration with from* factories (hours / minutes / seconds / fromString)', () => {
-        // TODO: green after feat/sdk-locked-syntax lands.
-        type Surface = typeof sdk;
-        expectTypeOf<Surface>().toHaveProperty('Duration');
-    });
+describe("Section 4 Flow C — Duration value object", () => {
+  it("exports Duration with from* factories (hours / minutes / seconds / fromString)", () => {
+    // TODO: green after feat/sdk-locked-syntax lands.
+    type Surface = typeof sdk;
+    expectTypeOf<Surface>().toHaveProperty("Duration");
+  });
 });
 
-describe('Section 4 Flow F — recovery primitive', () => {
-    it('Isa instance exposes recovery namespace (put / get / delete)', () => {
-        // TODO: green after feat/sdk-locked-syntax lands.
-        type Isa = InstanceType<typeof sdk.Isa>;
-        expectTypeOf<Isa>().toHaveProperty('recovery');
-    });
+describe("Section 4 Flow F — recovery primitive", () => {
+  it("Isa instance exposes recovery namespace (put / get / delete)", () => {
+    // TODO: green after feat/sdk-locked-syntax lands.
+    type Isa = InstanceType<typeof sdk.Isa>;
+    expectTypeOf<Isa>().toHaveProperty("recovery");
+  });
 });
 
-describe('Section 5 — analytics namespace', () => {
-    it('Isa instance exposes analytics.track / .attribute / .dashboard / .trackCustom', () => {
-        // TODO: green after feat/sdk-locked-syntax lands.
-        type Isa = InstanceType<typeof sdk.Isa>;
-        expectTypeOf<Isa>().toHaveProperty('analytics');
-    });
+describe("Section 5 — analytics namespace", () => {
+  it("Isa instance exposes analytics.track / .attribute / .dashboard / .trackCustom", () => {
+    // TODO: green after feat/sdk-locked-syntax lands.
+    type Isa = InstanceType<typeof sdk.Isa>;
+    expectTypeOf<Isa>().toHaveProperty("analytics");
+  });
 
-    it('AnalyticsEvent is exported as a typed enum (Section 5.1)', () => {
-        // TODO: green after feat/sdk-locked-syntax lands.
-        type Surface = typeof sdk;
-        expectTypeOf<Surface>().toHaveProperty('AnalyticsEvent');
-    });
+  it("AnalyticsEvent is exported as a typed enum (Section 5.1)", () => {
+    // TODO: green after feat/sdk-locked-syntax lands.
+    type Surface = typeof sdk;
+    expectTypeOf<Surface>().toHaveProperty("AnalyticsEvent");
+  });
 });
 
-describe('Section 3 Flow 3 — Height / Weight value objects (already shipped)', () => {
-    it('Height exposes fromInches / fromCm / fromString', () => {
-        expectTypeOf(sdk.Height).toBeObject();
-        expectTypeOf(sdk.Height.fromInches).toBeFunction();
-    });
+describe("Section 3 Flow 3 — Height / Weight value objects (already shipped)", () => {
+  it("Height exposes fromInches / fromCm / fromString", () => {
+    expectTypeOf(sdk.Height).toBeObject();
+    expectTypeOf(sdk.Height.fromInches).toBeFunction();
+  });
 
-    it('Weight exposes fromPounds / fromKilograms / fromString', () => {
-        expectTypeOf(sdk.Weight).toBeObject();
-        expectTypeOf(sdk.Weight.fromPounds).toBeFunction();
-    });
+  it("Weight exposes fromPounds / fromKilograms / fromString", () => {
+    expectTypeOf(sdk.Weight).toBeObject();
+    expectTypeOf(sdk.Weight.fromPounds).toBeFunction();
+  });
 });

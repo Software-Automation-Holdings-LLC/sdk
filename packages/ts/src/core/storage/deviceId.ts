@@ -12,7 +12,7 @@
  * a device's lifetime so HMAC signatures stay verifiable.
  */
 
-import { type CredentialStore, CREDENTIAL_KEYS } from './credentialStore.js';
+import { CREDENTIAL_KEYS, type CredentialStore } from "./credentialStore.js";
 
 /**
  * 16 random bytes = 128 bits of entropy. Matches Stripe's `cus_…` /
@@ -38,11 +38,11 @@ export async function loadOrMintDeviceId(store: CredentialStore): Promise<string
 export function mintDeviceId(): string {
   const g = globalThis as { crypto?: Crypto };
   if (!g.crypto?.getRandomValues) {
-    throw new Error('storage: crypto.getRandomValues is unavailable; cannot mint deviceId');
+    throw new Error("storage: crypto.getRandomValues is unavailable; cannot mint deviceId");
   }
   const bytes = new Uint8Array(DEVICE_ID_BYTES);
   g.crypto.getRandomValues(bytes);
   return Array.from(bytes)
-    .map((b) => b.toString(16).padStart(2, '0'))
-    .join('');
+    .map((b) => b.toString(16).padStart(2, "0"))
+    .join("");
 }

@@ -7,8 +7,8 @@
  * Source data:
  *   - insurance/v2_products.json
  */
-import { Product } from './products.js';
-import type { State } from './states.js';
+import { Product } from "./products.js";
+import type { State } from "./states.js";
 /** Public metadata for a single carrier. */
 export interface ProductCarrierMetadata {
     readonly displayName: string;
@@ -24,7 +24,9 @@ export interface ProductCarrierMetadata {
  * surfaced in the public reference data. Treat as advisory.
  */
 export declare const ProductCarriers: Readonly<{
+    /** Return every carrier slug in stable catalog order. */
     values(): readonly string[];
+    /** Return metadata for a carrier slug, or throw for unknown input. */
     metadata(c: string): ProductCarrierMetadata;
 }>;
 //# sourceMappingURL=carriers.d.ts.map

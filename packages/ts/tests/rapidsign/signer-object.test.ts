@@ -14,32 +14,32 @@
  * Persona: applicant + witness on a Mountain Life MYGA document.
  */
 
-import { describe, expectTypeOf, it } from 'vitest';
+import { describe, expectTypeOf, it } from "vitest";
 
-describe.skip('Signer object — atomic verbs, opaque IDs (Flow E)', () => {
-    // Pending a real exported Signer surface; a local placeholder would not
-    // protect the published SDK from drift.
-    type SignerSurface = {
-        invite: (...args: never[]) => Promise<unknown>;
-        cancelInvite: () => Promise<unknown>;
-        awaitSignature: (...args: never[]) => Promise<unknown>;
-    };
+describe.skip("Signer object — atomic verbs, opaque IDs (Flow E)", () => {
+  // Pending a real exported Signer surface; a local placeholder would not
+  // protect the published SDK from drift.
+  type SignerSurface = {
+    invite: (...args: never[]) => Promise<unknown>;
+    cancelInvite: () => Promise<unknown>;
+    awaitSignature: (...args: never[]) => Promise<unknown>;
+  };
 
-    it('Signer exposes invite / cancelInvite / awaitSignature', () => {
-        expectTypeOf<SignerSurface>().toHaveProperty('invite');
-        expectTypeOf<SignerSurface>().toHaveProperty('cancelInvite');
-        expectTypeOf<SignerSurface>().toHaveProperty('awaitSignature');
-    });
+  it("Signer exposes invite / cancelInvite / awaitSignature", () => {
+    expectTypeOf<SignerSurface>().toHaveProperty("invite");
+    expectTypeOf<SignerSurface>().toHaveProperty("cancelInvite");
+    expectTypeOf<SignerSurface>().toHaveProperty("awaitSignature");
+  });
 
-    it('Signer has no `restart` verb (Flow E explicitly rejects this naming)', () => {
-        type HasRestart = SignerSurface extends { restart: unknown } ? true : false;
-        expectTypeOf<HasRestart>().toEqualTypeOf<false>();
-    });
+  it("Signer has no `restart` verb (Flow E explicitly rejects this naming)", () => {
+    type HasRestart = SignerSurface extends { restart: unknown } ? true : false;
+    expectTypeOf<HasRestart>().toEqualTypeOf<false>();
+  });
 
-    it('signId / secretKey are not exposed as public Signer fields', () => {
-        type HasSignId = SignerSurface extends { signId: unknown } ? true : false;
-        type HasSecret = SignerSurface extends { secretKey: unknown } ? true : false;
-        expectTypeOf<HasSignId>().toEqualTypeOf<false>();
-        expectTypeOf<HasSecret>().toEqualTypeOf<false>();
-    });
+  it("signId / secretKey are not exposed as public Signer fields", () => {
+    type HasSignId = SignerSurface extends { signId: unknown } ? true : false;
+    type HasSecret = SignerSurface extends { secretKey: unknown } ? true : false;
+    expectTypeOf<HasSignId>().toEqualTypeOf<false>();
+    expectTypeOf<HasSecret>().toEqualTypeOf<false>();
+  });
 });

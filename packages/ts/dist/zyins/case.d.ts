@@ -10,9 +10,9 @@
  * attachment do not throw `InvalidCharacterError` (a real bug in older
  * browser `btoa` paths).
  */
-import { type AuthContext } from './auth.js';
-import { type Transport } from './transport.js';
-import { type Clock } from '../core/index.js';
+import { type Clock } from "../core/index.js";
+import { type AuthContext } from "./auth.js";
+import { type Transport } from "./transport.js";
 /** Inputs for `case.email`. */
 export interface CaseEmailRequest {
     /** Recipient email address. */

@@ -10,11 +10,11 @@
  * React installed (CLI, Node services) can still depend on the SDK without
  * pulling React into their bundle — they simply do not import this file.
  */
-import { type ReactNode } from 'react';
-import { type AuthContext } from '../auth.js';
-import { ZyInsClient, type ZyInsClientOptions } from '../client.js';
+import { type ReactNode } from "react";
+import { type AuthContext } from "../auth.js";
+import { ZyInsClient, type ZyInsClientOptions } from "../client.js";
 /** Shape carried by the provider. Extends auth with optional client overrides. */
-export interface ZyInsProviderConfig extends Omit<ZyInsClientOptions, 'auth'> {
+export interface ZyInsProviderConfig extends Omit<ZyInsClientOptions, "auth"> {
     auth: AuthContext;
 }
 /**
