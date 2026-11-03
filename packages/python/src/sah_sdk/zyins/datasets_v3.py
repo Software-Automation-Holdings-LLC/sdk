@@ -340,7 +340,9 @@ def _read_etag(headers: Mapping[str, str]) -> str | None:
 # ---------------------------------------------------------------------------
 
 
-def parse_datasets_v3_envelope(body: str, *, etag: str | None = None) -> DatasetBundleV3:
+def parse_datasets_v3_envelope(
+    body: str, *, etag: str | None = None
+) -> DatasetBundleV3:
     """Parse a ``/v3/datasets`` envelope body into a :class:`DatasetBundleV3`.
 
     Exposed for tests and for callers that want to drive the parser
@@ -370,16 +372,26 @@ def _parse_data(data: Mapping[str, object], *, etag: str | None) -> DatasetBundl
     # of the section gracefully.
     condition_rows = _parse_condition_rows(datasets_obj.get("conditions"))
     medication_rows = _parse_medication_rows(datasets_obj.get("medications"))
-    nicotine_option_rows = _parse_nicotine_option_rows(datasets_obj.get("nicotine_options"))
+    nicotine_option_rows = _parse_nicotine_option_rows(
+        datasets_obj.get("nicotine_options")
+    )
     spelling_corrections = _parse_spelling_correction_rows(
         datasets_obj.get("spelling_corrections")
     )
 
     datasets: dict[str, DatasetEntry | None] = {
-        DatasetCategory.MEDICATIONS.value: _parse_dataset_entry(datasets_obj.get("medications")),
-        DatasetCategory.CONDITIONS.value: _parse_dataset_entry(datasets_obj.get("conditions")),
-        DatasetCategory.PRODUCTS.value: _parse_dataset_entry(datasets_obj.get("products")),
-        DatasetCategory.CORRECTIONS.value: _parse_dataset_entry(datasets_obj.get("corrections")),
+        DatasetCategory.MEDICATIONS.value: _parse_dataset_entry(
+            datasets_obj.get("medications")
+        ),
+        DatasetCategory.CONDITIONS.value: _parse_dataset_entry(
+            datasets_obj.get("conditions")
+        ),
+        DatasetCategory.PRODUCTS.value: _parse_dataset_entry(
+            datasets_obj.get("products")
+        ),
+        DatasetCategory.CORRECTIONS.value: _parse_dataset_entry(
+            datasets_obj.get("corrections")
+        ),
         DatasetCategory.NICOTINE_OPTIONS.value: _parse_dataset_entry(
             datasets_obj.get("nicotine_options")
         ),
@@ -406,9 +418,7 @@ def _parse_data(data: Mapping[str, object], *, etag: str | None) -> DatasetBundl
     # at the data root.
     has_inline_relations = _has_relation_field(
         datasets_obj.get("conditions"), "treated_with"
-    ) or _has_relation_field(
-        datasets_obj.get("medications"), "used_for"
-    )
+    ) or _has_relation_field(datasets_obj.get("medications"), "used_for")
     if has_inline_relations:
         # Derive the legacy condition->medication maps from BOTH directions:
         # condition rows' ``treated_with`` AND medication rows' ``used_for``.
@@ -552,7 +562,9 @@ def _parse_condition_rows(raw: object) -> Sequence[ConditionRow]:
                     and not isinstance(rcount, bool)
                 ):
                     rels.append(
-                        MedicationRelation(id=rid, name=rname, prescription_count=rcount)
+                        MedicationRelation(
+                            id=rid, name=rname, prescription_count=rcount
+                        )
                     )
         out.append(ConditionRow(id=eid, name=name, treated_with=tuple(rels)))
     return tuple(out)

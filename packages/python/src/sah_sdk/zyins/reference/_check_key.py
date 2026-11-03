@@ -7,9 +7,9 @@ character that is not ASCII alphanumeric, then SORT the surviving
 characters ascending. Digits (0x30-0x39) sort before letters
 (0x41-0x5A), byte-identical to the engine.
 
-    "SEVERE COPD"   -> "CCDEEOPRSV"
-    "COPD (SEVERE)" -> "CCDEEOPRSV"   (collapses — word-order invariant)
-    "COPD (MILD)"   -> "CCDDILMOP"    (distinct — severity preserved)
+    "SEVERE COPD"   -> "CDEEEOPRSV"
+    "COPD (SEVERE)" -> "CDEEEOPRSV"   (collapses — word-order invariant)
+    "COPD (MILD)"   -> "CDDILMOP"     (distinct — severity preserved)
 
 Used ONLY for word-order-invariant NAME matching. Opaque catalog ids
 (e.g. ``HIGHBLOODPRESSURE``, ``cond_<ULID>``) are never keyed this way —

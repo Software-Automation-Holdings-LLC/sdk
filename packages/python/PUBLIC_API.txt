@@ -146,11 +146,6 @@ class ErrorCode(str, Enum)
 ErrorAdviceCodes: dict[str, str]
 ErrorDocUrls: dict[str, str]
 
-=== catalog/medications.py ===
-class MedicationUseMetadata
-    display_name: str
-    medications: tuple[str, ...]
-
 === catalog/products.py ===
 class Product
     id: str
@@ -355,7 +350,7 @@ def request_id_from_envelope(raw: dict[str, Any]) -> str
 
 === isa.py ===
 class Isa
-    def with_bearer(cls, token: str | None, *, base_url: str, timeout: float, transport: Transport | None, env: EnvReader | None, case_storage: CaseStorage | None, dataset_bundle_fetcher: Callable[[], Any] | None) -> Isa
+    def with_bearer(cls, token: str | None, *, base_url: str, timeout: float, transport: Transport | None, env: EnvReader | None, case_storage: CaseStorage | None, dataset_bundle_fetcher: Callable[[], Any] | None, datasets: DatasetSource | DatasetBundleV3 | str | None) -> Isa
     def with_license(cls, keycode: str | None, email: str | None, *, base_url: str, timeout: float, transport: Transport | None, env: EnvReader | None, credential_store: CredentialStore | None, license_clock: LicenseClock | None, api_version: Mapping[str, str] | None, case_storage: CaseStorage | None, dataset_bundle_fetcher: Callable[[], Any] | None) -> Isa
     def with_keycode(cls, keycode: str | None, email: str | None, *, base_url: str, timeout: float, transport: Transport | None, env: EnvReader | None, credential_store: CredentialStore | None, license_clock: LicenseClock | None, api_version: Mapping[str, str] | None, case_storage: CaseStorage | None, dataset_bundle_fetcher: Callable[[], Any] | None, autocorrector: Any | None, match_algorithm: Any | None, autocomplete_algorithm: Any | None) -> Isa
     def for_form(cls, form_token: str, *, base_url: str, timeout: float, transport: Transport | None) -> Isa
@@ -569,6 +564,26 @@ class IsaCredentialState
     def clear_license_key(self) -> None
 def mint_device_id() -> str
 def load_or_mint_device_id(store: CredentialStore) -> str
+
+=== zyins/dataset_source.py ===
+class DatasetSourceError(RuntimeError)
+class DatasetSource(Protocol)
+    def load(self) -> DatasetBundleV3
+class FileDatasetSource
+    path: str
+    read_file: FileReader
+    def load(self) -> DatasetBundleV3
+class ApiDatasetSource
+    fetch: Callable[[], DatasetBundleV3]
+    def load(self) -> DatasetBundleV3
+class StaticDatasetSource
+    bundle: DatasetBundleV3
+    def load(self) -> DatasetBundleV3
+class ResolvingDatasetSource
+    sources: Sequence[DatasetSource]
+    on_missing: OnMissingHook | None
+    def load(self) -> DatasetBundleV3
+def to_dataset_source(value: DatasetSource | DatasetBundleV3 | str) -> DatasetSource
 
 === zyins/datasets.py ===
 class Dataset(BaseModel)
@@ -1158,4 +1173,3 @@ class UsageSummary(BaseModel)
     total_calls: int
     request_id: str
 def parse_usage_summary(body: str, *, period: str) -> UsageSummary
-

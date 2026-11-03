@@ -4,7 +4,7 @@
   asks consumers to match on (see SDK_DESIGN.md §6).
 * :class:`UsState` — ISO 3166-2:US subdivision codes.
 * :class:`ProductLabels` — human-readable labels for the zyins
-  :class:`~sah_sdk.zyins.product.Product` enum. Kept here (not in
+  :class:`~sah_sdk.zyins.product.Product` model. Kept here (not in
   ``zyins/``) because labels are a presentation concern shared across
   any namespace that displays a product (e.g. proxy passthrough UI).
 """
@@ -15,7 +15,7 @@ from enum import Enum
 from types import MappingProxyType
 from typing import Final
 
-# Re-export the zyins Product enum from the package root for symmetry
+# Re-export the zyins Product model from the package root for symmetry
 # with the TypeScript surface (``import { Product } from
 # '@software-automation-holdings-llc/sdk'``). Importing here would
 # create a cycle (core ← zyins), so we keep the alias indirect: the
@@ -99,7 +99,7 @@ class UsState(str, Enum):
     WY = "WY"
 
 
-# Human-readable labels for the zyins Product enum. Kept as an
+# Human-readable labels for the zyins Product model. Kept as an
 # immutable mapping so consumers can't mutate the shared table at
 # runtime.
 _PRODUCT_LABELS: Final = {

@@ -40,9 +40,7 @@ VECTOR = {
     ),
 }
 
-EMPTY_SHA256 = (
-    "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
-)
+EMPTY_SHA256 = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
 
 
 def _fixed_clock(iso: str):
@@ -107,7 +105,7 @@ class TestSignRequest:
             clock=_fixed_clock(VECTOR["timestamp"]),
         )
         assert headers.isa_signature == VECTOR["expected_signature"]
-        assert headers.authorization == f"Bearer {VECTOR['session_secret']}"
+        assert headers.authorization == f"Session {VECTOR['session_secret']}"
         assert headers.isa_session_id == VECTOR["session_id"]
         assert headers.isa_timestamp == VECTOR["timestamp"]
 

@@ -47,7 +47,9 @@ _FAKE_FORM_TOKEN = "form" + "_canon_" + "persona"
 
 
 def test_with_keycode_is_alias_of_with_license() -> None:
-    env = FakeEnv({"ISA_LICENSE_KEYCODE": _FAKE_KEYCODE, "ISA_LICENSE_EMAIL": _FAKE_EMAIL})
+    env = FakeEnv(
+        {"ISA_LICENSE_KEYCODE": _FAKE_KEYCODE, "ISA_LICENSE_EMAIL": _FAKE_EMAIL}
+    )
     via_canonical = Isa.with_keycode(env=env, transport=StubTransport())
     via_deprecated = Isa.with_license(env=env, transport=StubTransport())
     assert via_canonical is not None
@@ -79,20 +81,61 @@ def test_authenticate_dispatches_by_arg_shape() -> None:
     assert via_form is not None
 
 
+def test_authenticate_rejects_empty_string_token() -> None:
+    # An empty-string token must not be treated as a supplied bearer token;
+    # it should fall through to IsaConfigError like an unset token.
+    with pytest.raises(IsaConfigError):
+        Isa.authenticate(token="", transport=StubTransport())
+
+
+def test_authenticate_partial_keycode_resolves_email_from_env() -> None:
+    # A caller supplying only keycode= (with an env reader) must still reach
+    # with_keycode's env fallback for the missing email, rather than being
+    # rejected because email was None.
+    env = FakeEnv({"ISA_LICENSE_EMAIL": _FAKE_EMAIL})
+    via_kc = Isa.authenticate(keycode=_FAKE_KEYCODE, env=env, transport=StubTransport())
+    assert via_kc._credential_state is not None
+
+
+def test_authenticate_partial_email_resolves_keycode_from_env() -> None:
+    # Symmetric to the keycode-only case above: a caller supplying only
+    # email= (with an env reader) must reach with_keycode's env fallback
+    # for the missing keycode, matching with_license/with_keycode's own
+    # documented env-fallback contract for either credential half.
+    env = FakeEnv({"ISA_LICENSE_KEYCODE": _FAKE_KEYCODE})
+    via_email = Isa.authenticate(email=_FAKE_EMAIL, env=env, transport=StubTransport())
+    assert via_email._credential_state is not None
+
+
+def test_authenticate_form_token_not_shadowed_by_partial_keycode() -> None:
+    # An explicit form_token must take the for_form path even when a stray
+    # email (or keycode) is also present; it must not be diverted into the
+    # keycode branch, which would try to bootstrap a license credential.
+    via_form = Isa.authenticate(
+        email=_FAKE_EMAIL, form_token=_FAKE_FORM_TOKEN, transport=StubTransport()
+    )
+    assert via_form is not None
+    assert via_form._credential_state is None
+
+
 def test_authenticate_with_no_args_raises() -> None:
     with pytest.raises(IsaConfigError):
         Isa.authenticate(transport=StubTransport())
 
 
 def test_zyins_license_singular_exists() -> None:
-    env = FakeEnv({"ISA_LICENSE_KEYCODE": _FAKE_KEYCODE, "ISA_LICENSE_EMAIL": _FAKE_EMAIL})
+    env = FakeEnv(
+        {"ISA_LICENSE_KEYCODE": _FAKE_KEYCODE, "ISA_LICENSE_EMAIL": _FAKE_EMAIL}
+    )
     isa = Isa.with_keycode(env=env, transport=StubTransport())
     # The singular `license` property must be accessible.
     assert isa.zyins.license is not None
 
 
 def test_zyins_cases_share_is_alias_of_create() -> None:
-    env = FakeEnv({"ISA_LICENSE_KEYCODE": _FAKE_KEYCODE, "ISA_LICENSE_EMAIL": _FAKE_EMAIL})
+    env = FakeEnv(
+        {"ISA_LICENSE_KEYCODE": _FAKE_KEYCODE, "ISA_LICENSE_EMAIL": _FAKE_EMAIL}
+    )
     isa = Isa.with_keycode(env=env, transport=StubTransport())
     cases = isa.zyins.cases
     assert callable(cases.share)

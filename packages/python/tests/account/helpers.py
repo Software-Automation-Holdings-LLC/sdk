@@ -15,7 +15,9 @@ class RecordingTransport:
     response_status: int = 200
     response_body: str = "{}"
     response_headers: dict[str, str] = field(default_factory=dict)
-    calls: list[tuple[str, str, dict[str, str], str | None]] = field(default_factory=list)
+    calls: list[tuple[str, str, dict[str, str], str | None]] = field(
+        default_factory=list
+    )
 
     def request(
         self,

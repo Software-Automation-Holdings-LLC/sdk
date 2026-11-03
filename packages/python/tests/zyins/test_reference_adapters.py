@@ -115,7 +115,9 @@ def test_autocorrect_on_applied_fires_once_per_correction() -> None:
 
 
 def test_autocorrect_continues_after_applied_correction() -> None:
-    ac = DefaultAutocorrector(typo_map={"ASTHM": "ASTHMA", "HYPRTENSION": "HYPERTENSION"})
+    ac = DefaultAutocorrector(
+        typo_map={"ASTHM": "ASTHMA", "HYPRTENSION": "HYPERTENSION"}
+    )
     assert ac.correct("asthm hyprtension", mode="submit") == "ASTHMA HYPERTENSION"
 
 
@@ -199,8 +201,16 @@ def test_match_word_order_invariant_via_check_key() -> None:
     """A reordered severity query resolves via the engine sorted check-key."""
     m = DefaultMatchAlgorithm()
     candidates = _concepts(
-        ("COPDSEVERE", "Chronic Obstructive Pulmonary Disease (Severe)", ConceptKind.CONDITION),
-        ("COPDMILD", "Chronic Obstructive Pulmonary Disease (Mild)", ConceptKind.CONDITION),
+        (
+            "COPDSEVERE",
+            "Chronic Obstructive Pulmonary Disease (Severe)",
+            ConceptKind.CONDITION,
+        ),
+        (
+            "COPDMILD",
+            "Chronic Obstructive Pulmonary Disease (Mild)",
+            ConceptKind.CONDITION,
+        ),
     )
     severe = m.match("Severe Chronic Obstructive Pulmonary Disease", candidates)
     assert severe.id == "COPDSEVERE"
@@ -211,11 +221,25 @@ def test_match_keeps_severity_distinct() -> None:
     """MILD and SEVERE never collapse — different letter multisets."""
     m = DefaultMatchAlgorithm()
     candidates = _concepts(
-        ("COPDSEVERE", "Chronic Obstructive Pulmonary Disease (Severe)", ConceptKind.CONDITION),
-        ("COPDMILD", "Chronic Obstructive Pulmonary Disease (Mild)", ConceptKind.CONDITION),
+        (
+            "COPDSEVERE",
+            "Chronic Obstructive Pulmonary Disease (Severe)",
+            ConceptKind.CONDITION,
+        ),
+        (
+            "COPDMILD",
+            "Chronic Obstructive Pulmonary Disease (Mild)",
+            ConceptKind.CONDITION,
+        ),
     )
-    assert m.match("Mild Chronic Obstructive Pulmonary Disease", candidates).id == "COPDMILD"
-    assert m.match("Severe Chronic Obstructive Pulmonary Disease", candidates).id == "COPDSEVERE"
+    assert (
+        m.match("Mild Chronic Obstructive Pulmonary Disease", candidates).id
+        == "COPDMILD"
+    )
+    assert (
+        m.match("Severe Chronic Obstructive Pulmonary Disease", candidates).id
+        == "COPDSEVERE"
+    )
 
 
 def test_match_exact_key_still_wins_superset() -> None:
@@ -855,7 +879,9 @@ def test_reference_index_frequency_keeps_zero_counts() -> None:
 
 def test_inline_row_bundle_drives_autocorrector_factory() -> None:
     bundle: DatasetBundleV3 = parse_datasets_v3_envelope(_INLINE_ROW_BODY)
-    typo_map = {row.from_.upper(): row.to.upper() for row in bundle.spelling_corrections}
+    typo_map = {
+        row.from_.upper(): row.to.upper() for row in bundle.spelling_corrections
+    }
     ac = DefaultAutocorrector(typo_map=typo_map, version_tag=bundle.version)
     assert ac.correct("hyprtension", mode="submit") == "HYPERTENSION"
     assert ac.version_tag == "2026.05.29"
@@ -900,7 +926,9 @@ def test_isa_autocomplete_default_options_use_bundle_frequencies() -> None:
     )
     isa.zyins.set_dataset_bundle(bundle)
 
-    suggestions = asyncio.run(isa.zyins.autocomplete.rank("l", AutocompleteOptions(limit=2)))
+    suggestions = asyncio.run(
+        isa.zyins.autocomplete.rank("l", AutocompleteOptions(limit=2))
+    )
 
     assert [s.id for s in suggestions] == ["med_LOS", "med_LIS"]
 
@@ -951,7 +979,9 @@ def test_isa_autocomplete_override_is_bound_to_bundle() -> None:
     )
     isa.zyins.set_dataset_bundle(bundle)
 
-    asyncio.run(isa.zyins.autocomplete.rank("anything", AutocompleteOptions(frequencies={})))
+    asyncio.run(
+        isa.zyins.autocomplete.rank("anything", AutocompleteOptions(frequencies={}))
+    )
     assert isa.zyins.autocomplete.version_tag is None
 
 

@@ -33,7 +33,9 @@ class Money:
     currency: str
 
     def __post_init__(self) -> None:
-        if not isinstance(self.amount_minor, int) or isinstance(self.amount_minor, bool):
+        if not isinstance(self.amount_minor, int) or isinstance(
+            self.amount_minor, bool
+        ):
             raise TypeError("Money.amount_minor must be an int (minor units)")
         if not _CURRENCY_PATTERN.fullmatch(self.currency):
             raise ValueError(

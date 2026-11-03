@@ -20,6 +20,22 @@ is left in place with a diagnostic on stderr.
 
 from __future__ import annotations
 
-from .rewriter import IsaSdkImportRewriter, rewrite_file, rewrite_tree
+from typing import Any
 
 __all__ = ["IsaSdkImportRewriter", "rewrite_file", "rewrite_tree"]
+
+_CODEMOD_INSTALL_HINT = "pip install 'sah-sdk[codemod]'"
+
+
+def __getattr__(name: str) -> Any:
+    if name not in __all__:
+        raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
+    try:
+        from . import rewriter
+    except ModuleNotFoundError as exc:
+        if exc.name == "libcst":
+            raise ModuleNotFoundError(
+                f"libcst is required for sah_sdk._codemod; install with {_CODEMOD_INSTALL_HINT}"
+            ) from exc
+        raise
+    return getattr(rewriter, name)

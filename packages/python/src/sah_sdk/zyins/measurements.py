@@ -36,9 +36,7 @@ _HEIGHT_FEET_INCHES_PATTERN: re.Pattern[str] = re.compile(
 _HEIGHT_INCHES_PATTERN: re.Pattern[str] = re.compile(
     r"^\s*(?P<inches>\d+(?:\.\d+)?)\s*(?:in|inches|\")\s*$"
 )
-_HEIGHT_CM_PATTERN: re.Pattern[str] = re.compile(
-    r"^\s*(?P<cm>\d+(?:\.\d+)?)\s*cm\s*$"
-)
+_HEIGHT_CM_PATTERN: re.Pattern[str] = re.compile(r"^\s*(?P<cm>\d+(?:\.\d+)?)\s*cm\s*$")
 _WEIGHT_LBS_PATTERN: re.Pattern[str] = re.compile(
     r"^\s*(?P<lbs>\d+(?:\.\d+)?)\s*(?:lb|lbs|pounds?)\s*$"
 )
@@ -157,9 +155,7 @@ class Height:
         return f"{feet}'{remainder}\""
 
     @classmethod
-    def __get_pydantic_core_schema__(
-        cls, _source_type: Any, _handler: Any
-    ) -> Any:
+    def __get_pydantic_core_schema__(cls, _source_type: Any, _handler: Any) -> Any:
         # Imported lazily so ``measurements`` doesn't pull pydantic at
         # import time for non-validating consumers.
         from pydantic_core import core_schema
@@ -234,8 +230,7 @@ class Weight:
             except ValueError as exc:
                 raise WeightParseError(str(exc)) from exc
         raise WeightParseError(
-            f"Weight.from_string: cannot parse {value!r}. "
-            "Try '195 lbs' or '88.5 kg'."
+            f"Weight.from_string: cannot parse {value!r}. Try '195 lbs' or '88.5 kg'."
         )
 
     @property
@@ -247,9 +242,7 @@ class Weight:
         return f"{self.pounds} lb"
 
     @classmethod
-    def __get_pydantic_core_schema__(
-        cls, _source_type: Any, _handler: Any
-    ) -> Any:
+    def __get_pydantic_core_schema__(cls, _source_type: Any, _handler: Any) -> Any:
         from pydantic_core import core_schema
 
         def _validate(value: Any) -> Weight:

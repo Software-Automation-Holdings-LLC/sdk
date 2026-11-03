@@ -242,9 +242,7 @@ class Concept:
     input_text: str
     _catalog: _Catalog | None = field(default=None, repr=False, compare=False)
 
-    def conditions(
-        self, sort: Sort = Sort.MOST_COMMON_FIRST
-    ) -> Sequence[Concept]:
+    def conditions(self, sort: Sort = Sort.MOST_COMMON_FIRST) -> Sequence[Concept]:
         """Conditions associated with this concept.
 
         Defined for medication handles; condition / unknown handles
@@ -271,9 +269,7 @@ class Concept:
             _build_condition_concept(catalog, cid, self.input_text) for cid in ordered
         )
 
-    def medications(
-        self, sort: Sort = Sort.MOST_COMMON_FIRST
-    ) -> Sequence[Concept]:
+    def medications(self, sort: Sort = Sort.MOST_COMMON_FIRST) -> Sequence[Concept]:
         """Medications associated with this concept.
 
         Defined for condition handles; medication / unknown handles

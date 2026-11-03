@@ -59,7 +59,9 @@ class Coverage(BaseModel):
     @classmethod
     def face_value(cls, amount: int) -> Coverage:
         """Coverage by face value (death benefit) in whole US dollars."""
-        return cls(type=CoverageType.FACE_VALUE, amount=_require_positive("face_value", amount))
+        return cls(
+            type=CoverageType.FACE_VALUE, amount=_require_positive("face_value", amount)
+        )
 
     @classmethod
     def monthly_budget(cls, amount: int) -> Coverage:
@@ -72,7 +74,10 @@ class Coverage(BaseModel):
     @classmethod
     def face_values(cls, amounts: Sequence[int]) -> Coverage:
         """Probe several face-value (death-benefit) amounts in one call."""
-        return cls(type=CoverageType.FACE_VALUE, amounts=_require_positive_seq("face_values", amounts))
+        return cls(
+            type=CoverageType.FACE_VALUE,
+            amounts=_require_positive_seq("face_values", amounts),
+        )
 
     @classmethod
     def monthly_budgets(cls, amounts: Sequence[int]) -> Coverage:

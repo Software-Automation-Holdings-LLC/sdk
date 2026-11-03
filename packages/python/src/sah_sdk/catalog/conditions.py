@@ -3,9 +3,9 @@
 Produced by ``packages/python/scripts/gen_catalog.py``.
 Regenerate with ``python packages/python/scripts/gen_catalog.py``.
 """
+
 # Source data:
 #   - insurance/v2_conditions.json
-#   - insurance/v2_medications.json
 from __future__ import annotations
 
 from dataclasses import dataclass

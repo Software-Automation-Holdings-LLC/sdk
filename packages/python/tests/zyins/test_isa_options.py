@@ -136,7 +136,9 @@ class TestSessionAuthFactory:
 
 class TestZyinsNamespaceExports:
     def test_auth_factories_are_exported_from_zyins_namespace(self) -> None:
-        assert isinstance(zyins.BearerAuth.from_token("isa_test_abc"), BearerAuthSupplier)
+        assert isinstance(
+            zyins.BearerAuth.from_token("isa_test_abc"), BearerAuthSupplier
+        )
         assert isinstance(
             zyins.LicenseAuth.from_keycode("ABC-123-XYZ", "agent@example.com"),
             LicenseAuthSupplier,
@@ -239,9 +241,7 @@ class TestResolveIsaOptions:
         assert resolved.proxy_origin == "https://proxy.example.com"
 
     def test_explicit_timeout(self) -> None:
-        opts = IsaCreateOptions(
-            auth=BearerAuth.from_token("isa_test_abc"), timeout=5.0
-        )
+        opts = IsaCreateOptions(auth=BearerAuth.from_token("isa_test_abc"), timeout=5.0)
         assert resolve_isa_options(opts).timeout_seconds == 5.0
 
 

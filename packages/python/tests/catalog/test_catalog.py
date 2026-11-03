@@ -11,7 +11,6 @@ from sah_sdk import (
     ErrorAdviceCodes,
     ErrorCode,
     ErrorDocUrls,
-    MedicationUses,
     Product,
     ProductCarriers,
     Products,
@@ -82,16 +81,6 @@ def test_states_includes_territories() -> None:
     assert pr.is_territory is True
     nc = States.metadata(State.NorthCarolina)
     assert nc.is_territory is False
-
-
-def test_medication_uses_values_sorted() -> None:
-    values = MedicationUses.values()
-    assert len(values) > 0
-    assert list(values) == sorted(values)
-    first = values[0]
-    meta = MedicationUses.metadata(first)
-    assert meta.display_name == first
-    assert all(isinstance(m, str) for m in meta.medications)
 
 
 def test_scope_and_sign_event_are_str_enums() -> None:

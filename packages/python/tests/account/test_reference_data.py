@@ -42,6 +42,19 @@ def test_reference_data_compiled_v3_targets_v2_path() -> None:
     assert payload["k"] == "v"
 
 
+def test_reference_data_payload_scope_cannot_override_routing_scope() -> None:
+    transport = RecordingTransport(response_body=json.dumps({"data": {}}))
+    ns = make_namespace(transport=transport)
+    ns.reference_data.get(
+        "compiled_data_v3",
+        payload={"scope": "compiled_data_v2", "k": "v"},
+    )
+    _, url, _, body = transport.calls[0]
+    payload = json.loads(body or "")
+    assert url.endswith("/v2/reference-data")
+    assert payload == {"k": "v", "scope": "compiled_data_v3"}
+
+
 def test_reference_data_default_targets_v1_path() -> None:
     transport = RecordingTransport(response_body=json.dumps({"data": {}}))
     ns = make_namespace(transport=transport)

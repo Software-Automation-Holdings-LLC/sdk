@@ -167,9 +167,7 @@ class AccountCases:
         }
         body = json.dumps(wire, separators=(",", ":"))
         raw = dispatch(self._ctx, method="POST", path=_PATH, body=body)
-        case_id = _str(
-            parse_json_object(raw, context="account.cases.share"), "id"
-        )
+        case_id = _str(parse_json_object(raw, context="account.cases.share"), "id")
         if not case_id:
             raise ValueError("account: cases.share response missing 'id'")
         link = assemble_link(
@@ -222,7 +220,9 @@ def _parse_summary_list(body: str) -> tuple[CaseSummary, ...]:
     try:
         parsed = json.loads(body)
     except json.JSONDecodeError as exc:
-        raise ValueError(f"account.cases.list: response was not valid JSON: {exc}") from exc
+        raise ValueError(
+            f"account.cases.list: response was not valid JSON: {exc}"
+        ) from exc
     root = unwrap_envelope(parsed)
     if isinstance(root, list):
         return tuple(_summary_from_record(e) for e in root if isinstance(e, dict))

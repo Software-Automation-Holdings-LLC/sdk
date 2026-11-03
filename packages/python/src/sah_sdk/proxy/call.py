@@ -51,7 +51,9 @@ class SessionBinding:
 #: HTTP transport seam. The default uses :mod:`urllib`; tests inject a stub
 #: returning ``(status, body, headers)`` so they exercise mapping without
 #: opening sockets.
-Transport = Callable[[str, str, Mapping[str, str], bytes], tuple[int, bytes, dict[str, str]]]
+Transport = Callable[
+    [str, str, Mapping[str, str], bytes], tuple[int, bytes, dict[str, str]]
+]
 
 
 def _default_transport(

@@ -3,6 +3,7 @@
 Produced by ``packages/python/scripts/gen_catalog.py``.
 Regenerate with ``python packages/python/scripts/gen_catalog.py``.
 """
+
 # Source data:
 #   - isa-platform/shared/schemas/api/isa/v1/common.proto
 from __future__ import annotations
@@ -18,18 +19,18 @@ class Scope(str, Enum):
     """
 
     """send signer notification emails."""
-    RapidsignDocumentsNotify = 'rapidsign:documents:notify'
+    RapidsignDocumentsNotify = "rapidsign:documents:notify"
     """fetch signature state and signed PDFs."""
-    RapidsignDocumentsRead = 'rapidsign:documents:read'
+    RapidsignDocumentsRead = "rapidsign:documents:read"
     """submit signatures."""
-    RapidsignDocumentsSign = 'rapidsign:documents:sign'
+    RapidsignDocumentsSign = "rapidsign:documents:sign"
     """create new documents."""
-    RapidsignDocumentsWrite = 'rapidsign:documents:write'
+    RapidsignDocumentsWrite = "rapidsign:documents:write"
 
 
 ScopeDescriptions: dict[str, str] = {
-    'rapidsign:documents:notify': 'send signer notification emails.',
-    'rapidsign:documents:read': 'fetch signature state and signed PDFs.',
-    'rapidsign:documents:sign': 'submit signatures.',
-    'rapidsign:documents:write': 'create new documents.',
+    "rapidsign:documents:notify": "send signer notification emails.",
+    "rapidsign:documents:read": "fetch signature state and signed PDFs.",
+    "rapidsign:documents:sign": "submit signatures.",
+    "rapidsign:documents:write": "create new documents.",
 }

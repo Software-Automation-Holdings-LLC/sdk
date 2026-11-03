@@ -89,16 +89,22 @@ def test_rejects_neither_identifier_set() -> None:
 
 
 @pytest.mark.parametrize("integration_id", [0, -1])
-def test_rejects_non_positive_integration_id_before_sending(integration_id: int) -> None:
+def test_rejects_non_positive_integration_id_before_sending(
+    integration_id: int,
+) -> None:
     isa = _session_isa()
     with pytest.raises(ValidationError):
-        isa.proxy.call(integration_id=integration_id, params={}, transport=RecordingTransport())
+        isa.proxy.call(
+            integration_id=integration_id, params={}, transport=RecordingTransport()
+        )
 
 
 def test_envelope_shape_unflattened() -> None:
     isa = _session_isa()
     transport = RecordingTransport()
-    isa.proxy.call(integration_uuid="int_abc", params={"foo": "bar"}, transport=transport)
+    isa.proxy.call(
+        integration_uuid="int_abc", params={"foo": "bar"}, transport=transport
+    )
     assert len(transport.calls) == 1
     body = json.loads(transport.calls[0]["body"].decode("utf-8"))
     assert body == {
@@ -185,7 +191,7 @@ def test_session_auth_headers_present() -> None:
     transport = RecordingTransport()
     isa.proxy.call(integration_uuid="int_abc", params={}, transport=transport)
     h = transport.calls[0]["headers"]
-    assert h["Authorization"] == f"Bearer {_FIXTURE_SECRET}"
+    assert h["Authorization"] == f"Session {_FIXTURE_SECRET}"
     assert h["X-Isa-Session-Id"] == "sess_test_unit"
     assert re.match(r"^\d{4}-\d{2}-\d{2}T", h["X-Isa-Timestamp"])
     assert re.match(r"^[0-9a-f]{64}$", h["X-Isa-Signature"])
@@ -193,7 +199,9 @@ def test_session_auth_headers_present() -> None:
 
 def test_401_maps_to_auth_error() -> None:
     isa = _session_isa()
-    transport = RecordingTransport(status=401, payload={"code": "unauthorized", "detail": "bad sig"})
+    transport = RecordingTransport(
+        status=401, payload={"code": "unauthorized", "detail": "bad sig"}
+    )
     with pytest.raises(AuthError):
         isa.proxy.call(integration_uuid="int_abc", params={}, transport=transport)
 
@@ -213,6 +221,8 @@ def test_409_idempotency_conflict_maps_to_typed_error() -> None:
 
 def test_500_maps_to_generic_isa_error() -> None:
     isa = _session_isa()
-    transport = RecordingTransport(status=500, payload={"code": "internal_error", "detail": "boom"})
+    transport = RecordingTransport(
+        status=500, payload={"code": "internal_error", "detail": "boom"}
+    )
     with pytest.raises(ISAError):
         isa.proxy.call(integration_uuid="int_abc", params={}, transport=transport)
