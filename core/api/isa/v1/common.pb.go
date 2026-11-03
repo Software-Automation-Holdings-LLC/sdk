@@ -86,6 +86,9 @@ const (
 	ErrorCode_ERROR_CODE_SERVICE_UNAVAILABLE ErrorCode = 14
 	// Capability not yet implemented (e.g. PDF renderer not configured).
 	ErrorCode_ERROR_CODE_NOT_IMPLEMENTED ErrorCode = 15
+	// Idempotency key conflict: same key sent with a different body.
+	// Client must retry with a new idempotency key.
+	ErrorCode_ERROR_CODE_IDEMPOTENCY_CONFLICT ErrorCode = 16
 )
 
 // Enum value maps for ErrorCode.
@@ -107,24 +110,26 @@ var (
 		13: "ERROR_CODE_GATEWAY_TIMEOUT",
 		14: "ERROR_CODE_SERVICE_UNAVAILABLE",
 		15: "ERROR_CODE_NOT_IMPLEMENTED",
+		16: "ERROR_CODE_IDEMPOTENCY_CONFLICT",
 	}
 	ErrorCode_value = map[string]int32{
-		"ERROR_CODE_UNSPECIFIED":         0,
-		"ERROR_CODE_UNAUTHORIZED":        1,
-		"ERROR_CODE_TOKEN_EXPIRED":       2,
-		"ERROR_CODE_INVALID_TOKEN":       3,
-		"ERROR_CODE_FORBIDDEN":           4,
-		"ERROR_CODE_NOT_FOUND":           5,
-		"ERROR_CODE_METHOD_NOT_ALLOWED":  6,
-		"ERROR_CODE_CONFLICT":            7,
-		"ERROR_CODE_VALIDATION_ERROR":    8,
-		"ERROR_CODE_LICENSE_LOCKED":      9,
-		"ERROR_CODE_RATE_LIMIT_EXCEEDED": 10,
-		"ERROR_CODE_INTERNAL_ERROR":      11,
-		"ERROR_CODE_BAD_GATEWAY":         12,
-		"ERROR_CODE_GATEWAY_TIMEOUT":     13,
-		"ERROR_CODE_SERVICE_UNAVAILABLE": 14,
-		"ERROR_CODE_NOT_IMPLEMENTED":     15,
+		"ERROR_CODE_UNSPECIFIED":          0,
+		"ERROR_CODE_UNAUTHORIZED":         1,
+		"ERROR_CODE_TOKEN_EXPIRED":        2,
+		"ERROR_CODE_INVALID_TOKEN":        3,
+		"ERROR_CODE_FORBIDDEN":            4,
+		"ERROR_CODE_NOT_FOUND":            5,
+		"ERROR_CODE_METHOD_NOT_ALLOWED":   6,
+		"ERROR_CODE_CONFLICT":             7,
+		"ERROR_CODE_VALIDATION_ERROR":     8,
+		"ERROR_CODE_LICENSE_LOCKED":       9,
+		"ERROR_CODE_RATE_LIMIT_EXCEEDED":  10,
+		"ERROR_CODE_INTERNAL_ERROR":       11,
+		"ERROR_CODE_BAD_GATEWAY":          12,
+		"ERROR_CODE_GATEWAY_TIMEOUT":      13,
+		"ERROR_CODE_SERVICE_UNAVAILABLE":  14,
+		"ERROR_CODE_NOT_IMPLEMENTED":      15,
+		"ERROR_CODE_IDEMPOTENCY_CONFLICT": 16,
 	}
 )
 
@@ -363,7 +368,7 @@ const file_api_isa_v1_common_proto_rawDesc = "" +
 	"\n" +
 	"request_id\x18\a \x01(\tR\trequestId\x12\x14\n" +
 	"\x05param\x18\b \x01(\tR\x05param\x12\x17\n" +
-	"\adoc_url\x18\t \x01(\tR\x06docUrl*\xf3\x03\n" +
+	"\adoc_url\x18\t \x01(\tR\x06docUrl*\x98\x04\n" +
 	"\tErrorCode\x12\x1a\n" +
 	"\x16ERROR_CODE_UNSPECIFIED\x10\x00\x12\x1b\n" +
 	"\x17ERROR_CODE_UNAUTHORIZED\x10\x01\x12\x1c\n" +
@@ -381,7 +386,8 @@ const file_api_isa_v1_common_proto_rawDesc = "" +
 	"\x16ERROR_CODE_BAD_GATEWAY\x10\f\x12\x1e\n" +
 	"\x1aERROR_CODE_GATEWAY_TIMEOUT\x10\r\x12\"\n" +
 	"\x1eERROR_CODE_SERVICE_UNAVAILABLE\x10\x0e\x12\x1e\n" +
-	"\x1aERROR_CODE_NOT_IMPLEMENTED\x10\x0f*\xb1\x01\n" +
+	"\x1aERROR_CODE_NOT_IMPLEMENTED\x10\x0f\x12#\n" +
+	"\x1fERROR_CODE_IDEMPOTENCY_CONFLICT\x10\x10*\xb1\x01\n" +
 	"\x05Scope\x12\x15\n" +
 	"\x11SCOPE_UNSPECIFIED\x10\x00\x12#\n" +
 	"\x1fSCOPE_RAPIDSIGN_DOCUMENTS_WRITE\x10\x01\x12\"\n" +

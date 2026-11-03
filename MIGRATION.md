@@ -1,6 +1,6 @@
 # Migration — 0.x → 1.0.0-rc.1 (Go)
 
-The cross-language guide at [`../../MIGRATION.md`](../../MIGRATION.md)
+The cross-language guide at [`../../docs/sdk/MIGRATION.md`](../../docs/sdk/MIGRATION.md)
 covers the full cut (constructor rename, per-surface `ApiVersion`,
 v3 wire-shape, `CaseStorage` adapter, bundleless `Match`).
 Go-specific notes:
@@ -31,17 +31,17 @@ Go-specific notes:
 
 ---
 
-# Historical: per-product Go SDKs → unified `sdk` module
+## Historical: per-product Go SDKs → unified `sdk` module
 
 The ISA Go SDK is now published as a single Go module instead of four.
 Sub-package import paths are unchanged; only the consumer `go.mod`
 requirement entry needs to change.
 
-## `go.mod`
+### `go.mod`
 
 Before:
 
-```
+```text
 require (
     github.com/Software-Automation-Holdings-LLC/sdk/core v0.2.4
     github.com/Software-Automation-Holdings-LLC/sdk/zyins v0.2.4
@@ -52,13 +52,13 @@ require (
 
 After:
 
-```
+```text
 require github.com/Software-Automation-Holdings-LLC/sdk v0.3.0
 ```
 
 Run (with `GOPRIVATE=github.com/Software-Automation-Holdings-LLC/*`):
 
-```
+```bash
 go mod edit -droprequire=github.com/Software-Automation-Holdings-LLC/sdk/core
 go mod edit -droprequire=github.com/Software-Automation-Holdings-LLC/sdk/zyins
 go mod edit -droprequire=github.com/Software-Automation-Holdings-LLC/sdk/rapidsign
@@ -67,7 +67,7 @@ go get github.com/Software-Automation-Holdings-LLC/sdk@v0.3.0
 go mod tidy
 ```
 
-## Imports unchanged
+### Imports unchanged
 
 ```go
 import (
@@ -78,7 +78,7 @@ import (
 )
 ```
 
-## New root facade
+### New root facade
 
 ```go
 import sdk "github.com/Software-Automation-Holdings-LLC/sdk"
@@ -90,6 +90,6 @@ resp, err := isa.Zyins.Prequalify.Run(ctx, req)
 
 Phase 1-5 capabilities are preserved on the sub-packages unchanged.
 
-## Codemod
+### Codemod
 
 A minimal scaffold lives at `codemod-v2/cmd/isa-sdk-go-v0.3.0/main.go`.

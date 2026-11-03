@@ -112,7 +112,7 @@ type LicenseCredential struct {
 // Session auth mode signs requests with.
 type SessionCredential struct {
 	SessionID     string
-	SessionSecret string //nolint:gosec // documented credential field; consumers expect this name
+	SessionSecret string
 }
 
 // WithBearer reads ISA_TOKEN from the environment and returns an Option

@@ -22,7 +22,7 @@ func DecodeGzippedBase64(s string) ([]byte, error) {
 	if err != nil {
 		return nil, fmt.Errorf("rapidsign: failed to open gzip reader on download payload: %w", err)
 	}
-	defer r.Close()
+	defer func() { _ = r.Close() }()
 	out, err := io.ReadAll(r)
 	if err != nil {
 		return nil, fmt.Errorf("rapidsign: failed to read gzip-decompressed download payload: %w", err)

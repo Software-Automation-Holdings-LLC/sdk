@@ -21,9 +21,9 @@ const (
 
 var scopeDescriptions = map[Scope]string{
 	"rapidsign:documents:notify": "send signer notification emails.",
-	"rapidsign:documents:read": "fetch signature state and signed PDFs.",
-	"rapidsign:documents:sign": "submit signatures.",
-	"rapidsign:documents:write": "create new documents.",
+	"rapidsign:documents:read":   "fetch signature state and signed PDFs.",
+	"rapidsign:documents:sign":   "submit signatures.",
+	"rapidsign:documents:write":  "create new documents.",
 }
 
 type scopesAPI struct{}

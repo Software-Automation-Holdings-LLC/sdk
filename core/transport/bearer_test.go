@@ -13,7 +13,6 @@ import (
 // headers without binding the network stack.
 type recordingDoer struct {
 	got    *http.Request
-	resp   *http.Response
 	err    error
 	calls  int
 	bodies []string
@@ -29,23 +28,30 @@ func (r *recordingDoer) Do(req *http.Request) (*http.Response, error) {
 	if r.err != nil {
 		return nil, r.err
 	}
-	return r.resp, nil
+	return &http.Response{
+		StatusCode: http.StatusOK,
+		Body:       io.NopCloser(strings.NewReader("")),
+		Header:     http.Header{},
+	}, nil
 }
 
 type erroringToken struct{}
 
 func (erroringToken) Token() (string, error) { return "", errors.New("token oracle offline") }
 
-func newOKResponse(body string) *http.Response {
-	return &http.Response{
-		StatusCode: 200,
-		Body:       io.NopCloser(strings.NewReader(body)),
-		Header:     http.Header{},
+// doClosing performs one request and closes the response body, returning
+// only the status so tests never hold an open body.
+func doClosing(d HTTPDoer, req *http.Request) (int, error) {
+	resp, err := d.Do(req)
+	if err != nil {
+		return 0, err
 	}
+	defer func() { _ = resp.Body.Close() }()
+	return resp.StatusCode, nil
 }
 
 func TestNewBearerTransport_NilTokenSource_ReturnsTypedError(t *testing.T) {
-	_, err := NewBearerTransport(nil, &recordingDoer{resp: newOKResponse("")})
+	_, err := NewBearerTransport(nil, &recordingDoer{})
 	if !errors.Is(err, ErrNilTokenSource) {
 		t.Fatalf("expected ErrNilTokenSource, got %v", err)
 	}
@@ -59,13 +65,13 @@ func TestNewBearerTransport_NilInner_ReturnsTypedError(t *testing.T) {
 }
 
 func TestBearerTransport_Do_SetsAuthorizationHeader(t *testing.T) {
-	inner := &recordingDoer{resp: newOKResponse("")}
+	inner := &recordingDoer{}
 	bt, err := NewBearerTransport(StaticToken("secret123"), inner)
 	if err != nil {
 		t.Fatalf("ctor: %v", err)
 	}
-	req := httptest.NewRequest("GET", "/v1/health", nil)
-	if _, err := bt.Do(req); err != nil {
+	req := httptest.NewRequest(http.MethodGet, "/v1/health", nil)
+	if _, err := doClosing(bt, req); err != nil {
 		t.Fatalf("Do: %v", err)
 	}
 	if got, want := inner.got.Header.Get("Authorization"), "Bearer secret123"; got != want {
@@ -74,14 +80,14 @@ func TestBearerTransport_Do_SetsAuthorizationHeader(t *testing.T) {
 }
 
 func TestBearerTransport_Do_OverwritesExistingHeader(t *testing.T) {
-	inner := &recordingDoer{resp: newOKResponse("")}
+	inner := &recordingDoer{}
 	bt, err := NewBearerTransport(StaticToken("new"), inner)
 	if err != nil {
 		t.Fatalf("ctor: %v", err)
 	}
-	req := httptest.NewRequest("GET", "/v1/health", nil)
+	req := httptest.NewRequest(http.MethodGet, "/v1/health", nil)
 	req.Header.Set("Authorization", "Bearer old")
-	if _, err := bt.Do(req); err != nil {
+	if _, err := doClosing(bt, req); err != nil {
 		t.Fatalf("Do: %v", err)
 	}
 	if got := inner.got.Header.Get("Authorization"); got != "Bearer new" {
@@ -90,12 +96,12 @@ func TestBearerTransport_Do_OverwritesExistingHeader(t *testing.T) {
 }
 
 func TestBearerTransport_Do_TokenSourceError_PropagatesUnchanged(t *testing.T) {
-	inner := &recordingDoer{resp: newOKResponse("")}
+	inner := &recordingDoer{}
 	bt, err := NewBearerTransport(erroringToken{}, inner)
 	if err != nil {
 		t.Fatalf("ctor: %v", err)
 	}
-	_, err = bt.Do(httptest.NewRequest("GET", "/v1/x", nil))
+	_, err = doClosing(bt, httptest.NewRequest(http.MethodGet, "/v1/x", nil))
 	if err == nil {
 		t.Fatalf("expected error from token source, got nil")
 	}

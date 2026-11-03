@@ -25,7 +25,7 @@ type Webhooks struct {
 // signing surface is still being designed (#38); for now this method
 // returns *NotImplementedError so SDK consumers can wire the call
 // site against the eventual shape.
-func (w *Webhooks) Verify(rawBody []byte, headers http.Header, secret string) (*WebhookEvent, error) {
+func (w *Webhooks) Verify(_ []byte, _ http.Header, _ string) (*WebhookEvent, error) {
 	return nil, &NotImplementedError{
 		Err: &Error{
 			Code:       ErrorCodeNotImplemented,

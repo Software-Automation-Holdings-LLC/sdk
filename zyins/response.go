@@ -30,7 +30,7 @@ type envelopeMeta struct {
 // read from the JSON body when present, falling back to response
 // headers and the request's outbound Idempotency-Key when the server
 // elides those fields.
-func newEnvelope[T any](data T, body []byte, resp *http.Response) *Envelope[T] {
+func newEnvelope[T any](data T, body []byte, resp *RawResponse) *Envelope[T] {
 	env := &Envelope[T]{Data: data}
 	if len(body) > 0 {
 		var meta envelopeMeta
@@ -45,8 +45,8 @@ func newEnvelope[T any](data T, body []byte, resp *http.Response) *Envelope[T] {
 		if env.RequestID == "" {
 			env.RequestID = resp.Header.Get("X-Request-Id")
 		}
-		if env.IdempotencyKey == "" && resp.Request != nil {
-			env.IdempotencyKey = resp.Request.Header.Get("Idempotency-Key")
+		if env.IdempotencyKey == "" {
+			env.IdempotencyKey = resp.idempotencyKey
 		}
 	}
 	return env
@@ -92,6 +92,9 @@ type RawResponse struct {
 	Header http.Header
 	// URL is the absolute URL the request was sent to.
 	URL *url.URL
+	// idempotencyKey is the Idempotency-Key the request carried; it backs
+	// the Envelope fallback when the body omits one.
+	idempotencyKey string
 }
 
 // captureRawResponse builds a RawResponse from a real http.Response.
@@ -107,6 +110,7 @@ func captureRawResponse(resp *http.Response) *RawResponse {
 	}
 	if resp.Request != nil {
 		out.URL = resp.Request.URL
+		out.idempotencyKey = resp.Request.Header.Get("Idempotency-Key")
 	}
 	return out
 }

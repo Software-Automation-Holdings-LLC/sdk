@@ -67,7 +67,7 @@ func (c *Client) doJSON(ctx context.Context, args requestArgs) ([]byte, error) {
 // want headers/status can capture them via captureRawResponse. The
 // response body is fully consumed before return; only metadata is
 // preserved on the returned object.
-func (c *Client) doJSONRaw(ctx context.Context, args requestArgs) ([]byte, *http.Response, error) {
+func (c *Client) doJSONRaw(ctx context.Context, args requestArgs) ([]byte, *RawResponse, error) {
 	bodyBytes, err := marshalBody(args.body)
 	if err != nil {
 		return nil, nil, fmt.Errorf("zyins: %s %s [op=%s] body marshal: %w", args.method, args.path, args.op, err)
@@ -84,15 +84,15 @@ func (c *Client) doJSONRaw(ctx context.Context, args requestArgs) ([]byte, *http
 	if err != nil {
 		return nil, nil, fmt.Errorf("zyins: %s %s [op=%s]: %w", args.method, args.path, args.op, err)
 	}
-	defer drainAndClose(resp.Body)
+	defer drainAndClose(resp)
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		return nil, resp, fmt.Errorf("zyins: %s %s [op=%s]: %w", args.method, args.path, args.op, errorFromResponse(resp))
+		return nil, captureRawResponse(resp), fmt.Errorf("zyins: %s %s [op=%s]: %w", args.method, args.path, args.op, errorFromResponse(resp))
 	}
 	out, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return nil, resp, fmt.Errorf("zyins: reading %s %s [op=%s] response: %w", args.method, args.path, args.op, err)
+		return nil, captureRawResponse(resp), fmt.Errorf("zyins: reading %s %s [op=%s] response: %w", args.method, args.path, args.op, err)
 	}
-	return out, resp, nil
+	return out, captureRawResponse(resp), nil
 }
 
 // buildRequest assembles the *http.Request, attaching content-type,
@@ -157,10 +157,10 @@ func marshalBody(body any) ([]byte, error) {
 
 // drainAndClose discards the response body so the underlying TCP
 // connection returns to the keep-alive pool.
-func drainAndClose(rc io.ReadCloser) {
-	if rc == nil {
+func drainAndClose(resp *http.Response) {
+	if resp == nil || resp.Body == nil {
 		return
 	}
-	_, _ = io.Copy(io.Discard, rc)
-	_ = rc.Close()
+	_, _ = io.Copy(io.Discard, resp.Body)
+	_ = resp.Body.Close()
 }

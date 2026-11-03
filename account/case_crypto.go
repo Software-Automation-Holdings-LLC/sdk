@@ -134,7 +134,7 @@ func DecryptCase(product string, envelope CaseEnvelope, keyFragment string) (any
 	}
 	plaintext, err := gcm.Open(nil, iv, append(ciphertext, tag...), []byte(product))
 	if err != nil {
-		return nil, fmt.Errorf("%w: %v", ErrCaseDecrypt, err)
+		return nil, fmt.Errorf("%w: %w", ErrCaseDecrypt, err)
 	}
 	var payload any
 	if err := json.Unmarshal(plaintext, &payload); err != nil {
@@ -169,7 +169,10 @@ func decodeFragmentKey(fragment string) ([]byte, error) {
 	}
 	raw, err := base64.StdEncoding.DecodeString(fragment)
 	if err != nil {
-		return nil, fmt.Errorf("decode fragment key %q: %w", fragment, err)
+		// Never embed the fragment key in the error: it is the decryption
+		// capability and callers commonly log errors. Report only that the
+		// decode failed and the length, never the bytes.
+		return nil, fmt.Errorf("decode fragment key (len %d): not valid base64url or base64: %w", len(fragment), err)
 	}
 	return raw, nil
 }

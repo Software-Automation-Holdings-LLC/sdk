@@ -44,12 +44,6 @@ func errorBody(status int, code, detail, param string) []byte {
 	return body
 }
 
-// fakeIDs returns deterministic identifiers so tests can assert on
-// outbound headers.
-type fakeIDs struct {
-	counter atomic.Uint32
-}
-
 func newFakeIDs() *internal.IDSource {
 	// internal.IDSource uses io.Reader for randomness; supply a
 	// repeating 16-byte pattern via bytes.Reader on each call.
@@ -138,6 +132,56 @@ func TestDocumentsSend_IncludesExpectedHashes(t *testing.T) {
 	}
 }
 
+// TestDocumentsSend_NotifyIncludesFormFields asserts the notify wire body
+// carries form_id and include_code_in_link in snake_case (REQ-017/018) —
+// wrong casing would silently omit the field server-side.
+func TestDocumentsSend_NotifyIncludesFormFields(t *testing.T) {
+	t.Parallel()
+
+	var notifyBody notifyDocumentRequest
+	mux := http.NewServeMux()
+	mux.HandleFunc("/v1/documents/sig_abc/notify", func(w http.ResponseWriter, r *http.Request) {
+		if err := json.NewDecoder(r.Body).Decode(&notifyBody); err != nil {
+			t.Fatalf("notify: decode body: %v", err)
+		}
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write(envelope(map[string]any{"sign_id": "sig_abc", "status": "notified"}))
+	})
+	mux.HandleFunc("/v1/documents", func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusCreated)
+		_, _ = w.Write(envelope(map[string]any{"id": "doc_123", "sign_id": "sig_abc", "status": "pending"}))
+	})
+	srv := httptest.NewServer(mux)
+	defer srv.Close()
+
+	c := newTestClient(t, srv)
+	if _, err := c.Documents.Send(context.Background(), &SendRequest{
+		Packet:            []PdfSource{{URL: "https://docs.example.com/a.pdf"}},
+		Recipient:         Recipient{Email: "signer@example.com"},
+		FormID:            "form_xyz",
+		IncludeCodeInLink: true,
+	}); err != nil {
+		t.Fatalf("Send: %v", err)
+	}
+	if notifyBody.FormID != "form_xyz" {
+		t.Errorf("notify body form_id = %q, want form_xyz", notifyBody.FormID)
+	}
+	if !notifyBody.IncludeCodeInLink {
+		t.Error("notify body include_code_in_link = false, want true")
+	}
+
+	raw, err := json.Marshal(notifyDocumentRequest{FormID: "form_xyz", IncludeCodeInLink: true})
+	if err != nil {
+		t.Fatalf("marshal: %v", err)
+	}
+	if !bytes.Contains(raw, []byte(`"form_id":"form_xyz"`)) {
+		t.Errorf("wire body missing snake_case form_id: %s", raw)
+	}
+	if !bytes.Contains(raw, []byte(`"include_code_in_link":true`)) {
+		t.Errorf("wire body missing snake_case include_code_in_link: %s", raw)
+	}
+}
+
 func TestDocumentsSend_HappyPath(t *testing.T) {
 	t.Parallel()
 
@@ -210,9 +254,8 @@ func TestDocumentsSend_HappyPath(t *testing.T) {
 
 func TestDocumentsSend_ValidatesInputs(t *testing.T) {
 	t.Parallel()
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+	srv := httptest.NewServer(http.HandlerFunc(func(_ http.ResponseWriter, _ *http.Request) {
 		t.Fatal("server should not be reached")
-		w.WriteHeader(500)
 	}))
 	defer srv.Close()
 	c := newTestClient(t, srv)
@@ -226,7 +269,6 @@ func TestDocumentsSend_ValidatesInputs(t *testing.T) {
 		{"empty-email", &SendRequest{Packet: []PdfSource{{URL: "https://x"}}}},
 	}
 	for _, tc := range cases {
-		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 			if _, err := c.Documents.Send(context.Background(), tc.req); err == nil {
@@ -373,8 +415,7 @@ func TestDocumentsCancel_NotImplemented(t *testing.T) {
 	defer srv.Close()
 	c := newTestClient(t, srv)
 	err := c.Documents.Cancel(context.Background(), "sig_abc", &CancelRequest{Reason: "test"})
-	var ni *NotImplementedError
-	if !errors.As(err, &ni) {
+	if _, ok := errors.AsType[*NotImplementedError](err); !ok {
 		t.Fatalf("err = %T, want *NotImplementedError", err)
 	}
 }
@@ -392,8 +433,7 @@ func TestErrorClassification_FromProblemDetails(t *testing.T) {
 		{
 			"unauthorized", 401, "unauthorized",
 			func(t *testing.T, err error) {
-				var e *UnauthorizedError
-				if !errors.As(err, &e) {
+				if _, ok := errors.AsType[*UnauthorizedError](err); !ok {
 					t.Fatalf("err = %T", err)
 				}
 			},
@@ -401,8 +441,7 @@ func TestErrorClassification_FromProblemDetails(t *testing.T) {
 		{
 			"token-expired", 401, "token_expired",
 			func(t *testing.T, err error) {
-				var e *TokenExpiredError
-				if !errors.As(err, &e) {
+				if _, ok := errors.AsType[*TokenExpiredError](err); !ok {
 					t.Fatalf("err = %T", err)
 				}
 			},
@@ -410,8 +449,7 @@ func TestErrorClassification_FromProblemDetails(t *testing.T) {
 		{
 			"forbidden", 403, "forbidden",
 			func(t *testing.T, err error) {
-				var e *ForbiddenError
-				if !errors.As(err, &e) {
+				if _, ok := errors.AsType[*ForbiddenError](err); !ok {
 					t.Fatalf("err = %T", err)
 				}
 			},
@@ -419,8 +457,7 @@ func TestErrorClassification_FromProblemDetails(t *testing.T) {
 		{
 			"not-found", 404, "not_found",
 			func(t *testing.T, err error) {
-				var e *NotFoundError
-				if !errors.As(err, &e) {
+				if _, ok := errors.AsType[*NotFoundError](err); !ok {
 					t.Fatalf("err = %T", err)
 				}
 			},
@@ -428,8 +465,7 @@ func TestErrorClassification_FromProblemDetails(t *testing.T) {
 		{
 			"conflict", 409, "conflict",
 			func(t *testing.T, err error) {
-				var e *ConflictError
-				if !errors.As(err, &e) {
+				if _, ok := errors.AsType[*ConflictError](err); !ok {
 					t.Fatalf("err = %T", err)
 				}
 			},
@@ -449,8 +485,7 @@ func TestErrorClassification_FromProblemDetails(t *testing.T) {
 		{
 			"rate-limited", 429, "rate_limit_exceeded",
 			func(t *testing.T, err error) {
-				var e *RateLimitedError
-				if !errors.As(err, &e) {
+				if _, ok := errors.AsType[*RateLimitedError](err); !ok {
 					t.Fatalf("err = %T", err)
 				}
 			},
@@ -458,8 +493,7 @@ func TestErrorClassification_FromProblemDetails(t *testing.T) {
 		{
 			"service-unavailable", 503, "service_unavailable",
 			func(t *testing.T, err error) {
-				var e *ServiceUnavailableError
-				if !errors.As(err, &e) {
+				if _, ok := errors.AsType[*ServiceUnavailableError](err); !ok {
 					t.Fatalf("err = %T", err)
 				}
 			},
@@ -467,15 +501,13 @@ func TestErrorClassification_FromProblemDetails(t *testing.T) {
 		{
 			"not-implemented", 501, "not_implemented",
 			func(t *testing.T, err error) {
-				var e *NotImplementedError
-				if !errors.As(err, &e) {
+				if _, ok := errors.AsType[*NotImplementedError](err); !ok {
 					t.Fatalf("err = %T", err)
 				}
 			},
 		},
 	}
 	for _, tc := range cases {
-		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 			srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
@@ -549,8 +581,7 @@ func TestErrorClassification_UnknownCodeReturnsBaseError(t *testing.T) {
 	if base.Code != ErrorCode("mystery_code") {
 		t.Fatalf("Code = %q, want mystery_code", base.Code)
 	}
-	var nfe *NotFoundError
-	if errors.As(gotErr, &nfe) {
+	if _, ok := errors.AsType[*NotFoundError](gotErr); ok {
 		t.Fatal("unknown code must not be classified via HTTP status fallback")
 	}
 }
@@ -569,8 +600,7 @@ func TestErrorClassification_FallbackOnStatusOnly(t *testing.T) {
 		t.Fatalf("New: %v", err)
 	}
 	_, gotErr := c.Documents.Get(context.Background(), "sig_abc")
-	var nfe *NotFoundError
-	if !errors.As(gotErr, &nfe) {
+	if _, ok := errors.AsType[*NotFoundError](gotErr); !ok {
 		t.Fatalf("err = %T", gotErr)
 	}
 }
@@ -681,7 +711,7 @@ func TestAwaitSignature_Timeout(t *testing.T) {
 
 func TestAwaitSignature_BlockedGetRespectsTimeout(t *testing.T) {
 	t.Parallel()
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	srv := httptest.NewServer(http.HandlerFunc(func(_ http.ResponseWriter, r *http.Request) {
 		<-r.Context().Done()
 	}))
 	defer srv.Close()

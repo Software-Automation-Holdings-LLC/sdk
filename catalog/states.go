@@ -11,61 +11,61 @@ import "strings"
 type State string
 
 const (
-	StateAlabama State = "AL"
-	StateAlaska State = "AK"
-	StateArizona State = "AZ"
-	StateArkansas State = "AR"
-	StateCalifornia State = "CA"
-	StateColorado State = "CO"
-	StateConnecticut State = "CT"
-	StateDelaware State = "DE"
-	StateFlorida State = "FL"
-	StateGeorgia State = "GA"
-	StateHawaii State = "HI"
-	StateIdaho State = "ID"
-	StateIllinois State = "IL"
-	StateIndiana State = "IN"
-	StateIowa State = "IA"
-	StateKansas State = "KS"
-	StateKentucky State = "KY"
-	StateLouisiana State = "LA"
-	StateMaine State = "ME"
-	StateMaryland State = "MD"
-	StateMassachusetts State = "MA"
-	StateMichigan State = "MI"
-	StateMinnesota State = "MN"
-	StateMississippi State = "MS"
-	StateMissouri State = "MO"
-	StateMontana State = "MT"
-	StateNebraska State = "NE"
-	StateNevada State = "NV"
-	StateNewHampshire State = "NH"
-	StateNewJersey State = "NJ"
-	StateNewMexico State = "NM"
-	StateNewYork State = "NY"
-	StateNorthCarolina State = "NC"
-	StateNorthDakota State = "ND"
-	StateOhio State = "OH"
-	StateOklahoma State = "OK"
-	StateOregon State = "OR"
-	StatePennsylvania State = "PA"
-	StateRhodeIsland State = "RI"
-	StateSouthCarolina State = "SC"
-	StateSouthDakota State = "SD"
-	StateTennessee State = "TN"
-	StateTexas State = "TX"
-	StateUtah State = "UT"
-	StateVermont State = "VT"
-	StateVirginia State = "VA"
-	StateWashington State = "WA"
-	StateWestVirginia State = "WV"
-	StateWisconsin State = "WI"
-	StateWyoming State = "WY"
-	StateDistrictOfColumbia State = "DC"
-	StateAmericanSamoa State = "AS"
-	StateGuam State = "GU"
-	StateNorthernMarianaIslands State = "MP"
-	StatePuertoRico State = "PR"
+	StateAlabama                   State = "AL"
+	StateAlaska                    State = "AK"
+	StateArizona                   State = "AZ"
+	StateArkansas                  State = "AR"
+	StateCalifornia                State = "CA"
+	StateColorado                  State = "CO"
+	StateConnecticut               State = "CT"
+	StateDelaware                  State = "DE"
+	StateFlorida                   State = "FL"
+	StateGeorgia                   State = "GA"
+	StateHawaii                    State = "HI"
+	StateIdaho                     State = "ID"
+	StateIllinois                  State = "IL"
+	StateIndiana                   State = "IN"
+	StateIowa                      State = "IA"
+	StateKansas                    State = "KS"
+	StateKentucky                  State = "KY"
+	StateLouisiana                 State = "LA"
+	StateMaine                     State = "ME"
+	StateMaryland                  State = "MD"
+	StateMassachusetts             State = "MA"
+	StateMichigan                  State = "MI"
+	StateMinnesota                 State = "MN"
+	StateMississippi               State = "MS"
+	StateMissouri                  State = "MO"
+	StateMontana                   State = "MT"
+	StateNebraska                  State = "NE"
+	StateNevada                    State = "NV"
+	StateNewHampshire              State = "NH"
+	StateNewJersey                 State = "NJ"
+	StateNewMexico                 State = "NM"
+	StateNewYork                   State = "NY"
+	StateNorthCarolina             State = "NC"
+	StateNorthDakota               State = "ND"
+	StateOhio                      State = "OH"
+	StateOklahoma                  State = "OK"
+	StateOregon                    State = "OR"
+	StatePennsylvania              State = "PA"
+	StateRhodeIsland               State = "RI"
+	StateSouthCarolina             State = "SC"
+	StateSouthDakota               State = "SD"
+	StateTennessee                 State = "TN"
+	StateTexas                     State = "TX"
+	StateUtah                      State = "UT"
+	StateVermont                   State = "VT"
+	StateVirginia                  State = "VA"
+	StateWashington                State = "WA"
+	StateWestVirginia              State = "WV"
+	StateWisconsin                 State = "WI"
+	StateWyoming                   State = "WY"
+	StateDistrictOfColumbia        State = "DC"
+	StateAmericanSamoa             State = "AS"
+	StateGuam                      State = "GU"
+	StateNorthernMarianaIslands    State = "MP"
+	StatePuertoRico                State = "PR"
 	StateUnitedStatesVirginIslands State = "VI"
 )
 
@@ -195,61 +195,61 @@ var allStates = []State{
 }
 
 var stateByName = map[string]State{
-	"alabama": "AL",
-	"alaska": "AK",
-	"arizona": "AZ",
-	"arkansas": "AR",
-	"california": "CA",
-	"colorado": "CO",
-	"connecticut": "CT",
-	"delaware": "DE",
-	"florida": "FL",
-	"georgia": "GA",
-	"hawaii": "HI",
-	"idaho": "ID",
-	"illinois": "IL",
-	"indiana": "IN",
-	"iowa": "IA",
-	"kansas": "KS",
-	"kentucky": "KY",
-	"louisiana": "LA",
-	"maine": "ME",
-	"maryland": "MD",
-	"massachusetts": "MA",
-	"michigan": "MI",
-	"minnesota": "MN",
-	"mississippi": "MS",
-	"missouri": "MO",
-	"montana": "MT",
-	"nebraska": "NE",
-	"nevada": "NV",
-	"new hampshire": "NH",
-	"new jersey": "NJ",
-	"new mexico": "NM",
-	"new york": "NY",
-	"north carolina": "NC",
-	"north dakota": "ND",
-	"ohio": "OH",
-	"oklahoma": "OK",
-	"oregon": "OR",
-	"pennsylvania": "PA",
-	"rhode island": "RI",
-	"south carolina": "SC",
-	"south dakota": "SD",
-	"tennessee": "TN",
-	"texas": "TX",
-	"utah": "UT",
-	"vermont": "VT",
-	"virginia": "VA",
-	"washington": "WA",
-	"west virginia": "WV",
-	"wisconsin": "WI",
-	"wyoming": "WY",
-	"district of columbia": "DC",
-	"american samoa": "AS",
-	"guam": "GU",
-	"northern mariana islands": "MP",
-	"puerto rico": "PR",
+	"alabama":                      "AL",
+	"alaska":                       "AK",
+	"arizona":                      "AZ",
+	"arkansas":                     "AR",
+	"california":                   "CA",
+	"colorado":                     "CO",
+	"connecticut":                  "CT",
+	"delaware":                     "DE",
+	"florida":                      "FL",
+	"georgia":                      "GA",
+	"hawaii":                       "HI",
+	"idaho":                        "ID",
+	"illinois":                     "IL",
+	"indiana":                      "IN",
+	"iowa":                         "IA",
+	"kansas":                       "KS",
+	"kentucky":                     "KY",
+	"louisiana":                    "LA",
+	"maine":                        "ME",
+	"maryland":                     "MD",
+	"massachusetts":                "MA",
+	"michigan":                     "MI",
+	"minnesota":                    "MN",
+	"mississippi":                  "MS",
+	"missouri":                     "MO",
+	"montana":                      "MT",
+	"nebraska":                     "NE",
+	"nevada":                       "NV",
+	"new hampshire":                "NH",
+	"new jersey":                   "NJ",
+	"new mexico":                   "NM",
+	"new york":                     "NY",
+	"north carolina":               "NC",
+	"north dakota":                 "ND",
+	"ohio":                         "OH",
+	"oklahoma":                     "OK",
+	"oregon":                       "OR",
+	"pennsylvania":                 "PA",
+	"rhode island":                 "RI",
+	"south carolina":               "SC",
+	"south dakota":                 "SD",
+	"tennessee":                    "TN",
+	"texas":                        "TX",
+	"utah":                         "UT",
+	"vermont":                      "VT",
+	"virginia":                     "VA",
+	"washington":                   "WA",
+	"west virginia":                "WV",
+	"wisconsin":                    "WI",
+	"wyoming":                      "WY",
+	"district of columbia":         "DC",
+	"american samoa":               "AS",
+	"guam":                         "GU",
+	"northern mariana islands":     "MP",
+	"puerto rico":                  "PR",
 	"united states virgin islands": "VI",
 }
 
@@ -270,7 +270,11 @@ func (statesAPI) Metadata(s State) (StateMetadata, bool) {
 // ByAbbreviation resolves by abbreviation or full name (case-insensitive).
 func (statesAPI) ByAbbreviation(s string) (State, bool) {
 	up := strings.ToUpper(strings.TrimSpace(s))
-	if _, ok := stateMetadata[State(up)]; ok { return State(up), true }
-	if v, ok := stateByName[strings.ToLower(strings.TrimSpace(s))]; ok { return v, true }
+	if _, ok := stateMetadata[State(up)]; ok {
+		return State(up), true
+	}
+	if v, ok := stateByName[strings.ToLower(strings.TrimSpace(s))]; ok {
+		return v, true
+	}
 	return "", false
 }

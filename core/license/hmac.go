@@ -34,13 +34,13 @@ import (
 // by Build. Exported so callers do not rebuild the literal in every
 // transport.
 const (
-	HeaderAuthorization      = "Authorization"
-	HeaderDeviceID           = "X-Device-ID"
-	HeaderDeviceSignature    = "X-Device-Signature"
-	HeaderLicenseMethod      = "X-License-Method"
-	HeaderLicenseURI         = "X-License-URI"
-	HeaderLicenseTimestamp   = "X-License-Timestamp"
-	authorizationLicenseTag  = "License"
+	HeaderAuthorization     = "Authorization"
+	HeaderDeviceID          = "X-Device-ID"
+	HeaderDeviceSignature   = "X-Device-Signature"
+	HeaderLicenseMethod     = "X-License-Method"
+	HeaderLicenseURI        = "X-License-URI"
+	HeaderLicenseTimestamp  = "X-License-Timestamp"
+	authorizationLicenseTag = "License"
 )
 
 // Errors surfaced by Build.
@@ -87,12 +87,12 @@ type Input struct {
 // Headers is the six-header bundle emitted by Build. AsMap renders the
 // canonical wire form for transport layers.
 type Headers struct {
-	Authorization     string
-	DeviceID          string
-	DeviceSignature   string
-	LicenseMethod     string
-	LicenseURI        string
-	LicenseTimestamp  string
+	Authorization    string
+	DeviceID         string
+	DeviceSignature  string
+	LicenseMethod    string
+	LicenseURI       string
+	LicenseTimestamp string
 }
 
 // AsMap returns the header bundle as a map keyed by canonical names.
