@@ -41,7 +41,7 @@ func loadAuthVector(t *testing.T) authVectorFixture {
 	t.Helper()
 	// packages/go/core → repo root is four levels up.
 	path := filepath.Join("..", "..", "..", "tests", "conformance", "fixtures", "auth-vector.json")
-	raw, err := os.ReadFile(path)
+	raw, err := os.ReadFile(filepath.Clean(path))
 	if err != nil {
 		t.Fatalf("read auth-vector fixture at %s: %v", path, err)
 	}

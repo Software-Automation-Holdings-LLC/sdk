@@ -117,7 +117,7 @@ type BearerOptions struct {
 // [LicenseOptions].
 type SessionOptions struct {
 	SessionID     string
-	SessionSecret string //nolint:gosec // documented credential field
+	SessionSecret string
 	APIVersion    map[string]string
 	CaseStorage   zcases.CaseStorage
 }

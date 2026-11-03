@@ -23,6 +23,8 @@ package transport
 
 import (
 	"bytes"
+	"crypto/rand"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -37,6 +39,8 @@ import (
 const maxProblemBodyBytes = 8 << 10
 
 const (
+	requestIDHeader    = "X-Isa-Request-Id"
+	requestIDByteCount = 16
 	sessionExpiredCode = "session_expired"
 	sessionRevokedCode = "session_revoked"
 )
@@ -112,6 +116,7 @@ func (s *SessionInterceptor) signAndSend(req *http.Request, body []byte) (*http.
 		Body:          body,
 		SessionID:     sess.ID,
 		SessionSecret: sess.Secret,
+		DeviceID:      s.store.DeviceID(),
 	})
 	if sigErr != nil {
 		return nil, fmt.Errorf("transport: sign request (path=%s): %w", req.URL.Path, sigErr)
@@ -119,12 +124,23 @@ func (s *SessionInterceptor) signAndSend(req *http.Request, body []byte) (*http.
 	for k, v := range signed.AsMap() {
 		req.Header.Set(k, v)
 	}
+	// A fresh id per attempt: the server's replay cache rejects a reused
+	// (sessionId, requestId) pair, including on the 401 retry.
+	req.Header.Set(requestIDHeader, newRequestID())
 	resetRequestBody(req, body)
 	resp, doErr := s.inner.Do(req)
 	if doErr != nil {
 		return nil, fmt.Errorf("transport: inner Do (path=%s): %w", req.URL.Path, doErr)
 	}
 	return resp, nil
+}
+
+// newRequestID returns 128 random bits, hex-encoded. crypto/rand.Read
+// never returns an error on supported platforms.
+func newRequestID() string {
+	b := make([]byte, requestIDByteCount)
+	_, _ = rand.Read(b)
+	return hex.EncodeToString(b)
 }
 
 func snapshotBody(req *http.Request) ([]byte, error) {

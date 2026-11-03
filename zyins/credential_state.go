@@ -37,6 +37,10 @@ type LicenseRefreshedEvent struct {
 // LicenseRefreshedListener subscribes to LicenseRefreshedEvent.
 type LicenseRefreshedListener func(LicenseRefreshedEvent)
 
+type licenseRefreshedSubscription struct {
+	listener LicenseRefreshedListener
+}
+
 // CredentialSnapshot is the bootstrap input for NewCredentialState.
 // Empty fields fall back to the store, then (for DeviceID) to an
 // auto-minted value.
@@ -60,7 +64,7 @@ type CredentialState struct {
 	email      string
 
 	store     CredentialStore
-	listeners []LicenseRefreshedListener
+	listeners []*licenseRefreshedSubscription
 }
 
 // NewCredentialState constructs a CredentialState from a snapshot. The
@@ -139,14 +143,25 @@ func (s *CredentialState) Snapshot() CredentialSnapshot {
 func (s *CredentialState) OnLicenseRefreshed(listener LicenseRefreshedListener) func() {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	s.listeners = append(s.listeners, listener)
-	idx := len(s.listeners) - 1
+	subscription := &licenseRefreshedSubscription{listener: listener}
+	s.listeners = append(s.listeners, subscription)
 	return func() {
 		s.mu.Lock()
 		defer s.mu.Unlock()
-		if idx < len(s.listeners) {
-			s.listeners[idx] = nil
+		s.removeLicenseRefreshedSubscription(subscription)
+	}
+}
+
+func (s *CredentialState) removeLicenseRefreshedSubscription(subscription *licenseRefreshedSubscription) {
+	for i, current := range s.listeners {
+		if current != subscription {
+			continue
 		}
+		last := len(s.listeners) - 1
+		s.listeners[i] = s.listeners[last]
+		s.listeners[last] = nil
+		s.listeners = s.listeners[:last]
+		return
 	}
 }
 
@@ -160,7 +175,7 @@ func (s *CredentialState) RefreshLicenseKey(licenseKey string) error {
 	deviceID := s.deviceID
 	email := s.email
 	keycode := s.keycode
-	listeners := append([]LicenseRefreshedListener(nil), s.listeners...)
+	listeners := append([]*licenseRefreshedSubscription(nil), s.listeners...)
 	s.mu.Unlock()
 	if err := s.store.Set(CredentialKeyLicenseKey, licenseKey); err != nil {
 		return fmt.Errorf("zyins: RefreshLicenseKey persisting license key: %w", err)
@@ -171,11 +186,11 @@ func (s *CredentialState) RefreshLicenseKey(licenseKey string) error {
 		Email:      email,
 		OrderID:    keycode,
 	}
-	for _, listener := range listeners {
-		if listener == nil {
+	for _, subscription := range listeners {
+		if subscription == nil || subscription.listener == nil {
 			continue
 		}
-		notifyListener(listener, event)
+		notifyListener(subscription.listener, event)
 	}
 	return nil
 }
@@ -219,4 +234,3 @@ func LicensesFromEnv() (CredentialSnapshot, error) {
 	}
 	return CredentialSnapshot{Keycode: keycode, Email: email}, nil
 }
-

@@ -26,73 +26,73 @@ type Product struct {
 // FexProducts is the read-only accessor for the fex product family.
 // Fields are unexported; access products via the provided methods, which
 // return by-value copies so the catalog source cannot be mutated.
-type FexProducts struct{
-	aetnaAccendo Product
-	aetnaProtectionSeries Product
-	aflacFinalExpense Product
-	americanAmicableClearChoice Product
-	americanAmicableDignitySolutions Product
-	americanAmicableGoldenSolution Product
-	americanAmicableInnovativeSolutions Product
+type FexProducts struct {
+	aetnaAccendo                               Product
+	aetnaProtectionSeries                      Product
+	aflacFinalExpense                          Product
+	americanAmicableClearChoice                Product
+	americanAmicableDignitySolutions           Product
+	americanAmicableGoldenSolution             Product
+	americanAmicableInnovativeSolutions        Product
 	americanAmicablePlatinumSolutionLegacyPlan Product
-	americanAmicableSeniorChoice Product
-	americanAmicableTribute Product
-	americanHomeLifeGuidestar Product
-	americanHomeLifePatriotSeries Product
-	americoEaglePremier Product
-	baltimoreLifeIprovide Product
-	baltimoreLifeSilverGuard Product
-	betterlifeFinalExpense Product
-	centrianLivingLegacy Product
-	cicaLifeSuperiorChoice Product
-	cignaIndividualWholeLife Product
-	combinedGenerationalLife Product
-	corebridgeGiwl Product
-	corebridgeSimplinowLegacy Product
-	emcEasylife Product
-	everestIaAmericanAdvantage50Plus Product
-	familyBenefitLifeGoldenEagle Product
-	fidelityLifeRapidecision Product
-	fidelityLifeRapidecisionSeniorLife Product
-	firstGuarantyInsuranceSecurityCare Product
-	forestersPlanRight Product
-	gerberLife Product
-	gpmLifeSecureMark Product
-	gtlHeritagePlan Product
-	illinoisMutualPathProtectorPlus Product
-	kskjFinalExpense Product
-	libertyBankersSimpl Product
-	lifeShieldSurvivor Product
-	manhattanLifeSecureAdvantage Product
-	mutualOfOmahaLivingPromise Product
-	newbridgeFinalExpense Product
-	occidentalLifeClearChoice Product
-	occidentalLifeDignitySolutions Product
-	occidentalLifeGoldenSolution Product
-	occidentalLifeInnovativeSolutions Product
-	occidentalLifePlatinumSolutionLegacyPlan Product
-	occidentalLifeSeniorChoice Product
-	occidentalLifeTribute Product
-	oxfordLifeSimplifiedIssue Product
-	pekinWholeLife Product
-	pioneerAmericanIndependentAmerican Product
-	pioneerAmericanNorthstarLegacy Product
-	royalArcanumGraded Product
-	royalArcanumSimplifiedIssue Product
-	royalNeighborsEnsuredLegacy Product
-	sUsaGoldenPromise Product
-	sbliLivingLegacy Product
-	securicoLifeFinalExpense Product
-	securityNationalSimpleSecurity Product
-	seniorLifeWholeLife Product
-	sentinelSecurityNewVantage Product
-	sonsOfNorwayLegacySure Product
-	sonsOfNorwayWholeLife Product
-	transamericaFeExpressSolution Product
-	transamericaSolution Product
-	trinityGoldenEagle Product
-	unitedFarmAndFamilyWholeLife Product
-	unitedHomeLifeWholeLife Product
+	americanAmicableSeniorChoice               Product
+	americanAmicableTribute                    Product
+	americanHomeLifeGuidestar                  Product
+	americanHomeLifePatriotSeries              Product
+	americoEaglePremier                        Product
+	baltimoreLifeIprovide                      Product
+	baltimoreLifeSilverGuard                   Product
+	betterlifeFinalExpense                     Product
+	centrianLivingLegacy                       Product
+	cicaLifeSuperiorChoice                     Product
+	cignaIndividualWholeLife                   Product
+	combinedGenerationalLife                   Product
+	corebridgeGiwl                             Product
+	corebridgeSimplinowLegacy                  Product
+	emcEasylife                                Product
+	everestIaAmericanAdvantage50Plus           Product
+	familyBenefitLifeGoldenEagle               Product
+	fidelityLifeRapidecision                   Product
+	fidelityLifeRapidecisionSeniorLife         Product
+	firstGuarantyInsuranceSecurityCare         Product
+	forestersPlanRight                         Product
+	gerberLife                                 Product
+	gpmLifeSecureMark                          Product
+	gtlHeritagePlan                            Product
+	illinoisMutualPathProtectorPlus            Product
+	kskjFinalExpense                           Product
+	libertyBankersSimpl                        Product
+	lifeShieldSurvivor                         Product
+	manhattanLifeSecureAdvantage               Product
+	mutualOfOmahaLivingPromise                 Product
+	newbridgeFinalExpense                      Product
+	occidentalLifeClearChoice                  Product
+	occidentalLifeDignitySolutions             Product
+	occidentalLifeGoldenSolution               Product
+	occidentalLifeInnovativeSolutions          Product
+	occidentalLifePlatinumSolutionLegacyPlan   Product
+	occidentalLifeSeniorChoice                 Product
+	occidentalLifeTribute                      Product
+	oxfordLifeSimplifiedIssue                  Product
+	pekinWholeLife                             Product
+	pioneerAmericanIndependentAmerican         Product
+	pioneerAmericanNorthstarLegacy             Product
+	royalArcanumGraded                         Product
+	royalArcanumSimplifiedIssue                Product
+	royalNeighborsEnsuredLegacy                Product
+	sUsaGoldenPromise                          Product
+	sbliLivingLegacy                           Product
+	securicoLifeFinalExpense                   Product
+	securityNationalSimpleSecurity             Product
+	seniorLifeWholeLife                        Product
+	sentinelSecurityNewVantage                 Product
+	sonsOfNorwayLegacySure                     Product
+	sonsOfNorwayWholeLife                      Product
+	transamericaFeExpressSolution              Product
+	transamericaSolution                       Product
+	trinityGoldenEagle                         Product
+	unitedFarmAndFamilyWholeLife               Product
+	unitedHomeLifeWholeLife                    Product
 }
 
 // AetnaAccendo returns the Product value for Aetna Accendo.
@@ -108,16 +108,24 @@ func (f FexProducts) AflacFinalExpense() Product { return f.aflacFinalExpense }
 func (f FexProducts) AmericanAmicableClearChoice() Product { return f.americanAmicableClearChoice }
 
 // AmericanAmicableDignitySolutions returns the Product value for American Amicable Dignity Solutions.
-func (f FexProducts) AmericanAmicableDignitySolutions() Product { return f.americanAmicableDignitySolutions }
+func (f FexProducts) AmericanAmicableDignitySolutions() Product {
+	return f.americanAmicableDignitySolutions
+}
 
 // AmericanAmicableGoldenSolution returns the Product value for American Amicable Golden Solution.
-func (f FexProducts) AmericanAmicableGoldenSolution() Product { return f.americanAmicableGoldenSolution }
+func (f FexProducts) AmericanAmicableGoldenSolution() Product {
+	return f.americanAmicableGoldenSolution
+}
 
 // AmericanAmicableInnovativeSolutions returns the Product value for American Amicable Innovative Solutions.
-func (f FexProducts) AmericanAmicableInnovativeSolutions() Product { return f.americanAmicableInnovativeSolutions }
+func (f FexProducts) AmericanAmicableInnovativeSolutions() Product {
+	return f.americanAmicableInnovativeSolutions
+}
 
 // AmericanAmicablePlatinumSolutionLegacyPlan returns the Product value for American Amicable Platinum Solution Legacy Plan.
-func (f FexProducts) AmericanAmicablePlatinumSolutionLegacyPlan() Product { return f.americanAmicablePlatinumSolutionLegacyPlan }
+func (f FexProducts) AmericanAmicablePlatinumSolutionLegacyPlan() Product {
+	return f.americanAmicablePlatinumSolutionLegacyPlan
+}
 
 // AmericanAmicableSeniorChoice returns the Product value for American Amicable Senior Choice.
 func (f FexProducts) AmericanAmicableSeniorChoice() Product { return f.americanAmicableSeniorChoice }
@@ -165,7 +173,9 @@ func (f FexProducts) CorebridgeSimplinowLegacy() Product { return f.corebridgeSi
 func (f FexProducts) EmcEasylife() Product { return f.emcEasylife }
 
 // EverestIaAmericanAdvantage50Plus returns the Product value for Everest IA American Advantage 50 Plus.
-func (f FexProducts) EverestIaAmericanAdvantage50Plus() Product { return f.everestIaAmericanAdvantage50Plus }
+func (f FexProducts) EverestIaAmericanAdvantage50Plus() Product {
+	return f.everestIaAmericanAdvantage50Plus
+}
 
 // FamilyBenefitLifeGoldenEagle returns the Product value for Family Benefit Life Golden Eagle.
 func (f FexProducts) FamilyBenefitLifeGoldenEagle() Product { return f.familyBenefitLifeGoldenEagle }
@@ -174,10 +184,14 @@ func (f FexProducts) FamilyBenefitLifeGoldenEagle() Product { return f.familyBen
 func (f FexProducts) FidelityLifeRapidecision() Product { return f.fidelityLifeRapidecision }
 
 // FidelityLifeRapidecisionSeniorLife returns the Product value for Fidelity Life RAPIDecision Senior Life.
-func (f FexProducts) FidelityLifeRapidecisionSeniorLife() Product { return f.fidelityLifeRapidecisionSeniorLife }
+func (f FexProducts) FidelityLifeRapidecisionSeniorLife() Product {
+	return f.fidelityLifeRapidecisionSeniorLife
+}
 
 // FirstGuarantyInsuranceSecurityCare returns the Product value for First Guaranty Insurance Security Care.
-func (f FexProducts) FirstGuarantyInsuranceSecurityCare() Product { return f.firstGuarantyInsuranceSecurityCare }
+func (f FexProducts) FirstGuarantyInsuranceSecurityCare() Product {
+	return f.firstGuarantyInsuranceSecurityCare
+}
 
 // ForestersPlanRight returns the Product value for Foresters Plan Right.
 func (f FexProducts) ForestersPlanRight() Product { return f.forestersPlanRight }
@@ -192,7 +206,9 @@ func (f FexProducts) GpmLifeSecureMark() Product { return f.gpmLifeSecureMark }
 func (f FexProducts) GtlHeritagePlan() Product { return f.gtlHeritagePlan }
 
 // IllinoisMutualPathProtectorPlus returns the Product value for Illinois Mutual Path Protector Plus.
-func (f FexProducts) IllinoisMutualPathProtectorPlus() Product { return f.illinoisMutualPathProtectorPlus }
+func (f FexProducts) IllinoisMutualPathProtectorPlus() Product {
+	return f.illinoisMutualPathProtectorPlus
+}
 
 // KskjFinalExpense returns the Product value for KSKJ Final Expense.
 func (f FexProducts) KskjFinalExpense() Product { return f.kskjFinalExpense }
@@ -216,16 +232,22 @@ func (f FexProducts) NewbridgeFinalExpense() Product { return f.newbridgeFinalEx
 func (f FexProducts) OccidentalLifeClearChoice() Product { return f.occidentalLifeClearChoice }
 
 // OccidentalLifeDignitySolutions returns the Product value for Occidental Life Dignity Solutions.
-func (f FexProducts) OccidentalLifeDignitySolutions() Product { return f.occidentalLifeDignitySolutions }
+func (f FexProducts) OccidentalLifeDignitySolutions() Product {
+	return f.occidentalLifeDignitySolutions
+}
 
 // OccidentalLifeGoldenSolution returns the Product value for Occidental Life Golden Solution.
 func (f FexProducts) OccidentalLifeGoldenSolution() Product { return f.occidentalLifeGoldenSolution }
 
 // OccidentalLifeInnovativeSolutions returns the Product value for Occidental Life Innovative Solutions.
-func (f FexProducts) OccidentalLifeInnovativeSolutions() Product { return f.occidentalLifeInnovativeSolutions }
+func (f FexProducts) OccidentalLifeInnovativeSolutions() Product {
+	return f.occidentalLifeInnovativeSolutions
+}
 
 // OccidentalLifePlatinumSolutionLegacyPlan returns the Product value for Occidental Life Platinum Solution Legacy Plan.
-func (f FexProducts) OccidentalLifePlatinumSolutionLegacyPlan() Product { return f.occidentalLifePlatinumSolutionLegacyPlan }
+func (f FexProducts) OccidentalLifePlatinumSolutionLegacyPlan() Product {
+	return f.occidentalLifePlatinumSolutionLegacyPlan
+}
 
 // OccidentalLifeSeniorChoice returns the Product value for Occidental Life Senior Choice.
 func (f FexProducts) OccidentalLifeSeniorChoice() Product { return f.occidentalLifeSeniorChoice }
@@ -240,10 +262,14 @@ func (f FexProducts) OxfordLifeSimplifiedIssue() Product { return f.oxfordLifeSi
 func (f FexProducts) PekinWholeLife() Product { return f.pekinWholeLife }
 
 // PioneerAmericanIndependentAmerican returns the Product value for Pioneer American Independent American.
-func (f FexProducts) PioneerAmericanIndependentAmerican() Product { return f.pioneerAmericanIndependentAmerican }
+func (f FexProducts) PioneerAmericanIndependentAmerican() Product {
+	return f.pioneerAmericanIndependentAmerican
+}
 
 // PioneerAmericanNorthstarLegacy returns the Product value for Pioneer American NorthStar Legacy.
-func (f FexProducts) PioneerAmericanNorthstarLegacy() Product { return f.pioneerAmericanNorthstarLegacy }
+func (f FexProducts) PioneerAmericanNorthstarLegacy() Product {
+	return f.pioneerAmericanNorthstarLegacy
+}
 
 // RoyalArcanumGraded returns the Product value for Royal Arcanum Graded.
 func (f FexProducts) RoyalArcanumGraded() Product { return f.royalArcanumGraded }
@@ -264,7 +290,9 @@ func (f FexProducts) SbliLivingLegacy() Product { return f.sbliLivingLegacy }
 func (f FexProducts) SecuricoLifeFinalExpense() Product { return f.securicoLifeFinalExpense }
 
 // SecurityNationalSimpleSecurity returns the Product value for Security National Simple Security.
-func (f FexProducts) SecurityNationalSimpleSecurity() Product { return f.securityNationalSimpleSecurity }
+func (f FexProducts) SecurityNationalSimpleSecurity() Product {
+	return f.securityNationalSimpleSecurity
+}
 
 // SeniorLifeWholeLife returns the Product value for Senior Life Whole Life.
 func (f FexProducts) SeniorLifeWholeLife() Product { return f.seniorLifeWholeLife }
@@ -296,9 +324,9 @@ func (f FexProducts) UnitedHomeLifeWholeLife() Product { return f.unitedHomeLife
 // MedsupProducts is the read-only accessor for the medsup product family.
 // Fields are unexported; access products via the provided methods, which
 // return by-value copies so the catalog source cannot be mutated.
-type MedsupProducts struct{
-	aetnaAccendoMedsup Product
-	aetnaMedsup Product
+type MedsupProducts struct {
+	aetnaAccendoMedsup  Product
+	aetnaMedsup         Product
 	manhattanLifeMedsup Product
 	mutualOfOmahaMedsup Product
 }
@@ -318,8 +346,8 @@ func (f MedsupProducts) MutualOfOmahaMedsup() Product { return f.mutualOfOmahaMe
 // PreneedProducts is the read-only accessor for the preneed product family.
 // Fields are unexported; access products via the provided methods, which
 // return by-value copies so the catalog source cannot be mutated.
-type PreneedProducts struct{
-	betterlifeSinglePremium Product
+type PreneedProducts struct {
+	betterlifeSinglePremium            Product
 	globalAtlanticSimpleProtectionPlan Product
 }
 
@@ -327,48 +355,50 @@ type PreneedProducts struct{
 func (f PreneedProducts) BetterlifeSinglePremium() Product { return f.betterlifeSinglePremium }
 
 // GlobalAtlanticSimpleProtectionPlan returns the Product value for Global Atlantic Simple Protection Plan.
-func (f PreneedProducts) GlobalAtlanticSimpleProtectionPlan() Product { return f.globalAtlanticSimpleProtectionPlan }
+func (f PreneedProducts) GlobalAtlanticSimpleProtectionPlan() Product {
+	return f.globalAtlanticSimpleProtectionPlan
+}
 
 // TermProducts is the read-only accessor for the term product family.
 // Fields are unexported; access products via the provided methods, which
 // return by-value copies so the catalog source cannot be mutated.
-type TermProducts struct{
-	americanAmicableEasyTerm Product
-	americanAmicableHomeProtector Product
-	americanAmicableTermMadeSimple Product
-	americoHmsPlus Product
-	ameritasFlxLivingBenefitsTerm Product
-	ameritasValuePlusTerm Product
-	bannerOpterm Product
-	corebridgeSelectATerm Product
-	fidelityLifeInstabrainPureTerm Product
-	fidelityLifeInstabrainTerm Product
-	fidelityLifeInstaterm Product
-	forestersStrongFoundation Product
-	forestersYourTerm Product
-	forestersYourTermNonMedical Product
-	gpmQMark Product
-	gtlTurboTerm Product
-	heroLifeTerm Product
-	johnHancockSimpleTermWithVitality Product
+type TermProducts struct {
+	americanAmicableEasyTerm           Product
+	americanAmicableHomeProtector      Product
+	americanAmicableTermMadeSimple     Product
+	americoHmsPlus                     Product
+	ameritasFlxLivingBenefitsTerm      Product
+	ameritasValuePlusTerm              Product
+	bannerOpterm                       Product
+	corebridgeSelectATerm              Product
+	fidelityLifeInstabrainPureTerm     Product
+	fidelityLifeInstabrainTerm         Product
+	fidelityLifeInstaterm              Product
+	forestersStrongFoundation          Product
+	forestersYourTerm                  Product
+	forestersYourTermNonMedical        Product
+	gpmQMark                           Product
+	gtlTurboTerm                       Product
+	heroLifeTerm                       Product
+	johnHancockSimpleTermWithVitality  Product
 	kansasCityLifeSignatureTermExpress Product
-	lincolnLifeelements Product
-	lincolnTermaccel Product
-	mutualOfOmahaTermLifeAnswers Product
-	mutualOfOmahaTermLifeExpress Product
-	nationwideYourlife Product
-	northAmericanAddvantage Product
-	prosperityFamilyFreedomTerm Product
-	protectiveLifeClassicChoiceTerm Product
-	protectiveLifeCustomChoiceTerm Product
-	prudentialEssentialTermPlus Product
-	prudentialEssentialTermValue Product
-	sagicorSageTerm Product
-	sbliTTerm Product
-	seniorLifeTermLife Product
-	transamericaTrendsetterLb Product
-	transamericaTrendsetterSuper Product
-	williamPennOpterm Product
+	lincolnLifeelements                Product
+	lincolnTermaccel                   Product
+	mutualOfOmahaTermLifeAnswers       Product
+	mutualOfOmahaTermLifeExpress       Product
+	nationwideYourlife                 Product
+	northAmericanAddvantage            Product
+	prosperityFamilyFreedomTerm        Product
+	protectiveLifeClassicChoiceTerm    Product
+	protectiveLifeCustomChoiceTerm     Product
+	prudentialEssentialTermPlus        Product
+	prudentialEssentialTermValue       Product
+	sagicorSageTerm                    Product
+	sbliTTerm                          Product
+	seniorLifeTermLife                 Product
+	transamericaTrendsetterLb          Product
+	transamericaTrendsetterSuper       Product
+	williamPennOpterm                  Product
 }
 
 // AmericanAmicableEasyTerm returns the Product value for American Amicable Easy Term.
@@ -378,7 +408,9 @@ func (f TermProducts) AmericanAmicableEasyTerm() Product { return f.americanAmic
 func (f TermProducts) AmericanAmicableHomeProtector() Product { return f.americanAmicableHomeProtector }
 
 // AmericanAmicableTermMadeSimple returns the Product value for American Amicable Term Made Simple.
-func (f TermProducts) AmericanAmicableTermMadeSimple() Product { return f.americanAmicableTermMadeSimple }
+func (f TermProducts) AmericanAmicableTermMadeSimple() Product {
+	return f.americanAmicableTermMadeSimple
+}
 
 // AmericoHmsPlus returns the Product value for Americo HMS PLUS.
 func (f TermProducts) AmericoHmsPlus() Product { return f.americoHmsPlus }
@@ -396,7 +428,9 @@ func (f TermProducts) BannerOpterm() Product { return f.bannerOpterm }
 func (f TermProducts) CorebridgeSelectATerm() Product { return f.corebridgeSelectATerm }
 
 // FidelityLifeInstabrainPureTerm returns the Product value for Fidelity Life InstaBrain Pure Term.
-func (f TermProducts) FidelityLifeInstabrainPureTerm() Product { return f.fidelityLifeInstabrainPureTerm }
+func (f TermProducts) FidelityLifeInstabrainPureTerm() Product {
+	return f.fidelityLifeInstabrainPureTerm
+}
 
 // FidelityLifeInstabrainTerm returns the Product value for Fidelity Life InstaBrain Term.
 func (f TermProducts) FidelityLifeInstabrainTerm() Product { return f.fidelityLifeInstabrainTerm }
@@ -423,10 +457,14 @@ func (f TermProducts) GtlTurboTerm() Product { return f.gtlTurboTerm }
 func (f TermProducts) HeroLifeTerm() Product { return f.heroLifeTerm }
 
 // JohnHancockSimpleTermWithVitality returns the Product value for John Hancock Simple Term with Vitality.
-func (f TermProducts) JohnHancockSimpleTermWithVitality() Product { return f.johnHancockSimpleTermWithVitality }
+func (f TermProducts) JohnHancockSimpleTermWithVitality() Product {
+	return f.johnHancockSimpleTermWithVitality
+}
 
 // KansasCityLifeSignatureTermExpress returns the Product value for Kansas City Life Signature Term Express.
-func (f TermProducts) KansasCityLifeSignatureTermExpress() Product { return f.kansasCityLifeSignatureTermExpress }
+func (f TermProducts) KansasCityLifeSignatureTermExpress() Product {
+	return f.kansasCityLifeSignatureTermExpress
+}
 
 // LincolnLifeelements returns the Product value for Lincoln LifeElements.
 func (f TermProducts) LincolnLifeelements() Product { return f.lincolnLifeelements }
@@ -450,10 +488,14 @@ func (f TermProducts) NorthAmericanAddvantage() Product { return f.northAmerican
 func (f TermProducts) ProsperityFamilyFreedomTerm() Product { return f.prosperityFamilyFreedomTerm }
 
 // ProtectiveLifeClassicChoiceTerm returns the Product value for Protective Life Classic Choice Term.
-func (f TermProducts) ProtectiveLifeClassicChoiceTerm() Product { return f.protectiveLifeClassicChoiceTerm }
+func (f TermProducts) ProtectiveLifeClassicChoiceTerm() Product {
+	return f.protectiveLifeClassicChoiceTerm
+}
 
 // ProtectiveLifeCustomChoiceTerm returns the Product value for Protective Life Custom Choice Term.
-func (f TermProducts) ProtectiveLifeCustomChoiceTerm() Product { return f.protectiveLifeCustomChoiceTerm }
+func (f TermProducts) ProtectiveLifeCustomChoiceTerm() Product {
+	return f.protectiveLifeCustomChoiceTerm
+}
 
 // PrudentialEssentialTermPlus returns the Product value for Prudential Essential Term Plus.
 func (f TermProducts) PrudentialEssentialTermPlus() Product { return f.prudentialEssentialTermPlus }
@@ -502,120 +544,120 @@ type productsAccessor struct {
 // Use ByID to resolve a prod_<uuid> identifier back to its Product value.
 var Products = productsAccessor{
 	Fex: FexProducts{
-		aetnaAccendo: Product{Id: "prod_d7b57156-3e83-506b-8936-0692c1193dc7", Name: "Aetna Accendo", Class: "fex", Carrier: "Aetna"},
-		aetnaProtectionSeries: Product{Id: "prod_2ebf0de6-7151-59cb-8a3a-745be5255aa0", Name: "Aetna Protection Series", Class: "fex", Carrier: "Aetna"},
-		aflacFinalExpense: Product{Id: "prod_2eaabda5-ea10-5803-b9fd-f92c0261a9c9", Name: "Aflac Final Expense", Class: "fex", Carrier: "Aflac"},
-		americanAmicableClearChoice: Product{Id: "prod_76ea329c-3e29-539c-9cc4-fe8753bbf8c8", Name: "American Amicable Clear Choice", Class: "fex", Carrier: "American Amicable"},
-		americanAmicableDignitySolutions: Product{Id: "prod_444bd8e6-1253-5837-9f30-e3e4efe721b2", Name: "American Amicable Dignity Solutions", Class: "fex", Carrier: "American Amicable"},
-		americanAmicableGoldenSolution: Product{Id: "prod_b630f531-dd7b-48e2-8f2f-1b03b97ed2f9", Name: "American Amicable Golden Solution", Class: "fex", Carrier: "American Amicable"},
-		americanAmicableInnovativeSolutions: Product{Id: "prod_1a546f99-9e24-4aec-b80d-99f8a0641230", Name: "American Amicable Innovative Solutions", Class: "fex", Carrier: "American Amicable"},
+		aetnaAccendo:                               Product{Id: "prod_d7b57156-3e83-506b-8936-0692c1193dc7", Name: "Aetna Accendo", Class: "fex", Carrier: "Aetna"},
+		aetnaProtectionSeries:                      Product{Id: "prod_2ebf0de6-7151-59cb-8a3a-745be5255aa0", Name: "Aetna Protection Series", Class: "fex", Carrier: "Aetna"},
+		aflacFinalExpense:                          Product{Id: "prod_2eaabda5-ea10-5803-b9fd-f92c0261a9c9", Name: "Aflac Final Expense", Class: "fex", Carrier: "Aflac"},
+		americanAmicableClearChoice:                Product{Id: "prod_76ea329c-3e29-539c-9cc4-fe8753bbf8c8", Name: "American Amicable Clear Choice", Class: "fex", Carrier: "American Amicable"},
+		americanAmicableDignitySolutions:           Product{Id: "prod_444bd8e6-1253-5837-9f30-e3e4efe721b2", Name: "American Amicable Dignity Solutions", Class: "fex", Carrier: "American Amicable"},
+		americanAmicableGoldenSolution:             Product{Id: "prod_b630f531-dd7b-48e2-8f2f-1b03b97ed2f9", Name: "American Amicable Golden Solution", Class: "fex", Carrier: "American Amicable"},
+		americanAmicableInnovativeSolutions:        Product{Id: "prod_1a546f99-9e24-4aec-b80d-99f8a0641230", Name: "American Amicable Innovative Solutions", Class: "fex", Carrier: "American Amicable"},
 		americanAmicablePlatinumSolutionLegacyPlan: Product{Id: "prod_fbf0beb6-5933-5810-8973-675454c64e54", Name: "American Amicable Platinum Solution Legacy Plan", Class: "fex", Carrier: "American Amicable"},
-		americanAmicableSeniorChoice: Product{Id: "prod_6b8e3fdb-79da-4e0c-81f5-534aaca277dd", Name: "American Amicable Senior Choice", Class: "fex", Carrier: "American Amicable"},
-		americanAmicableTribute: Product{Id: "prod_a9725d37-f0c9-429b-94fb-c5c4d1fa1d53", Name: "American Amicable Tribute", Class: "fex", Carrier: "American Amicable"},
-		americanHomeLifeGuidestar: Product{Id: "prod_9e575f61-4618-53cf-b321-6038b98c4ea5", Name: "American Home Life Guidestar", Class: "fex", Carrier: "American Home Life"},
-		americanHomeLifePatriotSeries: Product{Id: "prod_18005d37-9bee-588a-81e6-9f3ba641da35", Name: "American Home Life Patriot Series", Class: "fex", Carrier: "American Home Life"},
-		americoEaglePremier: Product{Id: "prod_14bbd5ef-adb9-575a-ba14-45da192bc0a3", Name: "Americo Eagle Premier", Class: "fex", Carrier: "Americo"},
-		baltimoreLifeIprovide: Product{Id: "prod_44937aff-cd7f-4484-b6d3-3dc84cd73491", Name: "Baltimore Life iProvide", Class: "fex", Carrier: "Baltimore Life"},
-		baltimoreLifeSilverGuard: Product{Id: "prod_4cda675a-9760-51ac-bb70-1e33e83502be", Name: "Baltimore Life Silver Guard", Class: "fex", Carrier: "Baltimore Life"},
-		betterlifeFinalExpense: Product{Id: "prod_e0cbd195-3967-5127-b9d7-9d763f9812b9", Name: "BetterLife Final Expense", Class: "fex", Carrier: "BetterLife"},
-		centrianLivingLegacy: Product{Id: "prod_ad1bf475-7997-5d4b-9034-bf9d4f0a0494", Name: "Centrian Living Legacy", Class: "fex", Carrier: "Centrian"},
-		cicaLifeSuperiorChoice: Product{Id: "prod_0940211a-bc9b-509b-ae1a-6e279eed776b", Name: "CICA Life Superior Choice", Class: "fex", Carrier: "CICA Life"},
-		cignaIndividualWholeLife: Product{Id: "prod_b11f7348-2716-5dae-b588-ed2a54ac4c04", Name: "Cigna Individual Whole Life", Class: "fex", Carrier: "Cigna"},
-		combinedGenerationalLife: Product{Id: "prod_50911138-79a1-4c20-911a-a37a3054e01a", Name: "Combined Generational Life", Class: "fex", Carrier: "Combined"},
-		corebridgeGiwl: Product{Id: "prod_e49fed5b-0803-480f-9ac4-8774353681ab", Name: "Corebridge GIWL", Class: "fex", Carrier: "Corebridge"},
-		corebridgeSimplinowLegacy: Product{Id: "prod_7eb671f1-781f-432d-b887-85195902c1cb", Name: "Corebridge SimpliNow Legacy", Class: "fex", Carrier: "Corebridge"},
-		emcEasylife: Product{Id: "prod_e1bda62f-59ba-5770-b4a4-9a3df49243bf", Name: "EMC EasyLife", Class: "fex", Carrier: "EMC"},
-		everestIaAmericanAdvantage50Plus: Product{Id: "prod_bb930420-5ed3-5d8a-94f5-a6d9d0571179", Name: "Everest IA American Advantage 50 Plus", Class: "fex", Carrier: "Everest IA American"},
-		familyBenefitLifeGoldenEagle: Product{Id: "prod_8b224dea-1a89-55ed-8e76-b394d707da1b", Name: "Family Benefit Life Golden Eagle", Class: "fex", Carrier: "Family Benefit Life"},
-		fidelityLifeRapidecision: Product{Id: "prod_510ecb6e-5801-53b3-89aa-d578ead5b623", Name: "Fidelity Life RAPIDecision", Class: "fex", Carrier: "Fidelity Life"},
-		fidelityLifeRapidecisionSeniorLife: Product{Id: "prod_39f74284-c3a3-5ef4-a499-96c80246e57f", Name: "Fidelity Life RAPIDecision Senior Life", Class: "fex", Carrier: "Fidelity Life"},
-		firstGuarantyInsuranceSecurityCare: Product{Id: "prod_f7143a73-aac8-55c7-9f7f-a69462cb5b7e", Name: "First Guaranty Insurance Security Care", Class: "fex", Carrier: "First Guaranty Insurance"},
-		forestersPlanRight: Product{Id: "prod_9577974b-a9f3-5da2-9855-1924074044dd", Name: "Foresters Plan Right", Class: "fex", Carrier: "Foresters"},
-		gerberLife: Product{Id: "prod_dc4e84b8-8099-51c9-ae31-37c78c0a8d39", Name: "Gerber Life", Class: "fex", Carrier: "Gerber"},
-		gpmLifeSecureMark: Product{Id: "prod_83b78dd8-a77b-558e-9b3b-c9cc5251c613", Name: "GPM Life Secure Mark", Class: "fex", Carrier: "GPM Life"},
-		gtlHeritagePlan: Product{Id: "prod_142e101a-749e-4e28-90ea-2f8fed3b6970", Name: "GTL Heritage Plan", Class: "fex", Carrier: "GTL"},
-		illinoisMutualPathProtectorPlus: Product{Id: "prod_e2aea5b2-316d-5150-8504-2e3c2a4e3276", Name: "Illinois Mutual Path Protector Plus", Class: "fex", Carrier: "Illinois Mutual"},
-		kskjFinalExpense: Product{Id: "prod_d93892e6-0035-5f82-8427-1bd9e49b1959", Name: "KSKJ Final Expense", Class: "fex", Carrier: "KSKJ"},
-		libertyBankersSimpl: Product{Id: "prod_fe3498ec-29a7-5dba-9da9-6a32cb3dc91e", Name: "Liberty Bankers Simpl", Class: "fex", Carrier: "Liberty Bankers"},
-		lifeShieldSurvivor: Product{Id: "prod_d155e90c-cba1-51cf-9d9c-e6518fa13d37", Name: "Life Shield Survivor", Class: "fex", Carrier: "Life Shield"},
-		manhattanLifeSecureAdvantage: Product{Id: "prod_afbfa67e-a41d-45be-bcbc-bf31e7de669f", Name: "Manhattan Life Secure Advantage", Class: "fex", Carrier: "Manhattan Life"},
-		mutualOfOmahaLivingPromise: Product{Id: "prod_cb26875d-f5b2-52f7-8f89-66cb3d779bf8", Name: "Mutual of Omaha Living Promise", Class: "fex", Carrier: "Mutual of Omaha"},
-		newbridgeFinalExpense: Product{Id: "prod_007e74bf-671c-41cc-be27-28cfd75fd5d2", Name: "Newbridge Final Expense", Class: "fex", Carrier: "Newbridge"},
-		occidentalLifeClearChoice: Product{Id: "prod_b06445f5-5e02-5111-863b-5e1260b4524b", Name: "Occidental Life Clear Choice", Class: "fex", Carrier: "Occidental Life"},
-		occidentalLifeDignitySolutions: Product{Id: "prod_07bdd66e-7e3c-5f7f-9c8e-b4bb414dd9e2", Name: "Occidental Life Dignity Solutions", Class: "fex", Carrier: "Occidental Life"},
-		occidentalLifeGoldenSolution: Product{Id: "prod_d2eeac7e-6aad-5eee-83e1-fd2aee0da64c", Name: "Occidental Life Golden Solution", Class: "fex", Carrier: "Occidental Life"},
-		occidentalLifeInnovativeSolutions: Product{Id: "prod_4b038ed0-2aa2-58e6-9c62-9aa736e4d9b5", Name: "Occidental Life Innovative Solutions", Class: "fex", Carrier: "Occidental Life"},
-		occidentalLifePlatinumSolutionLegacyPlan: Product{Id: "prod_fbd566f8-72f6-5383-84e9-a84c517c8815", Name: "Occidental Life Platinum Solution Legacy Plan", Class: "fex", Carrier: "Occidental Life"},
-		occidentalLifeSeniorChoice: Product{Id: "prod_97d8f31d-764a-549c-9834-6691e1db06a8", Name: "Occidental Life Senior Choice", Class: "fex", Carrier: "Occidental Life"},
-		occidentalLifeTribute: Product{Id: "prod_0c5d1d8d-dd9e-59b8-a5c7-dddfd4b7da1a", Name: "Occidental Life Tribute", Class: "fex", Carrier: "Occidental Life"},
-		oxfordLifeSimplifiedIssue: Product{Id: "prod_a5a3a129-cf4d-57bf-a278-034b65348c11", Name: "Oxford Life Simplified Issue", Class: "fex", Carrier: "Oxford Life"},
-		pekinWholeLife: Product{Id: "prod_8e946869-fe0e-5f8c-a231-cc1671e4b2d4", Name: "Pekin Whole Life", Class: "fex", Carrier: "Pekin"},
-		pioneerAmericanIndependentAmerican: Product{Id: "prod_42cfd631-69ea-5711-858d-168503cb0680", Name: "Pioneer American Independent American", Class: "fex", Carrier: "Pioneer American"},
-		pioneerAmericanNorthstarLegacy: Product{Id: "prod_ec518d73-777d-5976-b4fd-d2e0b6332c56", Name: "Pioneer American NorthStar Legacy", Class: "fex", Carrier: "Pioneer American"},
-		royalArcanumGraded: Product{Id: "prod_4d67b7ca-cc86-5849-8e32-5e22bea6cdce", Name: "Royal Arcanum Graded", Class: "fex", Carrier: "Royal Arcanum"},
-		royalArcanumSimplifiedIssue: Product{Id: "prod_bf77cdcd-078d-534c-a923-861ce722a0e8", Name: "Royal Arcanum Simplified Issue", Class: "fex", Carrier: "Royal Arcanum"},
-		royalNeighborsEnsuredLegacy: Product{Id: "prod_b039d938-ced2-4496-ad4d-f28b795b8089", Name: "Royal Neighbors Ensured Legacy", Class: "fex", Carrier: "Royal Neighbors"},
-		sUsaGoldenPromise: Product{Id: "prod_79a26030-6b45-416a-b97d-02e0200a4d39", Name: "S.USA Golden Promise", Class: "fex", Carrier: "S.USA"},
-		sbliLivingLegacy: Product{Id: "prod_09b94921-6ba1-5f17-92da-5750c2c0b12a", Name: "SBLI Living Legacy", Class: "fex", Carrier: "SBLI"},
-		securicoLifeFinalExpense: Product{Id: "prod_e2a56a6e-9d28-51d2-893f-b980998b7822", Name: "Securico Life Final Expense", Class: "fex", Carrier: "Securico Life"},
-		securityNationalSimpleSecurity: Product{Id: "prod_81f01f85-1d97-58b1-9892-f7fd66ac2152", Name: "Security National Simple Security", Class: "fex", Carrier: "Security National"},
-		seniorLifeWholeLife: Product{Id: "prod_ed4476ae-f668-4a64-96cc-d618c1f018b8", Name: "Senior Life Whole Life", Class: "fex", Carrier: "Senior Life"},
-		sentinelSecurityNewVantage: Product{Id: "prod_cac5f3fe-1d7a-5865-84cf-8000ff8bcfd7", Name: "Sentinel Security New Vantage", Class: "fex", Carrier: "Sentinel Security"},
-		sonsOfNorwayLegacySure: Product{Id: "prod_2dec8fd4-8ead-4862-a51e-e51f7aae8ee5", Name: "Sons of Norway Legacy Sure", Class: "fex", Carrier: "Sons of Norway"},
-		sonsOfNorwayWholeLife: Product{Id: "prod_9b00ed35-28a2-4ce6-a50e-914213419d6b", Name: "Sons of Norway Whole Life", Class: "fex", Carrier: "Sons of Norway"},
-		transamericaFeExpressSolution: Product{Id: "prod_18477e53-831f-47bf-829c-0237c23b6fb6", Name: "TransAmerica FE Express Solution", Class: "fex", Carrier: "TransAmerica"},
-		transamericaSolution: Product{Id: "prod_e64af080-608b-5c34-ba46-166d008fa249", Name: "TransAmerica Solution", Class: "fex", Carrier: "TransAmerica"},
-		trinityGoldenEagle: Product{Id: "prod_19c56704-7c68-5320-9a8a-042c94ceba64", Name: "Trinity Golden Eagle", Class: "fex", Carrier: "Trinity"},
-		unitedFarmAndFamilyWholeLife: Product{Id: "prod_a6f48502-08be-5a6b-9934-d3cb3f470972", Name: "United Farm And Family Whole Life", Class: "fex", Carrier: "United Farm And Family"},
-		unitedHomeLifeWholeLife: Product{Id: "prod_d851aa99-47f9-5400-a966-97a0b5a71bb3", Name: "United Home Life Whole Life", Class: "fex", Carrier: "United Home Life"},
+		americanAmicableSeniorChoice:               Product{Id: "prod_6b8e3fdb-79da-4e0c-81f5-534aaca277dd", Name: "American Amicable Senior Choice", Class: "fex", Carrier: "American Amicable"},
+		americanAmicableTribute:                    Product{Id: "prod_a9725d37-f0c9-429b-94fb-c5c4d1fa1d53", Name: "American Amicable Tribute", Class: "fex", Carrier: "American Amicable"},
+		americanHomeLifeGuidestar:                  Product{Id: "prod_9e575f61-4618-53cf-b321-6038b98c4ea5", Name: "American Home Life Guidestar", Class: "fex", Carrier: "American Home Life"},
+		americanHomeLifePatriotSeries:              Product{Id: "prod_18005d37-9bee-588a-81e6-9f3ba641da35", Name: "American Home Life Patriot Series", Class: "fex", Carrier: "American Home Life"},
+		americoEaglePremier:                        Product{Id: "prod_14bbd5ef-adb9-575a-ba14-45da192bc0a3", Name: "Americo Eagle Premier", Class: "fex", Carrier: "Americo"},
+		baltimoreLifeIprovide:                      Product{Id: "prod_44937aff-cd7f-4484-b6d3-3dc84cd73491", Name: "Baltimore Life iProvide", Class: "fex", Carrier: "Baltimore Life"},
+		baltimoreLifeSilverGuard:                   Product{Id: "prod_4cda675a-9760-51ac-bb70-1e33e83502be", Name: "Baltimore Life Silver Guard", Class: "fex", Carrier: "Baltimore Life"},
+		betterlifeFinalExpense:                     Product{Id: "prod_e0cbd195-3967-5127-b9d7-9d763f9812b9", Name: "BetterLife Final Expense", Class: "fex", Carrier: "BetterLife"},
+		centrianLivingLegacy:                       Product{Id: "prod_ad1bf475-7997-5d4b-9034-bf9d4f0a0494", Name: "Centrian Living Legacy", Class: "fex", Carrier: "Centrian"},
+		cicaLifeSuperiorChoice:                     Product{Id: "prod_0940211a-bc9b-509b-ae1a-6e279eed776b", Name: "CICA Life Superior Choice", Class: "fex", Carrier: "CICA Life"},
+		cignaIndividualWholeLife:                   Product{Id: "prod_b11f7348-2716-5dae-b588-ed2a54ac4c04", Name: "Cigna Individual Whole Life", Class: "fex", Carrier: "Cigna"},
+		combinedGenerationalLife:                   Product{Id: "prod_50911138-79a1-4c20-911a-a37a3054e01a", Name: "Combined Generational Life", Class: "fex", Carrier: "Combined"},
+		corebridgeGiwl:                             Product{Id: "prod_e49fed5b-0803-480f-9ac4-8774353681ab", Name: "Corebridge GIWL", Class: "fex", Carrier: "Corebridge"},
+		corebridgeSimplinowLegacy:                  Product{Id: "prod_7eb671f1-781f-432d-b887-85195902c1cb", Name: "Corebridge SimpliNow Legacy", Class: "fex", Carrier: "Corebridge"},
+		emcEasylife:                                Product{Id: "prod_e1bda62f-59ba-5770-b4a4-9a3df49243bf", Name: "EMC EasyLife", Class: "fex", Carrier: "EMC"},
+		everestIaAmericanAdvantage50Plus:           Product{Id: "prod_bb930420-5ed3-5d8a-94f5-a6d9d0571179", Name: "Everest IA American Advantage 50 Plus", Class: "fex", Carrier: "Everest IA American"},
+		familyBenefitLifeGoldenEagle:               Product{Id: "prod_8b224dea-1a89-55ed-8e76-b394d707da1b", Name: "Family Benefit Life Golden Eagle", Class: "fex", Carrier: "Family Benefit Life"},
+		fidelityLifeRapidecision:                   Product{Id: "prod_510ecb6e-5801-53b3-89aa-d578ead5b623", Name: "Fidelity Life RAPIDecision", Class: "fex", Carrier: "Fidelity Life"},
+		fidelityLifeRapidecisionSeniorLife:         Product{Id: "prod_39f74284-c3a3-5ef4-a499-96c80246e57f", Name: "Fidelity Life RAPIDecision Senior Life", Class: "fex", Carrier: "Fidelity Life"},
+		firstGuarantyInsuranceSecurityCare:         Product{Id: "prod_f7143a73-aac8-55c7-9f7f-a69462cb5b7e", Name: "First Guaranty Insurance Security Care", Class: "fex", Carrier: "First Guaranty Insurance"},
+		forestersPlanRight:                         Product{Id: "prod_9577974b-a9f3-5da2-9855-1924074044dd", Name: "Foresters Plan Right", Class: "fex", Carrier: "Foresters"},
+		gerberLife:                                 Product{Id: "prod_dc4e84b8-8099-51c9-ae31-37c78c0a8d39", Name: "Gerber Life", Class: "fex", Carrier: "Gerber"},
+		gpmLifeSecureMark:                          Product{Id: "prod_83b78dd8-a77b-558e-9b3b-c9cc5251c613", Name: "GPM Life Secure Mark", Class: "fex", Carrier: "GPM Life"},
+		gtlHeritagePlan:                            Product{Id: "prod_142e101a-749e-4e28-90ea-2f8fed3b6970", Name: "GTL Heritage Plan", Class: "fex", Carrier: "GTL"},
+		illinoisMutualPathProtectorPlus:            Product{Id: "prod_e2aea5b2-316d-5150-8504-2e3c2a4e3276", Name: "Illinois Mutual Path Protector Plus", Class: "fex", Carrier: "Illinois Mutual"},
+		kskjFinalExpense:                           Product{Id: "prod_d93892e6-0035-5f82-8427-1bd9e49b1959", Name: "KSKJ Final Expense", Class: "fex", Carrier: "KSKJ"},
+		libertyBankersSimpl:                        Product{Id: "prod_fe3498ec-29a7-5dba-9da9-6a32cb3dc91e", Name: "Liberty Bankers Simpl", Class: "fex", Carrier: "Liberty Bankers"},
+		lifeShieldSurvivor:                         Product{Id: "prod_d155e90c-cba1-51cf-9d9c-e6518fa13d37", Name: "Life Shield Survivor", Class: "fex", Carrier: "Life Shield"},
+		manhattanLifeSecureAdvantage:               Product{Id: "prod_afbfa67e-a41d-45be-bcbc-bf31e7de669f", Name: "Manhattan Life Secure Advantage", Class: "fex", Carrier: "Manhattan Life"},
+		mutualOfOmahaLivingPromise:                 Product{Id: "prod_cb26875d-f5b2-52f7-8f89-66cb3d779bf8", Name: "Mutual of Omaha Living Promise", Class: "fex", Carrier: "Mutual of Omaha"},
+		newbridgeFinalExpense:                      Product{Id: "prod_007e74bf-671c-41cc-be27-28cfd75fd5d2", Name: "Newbridge Final Expense", Class: "fex", Carrier: "Newbridge"},
+		occidentalLifeClearChoice:                  Product{Id: "prod_b06445f5-5e02-5111-863b-5e1260b4524b", Name: "Occidental Life Clear Choice", Class: "fex", Carrier: "Occidental Life"},
+		occidentalLifeDignitySolutions:             Product{Id: "prod_07bdd66e-7e3c-5f7f-9c8e-b4bb414dd9e2", Name: "Occidental Life Dignity Solutions", Class: "fex", Carrier: "Occidental Life"},
+		occidentalLifeGoldenSolution:               Product{Id: "prod_d2eeac7e-6aad-5eee-83e1-fd2aee0da64c", Name: "Occidental Life Golden Solution", Class: "fex", Carrier: "Occidental Life"},
+		occidentalLifeInnovativeSolutions:          Product{Id: "prod_4b038ed0-2aa2-58e6-9c62-9aa736e4d9b5", Name: "Occidental Life Innovative Solutions", Class: "fex", Carrier: "Occidental Life"},
+		occidentalLifePlatinumSolutionLegacyPlan:   Product{Id: "prod_fbd566f8-72f6-5383-84e9-a84c517c8815", Name: "Occidental Life Platinum Solution Legacy Plan", Class: "fex", Carrier: "Occidental Life"},
+		occidentalLifeSeniorChoice:                 Product{Id: "prod_97d8f31d-764a-549c-9834-6691e1db06a8", Name: "Occidental Life Senior Choice", Class: "fex", Carrier: "Occidental Life"},
+		occidentalLifeTribute:                      Product{Id: "prod_0c5d1d8d-dd9e-59b8-a5c7-dddfd4b7da1a", Name: "Occidental Life Tribute", Class: "fex", Carrier: "Occidental Life"},
+		oxfordLifeSimplifiedIssue:                  Product{Id: "prod_a5a3a129-cf4d-57bf-a278-034b65348c11", Name: "Oxford Life Simplified Issue", Class: "fex", Carrier: "Oxford Life"},
+		pekinWholeLife:                             Product{Id: "prod_8e946869-fe0e-5f8c-a231-cc1671e4b2d4", Name: "Pekin Whole Life", Class: "fex", Carrier: "Pekin"},
+		pioneerAmericanIndependentAmerican:         Product{Id: "prod_42cfd631-69ea-5711-858d-168503cb0680", Name: "Pioneer American Independent American", Class: "fex", Carrier: "Pioneer American"},
+		pioneerAmericanNorthstarLegacy:             Product{Id: "prod_ec518d73-777d-5976-b4fd-d2e0b6332c56", Name: "Pioneer American NorthStar Legacy", Class: "fex", Carrier: "Pioneer American"},
+		royalArcanumGraded:                         Product{Id: "prod_4d67b7ca-cc86-5849-8e32-5e22bea6cdce", Name: "Royal Arcanum Graded", Class: "fex", Carrier: "Royal Arcanum"},
+		royalArcanumSimplifiedIssue:                Product{Id: "prod_bf77cdcd-078d-534c-a923-861ce722a0e8", Name: "Royal Arcanum Simplified Issue", Class: "fex", Carrier: "Royal Arcanum"},
+		royalNeighborsEnsuredLegacy:                Product{Id: "prod_b039d938-ced2-4496-ad4d-f28b795b8089", Name: "Royal Neighbors Ensured Legacy", Class: "fex", Carrier: "Royal Neighbors"},
+		sUsaGoldenPromise:                          Product{Id: "prod_79a26030-6b45-416a-b97d-02e0200a4d39", Name: "S.USA Golden Promise", Class: "fex", Carrier: "S.USA"},
+		sbliLivingLegacy:                           Product{Id: "prod_09b94921-6ba1-5f17-92da-5750c2c0b12a", Name: "SBLI Living Legacy", Class: "fex", Carrier: "SBLI"},
+		securicoLifeFinalExpense:                   Product{Id: "prod_e2a56a6e-9d28-51d2-893f-b980998b7822", Name: "Securico Life Final Expense", Class: "fex", Carrier: "Securico Life"},
+		securityNationalSimpleSecurity:             Product{Id: "prod_81f01f85-1d97-58b1-9892-f7fd66ac2152", Name: "Security National Simple Security", Class: "fex", Carrier: "Security National"},
+		seniorLifeWholeLife:                        Product{Id: "prod_ed4476ae-f668-4a64-96cc-d618c1f018b8", Name: "Senior Life Whole Life", Class: "fex", Carrier: "Senior Life"},
+		sentinelSecurityNewVantage:                 Product{Id: "prod_cac5f3fe-1d7a-5865-84cf-8000ff8bcfd7", Name: "Sentinel Security New Vantage", Class: "fex", Carrier: "Sentinel Security"},
+		sonsOfNorwayLegacySure:                     Product{Id: "prod_2dec8fd4-8ead-4862-a51e-e51f7aae8ee5", Name: "Sons of Norway Legacy Sure", Class: "fex", Carrier: "Sons of Norway"},
+		sonsOfNorwayWholeLife:                      Product{Id: "prod_9b00ed35-28a2-4ce6-a50e-914213419d6b", Name: "Sons of Norway Whole Life", Class: "fex", Carrier: "Sons of Norway"},
+		transamericaFeExpressSolution:              Product{Id: "prod_18477e53-831f-47bf-829c-0237c23b6fb6", Name: "TransAmerica FE Express Solution", Class: "fex", Carrier: "TransAmerica"},
+		transamericaSolution:                       Product{Id: "prod_e64af080-608b-5c34-ba46-166d008fa249", Name: "TransAmerica Solution", Class: "fex", Carrier: "TransAmerica"},
+		trinityGoldenEagle:                         Product{Id: "prod_19c56704-7c68-5320-9a8a-042c94ceba64", Name: "Trinity Golden Eagle", Class: "fex", Carrier: "Trinity"},
+		unitedFarmAndFamilyWholeLife:               Product{Id: "prod_a6f48502-08be-5a6b-9934-d3cb3f470972", Name: "United Farm And Family Whole Life", Class: "fex", Carrier: "United Farm And Family"},
+		unitedHomeLifeWholeLife:                    Product{Id: "prod_d851aa99-47f9-5400-a966-97a0b5a71bb3", Name: "United Home Life Whole Life", Class: "fex", Carrier: "United Home Life"},
 	},
 	Medsup: MedsupProducts{
-		aetnaAccendoMedsup: Product{Id: "prod_c134cc26-08e2-5489-8e60-8bea89e89f49", Name: "Aetna Accendo Medicare Supplement", Class: "medsup", Carrier: "Aetna Accendo"},
-		aetnaMedsup: Product{Id: "prod_8378b6bc-e99a-5f77-8f0d-cc978560c72f", Name: "Aetna Medicare Supplement", Class: "medsup", Carrier: "Aetna"},
+		aetnaAccendoMedsup:  Product{Id: "prod_c134cc26-08e2-5489-8e60-8bea89e89f49", Name: "Aetna Accendo Medicare Supplement", Class: "medsup", Carrier: "Aetna Accendo"},
+		aetnaMedsup:         Product{Id: "prod_8378b6bc-e99a-5f77-8f0d-cc978560c72f", Name: "Aetna Medicare Supplement", Class: "medsup", Carrier: "Aetna"},
 		manhattanLifeMedsup: Product{Id: "prod_5ba7fc1f-0bd8-5f49-827a-ca049312920f", Name: "Manhattan Life Medicare Supplement", Class: "medsup", Carrier: "Manhattan Life"},
 		mutualOfOmahaMedsup: Product{Id: "prod_88e1ad8f-a3b3-52dd-89b7-8ae7e9d81eca", Name: "Mutual of Omaha Medicare Supplement", Class: "medsup", Carrier: "Mutual of Omaha"},
 	},
 	Preneed: PreneedProducts{
-		betterlifeSinglePremium: Product{Id: "prod_558a0ca1-c2a3-5007-916d-28dde3eaeabb", Name: "BetterLife Single Premium", Class: "preneed", Carrier: "BetterLife"},
+		betterlifeSinglePremium:            Product{Id: "prod_558a0ca1-c2a3-5007-916d-28dde3eaeabb", Name: "BetterLife Single Premium", Class: "preneed", Carrier: "BetterLife"},
 		globalAtlanticSimpleProtectionPlan: Product{Id: "prod_52d6ba39-47d6-5527-bd4a-49bca391ab19", Name: "Global Atlantic Simple Protection Plan", Class: "preneed", Carrier: "Global Atlantic"},
 	},
 	Term: TermProducts{
-		americanAmicableEasyTerm: Product{Id: "prod_8bf67d18-391b-51c2-9333-cf557e81d1ff", Name: "American Amicable Easy Term", Class: "term", Carrier: "American Amicable"},
-		americanAmicableHomeProtector: Product{Id: "prod_7f5a7c56-8ef1-5874-a3c6-6433b4c6c3c4", Name: "American Amicable Home Protector", Class: "term", Carrier: "American Amicable"},
-		americanAmicableTermMadeSimple: Product{Id: "prod_d6147bbb-b210-5422-9ec4-41de0379e552", Name: "American Amicable Term Made Simple", Class: "term", Carrier: "American Amicable"},
-		americoHmsPlus: Product{Id: "prod_9b379a0d-320e-50ac-bd2e-8519ea503286", Name: "Americo HMS PLUS", Class: "term", Carrier: "Americo"},
-		ameritasFlxLivingBenefitsTerm: Product{Id: "prod_e832f26e-f6e6-5009-8c13-d17e5bc6a02f", Name: "Ameritas FLX Living Benefits Term", Class: "term", Carrier: "Ameritas"},
-		ameritasValuePlusTerm: Product{Id: "prod_6b476015-eeca-5f02-a259-36820bd47b98", Name: "Ameritas Value Plus Term", Class: "term", Carrier: "Ameritas"},
-		bannerOpterm: Product{Id: "prod_58edb7da-536d-51d3-8a23-ecb500d37de3", Name: "Banner OPTerm", Class: "term", Carrier: "Banner"},
-		corebridgeSelectATerm: Product{Id: "prod_72169acb-1a87-5848-9df0-96454c709b81", Name: "Corebridge Select A Term", Class: "term", Carrier: "Corebridge"},
-		fidelityLifeInstabrainPureTerm: Product{Id: "prod_ddcffff2-12d0-4549-a6af-1eee7d73d646", Name: "Fidelity Life InstaBrain Pure Term", Class: "term", Carrier: "Fidelity Life"},
-		fidelityLifeInstabrainTerm: Product{Id: "prod_10f36326-2bd4-5ae1-8463-e04ad594db6c", Name: "Fidelity Life InstaBrain Term", Class: "term", Carrier: "Fidelity Life"},
-		fidelityLifeInstaterm: Product{Id: "prod_e1c66430-dec1-571a-b96b-17231fe55c12", Name: "Fidelity Life InstaTerm", Class: "term", Carrier: "Fidelity Life"},
-		forestersStrongFoundation: Product{Id: "prod_797c9cc3-325f-5058-b092-ca811dfd89cf", Name: "Foresters Strong Foundation", Class: "term", Carrier: "Foresters"},
-		forestersYourTerm: Product{Id: "prod_82b87fc0-e3dc-5fb6-bf18-85035e6cb8cf", Name: "Foresters Your Term", Class: "term", Carrier: "Foresters"},
-		forestersYourTermNonMedical: Product{Id: "prod_f5c30718-4681-599f-8110-b5aaacd778c7", Name: "Foresters Your Term Non Medical", Class: "term", Carrier: "Foresters"},
-		gpmQMark: Product{Id: "prod_bb80c30b-eba4-5319-8ba6-13d807bfba9a", Name: "GPM Q Mark", Class: "term", Carrier: "GPM"},
-		gtlTurboTerm: Product{Id: "prod_a8249c2b-5277-5113-8ecc-4d8b0f507662", Name: "GTL Turbo Term", Class: "term", Carrier: "GTL"},
-		heroLifeTerm: Product{Id: "prod_7f6016d9-9f12-5f75-a57a-cd16ddffe99c", Name: "Hero Life Term", Class: "term", Carrier: "Hero Life"},
-		johnHancockSimpleTermWithVitality: Product{Id: "prod_0d293690-3896-530f-a94b-aa2cb72d30bd", Name: "John Hancock Simple Term with Vitality", Class: "term", Carrier: "John Hancock"},
+		americanAmicableEasyTerm:           Product{Id: "prod_8bf67d18-391b-51c2-9333-cf557e81d1ff", Name: "American Amicable Easy Term", Class: "term", Carrier: "American Amicable"},
+		americanAmicableHomeProtector:      Product{Id: "prod_7f5a7c56-8ef1-5874-a3c6-6433b4c6c3c4", Name: "American Amicable Home Protector", Class: "term", Carrier: "American Amicable"},
+		americanAmicableTermMadeSimple:     Product{Id: "prod_d6147bbb-b210-5422-9ec4-41de0379e552", Name: "American Amicable Term Made Simple", Class: "term", Carrier: "American Amicable"},
+		americoHmsPlus:                     Product{Id: "prod_9b379a0d-320e-50ac-bd2e-8519ea503286", Name: "Americo HMS PLUS", Class: "term", Carrier: "Americo"},
+		ameritasFlxLivingBenefitsTerm:      Product{Id: "prod_e832f26e-f6e6-5009-8c13-d17e5bc6a02f", Name: "Ameritas FLX Living Benefits Term", Class: "term", Carrier: "Ameritas"},
+		ameritasValuePlusTerm:              Product{Id: "prod_6b476015-eeca-5f02-a259-36820bd47b98", Name: "Ameritas Value Plus Term", Class: "term", Carrier: "Ameritas"},
+		bannerOpterm:                       Product{Id: "prod_58edb7da-536d-51d3-8a23-ecb500d37de3", Name: "Banner OPTerm", Class: "term", Carrier: "Banner"},
+		corebridgeSelectATerm:              Product{Id: "prod_72169acb-1a87-5848-9df0-96454c709b81", Name: "Corebridge Select A Term", Class: "term", Carrier: "Corebridge"},
+		fidelityLifeInstabrainPureTerm:     Product{Id: "prod_ddcffff2-12d0-4549-a6af-1eee7d73d646", Name: "Fidelity Life InstaBrain Pure Term", Class: "term", Carrier: "Fidelity Life"},
+		fidelityLifeInstabrainTerm:         Product{Id: "prod_10f36326-2bd4-5ae1-8463-e04ad594db6c", Name: "Fidelity Life InstaBrain Term", Class: "term", Carrier: "Fidelity Life"},
+		fidelityLifeInstaterm:              Product{Id: "prod_e1c66430-dec1-571a-b96b-17231fe55c12", Name: "Fidelity Life InstaTerm", Class: "term", Carrier: "Fidelity Life"},
+		forestersStrongFoundation:          Product{Id: "prod_797c9cc3-325f-5058-b092-ca811dfd89cf", Name: "Foresters Strong Foundation", Class: "term", Carrier: "Foresters"},
+		forestersYourTerm:                  Product{Id: "prod_82b87fc0-e3dc-5fb6-bf18-85035e6cb8cf", Name: "Foresters Your Term", Class: "term", Carrier: "Foresters"},
+		forestersYourTermNonMedical:        Product{Id: "prod_f5c30718-4681-599f-8110-b5aaacd778c7", Name: "Foresters Your Term Non Medical", Class: "term", Carrier: "Foresters"},
+		gpmQMark:                           Product{Id: "prod_bb80c30b-eba4-5319-8ba6-13d807bfba9a", Name: "GPM Q Mark", Class: "term", Carrier: "GPM"},
+		gtlTurboTerm:                       Product{Id: "prod_a8249c2b-5277-5113-8ecc-4d8b0f507662", Name: "GTL Turbo Term", Class: "term", Carrier: "GTL"},
+		heroLifeTerm:                       Product{Id: "prod_7f6016d9-9f12-5f75-a57a-cd16ddffe99c", Name: "Hero Life Term", Class: "term", Carrier: "Hero Life"},
+		johnHancockSimpleTermWithVitality:  Product{Id: "prod_0d293690-3896-530f-a94b-aa2cb72d30bd", Name: "John Hancock Simple Term with Vitality", Class: "term", Carrier: "John Hancock"},
 		kansasCityLifeSignatureTermExpress: Product{Id: "prod_65015b8a-d64d-55f1-9ca1-06588d8b073e", Name: "Kansas City Life Signature Term Express", Class: "term", Carrier: "Kansas City Life"},
-		lincolnLifeelements: Product{Id: "prod_9071ccab-2830-59ed-8715-f2330215bf0d", Name: "Lincoln LifeElements", Class: "term", Carrier: "Lincoln"},
-		lincolnTermaccel: Product{Id: "prod_45751b44-a561-54c2-9e1d-4120fdc09e7f", Name: "Lincoln TermAccel", Class: "term", Carrier: "Lincoln"},
-		mutualOfOmahaTermLifeAnswers: Product{Id: "prod_ab68ec62-2afe-561c-acd7-dab8eaf56846", Name: "Mutual of Omaha Term Life Answers", Class: "term", Carrier: "Mutual of Omaha"},
-		mutualOfOmahaTermLifeExpress: Product{Id: "prod_1452309d-291d-54dc-aca7-cc313811a239", Name: "Mutual of Omaha Term Life Express", Class: "term", Carrier: "Mutual of Omaha"},
-		nationwideYourlife: Product{Id: "prod_f8d141bf-d0b5-5a97-9226-4b1ab5380d47", Name: "Nationwide YourLife", Class: "term", Carrier: "Nationwide"},
-		northAmericanAddvantage: Product{Id: "prod_29cffca2-ddfc-54de-a94b-65595b68adf3", Name: "North American ADDvantage", Class: "term", Carrier: "North American"},
-		prosperityFamilyFreedomTerm: Product{Id: "prod_090de60e-d322-55d9-8ef5-a010e5275cc5", Name: "Prosperity Family Freedom Term", Class: "term", Carrier: "Prosperity"},
-		protectiveLifeClassicChoiceTerm: Product{Id: "prod_b11965d0-4866-5e50-b348-d93e09832867", Name: "Protective Life Classic Choice Term", Class: "term", Carrier: "Protective Life"},
-		protectiveLifeCustomChoiceTerm: Product{Id: "prod_6a8bfb0c-15da-51f4-a267-6d237e125d97", Name: "Protective Life Custom Choice Term", Class: "term", Carrier: "Protective Life"},
-		prudentialEssentialTermPlus: Product{Id: "prod_80952375-cbed-5817-910c-07475af33604", Name: "Prudential Essential Term Plus", Class: "term", Carrier: "Prudential"},
-		prudentialEssentialTermValue: Product{Id: "prod_3d619542-5829-5d2a-9450-6e2673e7cb94", Name: "Prudential Essential Term Value", Class: "term", Carrier: "Prudential"},
-		sagicorSageTerm: Product{Id: "prod_3a9f8911-2d94-5f27-88b8-62dcc7d5727a", Name: "Sagicor Sage Term", Class: "term", Carrier: "Sagicor"},
-		sbliTTerm: Product{Id: "prod_360fe967-f7e1-5ab4-8f1a-e56e9ef543ab", Name: "SBLI T Term", Class: "term", Carrier: "SBLI"},
-		seniorLifeTermLife: Product{Id: "prod_ccebb3f4-2be4-5a64-8365-6e72faf5185d", Name: "Senior Life Term Life", Class: "term", Carrier: "Senior Life"},
-		transamericaTrendsetterLb: Product{Id: "prod_bcfc35ae-30d7-5466-9267-06d09faa3319", Name: "TransAmerica Trendsetter LB", Class: "term", Carrier: "TransAmerica"},
-		transamericaTrendsetterSuper: Product{Id: "prod_90d1b5da-5063-56e7-b737-d44b77126da2", Name: "TransAmerica Trendsetter Super", Class: "term", Carrier: "TransAmerica"},
-		williamPennOpterm: Product{Id: "prod_482585d7-6c1c-5042-b42b-09ef12933d1d", Name: "William Penn OPTerm", Class: "term", Carrier: "William Penn"},
+		lincolnLifeelements:                Product{Id: "prod_9071ccab-2830-59ed-8715-f2330215bf0d", Name: "Lincoln LifeElements", Class: "term", Carrier: "Lincoln"},
+		lincolnTermaccel:                   Product{Id: "prod_45751b44-a561-54c2-9e1d-4120fdc09e7f", Name: "Lincoln TermAccel", Class: "term", Carrier: "Lincoln"},
+		mutualOfOmahaTermLifeAnswers:       Product{Id: "prod_ab68ec62-2afe-561c-acd7-dab8eaf56846", Name: "Mutual of Omaha Term Life Answers", Class: "term", Carrier: "Mutual of Omaha"},
+		mutualOfOmahaTermLifeExpress:       Product{Id: "prod_1452309d-291d-54dc-aca7-cc313811a239", Name: "Mutual of Omaha Term Life Express", Class: "term", Carrier: "Mutual of Omaha"},
+		nationwideYourlife:                 Product{Id: "prod_f8d141bf-d0b5-5a97-9226-4b1ab5380d47", Name: "Nationwide YourLife", Class: "term", Carrier: "Nationwide"},
+		northAmericanAddvantage:            Product{Id: "prod_29cffca2-ddfc-54de-a94b-65595b68adf3", Name: "North American ADDvantage", Class: "term", Carrier: "North American"},
+		prosperityFamilyFreedomTerm:        Product{Id: "prod_090de60e-d322-55d9-8ef5-a010e5275cc5", Name: "Prosperity Family Freedom Term", Class: "term", Carrier: "Prosperity"},
+		protectiveLifeClassicChoiceTerm:    Product{Id: "prod_b11965d0-4866-5e50-b348-d93e09832867", Name: "Protective Life Classic Choice Term", Class: "term", Carrier: "Protective Life"},
+		protectiveLifeCustomChoiceTerm:     Product{Id: "prod_6a8bfb0c-15da-51f4-a267-6d237e125d97", Name: "Protective Life Custom Choice Term", Class: "term", Carrier: "Protective Life"},
+		prudentialEssentialTermPlus:        Product{Id: "prod_80952375-cbed-5817-910c-07475af33604", Name: "Prudential Essential Term Plus", Class: "term", Carrier: "Prudential"},
+		prudentialEssentialTermValue:       Product{Id: "prod_3d619542-5829-5d2a-9450-6e2673e7cb94", Name: "Prudential Essential Term Value", Class: "term", Carrier: "Prudential"},
+		sagicorSageTerm:                    Product{Id: "prod_3a9f8911-2d94-5f27-88b8-62dcc7d5727a", Name: "Sagicor Sage Term", Class: "term", Carrier: "Sagicor"},
+		sbliTTerm:                          Product{Id: "prod_360fe967-f7e1-5ab4-8f1a-e56e9ef543ab", Name: "SBLI T Term", Class: "term", Carrier: "SBLI"},
+		seniorLifeTermLife:                 Product{Id: "prod_ccebb3f4-2be4-5a64-8365-6e72faf5185d", Name: "Senior Life Term Life", Class: "term", Carrier: "Senior Life"},
+		transamericaTrendsetterLb:          Product{Id: "prod_bcfc35ae-30d7-5466-9267-06d09faa3319", Name: "TransAmerica Trendsetter LB", Class: "term", Carrier: "TransAmerica"},
+		transamericaTrendsetterSuper:       Product{Id: "prod_90d1b5da-5063-56e7-b737-d44b77126da2", Name: "TransAmerica Trendsetter Super", Class: "term", Carrier: "TransAmerica"},
+		williamPennOpterm:                  Product{Id: "prod_482585d7-6c1c-5042-b42b-09ef12933d1d", Name: "William Penn OPTerm", Class: "term", Carrier: "William Penn"},
 	},
 }
 

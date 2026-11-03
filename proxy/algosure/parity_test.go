@@ -81,7 +81,7 @@ func loadParityVectors(t *testing.T) []parityVector {
 	return doc.Vectors
 }
 
-// vectorSalt fulfils SaltFetcher by serving the vector's salt_content
+// vectorSalt fulfills SaltFetcher by serving the vector's salt_content
 // regardless of (saltID, host). The verifier still validates that the
 // header is present; this fetcher simply skips the data-layer dimension
 // because the parity vectors fix it as constant.

@@ -53,7 +53,7 @@ func WithAutocompleteAlgorithmVersionTag(tag string) AutocompleteAlgorithmOption
 // token-aware fuzzy pass — Damerau-OSA within the length band OR
 // Double-Metaphone equality, per candidate token — with fuzzy hits ranked
 // strictly below every literal bucket. Pass WithAutocompleteFuzzy(false) to
-// restore substring-only behaviour.
+// restore substring-only behavior.
 func WithAutocompleteFuzzy(enabled bool) AutocompleteAlgorithmOption {
 	return func(o *defaultAutocompleteAlgorithmOptions) {
 		o.fuzzy = enabled
@@ -331,10 +331,7 @@ func applyFrequencyBoost(grouped [][]CandidateConcept, frequencies map[string]in
 	scoreOf := make(map[string]int)
 
 	for groupIndex, group := range grouped {
-		scaleFactor := maxScaleFactor - groupIndex
-		if scaleFactor < 1 {
-			scaleFactor = 1
-		}
+		scaleFactor := max(maxScaleFactor-groupIndex, 1)
 		for _, c := range group {
 			freq := frequencies[c.ID]
 			if freq > 0 {
@@ -382,10 +379,7 @@ func computeAutocompleteScoreLookup(grouped [][]CandidateConcept, frequencies ma
 	total := len(grouped)
 	out := make(map[string]int)
 	for groupIndex, group := range grouped {
-		scale := total - groupIndex
-		if scale < 1 {
-			scale = 1
-		}
+		scale := max(total-groupIndex, 1)
 		for _, c := range group {
 			key := autocompleteScoreKey(c)
 			if _, ok := out[key]; ok {

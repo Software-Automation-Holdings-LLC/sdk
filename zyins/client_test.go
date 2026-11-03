@@ -20,7 +20,7 @@ import (
 func newTestClient(t *testing.T, srv *httptest.Server) *Client {
 	t.Helper()
 	c, err := NewClient(
-		WithToken("isa_test_4fjK2nQ7mX1aB8sR9pZ3"),
+		WithToken("isa_test_aaaaaaaaaaaaaaaaaaaa"),
 		WithBaseURL(srv.URL),
 		WithMaxRetryAttempts(1),
 		// The bundled default pins prequalify/quote to v3; these tests
@@ -434,17 +434,15 @@ func TestProductsService_CatalogDedupesConcurrentFetch(t *testing.T) {
 	ready := make(chan struct{}, callers)
 	errs := make(chan error, callers)
 	var wg sync.WaitGroup
-	for i := 0; i < callers; i++ {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
+	for range callers {
+		wg.Go(func() {
 			ready <- struct{}{}
 			<-start
 			_, err := c.Products.Catalog(context.Background())
 			errs <- err
-		}()
+		})
 	}
-	for i := 0; i < callers; i++ {
+	for range callers {
 		<-ready
 	}
 	close(start)

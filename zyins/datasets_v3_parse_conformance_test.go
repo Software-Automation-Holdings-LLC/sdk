@@ -46,7 +46,7 @@ type datasetsV3ConformanceCorpus struct {
 
 func loadDatasetsV3ConformanceCorpus(t *testing.T) datasetsV3ConformanceCorpus {
 	t.Helper()
-	raw, err := os.ReadFile(datasetsV3ParseConformancePath)
+	raw, err := os.ReadFile(filepath.Clean(datasetsV3ParseConformancePath))
 	if err != nil {
 		t.Fatalf("read conformance corpus %s: %v", datasetsV3ParseConformancePath, err)
 	}

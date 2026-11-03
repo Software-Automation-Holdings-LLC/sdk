@@ -20,7 +20,10 @@ package reference
 //   - Only ASCII A–Z is processed; any other character is dropped, so the
 //     caller is responsible for NFC-normalizing before calling.
 
-import "strings"
+import (
+	"slices"
+	"strings"
+)
 
 // defaultMaxCodeLen is the phonetic code length. Classic Double Metaphone
 // truncates to 4, which is too lossy for the long compound terms in the
@@ -108,14 +111,8 @@ func (w word) at(index int) byte {
 }
 
 func (w word) slice(start, end int) string {
-	lo := start
-	if lo < 0 {
-		lo = 0
-	}
-	hi := end
-	if hi > len(w.value) {
-		hi = len(w.value)
-	}
+	lo := max(start, 0)
+	hi := min(end, len(w.value))
 	if hi <= lo {
 		return ""
 	}
@@ -135,12 +132,7 @@ func (w word) isSlavoGermanic() bool {
 
 func (w word) contains(start, length int, candidates ...string) bool {
 	target := w.slice(start, start+length)
-	for _, c := range candidates {
-		if c == target {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(candidates, target)
 }
 
 // doubleMetaphone encodes input into its Double Metaphone primary +

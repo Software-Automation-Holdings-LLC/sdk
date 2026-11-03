@@ -184,9 +184,6 @@ type Applicant struct {
 	Zip string `json:"zip,omitempty"`
 	// NicotineUse is the underlying fact; mapped to the wire shape by the
 	// prequalify builder. Set via NicotineUsageInput for 0.5.1+.
-	//
-	// Deprecated: NicotineUsageLegacy accepts the old NicotineUsage enum.
-	// Will be removed in v0.7.0.
 	NicotineUse NicotineUsageInput `json:"-"`
 	// NicotineUsageLegacy holds the deprecated three-value enum when the
 	// caller has not yet migrated to NicotineUsageInput.

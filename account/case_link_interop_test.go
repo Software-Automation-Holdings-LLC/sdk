@@ -50,9 +50,9 @@ func loadCaseLinkFixture(t *testing.T) caseLinkFixture {
 		t.Fatal("runtime.Caller failed")
 	}
 	dir := filepath.Dir(file)
-	for i := 0; i < 8; i++ {
+	for range 8 {
 		candidate := filepath.Join(dir, "conformance", "scenarios", ".fixtures", "case-link-share.fixture.json")
-		if data, err := os.ReadFile(candidate); err == nil {
+		if data, err := os.ReadFile(filepath.Clean(candidate)); err == nil {
 			var fx caseLinkFixture
 			if err := json.Unmarshal(data, &fx); err != nil {
 				t.Fatalf("decode case-link fixture: %v", err)

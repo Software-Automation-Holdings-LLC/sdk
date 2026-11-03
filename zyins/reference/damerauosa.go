@@ -54,7 +54,7 @@ func optimalStringAlignmentDistance(a, b string, maxDistance int) int {
 	prevPrev := make([]int, cols)
 	prev := make([]int, cols)
 	curr := make([]int, cols)
-	for j := 0; j < cols; j++ {
+	for j := range cols {
 		prev[j] = j
 	}
 
@@ -99,12 +99,6 @@ func abs(n int) int {
 }
 
 func min3(a, b, c int) int {
-	m := a
-	if b < m {
-		m = b
-	}
-	if c < m {
-		m = c
-	}
+	m := min(c, min(b, a))
 	return m
 }

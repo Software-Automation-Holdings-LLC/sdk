@@ -36,7 +36,7 @@ func JSONRequest(
 	opts RequestOptions,
 ) (*http.Response, error) {
 	var (
-		reader io.Reader
+		reader  io.Reader
 		getBody func() (io.ReadCloser, error)
 	)
 	if body != nil {

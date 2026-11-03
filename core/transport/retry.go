@@ -35,7 +35,7 @@ func (realSleeper) Sleep(ctx context.Context, d time.Duration) error {
 	case <-t.C:
 		return nil
 	case <-ctx.Done():
-		return fmt.Errorf("transport: retry sleeper cancelled by context: %w", ctx.Err())
+		return fmt.Errorf("transport: retry sleeper canceled by context: %w", ctx.Err())
 	}
 }
 

@@ -17,7 +17,6 @@ package zyins
 
 import (
 	"encoding/json"
-	"fmt"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -87,7 +86,7 @@ func conformanceFixturesDir(t *testing.T) string {
 	}
 	// Walk from packages/go/zyins up to the repo root.
 	dir := filepath.Dir(file)
-	for i := 0; i < 8; i++ {
+	for range 8 {
 		candidate := filepath.Join(dir, "conformance", "scenarios", ".fixtures")
 		if _, err := os.Stat(candidate); err == nil {
 			return candidate
@@ -101,7 +100,7 @@ func conformanceFixturesDir(t *testing.T) string {
 func readCrossSDKFixture(t *testing.T, name string) []byte {
 	t.Helper()
 	path := filepath.Join(conformanceFixturesDir(t), name)
-	data, err := os.ReadFile(path)
+	data, err := os.ReadFile(filepath.Clean(path))
 	if err != nil {
 		t.Fatalf("read fixture %s: %v", path, err)
 	}
@@ -111,7 +110,7 @@ func readCrossSDKFixture(t *testing.T, name string) []byte {
 func readCrossSDKExpected(t *testing.T) crossSDKExpected {
 	t.Helper()
 	path := filepath.Join(conformanceFixturesDir(t), "prequalify-v3-fex-immediate.expected.json")
-	data, err := os.ReadFile(path)
+	data, err := os.ReadFile(filepath.Clean(path))
 	if err != nil {
 		t.Fatalf("read expected %s: %v", path, err)
 	}
@@ -120,7 +119,7 @@ func readCrossSDKExpected(t *testing.T) crossSDKExpected {
 		t.Fatalf("decode expected JSON: %v", err)
 	}
 	if len(out.Plans) == 0 {
-		t.Fatal(fmt.Sprintf("expected.json has no plans at %s", path))
+		t.Fatalf("expected.json has no plans at %s", path)
 	}
 	return out
 }

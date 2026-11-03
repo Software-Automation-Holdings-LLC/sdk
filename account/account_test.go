@@ -29,11 +29,11 @@ func (f *fakeDoer) Do(req *http.Request) (*http.Response, error) {
 	return f.resp, nil
 }
 
-func newClient(t *testing.T, body string, status int) (*Client, *fakeDoer) {
+func newClient(t *testing.T, body string) (*Client, *fakeDoer) {
 	t.Helper()
 	doer := &fakeDoer{
 		resp: &http.Response{
-			StatusCode: status,
+			StatusCode: http.StatusOK,
 			Body:       io.NopCloser(strings.NewReader(body)),
 		},
 	}
@@ -62,7 +62,7 @@ func TestNewClient_RejectsWhitespaceOnlyAuthFields(t *testing.T) {
 }
 
 func TestBranding_Lookup_EmptyBody(t *testing.T) {
-	c, _ := newClient(t, "", 200)
+	c, _ := newClient(t, "")
 	out, err := c.Branding.Lookup(context.Background(), nil)
 	if err != nil {
 		t.Fatalf("Lookup: %v", err)
@@ -73,7 +73,7 @@ func TestBranding_Lookup_EmptyBody(t *testing.T) {
 }
 
 func TestBranding_Lookup_SignsAndDecodes(t *testing.T) {
-	c, doer := newClient(t, `{"data":{"imo_name":"Acme","main_color":"#abc"}}`, 200)
+	c, doer := newClient(t, `{"data":{"imo_name":"Acme","main_color":"#abc"}}`)
 	out, err := c.Branding.Lookup(context.Background(), nil)
 	if err != nil {
 		t.Fatalf("Lookup: %v", err)
@@ -93,7 +93,7 @@ func TestBranding_Lookup_SignsAndDecodes(t *testing.T) {
 }
 
 func TestPreferences_LookupAndSet(t *testing.T) {
-	c, doer := newClient(t, `{"prefs":{"theme":"dark"}}`, 200)
+	c, doer := newClient(t, `{"prefs":{"theme":"dark"}}`)
 	prefs, err := c.Preferences.Lookup(context.Background(), "bpp")
 	if err != nil {
 		t.Fatalf("Lookup: %v", err)
@@ -104,7 +104,7 @@ func TestPreferences_LookupAndSet(t *testing.T) {
 	if !strings.Contains(doer.last.URL.RawQuery, "scope=bpp") {
 		t.Errorf("expected scope=bpp in query, got %q", doer.last.URL.RawQuery)
 	}
-	doer.resp = &http.Response{StatusCode: 200, Body: io.NopCloser(strings.NewReader(`{"ok":true}`))}
+	doer.resp = &http.Response{StatusCode: http.StatusOK, Body: io.NopCloser(strings.NewReader(`{"ok":true}`))}
 	ok, err := c.Preferences.Set(context.Background(), "bpp", PreferencesDocument{"theme": "light"})
 	if err != nil || !ok {
 		t.Fatalf("Set: ok=%v err=%v", ok, err)
@@ -122,7 +122,6 @@ func TestPreferences_LookupAndSet(t *testing.T) {
 func TestCases_Create_RoundTrip(t *testing.T) {
 	c, doer := newClient(t,
 		`{"hash":"abc","url":"https://q.zyins/c/abc","readonly":false,"created_at":"2026-05-21T00:00:00Z"}`,
-		200,
 	)
 	out, err := c.Cases.Create(context.Background(), CaseCreateInput{
 		Input:    map[string]any{"age": 60},
@@ -140,7 +139,7 @@ func TestCases_Create_RoundTrip(t *testing.T) {
 }
 
 func TestEmail_Enqueue(t *testing.T) {
-	c, _ := newClient(t, `{"status":"queued"}`, 200)
+	c, _ := newClient(t, `{"status":"queued"}`)
 	ok, err := c.Email.Enqueue(context.Background(), EmailEnqueueInput{
 		To: []string{"a@b.co"}, Subject: "s", Body: "b",
 	})
@@ -150,7 +149,7 @@ func TestEmail_Enqueue(t *testing.T) {
 }
 
 func TestReferenceData_DispatchByScope(t *testing.T) {
-	c, doer := newClient(t, `{"datasets":{"states":[]}}`, 200)
+	c, doer := newClient(t, `{"datasets":{"states":[]}}`)
 	out, err := c.ReferenceData.Get(context.Background(), "dataset", WithDataset("brands"))
 	if err != nil {
 		t.Fatalf("Get: %v", err)
@@ -162,14 +161,14 @@ func TestReferenceData_DispatchByScope(t *testing.T) {
 		t.Errorf("expected datasets key, got %v", out)
 	}
 
-	c.ReferenceData.Get(context.Background(), "compiled_data_v3", WithPayload(map[string]any{"x": 1}))
+	_, _ = c.ReferenceData.Get(context.Background(), "compiled_data_v3", WithPayload(map[string]any{"x": 1}))
 	if doer.last.URL.Path != "/v2/reference-data" {
 		t.Errorf("expected /v2/reference-data for compiled_data_v3, got %q", doer.last.URL.Path)
 	}
 }
 
 func TestReferenceData_PayloadCannotOverrideScope(t *testing.T) {
-	c, doer := newClient(t, `{"ok":true}`, 200)
+	c, doer := newClient(t, `{"ok":true}`)
 	_, err := c.ReferenceData.Get(context.Background(), "compiled_data_v3", WithPayload(map[string]any{
 		"scope": "wrong",
 		"x":     1,

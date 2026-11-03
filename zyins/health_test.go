@@ -42,7 +42,7 @@ func TestHealth_GetReadiness_HappyPath(t *testing.T) {
 }
 
 func TestHealth_GetReadiness_NotServing(t *testing.T) {
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", "application/problem+json")
 		w.WriteHeader(http.StatusServiceUnavailable)
 		_, _ = w.Write([]byte(`{"type":"about:blank","title":"not ready","status":503,"code":"service_unavailable"}`))
@@ -56,7 +56,7 @@ func TestHealth_GetReadiness_NotServing(t *testing.T) {
 }
 
 func TestHealth_GetReadiness_DownstreamMap(t *testing.T) {
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		_, _ = w.Write([]byte(`{"data":{
 			"ready": false,

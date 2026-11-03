@@ -2,8 +2,8 @@ package zyins
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
-	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"sync"
@@ -131,8 +131,7 @@ func TestIdempotencyConflictError_FallbackFromConflictStatusOnly(t *testing.T) {
 	_, err := c.PrequalifyV1.Run(context.Background(), &PrequalifyInput{
 		Applicant: validApplicant(t), Coverage: cov, Products: sel,
 	})
-	var ice *IdempotencyConflictError
-	if !errors.As(err, &ice) {
+	if _, ok := errors.AsType[*IdempotencyConflictError](err); !ok {
 		t.Fatalf("expected *IdempotencyConflictError; got %T", err)
 	}
 }
@@ -148,16 +147,16 @@ func TestClient_ConcurrentRequestsHaveDistinctIdempotencyKeys(t *testing.T) {
 	var (
 		mu   sync.Mutex
 		keys = make(map[string]struct{}, n)
-		hits int64
+		hits atomic.Int64
 	)
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		key := r.Header.Get("Idempotency-Key")
 		mu.Lock()
 		keys[key] = struct{}{}
 		mu.Unlock()
-		atomic.AddInt64(&hits, 1)
+		hits.Add(1)
 		w.Header().Set("Content-Type", "application/json")
-		_, _ = w.Write(fmt.Appendf(nil, `{"data":{"plans":[]},"request_id":%q}`, key))
+		_ = json.NewEncoder(w).Encode(map[string]any{"data": map[string]any{"plans": []any{}}, "request_id": key})
 	}))
 	defer srv.Close()
 	c := newTestClient(t, srv)
@@ -176,7 +175,7 @@ func TestClient_ConcurrentRequestsHaveDistinctIdempotencyKeys(t *testing.T) {
 	if err := g.Wait(); err != nil {
 		t.Fatalf("concurrent Run failed: %v", err)
 	}
-	if got := atomic.LoadInt64(&hits); got != n {
+	if got := hits.Load(); got != n {
 		t.Fatalf("server hits = %d, want %d", got, n)
 	}
 	mu.Lock()
@@ -201,7 +200,7 @@ func TestClient_ConcurrentRequestsHaveDistinctRequestIDs(t *testing.T) {
 		// transitively assert end-to-end distinctness.
 		key := r.Header.Get("Idempotency-Key")
 		w.Header().Set("Content-Type", "application/json")
-		_, _ = w.Write(fmt.Appendf(nil, `{"data":{"plans":[],"request_id":%q}}`, key))
+		_ = json.NewEncoder(w).Encode(map[string]any{"data": map[string]any{"plans": []any{}, "request_id": key}})
 	}))
 	defer srv.Close()
 	c := newTestClient(t, srv)

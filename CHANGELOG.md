@@ -66,7 +66,7 @@ push happens until 1.0.0 ships.
 ### Migration
 
 See [`MIGRATION.md`](./MIGRATION.md) for the 0.x → 1.0 cut and
-[../../MIGRATION.md](../../MIGRATION.md) for the cross-language guide.
+[../../docs/sdk/MIGRATION.md](../../docs/sdk/MIGRATION.md) for the cross-language guide.
 
 ### Known drift (conformance gate YELLOW — non-blocking)
 
@@ -129,7 +129,7 @@ gate is YELLOW pending triage.
 
 ## v0.4.0-rc.1 — 2026-05-21
 
-### Added
+### Added (v0.4.0-rc.1)
 
 - **`account/` namespace** — License-HMAC-authenticated `isa.account.*`
   surface for branding, preferences, cases, email, and reference-data
