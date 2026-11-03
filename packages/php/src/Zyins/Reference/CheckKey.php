@@ -21,9 +21,9 @@ namespace Isa\Sdk\Zyins\Reference;
  * Sorting collapses word order so prefix / suffix / no-space severity
  * variants of one concept resolve identically, while severity qualifiers
  * stay distinct (MILD vs SEVERE differ in letter multiset):
- *   "SEVERE COPD"   → "CCDEEOPRSV"
- *   "COPD (SEVERE)" → "CCDEEOPRSV"
- *   "COPD (MILD)"   → "CCDDILMOP"
+ *   "SEVERE COPD"   → "CDEEEOPRSV"
+ *   "COPD (SEVERE)" → "CDEEEOPRSV"
+ *   "COPD (MILD)"   → "CDDILMOP"
  *
  * Used ONLY for word-order-invariant NAME matching. Opaque catalog ids
  * (e.g. HIGHBLOODPRESSURE, cond_<ULID>) are never keyed this way —

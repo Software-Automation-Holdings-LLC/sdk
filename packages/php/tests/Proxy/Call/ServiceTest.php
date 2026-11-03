@@ -32,7 +32,7 @@ final class ServiceTest extends TestCase
     {
         $transport = new Transport(
             http: $http,
-            auth: new Auth('isa_test_4fjK2nQ7mX1aB8sR9pZ3'),
+            auth: new Auth('isa_test_aaaaaaaaaaaaaaaaaaaa'),
             keys: new FixedKeySource('550e8400-e29b-41d4-a716-446655440000'),
             baseUrl: 'https://proxy.example.test',
             apiVersion: '2026-05-18',
@@ -72,7 +72,7 @@ final class ServiceTest extends TestCase
         $req = $http->lastRequest();
         $this->assertSame('POST', $req->getMethod());
         $this->assertSame('https://proxy.example.test/v1/call', (string) $req->getUri());
-        $this->assertSame('Bearer isa_test_4fjK2nQ7mX1aB8sR9pZ3', $req->getHeaderLine('Authorization'));
+        $this->assertSame('Bearer isa_test_aaaaaaaaaaaaaaaaaaaa', $req->getHeaderLine('Authorization'));
         $this->assertSame('550e8400-e29b-41d4-a716-446655440000', $req->getHeaderLine('Idempotency-Key'));
         $this->assertSame('2026-05-18', $req->getHeaderLine('Version'));
 

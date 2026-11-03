@@ -8,6 +8,9 @@ use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\TestCase;
 use Isa\Sdk\Core\InMemoryCredentialStore;
 use Isa\Sdk\Isa;
+use Isa\Sdk\Proxy\ProxyClient;
+use Isa\Sdk\RapidSign\RapidSignClient;
+use Isa\Sdk\UnsupportedAuthProduct;
 use Isa\Sdk\Zyins\Exception\IsaConfigException;
 use Isa\Sdk\Zyins\Licenses\CredentialState;
 use Isa\Sdk\Zyins\Licenses\LicenseRefreshedEvent;
@@ -107,5 +110,44 @@ final class IsaTest extends TestCase
         self::assertSame('license-key-fresh', $store->get('isa.licenseKey'));
 
         $unsub();
+    }
+
+    public function testWithBearerWiresRapidsignAndProxy(): void
+    {
+        $isa = Isa::withBearer('isa_test_example');
+
+        self::assertInstanceOf(RapidSignClient::class, $isa->rapidsign);
+        self::assertInstanceOf(ProxyClient::class, $isa->proxy);
+    }
+
+    public function testWithLicenseRejectsRapidsignAccess(): void
+    {
+        $isa = Isa::withLicense('KEY', 'agent@example.com');
+        $rapidsign = $isa->rapidsign;
+        self::assertInstanceOf(UnsupportedAuthProduct::class, $rapidsign);
+
+        $this->expectException(IsaConfigException::class);
+        $this->expectExceptionMessage('rapidsign');
+        $rapidsign->access('documents');
+    }
+
+    public function testWithLicenseRejectsRapidsignPresenceCheck(): void
+    {
+        $isa = Isa::withLicense('KEY', 'agent@example.com');
+
+        $this->expectException(IsaConfigException::class);
+        $this->expectExceptionMessage('rapidsign');
+        self::assertTrue(isset($isa->rapidsign->documents));
+    }
+
+    public function testWithSessionRejectsProxyAccess(): void
+    {
+        $isa = Isa::withSession('sid-1', 'secret-1');
+        $proxy = $isa->proxy;
+        self::assertInstanceOf(UnsupportedAuthProduct::class, $proxy);
+
+        $this->expectException(IsaConfigException::class);
+        $this->expectExceptionMessage('proxy');
+        $proxy->access('call');
     }
 }

@@ -52,7 +52,7 @@ include `rc` (set at the consumer's project level).
 ### Migration
 
 See [`MIGRATION.md`](./MIGRATION.md) for the 0.x → 1.0 cut and
-[../../MIGRATION.md](../../MIGRATION.md) for the cross-language guide.
+[../../docs/sdk/MIGRATION.md](../../docs/sdk/MIGRATION.md) for the cross-language guide.
 
 ### Known drift (conformance gate YELLOW — non-blocking)
 

@@ -119,7 +119,8 @@ final class SignRequestTest extends TestCase
         );
 
         $this->assertSame(self::VECTOR_EXPECTED_SIG, $headers['X-Isa-Signature']);
-        $this->assertSame('Bearer ' . $this->vectorSecret(), $headers['Authorization']);
+        $this->assertSame('Session ' . $this->vectorSecret(), $headers['Authorization']);
+        $this->assertStringStartsWith('Session ', $headers['Authorization']);
         $this->assertSame(self::VECTOR_SESSION_ID, $headers['X-Isa-Session-Id']);
         $this->assertSame(self::VECTOR_TIMESTAMP, $headers['X-Isa-Timestamp']);
     }

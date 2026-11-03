@@ -35,7 +35,7 @@ final class RapidSignClientTest extends TestCase
 
     public function testAuthTrimsSurroundingWhitespace(): void
     {
-        $auth = new Auth('  	' . self::FIXTURE_TOKEN . '  
+        $auth = new Auth('  	' . self::FIXTURE_TOKEN . '
 ');
         self::assertSame(self::FIXTURE_TOKEN, $auth->token);
     }

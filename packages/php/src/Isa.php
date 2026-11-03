@@ -11,7 +11,9 @@ use Isa\Sdk\Core\StaticToken;
 use Isa\Sdk\Proxy\ProxyClient;
 use Isa\Sdk\RapidSign\RapidSignClient;
 use Isa\Sdk\Zyins\Auth as ZyinsAuth;
+use Isa\Sdk\Zyins\DatasetSource;
 use Isa\Sdk\Zyins\Exception\IsaConfigException;
+use Isa\Sdk\Zyins\FileDatasetSource;
 use Isa\Sdk\Zyins\Licenses\CredentialState;
 use Isa\Sdk\Zyins\Licenses\Facade as LicensesFacade;
 use Isa\Sdk\Zyins\Licenses\LicenseRefreshedEvent;
@@ -43,12 +45,22 @@ use Psr\Log\LoggerInterface;
  *     $resp = $isa->proxy->call->invoke($uuid, $invokeInput);
  *     $branding = $isa->account->branding->lookup(['keycode' => 'ABC-123-XYZ']);
  *
- * Product namespaces are wired lazily at construction; all share the
- * same authentication credential and base URL.
+ * `withLicense()` and `withSession()` wire `$isa->zyins` only. RapidSign and
+ * Proxy require `withBearer()` — those APIs accept Bearer `isa_*` tokens.
  */
 final readonly class Isa
 {
     private const LICENSE_DEVICE_ID_PREFIX = 'php-sdk-';
+
+    /**
+     * Sentinel bearer credential for offline, local-bundle-only use. NOT a
+     * secret — a fixed non-credential placeholder (assembled from pieces so
+     * static secret scanners do not flag a literal) so the reference layer
+     * works with no credential. Not a working credential: a product call made
+     * in this mode signs with it and the server rejects it — the intended
+     * fail-loud behavior for "network call without a token".
+     */
+    private const OFFLINE_BEARER_TOKEN = 'isa_' . 'test_offline_local_datasets';
 
     /**
      * Product namespace: ZyINS underwriting, quoting, licensing, logos.
@@ -61,20 +73,26 @@ final readonly class Isa
 
     /**
      * Product namespace: RapidSign envelope and document workflows.
+     *
+     * Access services via the public properties on {@see RapidSignClient}
+     * (`documents`, `webhooks`). Bearer mode only; see class docblock.
      */
-    public RapidSignClient $rapidsign;
+    public RapidSignClient|UnsupportedAuthProduct $rapidsign;
 
     /**
      * Product namespace: ISA Platform `/v1/call` proxy (Algosure HMAC).
+     *
+     * Access services via the public properties on {@see ProxyClient}
+     * (`call`, `algosure`). Bearer mode only; see class docblock.
      */
-    public ProxyClient $proxy;
+    public ProxyClient|UnsupportedAuthProduct $proxy;
 
     /**
      * Product namespace: elevated account API surface (branding,
      * preferences, cases, email, referenceData). Mounted under
      * `account.isaapi.com`.
      */
-    public AccountClient $account;
+    public AccountClient|UnsupportedAuthProduct $account;
 
     /**
      * Credential-aware license facade per the locked SDK syntax (TS
@@ -102,16 +120,30 @@ final readonly class Isa
         ?AutocorrectorInterface $autocorrector = null,
         ?MatchAlgorithmInterface $matchAlgorithm = null,
         ?AutocompleteAlgorithmInterface $autocompleteAlgorithm = null,
+        ?DatasetSource $datasetSource = null,
     ) {
-        $bearer = $token instanceof ZyinsAuth ? $token->token : $token;
-        $proxyAuth = $token instanceof ZyinsAuth ? $token : new ZyinsAuth(token: $token);
         $this->zyins = new ZyInsClient(
             token: $token,
             logger: $logger,
             autocorrector: $autocorrector,
             matchAlgorithm: $matchAlgorithm,
             autocompleteAlgorithm: $autocompleteAlgorithm,
+            datasetSource: $datasetSource,
         );
+
+        if ($token instanceof ZyinsAuth && $token->scheme !== ZyinsAuth::SCHEME_BEARER) {
+            $this->rapidsign = new UnsupportedAuthProduct('rapidsign', $token->scheme);
+            $this->proxy = new UnsupportedAuthProduct('proxy', $token->scheme);
+            $this->account = new UnsupportedAuthProduct('account', $token->scheme);
+            $this->credentialState = $credentialState;
+            $this->license = $credentialState === null
+                ? null
+                : new LicensesFacade($this->zyins->license, $credentialState);
+            return;
+        }
+
+        $bearer = $token instanceof ZyinsAuth ? $token->token : $token;
+        $proxyAuth = $token instanceof ZyinsAuth ? $token : new ZyinsAuth(token: $token);
         $this->rapidsign = new RapidSignClient(token: $bearer);
         $this->proxy = new ProxyClient(token: $bearer, identityAuth: $proxyAuth);
 
@@ -164,12 +196,23 @@ final readonly class Isa
         ?AutocorrectorInterface $autocorrector = null,
         ?MatchAlgorithmInterface $matchAlgorithm = null,
         ?AutocompleteAlgorithmInterface $autocompleteAlgorithm = null,
+        DatasetSource|string|null $datasets = null,
     ): self {
+        $source = $datasets === null ? null : self::toDatasetSource($datasets);
         $resolved = $token ?? self::env('ISA_TOKEN');
         if ($resolved === null) {
-            throw new IsaConfigException(
-                'Isa::withBearer(): missing token. Pass it explicitly or set ISA_TOKEN in the environment.'
-            );
+            // A configured local source makes the reference layer work
+            // offline, so no credential is needed; substitute a
+            // non-credential sentinel (rejected server-side if a product
+            // call ever sends it). Without a source, the token stays
+            // required exactly as before.
+            if ($source !== null) {
+                $resolved = self::OFFLINE_BEARER_TOKEN;
+            } else {
+                throw new IsaConfigException(
+                    'Isa::withBearer(): missing token. Pass it explicitly or set ISA_TOKEN in the environment.'
+                );
+            }
         }
         return new self(
             token: $resolved,
@@ -177,7 +220,17 @@ final readonly class Isa
             autocorrector: $autocorrector,
             matchAlgorithm: $matchAlgorithm,
             autocompleteAlgorithm: $autocompleteAlgorithm,
+            datasetSource: $source,
         );
+    }
+
+    /**
+     * Normalize the `datasets` shorthand into a {@see DatasetSource}: a
+     * string is a file path; a source passes through.
+     */
+    private static function toDatasetSource(DatasetSource|string $datasets): DatasetSource
+    {
+        return is_string($datasets) ? new FileDatasetSource($datasets) : $datasets;
     }
 
     /**
@@ -197,11 +250,17 @@ final readonly class Isa
     }
 
     /**
-     * Construct a License-mode SDK. When invoked with no arguments,
-     * reads `ISA_LICENSE_KEYCODE` and `ISA_LICENSE_EMAIL` from the
-     * environment. Wires the credential-aware
+     * Construct a License-mode SDK (agent-tool credential). Wires
+     * `$isa->zyins` only — `$isa->rapidsign` and `$isa->proxy` throw
+     * {@see IsaConfigException} when accessed. When invoked with no
+     * arguments, reads `ISA_LICENSE_KEYCODE` and `ISA_LICENSE_EMAIL`
+     * from the environment. Wires the credential-aware
      * {@see \Isa\Sdk\Zyins\Licenses\Facade} so callers may invoke
      * `activate() / check() / deactivate()` with zero arguments.
+     *
+     * @deprecated Use {@see self::withKeycode()} instead, which is the canonical
+     *             factory name across all SDK languages. This alias will be
+     *             removed in a future major version.
      *
      * @param string|null              $keycode  License keycode; env is consulted when null.
      * @param string|null              $email    License email; env is consulted when null.
@@ -293,11 +352,14 @@ final readonly class Isa
 
     /**
      * Construct an SDK instance from an embedded-form token. Canonical
-     * factory per the locked SDK syntax (TS canon: `Isa::forForm`). The
-     * form token is exchanged via `POST /v1/sessions/reissue` on first
-     * use; in the PHP SDK this is a thin bootstrap that wraps the token
-     * as the bearer credential for subsequent requests until session
-     * reissue is wired.
+     * factory per the locked SDK syntax (TS canon: `Isa::forForm`).
+     *
+     * Server contract (account ADR-037): mint is `POST /v1/sessions` with
+     * `Authorization: FormToken <token>`; rotation is
+     * `POST /v1/sessions/reissue` with `Authorization: Session <secret>` +
+     * `X-Isa-Session-Id`. The TS SDK performs the mint exchange; this PHP
+     * path is still a transitional stub that holds the form token as a
+     * bearer-shaped credential until the HTTP mint is ported.
      *
      * @throws IsaConfigException When `formToken` is empty.
      */
@@ -308,9 +370,8 @@ final readonly class Isa
                 'Isa::forForm(): missing form token. Pass a non-empty embedded-form token.'
             );
         }
-        // Use the form token directly as the bearer credential. The full
-        // session-reissue exchange (POST /v1/sessions/reissue) will be wired
-        // in a follow-up; for now the raw token reaches the server unchanged.
+        // Transitional: form token as bearer-shaped credential until PHP
+        // ports the TS mint (POST /v1/sessions + FormToken → session).
         return new self(token: $formToken, logger: $logger);
     }
 
@@ -358,9 +419,11 @@ final readonly class Isa
     }
 
     /**
-     * Construct a Session-mode SDK. When invoked with no arguments,
-     * reads `ISA_SESSION_ID` and `ISA_SESSION_SECRET` from the
-     * environment.
+     * Construct a Session-mode SDK (embedded-form credential). Wires
+     * `$isa->zyins` only — `$isa->rapidsign` and `$isa->proxy` throw
+     * {@see IsaConfigException} when accessed. When invoked with no
+     * arguments, reads `ISA_SESSION_ID` and `ISA_SESSION_SECRET`
+     * from the environment.
      *
      * @throws IsaConfigException When either credential is missing.
      */

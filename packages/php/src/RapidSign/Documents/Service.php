@@ -77,6 +77,12 @@ final readonly class Service
         if ($request->notificationKey !== null) {
             $notifyBody['key'] = $request->notificationKey;
         }
+        if ($request->formId !== null) {
+            $notifyBody['form_id'] = $request->formId;
+        }
+        if ($request->includeCodeInLink) {
+            $notifyBody['include_code_in_link'] = true;
+        }
         $this->callJson(
             'POST',
             self::PATH_DOCUMENTS . '/' . rawurlencode($resolvedSignId) . '/notify',
