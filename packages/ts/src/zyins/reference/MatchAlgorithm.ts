@@ -23,10 +23,10 @@
  * ```
  */
 
-import type { Concept, UnknownConcept } from './Concept.js';
-import { _makeKey } from './_makeKey.js';
-import { _checkKey } from './_checkKey.js';
-import { buildUnknownConcept } from './referenceIndex.js';
+import { _checkKey } from "./_checkKey.js";
+import { _makeKey } from "./_makeKey.js";
+import type { Concept, UnknownConcept } from "./Concept.js";
+import { buildUnknownConcept } from "./referenceIndex.js";
 
 /**
  * Resolve free text to exactly one `Concept` from a candidate pool.

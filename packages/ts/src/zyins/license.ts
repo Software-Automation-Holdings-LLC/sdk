@@ -12,18 +12,18 @@
  * Only the wire parsing adapts to the v2 envelope shape.
  */
 
-import { type AuthContext } from './auth.js';
-import { type Transport } from './transport.js';
-import { fromHttpResponse } from './errors.js';
-import { deriveIdempotencyKey } from './idempotency.js';
-import { parseJsonResponse, unwrapEnvelope as unwrapParsedEnvelope } from './response.js';
-import { stripQuotes } from '../core/license/deviceAuth.js';
-import { type Clock } from '../core/index.js';
+import { type Clock } from "../core/index.js";
+import { stripQuotes } from "../core/license/deviceAuth.js";
+import { type AuthContext } from "./auth.js";
+import { fromHttpResponse } from "./errors.js";
+import { deriveIdempotencyKey } from "./idempotency.js";
+import { parseJsonResponse, unwrapEnvelope as unwrapParsedEnvelope } from "./response.js";
+import { type Transport } from "./transport.js";
 
-const LICENSES_ACTIVATE_PATH = '/v2/licenses/activate';
-const LICENSES_CHECK_PATH = '/v2/licenses/check';
-const LICENSES_DEACTIVATE_PATH = '/v2/licenses/deactivate';
-const DEACTIVATED_STATUS = 'inactive';
+const LICENSES_ACTIVATE_PATH = "/v2/licenses/activate";
+const LICENSES_CHECK_PATH = "/v2/licenses/check";
+const LICENSES_DEACTIVATE_PATH = "/v2/licenses/deactivate";
+const DEACTIVATED_STATUS = "inactive";
 
 /** Mirror of proto `LicenseStatus`. Unknown wire values surface as-is. */
 export type LicenseValidationStatus = string;
@@ -113,13 +113,12 @@ export async function activate(
     ...ctx,
     auth: { ...ctx.auth, deviceId: request.deviceId },
   };
-  const idempotencyKey =
-    ctx.idempotencyKey ??
-    (await deriveIdempotencyKey({ deviceId: request.deviceId, op: 'license_activate', body }));
+  const idempotencyKey = ctx.idempotencyKey
+    ?? (await deriveIdempotencyKey({ deviceId: request.deviceId, op: "license_activate", body }));
   const headers = await buildHeaders({ ctx: requestCtx, body, path: LICENSES_ACTIVATE_PATH, idempotencyKey });
   const response = await ctx.transport({
     url: `${ctx.baseUrl}${LICENSES_ACTIVATE_PATH}`,
-    method: 'POST',
+    method: "POST",
     headers,
     body,
   });
@@ -140,13 +139,12 @@ export async function check(
 ): Promise<LicenseCheckResult> {
   validateCheckRequest(request);
   const body = JSON.stringify(serializeCheck(request));
-  const idempotencyKey =
-    ctx.idempotencyKey ??
-    (await deriveIdempotencyKey({ deviceId: ctx.auth.deviceId, op: 'license_check', body }));
+  const idempotencyKey = ctx.idempotencyKey
+    ?? (await deriveIdempotencyKey({ deviceId: ctx.auth.deviceId, op: "license_check", body }));
   const headers = await buildHeaders({ ctx, body, path: LICENSES_CHECK_PATH, idempotencyKey });
   const response = await ctx.transport({
     url: `${ctx.baseUrl}${LICENSES_CHECK_PATH}`,
-    method: 'POST',
+    method: "POST",
     headers,
     body,
   });
@@ -166,13 +164,12 @@ export async function deactivate(
 ): Promise<LicenseDeactivateResult> {
   validateDeactivateRequest(request);
   const body = JSON.stringify(serializeDeactivate(request));
-  const idempotencyKey =
-    ctx.idempotencyKey ??
-    (await deriveIdempotencyKey({ deviceId: ctx.auth.deviceId, op: 'license_deactivate', body }));
+  const idempotencyKey = ctx.idempotencyKey
+    ?? (await deriveIdempotencyKey({ deviceId: ctx.auth.deviceId, op: "license_deactivate", body }));
   const headers = await buildHeaders({ ctx, body, path: LICENSES_DEACTIVATE_PATH, idempotencyKey });
   const response = await ctx.transport({
     url: `${ctx.baseUrl}${LICENSES_DEACTIVATE_PATH}`,
-    method: 'POST',
+    method: "POST",
     headers,
     body,
   });
@@ -184,31 +181,31 @@ export async function deactivate(
 
 function validateActivateRequest(request: LicenseActivateRequest): void {
   if (!request.email?.trim()) {
-    throw new Error('zyins: license.activate requires email');
+    throw new Error("zyins: license.activate requires email");
   }
   if (!request.keycode?.trim()) {
-    throw new Error('zyins: license.activate requires keycode');
+    throw new Error("zyins: license.activate requires keycode");
   }
   if (!request.deviceId?.trim()) {
-    throw new Error('zyins: license.activate requires deviceId');
+    throw new Error("zyins: license.activate requires deviceId");
   }
 }
 
 function validateCheckRequest(request: LicenseCheckRequest): void {
   if (!request.email?.trim()) {
-    throw new Error('zyins: license.check requires email');
+    throw new Error("zyins: license.check requires email");
   }
   if (!request.keycode?.trim()) {
-    throw new Error('zyins: license.check requires keycode');
+    throw new Error("zyins: license.check requires keycode");
   }
 }
 
 function validateDeactivateRequest(request: LicenseDeactivateRequest): void {
   if (!request.email?.trim()) {
-    throw new Error('zyins: license.deactivate requires email');
+    throw new Error("zyins: license.deactivate requires email");
   }
   if (!request.keycode?.trim()) {
-    throw new Error('zyins: license.deactivate requires keycode');
+    throw new Error("zyins: license.deactivate requires keycode");
   }
 }
 
@@ -225,8 +222,8 @@ function serializeCheck(request: LicenseCheckRequest): Record<string, string> {
     email: request.email,
     keycode: request.keycode,
   };
-  if (request.deviceId) payload['deviceId'] = request.deviceId;
-  if (request.licenseKey) payload['licenseKey'] = request.licenseKey;
+  if (request.deviceId) payload["deviceId"] = request.deviceId;
+  if (request.licenseKey) payload["licenseKey"] = request.licenseKey;
   return payload;
 }
 
@@ -235,7 +232,7 @@ function serializeDeactivate(request: LicenseDeactivateRequest): Record<string, 
     email: request.email,
     keycode: request.keycode,
   };
-  if (request.deviceId) payload['deviceId'] = request.deviceId;
+  if (request.deviceId) payload["deviceId"] = request.deviceId;
   return payload;
 }
 
@@ -246,12 +243,11 @@ function parseActivate(body: string): LicenseActivateResult {
     remainingActivations?: unknown;
   };
   const status = data.status;
-  if (typeof status !== 'string' || status === '') {
-    throw new Error('zyins: license.activate response missing status field');
+  if (typeof status !== "string" || status === "") {
+    throw new Error("zyins: license.activate response missing status field");
   }
-  const licenseKey = typeof data.licenseKey === 'string' ? data.licenseKey : '';
-  const remainingActivations =
-    typeof data.remainingActivations === 'number' ? data.remainingActivations : 0;
+  const licenseKey = typeof data.licenseKey === "string" ? data.licenseKey : "";
+  const remainingActivations = typeof data.remainingActivations === "number" ? data.remainingActivations : 0;
   return {
     status,
     auth: { licenseKey },
@@ -262,7 +258,7 @@ function parseActivate(body: string): LicenseActivateResult {
 function parseCheck(body: string): LicenseCheckResult {
   const data = unwrapEnvelope(body);
   const status = (data as { status?: unknown }).status;
-  if (typeof status !== 'string') {
+  if (typeof status !== "string") {
     throw new Error(`zyins: license.check response missing status field`);
   }
   return { status: status as LicenseValidationStatus };
@@ -273,17 +269,17 @@ function parseDeactivate(body: string): LicenseDeactivateResult {
   const status = (data as { status?: unknown }).status;
   // v2 returns "inactive" on success; accept the legacy "deactivated" too
   // so a server still serving the old wire word does not break consumers.
-  if (status !== DEACTIVATED_STATUS && status !== 'deactivated') {
-    throw new Error('zyins: license.deactivate response missing inactive status');
+  if (status !== DEACTIVATED_STATUS && status !== "deactivated") {
+    throw new Error("zyins: license.deactivate response missing inactive status");
   }
   return { status: status as string };
 }
 
 function unwrapEnvelope(body: string): unknown {
   if (!body) {
-    throw new Error('zyins: license response body was empty');
+    throw new Error("zyins: license response body was empty");
   }
-  return unwrapParsedEnvelope(parseJsonResponse(body, 'license'));
+  return unwrapParsedEnvelope(parseJsonResponse(body, "license"));
 }
 
 // buildHeaders emits ONLY the bootstrap-safe headers for the v2 license
@@ -298,13 +294,13 @@ function buildHeaders(args: {
   idempotencyKey: string;
 }): Record<string, string> {
   const headers: Record<string, string> = {
-    'Content-Type': 'application/json',
-    Accept: 'application/json',
-    'Idempotency-Key': args.idempotencyKey,
+    "Content-Type": "application/json",
+    Accept: "application/json",
+    "Idempotency-Key": args.idempotencyKey,
   };
   const deviceId = args.ctx.auth.deviceId;
   if (deviceId) {
-    headers['X-Device-ID'] = stripQuotes(deviceId);
+    headers["X-Device-ID"] = stripQuotes(deviceId);
   }
   return headers;
 }

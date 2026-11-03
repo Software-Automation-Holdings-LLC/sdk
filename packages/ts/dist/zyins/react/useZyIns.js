@@ -10,8 +10,8 @@
  * React installed (CLI, Node services) can still depend on the SDK without
  * pulling React into their bundle — they simply do not import this file.
  */
-import { createContext, createElement, useContext, useMemo } from 'react';
-import { ZyInsClient } from '../client.js';
+import { createContext, createElement, useContext, useMemo } from "react";
+import { ZyInsClient } from "../client.js";
 const ZyInsContext = createContext(null);
 /**
  * Provider component. Wrap the app (or a subtree) so descendants can call
@@ -32,7 +32,7 @@ export function ZyInsProvider(props) {
 export function useZyIns() {
     const client = useContext(ZyInsContext);
     if (!client) {
-        throw new Error('useZyIns: called outside <ZyInsProvider>. Wrap your app root with <ZyInsProvider config={{ auth }} />.');
+        throw new Error("useZyIns: called outside <ZyInsProvider>. Wrap your app root with <ZyInsProvider config={{ auth }} />.");
     }
     return client;
 }

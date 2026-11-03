@@ -14,8 +14,8 @@
  * auth-mode-agnostic; adding a third mode is a new signer, not a new branch
  * in every call site.
  */
-import { type AuthContext } from './auth.js';
-import { type Clock } from '../core/index.js';
+import { type Clock } from "../core/index.js";
+import { type AuthContext } from "./auth.js";
 /** Inputs a signer needs to bind auth headers to a specific request. */
 export interface SignableRequest {
     /** HTTP method (`POST`, `GET`, …). */

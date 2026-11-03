@@ -8,7 +8,7 @@
  * prequalify builder is the only consumer that knows how to serialize them.
  */
 
-import type { State } from '../catalog/states.js';
+import type { State } from "../catalog/states.js";
 
 /**
  * Applicant biological sex. The server accepts `male` and `female`
@@ -16,8 +16,8 @@ import type { State } from '../catalog/states.js';
  * (`M`, `F`) transparently. The SDK emits only the canonical form.
  */
 export enum Sex {
-  Male = 'male',
-  Female = 'female',
+  Male = "male",
+  Female = "female",
 }
 
 /**
@@ -26,13 +26,13 @@ export enum Sex {
  * re-exports them under a friendlier name so callers never spell raw strings.
  */
 export enum NicotineDuration {
-  Never = 'never',
-  Within12Months = 'within_12_months',
-  N12To24Months = '12_to_24_months',
-  N24To36Months = '24_to_36_months',
-  N36To48Months = '36_to_48_months',
-  N48To60Months = '48_to_60_months',
-  Over60Months = 'over_60_months',
+  Never = "never",
+  Within12Months = "within_12_months",
+  N12To24Months = "12_to_24_months",
+  N24To36Months = "24_to_36_months",
+  N36To48Months = "36_to_48_months",
+  N48To60Months = "48_to_60_months",
+  Over60Months = "over_60_months",
 }
 
 /**
@@ -82,9 +82,9 @@ export interface NicotineUsageInput {
  *     (or the appropriate duration bucket)
  */
 export enum NicotineUsage {
-  None = 'none',
-  Current = 'current',
-  Former = 'former',
+  None = "none",
+  Current = "current",
+  Former = "former",
 }
 
 /**
@@ -98,10 +98,10 @@ export class Height {
   /** Construct a height from a feet+inches pair (the natural US input). */
   static fromFeetInches(feet: number, inches: number): Height {
     if (!Number.isFinite(feet) || !Number.isFinite(inches)) {
-      throw new Error('Height.fromFeetInches: feet and inches must be finite numbers');
+      throw new Error("Height.fromFeetInches: feet and inches must be finite numbers");
     }
     if (feet < 0 || inches < 0) {
-      throw new Error('Height.fromFeetInches: feet and inches must be non-negative');
+      throw new Error("Height.fromFeetInches: feet and inches must be non-negative");
     }
     return new Height(Math.round(feet * INCHES_PER_FOOT + inches));
   }
@@ -109,7 +109,7 @@ export class Height {
   /** Construct a height from a total inch count (rare; for parity tests). */
   static fromInches(totalInches: number): Height {
     if (!Number.isFinite(totalInches) || totalInches < 0) {
-      throw new Error('Height.fromInches: totalInches must be a non-negative number');
+      throw new Error("Height.fromInches: totalInches must be a non-negative number");
     }
     return new Height(Math.round(totalInches));
   }
@@ -128,7 +128,7 @@ export class Weight {
   /** Construct from a pound value (the natural US input). */
   static fromPounds(pounds: number): Weight {
     if (!Number.isFinite(pounds) || pounds <= 0) {
-      throw new Error('Weight.fromPounds: pounds must be a positive number');
+      throw new Error("Weight.fromPounds: pounds must be a positive number");
     }
     return new Weight(Math.round(pounds));
   }

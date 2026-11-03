@@ -12,7 +12,6 @@ export { ProductType, Products as ProductsByType, } from './productsByType.js';
 export { State, States } from './states.js';
 export { ProductCarriers } from './carriers.js';
 export { ConditionCategories } from './conditions.js';
-export { MedicationUses } from './medications.js';
 export { Scope, ScopeDescriptions } from './scopes.js';
 export { SignEvent, SignEventLabels } from './signEvents.js';
 export { ErrorCode, ErrorAdviceCodes, ErrorDocUrls } from './errors.js';

@@ -10,7 +10,7 @@
  * @see go/zyins/server/auth_middleware.go
  * @see go/zyins/server/device_signature.go
  */
-import { type Clock } from '../internal/crypto.js';
+import { type Clock } from "../internal/crypto.js";
 /**
  * Strips surrounding double-quote characters from a string.
  * AsyncStorage values may retain JSON serialization quotes depending on the
@@ -44,11 +44,11 @@ export declare const buildLicenseHeader: (licenseKey: string, orderId: string, e
  */
 export interface LicenseHMACHeaders {
     Authorization: string;
-    'X-Device-ID': string;
-    'X-Device-Signature': string;
-    'X-License-Method': string;
-    'X-License-URI': string;
-    'X-License-Timestamp': string;
+    "X-Device-ID": string;
+    "X-Device-Signature": string;
+    "X-License-Method": string;
+    "X-License-URI": string;
+    "X-License-Timestamp": string;
 }
 /**
  * Builds the HMAC-signed License authentication headers, binding the license

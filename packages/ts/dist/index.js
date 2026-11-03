@@ -21,57 +21,63 @@
  * bundle.
  */
 // --- Unified facade ------------------------------------------------------
-export { Isa, ZyInsNamespace, RapidSignNamespace, ProxyNamespace, SESSIONS_REISSUE_PATH } from './zyins/isa.js';
+export { Isa, ProxyNamespace, RapidSignNamespace, SESSIONS_PATH, SESSIONS_REISSUE_PATH, ZyInsNamespace, } from "./zyins/isa.js";
 // --- Account namespace --------------------------------------------------
-export { AccountNamespace, AccountBranding, AccountPreferences, AccountCases, AccountEmail, } from './account/index.js';
+export { AccountBranding, AccountCases, AccountEmail, AccountNamespace, AccountPreferences, } from "./account/index.js";
 // --- Auth / identity / env factory --------------------------------------
 // `SessionIdentity` and `resolveSessionIdentity` are intentionally omitted
 // from the public surface — sessions are SDK-internal refresh state minted
 // by `Isa.withKeycode` / `Isa.forForm`, not a consumer-constructed auth
 // mode (sdk-syntax-proposal.md §4 + §6).
-export { resolveBearerIdentity, resolveLicenseIdentity, ENV_VAR_NAMES } from './zyins/envFactory.js';
+export { isAuthContext } from "./zyins/auth.js";
+export { ENV_VAR_NAMES, resolveBearerIdentity, resolveLicenseIdentity, } from "./zyins/envFactory.js";
 // --- Errors -------------------------------------------------------------
 // One hierarchy: every error descends from `IsaError`; the product and failure
 // kind live in `code`, not in a parallel class tree (Stripe/AWS convention).
-export { IsaError, IsaApiError, IsaConfigError, IsaCaseExpiredError, IsaIdempotencyConflictError, IsaLicenseError, IsaNotActivatedError, IsaRateLimitError, IsaTimeoutError, IsaUnauthorizedError, IsaValidationError, } from './zyins/apiError.js';
+export { IsaApiError, IsaCaseExpiredError, IsaConfigError, IsaError, IsaIdempotencyConflictError, IsaLicenseError, IsaNotActivatedError, isApiError, IsaRateLimitError, IsaTimeoutError, IsaUnauthorizedError, IsaValidationError, isIdempotencyConflictError, isNotActivatedError, } from "./zyins/apiError.js";
 // --- Case crypto (zero-knowledge envelope) ------------------------------
-export { encryptCase, decryptCase, IsaCaseDecryptError } from './account/caseCrypto.js';
-export { canonicalString, formatTimestamp, signRequest } from './core/auth/signRequest.js';
+export { decryptCase, encryptCase, IsaCaseDecryptError, } from "./account/caseCrypto.js";
+// --- Envelope -----------------------------------------------------------
+export { canonicalString, formatTimestamp, signRequest, } from "./core/auth/signRequest.js";
 // --- Value types / domain primitives (zyins-flavored, public) ----------
-export { Sex, NicotineUsage, NicotineDuration, Height, Weight } from './zyins/applicant.js';
-export { Coverage, QuoteType, isMulti } from './zyins/coverage.js';
-export { ProductSelection, ProductClass, ProductType, Products } from './zyins/product.js';
-export { MinRank } from './zyins/minRank.js';
+export { Height, NicotineDuration, NicotineUsage, Sex, Weight, } from "./zyins/applicant.js";
+export { Coverage, isMulti, QuoteType, } from "./zyins/coverage.js";
+export { MinRank } from "./zyins/minRank.js";
+export { ProductClass, Products, ProductSelection, ProductType, } from "./zyins/product.js";
 // --- Reference catalog (typed concepts, sort, adapters) ----------------
 // `ReferenceSort` + the concept/adapter types are the surface bpp2.0 (and
 // any reference consumer) imports from the package root. Re-exported here
 // so `import { ReferenceSort } from '@software-automation-holdings-llc/sdk'`
 // resolves without a per-consumer shim; the `./zyins` subpath in
 // `package.json#exports` exposes the same names under a namespaced path.
-export { ReferenceSort, 
+export { ApiDatasetSource, DatasetSourceError, 
+// Pluggable dataset source — load the reference bundle from a local
+// file (offline `conditions.match`) instead of the API. Purely
+// additive; the API path stays the default.
+FileDatasetSource, 
 // `FuzzyMatchAlgorithm` is the opt-in typo-tolerant matcher. The class
 // (not just its type) is re-exported here so integrators can construct
 // it from the package root — `new FuzzyMatchAlgorithm({ frequencies })`
 // — and pass it to `Isa.withKeycode({ matchAlgorithm })`. The default
 // matcher stays `DefaultMatchAlgorithm`; this is purely additive.
-FuzzyMatchAlgorithm, } from './zyins/index.js';
+FuzzyMatchAlgorithm, platformFileReader, ReferenceSort, ResolvingDatasetSource, StaticDatasetSource, toDatasetSource, } from "./zyins/index.js";
 // --- Prequalify v3 (request + pricing surface) -------------------------
 // The v3 surface integrators import from the package root: the request type
 // they construct and the result/pricing types they read.
-export { byAmount, offerPremium, } from './zyins/prequalify-v3.js';
-// --- IsaOptions sugar constructor -------------------------------------
-export { BearerAuth, LicenseAuth, FormAuth, RemoteEngine, LocalEngine, ProxyEngine, InMemoryEngine, inMemoryEngineWith, resolveIsaOptions, DEFAULT_TIMEOUT_MS, BundledApiVersions, resolveApiVersions, } from './zyins/isaOptions.js';
-export { ZeroKnowledgeCaseStorage } from './zyins/cases/ZeroKnowledgeCaseStorage.js';
+export { formatMoney } from "./zyins/money.js";
+export { byAmount, offerPremium, } from "./zyins/prequalify-v3.js";
+export { ZeroKnowledgeCaseStorage } from "./zyins/cases/ZeroKnowledgeCaseStorage.js";
+export { BearerAuth, BundledApiVersions, DEFAULT_TIMEOUT_MS, FormAuth, InMemoryEngine, inMemoryEngineWith, LicenseAuth, LocalEngine, ProxyEngine, RemoteEngine, resolveApiVersions, resolveIsaOptions, } from "./zyins/isaOptions.js";
 // --- Generated catalogs -------------------------------------------------
 // Every name in this block is produced by `scripts/gen-catalog.mjs`. See
 // `src/catalog/` for the source modules and `docs/SDK_DESIGN.md` §5.1
 // for the named-export contract.
-export { 
+export { ConditionCategories, ErrorAdviceCodes, ErrorCode, ErrorDocUrls, 
 // Legacy flat slug enum + accessor from `src/catalog/products.ts`.
 // The typed Product interface and nested `Products` namespace exported
 // above (from `./zyins/product`) shadow these names; consumers needing the
 // legacy flat enum should import from `./catalog/products` directly.
-Product as ProductSlug, Products as ProductSlugs, State, States, ProductCarriers, ConditionCategories, MedicationUses, Scope, ScopeDescriptions, SignEvent, SignEventLabels, ErrorCode, ErrorAdviceCodes, ErrorDocUrls, } from './catalog/index.js';
+Product as ProductSlug, ProductCarriers, Products as ProductSlugs, Scope, ScopeDescriptions, SignEvent, SignEventLabels, State, States, } from "./catalog/index.js";
 // --- Debug logger / env reader -----------------------------------------
-export { debugLoggerFromEnv, makeLogger, redactHeaders, redactBody, redactBodyString, processEnv, stderrSink } from './zyins/logger.js';
+export { debugLoggerFromEnv, makeLogger, processEnv, redactBody, redactBodyString, redactHeaders, stderrSink, } from "./zyins/logger.js";
 //# sourceMappingURL=index.js.map

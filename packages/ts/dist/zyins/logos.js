@@ -20,11 +20,11 @@
  * 404 — when the carrier has no logo asset — surfaces as a typed
  * `IsaApiError` with code `not_found`, matching the rest of the error funnel.
  */
-import { resolveFetch } from '../core/index.js';
-import { fromHttpResponse } from './errors.js';
-import { IsaApiError, IsaValidationError } from './apiError.js';
+import { resolveFetch } from "../core/index.js";
+import { IsaApiError, IsaValidationError } from "./apiError.js";
+import { fromHttpResponse } from "./errors.js";
 /** Path prefix for the carrier-logo endpoint (canonical per api-standards.md). */
-const LOGOS_PATH = '/v1/logos';
+const LOGOS_PATH = "/v1/logos";
 export async function get(carrier, opts, ctx) {
     const url = buildLogosUrl(ctx.baseUrl, carrier, opts?.dataUri === true);
     const response = await callLogos(url, ctx.fetchImpl);
@@ -60,10 +60,10 @@ export class LogosSubClient {
 function buildLogosUrl(baseUrl, carrier, dataUri) {
     const normalizedCarrier = carrier.trim();
     if (!normalizedCarrier) {
-        throw new IsaValidationError({ message: 'zyins.logos.get: carrier is required' });
+        throw new IsaValidationError({ message: "zyins.logos.get: carrier is required" });
     }
     const path = `${LOGOS_PATH}/${encodeURIComponent(normalizedCarrier)}`;
-    const suffix = dataUri ? '?ds=true' : '';
+    const suffix = dataUri ? "?ds=true" : "";
     return `${baseUrl}${path}${suffix}`;
 }
 /**
@@ -75,7 +75,7 @@ function buildLogosUrl(baseUrl, carrier, dataUri) {
 function callLogos(url, fetchImpl) {
     if (fetchImpl)
         return fetchImpl(url);
-    const f = resolveFetch(undefined, 'ZyInsLogosTransport');
+    const f = resolveFetch(undefined, "ZyInsLogosTransport");
     return f(url).then((r) => ({
         status: r.status,
         text: () => r.text(),
@@ -92,7 +92,7 @@ async function safeReadText(response) {
         return await response.text();
     }
     catch {
-        return '';
+        return "";
     }
 }
 /**
@@ -103,10 +103,10 @@ async function safeReadText(response) {
  * per RFC 2397.
  */
 function assertDataUri(body) {
-    if (!body.startsWith('data:image/')) {
+    if (!body.startsWith("data:image/")) {
         throw new IsaApiError({
             message: `zyins.logos.get: expected a data:image/... URI but got: ${body.slice(0, 32)}`,
-            code: 'unknown',
+            code: "unknown",
             status: 0,
         });
     }

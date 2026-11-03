@@ -13,9 +13,9 @@
  * This module owns ONLY the wire shape + the parser. Consumer-side index
  * construction (`ReferenceIndex`) lives in `./reference/referenceIndex.ts`.
  */
-import type { OperationContext } from './client.js';
+import type { OperationContext } from "./client.js";
 /** Closed enum of dataset categories the server returns. */
-export type DatasetCategory = 'medications' | 'conditions' | 'products' | 'spelling_corrections' | 'nicotine_options';
+export type DatasetCategory = "medications" | "conditions" | "products" | "spelling_corrections" | "nicotine_options";
 /** Base reference entity: every row carries at least `id` + `name`. */
 export interface ReferenceEntity {
     /** Opaque entity identifier. Today: kind-prefixed ULID (`cond_`, `med_`, ...). */
@@ -60,7 +60,7 @@ export interface MedicationEntity extends ReferenceEntity {
 /** A nicotine-option row. */
 export interface NicotineOptionEntity extends ReferenceEntity {
     /** Coarse classification of the consumption form. */
-    readonly type: 'smoked' | 'smokeless' | 'vapor' | 'other';
+    readonly type: "smoked" | "smokeless" | "vapor" | "other";
 }
 /** A typo correction row. */
 export interface SpellingCorrectionEntity extends ReferenceEntity {
@@ -132,7 +132,7 @@ export interface DatasetsV3GetOptions {
     /** Narrow the response to specific categories. Omit for all. */
     readonly include?: readonly DatasetCategory[];
     /** `'meta'` skips row payloads; `'full'` (default) returns everything. */
-    readonly fields?: 'full' | 'meta';
+    readonly fields?: "full" | "meta";
     /** Conditional revalidation; passes through as `If-None-Match`. */
     readonly ifNoneMatch?: string;
 }
@@ -160,7 +160,7 @@ export declare function isNotModified(result: DatasetBundleV3 | DatasetsV3NotMod
  * inputs before lookup. Conventionally fed into
  * {@link DefaultAutocorrector}.
  */
-export declare function buildTypoMap(bundle: Pick<DatasetBundleV3, 'spellingCorrections'>): ReadonlyMap<string, string>;
+export declare function buildTypoMap(bundle: Pick<DatasetBundleV3, "spellingCorrections">): ReadonlyMap<string, string>;
 /**
  * Aggregate per-id prescription frequency from inline rows.
  *
@@ -170,8 +170,21 @@ export declare function buildTypoMap(bundle: Pick<DatasetBundleV3, 'spellingCorr
  * Consumers feed this into {@link AutocompleteAlgorithm.rank} as the
  * `frequencies` map.
  */
-export declare function buildFrequencyMap(bundle: Pick<DatasetBundleV3, 'conditions' | 'medications'>): ReadonlyMap<string, number>;
+export declare function buildFrequencyMap(bundle: Pick<DatasetBundleV3, "conditions" | "medications">): ReadonlyMap<string, number>;
 export declare function getDatasetsV3(options: DatasetsV3GetOptions | undefined, ctx: OperationContext): Promise<DatasetBundleV3 | DatasetsV3NotModified>;
+/**
+ * Parse a raw `GET /v3/datasets` response body — the full envelope shape
+ * `{ "data": { ... } }` — into a {@link DatasetBundleV3}. Exported so a
+ * local {@link DatasetSource} can reuse the exact same parser the HTTP
+ * path uses; there is intentionally no second parser. `etag` is the value
+ * to stamp on the bundle (the file path has none, so it passes
+ * `undefined`).
+ *
+ * Accepts both the slim `reference-bundle.json` and the full
+ * `datasets.json` — both carry the same `data.datasets` shape; the
+ * reference layer reads only the reference fields.
+ */
+export declare function parseEnvelope(body: string, etag: string | undefined): DatasetBundleV3;
 export declare class DatasetsV3SubClient {
     private readonly ctx;
     constructor(ctx: OperationContext);

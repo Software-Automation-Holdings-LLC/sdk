@@ -5,15 +5,15 @@
  * Status: scaffold. Wire to `npx jscodeshift -t codemod/rename-isa-sdk-imports.ts <path>`
  * when the codemod harness lands (tracked alongside the v0.3.0 release).
  */
-import type { API, FileInfo, Options } from 'jscodeshift';
+import type { API, FileInfo, Options } from "jscodeshift";
 
 const OLD = [
-  '@isa-sdk/core',
-  '@isa-sdk/zyins',
-  '@isa-sdk/rapidsign',
-  '@isa-sdk/proxy',
+  "@isa-sdk/core",
+  "@isa-sdk/zyins",
+  "@isa-sdk/rapidsign",
+  "@isa-sdk/proxy",
 ];
-const NEW_PKG = '@software-automation-holdings-llc/sdk';
+const NEW_PKG = "@software-automation-holdings-llc/sdk";
 
 export default function transform(file: FileInfo, api: API, _opts: Options): string {
   const j = api.jscodeshift;
@@ -24,5 +24,5 @@ export default function transform(file: FileInfo, api: API, _opts: Options): str
     .forEach((p) => {
       p.node.source = j.literal(NEW_PKG);
     });
-  return root.toSource({ quote: 'single' });
+  return root.toSource({ quote: "single" });
 }

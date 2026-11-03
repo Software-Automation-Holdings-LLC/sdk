@@ -12,11 +12,12 @@
  * mandatory: a curator only using RapidSign can construct this class
  * directly and skip the umbrella entirely.
  */
-import { DocumentsService } from './documents.js';
-import { WebhooksService } from './webhooks.js';
-import { type Transport } from './internal/transport.js';
-import { type Decompressor } from './internal/decompress.js';
-import { type Clock, type Sleeper, type UUIDGenerator } from './internal/random.js';
+import { DocumentsService } from "./documents.js";
+import { type Decompressor } from "./internal/decompress.js";
+import { type Clock, type Sleeper, type UUIDGenerator } from "./internal/random.js";
+import { type Transport } from "./internal/transport.js";
+import { VoiceService } from "./voice.js";
+import { WebhooksService } from "./webhooks.js";
 /** Production RapidSign endpoint. Override only for staging / local. */
 export declare const DEFAULT_RAPIDSIGN_BASE_URL = "https://rapidsign.isaapi.com";
 /** Default User-Agent string. The version is updated on each release. */
@@ -46,10 +47,11 @@ export interface RapidSignClientOptions {
 }
 /**
  * The RapidSign client. Construct once per bearer token; methods are
- * grouped under typed sub-clients (`documents`, `webhooks`).
+ * grouped under typed sub-clients (`documents`, `voice`, `webhooks`).
  */
 export declare class RapidSignClient {
     readonly documents: DocumentsService;
+    readonly voice: VoiceService;
     readonly webhooks: WebhooksService;
     constructor(token: string, options?: RapidSignClientOptions);
 }

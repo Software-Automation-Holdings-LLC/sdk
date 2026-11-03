@@ -9,11 +9,11 @@
  */
 
 export * from "./algosure/index.js";
-export * from "./transport/call.js";
 export {
+  assertSessionIdentityForProxyCall,
+  proxyCall as proxyCallV2,
   type ProxyCallBinding,
   type ProxyCallOptions,
   type ProxyCallResult,
-  assertSessionIdentityForProxyCall,
-  proxyCall as proxyCallV2,
 } from "./call.js";
+export * from "./transport/call.js";

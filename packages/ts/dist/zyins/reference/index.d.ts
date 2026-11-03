@@ -21,13 +21,13 @@
  * const ranked = await isa.zyins.medications.autocomplete('lisi', { limit: 5 });
  * ```
  */
-import type { DatasetBundleV3 } from '../datasets-v3.js';
-import { ReferenceIndex } from './referenceIndex.js';
-import { type Concept, type ConditionConcept, type MedicationConcept, type UnknownConcept } from './Concept.js';
-import { type Autocorrector } from './Autocorrector.js';
-import { type MatchAlgorithm } from './MatchAlgorithm.js';
-import { type AutocompleteAlgorithm, type AutocompleteOptions } from './AutocompleteAlgorithm.js';
-import { type Suggestion } from './Suggestion.js';
+import type { DatasetBundleV3 } from "../datasets-v3.js";
+import { type AutocompleteAlgorithm, type AutocompleteOptions } from "./AutocompleteAlgorithm.js";
+import { type Autocorrector } from "./Autocorrector.js";
+import { type Concept, type ConditionConcept, type MedicationConcept, type UnknownConcept } from "./Concept.js";
+import { type MatchAlgorithm } from "./MatchAlgorithm.js";
+import { ReferenceIndex } from "./referenceIndex.js";
+import { type Suggestion } from "./Suggestion.js";
 /**
  * Shared bundle cache. One instance per `ZyInsNamespace`; the
  * `DatasetsFacade.getV3()` call writes the latest bundle here, and the
@@ -143,11 +143,11 @@ export declare class ReferenceConceptsFacade {
      */
     autocomplete(query: string, options?: Partial<AutocompleteOptions>): Promise<Suggestion[]>;
 }
-export { Sort } from './Sort.js';
-export type { Concept, ConceptKind, ConditionConcept, MedicationConcept, UnknownConcept } from './Concept.js';
-export { type Autocorrector, type AutocorrectOptions, type AutocorrectAppliedEvent, type DefaultAutocorrectorOptions, DefaultAutocorrector } from './Autocorrector.js';
-export { type MatchAlgorithm, type DefaultMatchAlgorithmOptions, DefaultMatchAlgorithm } from './MatchAlgorithm.js';
-export { type FuzzyMatchAlgorithmOptions, FuzzyMatchAlgorithm } from './FuzzyMatchAlgorithm.js';
-export { type AutocompleteAlgorithm, type AutocompleteOptions, type DefaultAutocompleteAlgorithmOptions, DefaultAutocompleteAlgorithm } from './AutocompleteAlgorithm.js';
-export { type Suggestion, buildSuggestion } from './Suggestion.js';
+export { type AutocompleteAlgorithm, type AutocompleteOptions, DefaultAutocompleteAlgorithm, type DefaultAutocompleteAlgorithmOptions, } from "./AutocompleteAlgorithm.js";
+export { type AutocorrectAppliedEvent, type AutocorrectOptions, type Autocorrector, DefaultAutocorrector, type DefaultAutocorrectorOptions, } from "./Autocorrector.js";
+export type { Concept, ConceptKind, ConditionConcept, MedicationConcept, UnknownConcept } from "./Concept.js";
+export { FuzzyMatchAlgorithm, type FuzzyMatchAlgorithmOptions } from "./FuzzyMatchAlgorithm.js";
+export { DefaultMatchAlgorithm, type DefaultMatchAlgorithmOptions, type MatchAlgorithm } from "./MatchAlgorithm.js";
+export { Sort } from "./Sort.js";
+export { buildSuggestion, type Suggestion } from "./Suggestion.js";
 //# sourceMappingURL=index.d.ts.map

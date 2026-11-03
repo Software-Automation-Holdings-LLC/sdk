@@ -10,9 +10,9 @@
  * Module-private. Consumers only ever see `Concept` handles via the
  * `ReferenceFacade`.
  */
-import { _makeKey } from './_makeKey.js';
-import { _checkKey } from './_checkKey.js';
-import { Sort } from './Sort.js';
+import { _checkKey } from "./_checkKey.js";
+import { _makeKey } from "./_makeKey.js";
+import { Sort } from "./Sort.js";
 export class ReferenceIndex {
     conditionById;
     conditionByKey;
@@ -83,13 +83,13 @@ export class ReferenceIndex {
     lookupResolvedConcept(result, inputText) {
         if (!result.isKnown || result.id === null)
             return buildUnknownConcept(inputText);
-        if (result.kind === 'condition') {
+        if (result.kind === "condition") {
             const entity = this.conditionById.get(result.id);
             return entity
                 ? this.buildConditionConcept(entity, inputText)
                 : buildUnknownConcept(inputText);
         }
-        if (result.kind === 'medication') {
+        if (result.kind === "medication") {
             const entity = this.medicationById.get(result.id);
             return entity
                 ? this.buildMedicationConcept(entity, inputText)
@@ -139,12 +139,12 @@ export class ReferenceIndex {
         return {
             id: entity.id,
             name: entity.name,
-            kind: 'medication',
+            kind: "medication",
             isKnown: true,
             inputText,
             conditions,
             medications: () => [],
-            equals: (other) => other.kind === 'medication' && other.isKnown && other.id === entity.id,
+            equals: (other) => other.kind === "medication" && other.isKnown && other.id === entity.id,
         };
     }
     buildConditionConcept(entity, inputText) {
@@ -168,12 +168,12 @@ export class ReferenceIndex {
         return {
             id: entity.id,
             name: entity.name,
-            kind: 'condition',
+            kind: "condition",
             isKnown: true,
             inputText,
             medications,
             conditions: () => [],
-            equals: (other) => other.kind === 'condition' && other.isKnown && other.id === entity.id,
+            equals: (other) => other.kind === "condition" && other.isKnown && other.id === entity.id,
         };
     }
 }
@@ -195,7 +195,7 @@ export function buildUnknownConcept(inputText) {
     return {
         id: null,
         name: inputText,
-        kind: 'unknown',
+        kind: "unknown",
         isKnown: false,
         inputText,
         conditions: () => [],

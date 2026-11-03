@@ -9,14 +9,14 @@
  * Idempotency: every v3 mutating call requires a UUID v4 in
  * `Idempotency-Key`. We auto-mint when the caller does not supply one.
  */
-import { type Applicant } from './applicant.js';
-import { type CoverageInput } from './coverage.js';
-import { type AuthContext } from './auth.js';
-import { type RequestSigner } from './requestSigner.js';
-import { type Clock } from '../core/index.js';
-import { type PrequalifyV3Context, type PrequalifyV3Request, type PrequalifyV3Result, type V3Offer, type V3PricingRow } from './prequalify-v3-types.js';
-export { byAmount, offerPremium } from './prequalify-v3-types.js';
-export type { PrequalifyV3Context, PrequalifyV3Options, PrequalifyV3Request, PrequalifyV3Result, QuoteV3Context, QuoteV3Options, QuoteV3Request, QuoteV3Result, V3Amount, V3Eligibility, V3EligibilityCategory, V3Money, V3Offer, V3Period, V3Premium, V3PricingRow, } from './prequalify-v3-types.js';
+import { type Clock } from "../core/index.js";
+import { type Applicant } from "./applicant.js";
+import { type AuthContext } from "./auth.js";
+import { type CoverageInput } from "./coverage.js";
+import { type PrequalifyV3Context, type PrequalifyV3Request, type PrequalifyV3Result, type V3Offer, type V3PricingRow } from "./prequalify-v3-types.js";
+import { type RequestSigner } from "./requestSigner.js";
+export { byAmount, offerPremium } from "./prequalify-v3-types.js";
+export type { PrequalifyV3Context, PrequalifyV3Options, PrequalifyV3Request, PrequalifyV3Result, QuoteV3Context, QuoteV3Options, QuoteV3Request, QuoteV3Result, V3Amount, V3Eligibility, V3EligibilityCategory, V3Money, V3Offer, V3Period, V3Premium, V3PricingRow, } from "./prequalify-v3-types.js";
 /**
  * Run a v3 prequalify call. Builds the wire body, mints a UUID v4 for
  * `Idempotency-Key` if the caller did not pass one, signs the request,
@@ -46,8 +46,8 @@ export declare function serializeV3PrequalifyBody(request: PrequalifyV3Request):
 export declare function serializeWireBody(request: {
     readonly applicant: Applicant;
     readonly coverage: CoverageInput;
-    readonly products: PrequalifyV3Request['products'];
-    readonly options?: PrequalifyV3Request['options'];
+    readonly products: PrequalifyV3Request["products"];
+    readonly options?: PrequalifyV3Request["options"];
 }): string;
 export declare function buildHeaders(args: {
     readonly auth: AuthContext;

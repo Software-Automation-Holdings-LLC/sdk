@@ -14,7 +14,7 @@
  * auth-mode-agnostic; adding a third mode is a new signer, not a new branch
  * in every call site.
  */
-import { buildLicenseHMACHeaders, systemClock } from '../core/index.js';
+import { buildLicenseHMACHeaders, systemClock } from "../core/index.js";
 /**
  * License-HMAC signer. Wraps {@link buildLicenseHMACHeaders}, binding the
  * `(licenseKey, orderId, email, deviceId)` identity to each request via
@@ -39,8 +39,8 @@ export function licenseSigner(auth, clock = systemClock) {
  */
 export function bearerSigner(token) {
     const trimmed = token.trim();
-    if (trimmed === '') {
-        throw new Error('requestSigner: bearer signer refuses an empty token');
+    if (trimmed === "") {
+        throw new Error("requestSigner: bearer signer refuses an empty token");
     }
     const header = `Bearer ${trimmed}`;
     return {

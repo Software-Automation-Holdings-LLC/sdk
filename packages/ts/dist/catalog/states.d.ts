@@ -75,8 +75,11 @@ export interface StateMetadata {
     readonly isTerritory: boolean;
 }
 export declare const States: Readonly<{
+    /** Return every state and territory abbreviation in display-name order. */
     values(): readonly State[];
+    /** Return state metadata entries in display-name order. */
     entries(): ReadonlyArray<readonly [State, StateMetadata]>;
+    /** Return metadata for a state abbreviation, or throw for unknown input. */
     metadata(s: State): StateMetadata;
     /**
      * Look up a state by its ISO abbreviation (case-insensitive) or by its

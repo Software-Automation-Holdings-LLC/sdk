@@ -10,33 +10,20 @@
  * `Idempotency-Key`. We auto-mint when the caller does not supply one.
  */
 
+import { type Clock, systemClock } from "../core/index.js";
 import {
   type Applicant,
   type Condition,
   type Medication,
-  NicotineUsage,
-  type NicotineProductUsage,
-  type NicotineUsageInput,
   NicotineDuration,
-} from './applicant.js';
-import { type CoverageInput, QuoteType, isMulti } from './coverage.js';
-import { fromHttpResponse } from './errors.js';
-import { type AuthContext } from './auth.js';
-import { type RequestSigner, licenseSigner } from './requestSigner.js';
-import { type Clock, systemClock } from '../core/index.js';
-import { retryAttemptsFromHeaders } from './retryAttempts.js';
-import { coercePlanInfo } from './planInfo.js';
-import {
-  coerceAmount,
-  coerceCarrier,
-  coerceMoney,
-  coerceProduct,
-  isRecord,
-  toBool,
-  toNullableNum,
-  toNum,
-  toStr,
-} from './v3Coercion.js';
+  type NicotineProductUsage,
+  NicotineUsage,
+  type NicotineUsageInput,
+} from "./applicant.js";
+import { type AuthContext } from "./auth.js";
+import { type CoverageInput, isMulti, QuoteType } from "./coverage.js";
+import { fromHttpResponse } from "./errors.js";
+import { coercePlanInfo } from "./planInfo.js";
 import {
   type PrequalifyV3Context,
   type PrequalifyV3Options,
@@ -48,9 +35,21 @@ import {
   type V3Offer,
   type V3Premium,
   type V3PricingRow,
-} from './prequalify-v3-types.js';
+} from "./prequalify-v3-types.js";
+import { licenseSigner, type RequestSigner } from "./requestSigner.js";
+import { retryAttemptsFromHeaders } from "./retryAttempts.js";
+import {
+  coerceAmount,
+  coerceCarrier,
+  coerceMoney,
+  coerceProduct,
+  isRecord,
+  toBool,
+  toNullableNum,
+  toStr,
+} from "./v3Coercion.js";
 
-export { byAmount, offerPremium } from './prequalify-v3-types.js';
+export { byAmount, offerPremium } from "./prequalify-v3-types.js";
 export type {
   PrequalifyV3Context,
   PrequalifyV3Options,
@@ -68,9 +67,9 @@ export type {
   V3Period,
   V3Premium,
   V3PricingRow,
-} from './prequalify-v3-types.js';
+} from "./prequalify-v3-types.js";
 
-const PREQUALIFY_V3_PATH = '/v3/prequalify';
+const PREQUALIFY_V3_PATH = "/v3/prequalify";
 
 /**
  * Run a v3 prequalify call. Builds the wire body, mints a UUID v4 for
@@ -90,10 +89,10 @@ export async function prequalifyV3(
     idempotencyKey,
     clock: ctx.clock,
     path: PREQUALIFY_V3_PATH,
-    apiVersion: 'v3',
+    apiVersion: "v3",
   });
   const url = `${ctx.baseUrl}${PREQUALIFY_V3_PATH}`;
-  const response = await ctx.transport({ url, method: 'POST', headers, body });
+  const response = await ctx.transport({ url, method: "POST", headers, body });
   if (response.status >= 200 && response.status < 300) {
     return parsePrequalifyEnvelope(
       response.body,
@@ -124,17 +123,17 @@ export async function prequalifyV3(
  * here so v3 callers do not need to know the wire enum names.
  */
 const V3_NICOTINE_FREQUENCY: Record<string, string> = {
-  daily: 'daily',
-  DAILY: 'daily',
-  weekly: 'few_times_per_week',
-  WEEKLY: 'few_times_per_week',
-  few_times_per_week: 'few_times_per_week',
-  monthly: 'few_times_per_month',
-  MONTHLY: 'few_times_per_month',
-  few_times_per_month: 'few_times_per_month',
-  yearly: 'few_times_per_year',
-  YEARLY: 'few_times_per_year',
-  few_times_per_year: 'few_times_per_year',
+  daily: "daily",
+  DAILY: "daily",
+  weekly: "few_times_per_week",
+  WEEKLY: "few_times_per_week",
+  few_times_per_week: "few_times_per_week",
+  monthly: "few_times_per_month",
+  MONTHLY: "few_times_per_month",
+  few_times_per_month: "few_times_per_month",
+  yearly: "few_times_per_year",
+  YEARLY: "few_times_per_year",
+  few_times_per_year: "few_times_per_year",
 };
 
 /** Cents per dollar. The v3 coverage envelope speaks integer cents. */
@@ -153,11 +152,11 @@ function dollarsToCents(amount: number): number {
  */
 function serializeV3Condition(c: Condition): Record<string, unknown> {
   const row: Record<string, unknown> = { text: c.name };
-  if (c.wasDiagnosed !== undefined && c.wasDiagnosed !== '') {
-    row['was_diagnosed'] = c.wasDiagnosed;
+  if (c.wasDiagnosed !== undefined && c.wasDiagnosed !== "") {
+    row["was_diagnosed"] = c.wasDiagnosed;
   }
-  if (c.lastTreatment !== undefined && c.lastTreatment !== '') {
-    row['last_treatment'] = c.lastTreatment;
+  if (c.lastTreatment !== undefined && c.lastTreatment !== "") {
+    row["last_treatment"] = c.lastTreatment;
   }
   return row;
 }
@@ -170,9 +169,9 @@ function serializeV3Condition(c: Condition): Record<string, unknown> {
  */
 function serializeV3Medication(m: Medication): Record<string, unknown> {
   const row: Record<string, unknown> = { text: m.name };
-  if (m.use !== undefined && m.use !== '') row['use'] = m.use;
-  if (m.firstFill !== undefined && m.firstFill !== '') row['first_fill'] = m.firstFill;
-  if (m.lastFill !== undefined && m.lastFill !== '') row['last_fill'] = m.lastFill;
+  if (m.use !== undefined && m.use !== "") row["use"] = m.use;
+  if (m.firstFill !== undefined && m.firstFill !== "") row["first_fill"] = m.firstFill;
+  if (m.lastFill !== undefined && m.lastFill !== "") row["last_fill"] = m.lastFill;
   return row;
 }
 
@@ -189,7 +188,7 @@ function serializeV3NicotineSpecificity(p: NicotineProductUsage): Record<string,
     // Underwriting input: an unrecognized frequency must fail loudly.
     // Silently coercing it (the old behavior defaulted to 'daily') would
     // mis-price a smoker whose true frequency the caller mistyped.
-    const allowed = [...new Set(Object.values(V3_NICOTINE_FREQUENCY))].join(', ');
+    const allowed = [...new Set(Object.values(V3_NICOTINE_FREQUENCY))].join(", ");
     throw new Error(
       `Unknown nicotine frequency ${JSON.stringify(p.frequency)} for "${p.type}"; expected one of: ${allowed}`,
     );
@@ -205,9 +204,9 @@ function serializeV3NicotineSpecificity(p: NicotineProductUsage): Record<string,
  * compatibility mapping.
  */
 function serializeV3Nicotine(
-  nicotineUse: Applicant['nicotineUse'],
+  nicotineUse: Applicant["nicotineUse"],
 ): { last_used: string; specificity?: Array<Record<string, unknown>> } {
-  if (typeof nicotineUse === 'object' && nicotineUse !== null) {
+  if (typeof nicotineUse === "object" && nicotineUse !== null) {
     const input = nicotineUse as NicotineUsageInput;
     const result: { last_used: string; specificity?: Array<Record<string, unknown>> } = {
       last_used: input.lastUsed as string,
@@ -244,7 +243,7 @@ function serializeV3Nicotine(
  * required only for medsup quotes.
  */
 function serializeV3Coverage(
-  coverage: PrequalifyV3Request['coverage'],
+  coverage: PrequalifyV3Request["coverage"],
   state: string,
   zip: string | null | undefined,
 ): Record<string, unknown> {
@@ -253,15 +252,14 @@ function serializeV3Coverage(
   // A whitespace-only value (e.g. a UI placeholder of " ") is treated as absent
   // — it is not a valid ZIP under the server pattern `^\d{5}(-\d{4})?$`, and
   // sending it triggers a 400. Only a non-empty trimmed zip rides the wire.
-  const trimmedZip = typeof zip === 'string' ? zip.trim() : zip;
-  if (trimmedZip != null && trimmedZip !== '') {
-    locale['zip'] = trimmedZip;
+  const trimmedZip = typeof zip === "string" ? zip.trim() : zip;
+  if (trimmedZip != null && trimmedZip !== "") {
+    locale["zip"] = trimmedZip;
   }
   if (isMulti(coverage)) {
     return {
       quote_options: {
-        quote_type:
-          coverage.type === 'face_value' ? QuoteType.FaceAmounts : QuoteType.MonthlyBudget,
+        quote_type: coverage.type === "face_value" ? QuoteType.FaceAmounts : QuoteType.MonthlyBudget,
         amounts: coverage.amounts.map((n) => String(n)),
       },
       ...locale,
@@ -272,7 +270,7 @@ function serializeV3Coverage(
   // discriminator — the same path the server (zyins #400) accepts for the
   // multi-amount budget probe. A single face amount keeps the proven
   // face_amount_cents wire shape.
-  if (coverage.type !== 'face_value') {
+  if (coverage.type !== "face_value") {
     return {
       quote_options: {
         quote_type: QuoteType.MonthlyBudget,
@@ -302,12 +300,12 @@ function applySharedV3Options(
 ): void {
   if (options.onlyProductClass !== undefined) {
     const wireToken: string = options.onlyProductClass.wireToken;
-    if (wireToken !== '') payload['only_product_class'] = wireToken;
+    if (wireToken !== "") payload["only_product_class"] = wireToken;
   }
-  if (options.minRank !== undefined && options.minRank !== '') payload['min_rank'] = options.minRank;
-  if (options.showUnreleased !== undefined) payload['show_unreleased'] = options.showUnreleased;
+  if (options.minRank !== undefined && options.minRank !== "") payload["min_rank"] = options.minRank;
+  if (options.showUnreleased !== undefined) payload["show_unreleased"] = options.showUnreleased;
   if (options.skipHealthBasedUnderwriting !== undefined) {
-    payload['skip_health_based_underwriting'] = options.skipHealthBasedUnderwriting;
+    payload["skip_health_based_underwriting"] = options.skipHealthBasedUnderwriting;
   }
 }
 
@@ -342,15 +340,15 @@ export function serializeV3PrequalifyBody(request: PrequalifyV3Request): string 
   // robust to any toWireFields-shaped products value. Type-based
   // selection is supported on the v2 prequalify / v3 quote flat body.
   if (
-    Array.isArray(productsWire['include_product_class']) &&
-    productsWire['include_product_class'].length > 0
+    Array.isArray(productsWire["include_product_class"])
+    && productsWire["include_product_class"].length > 0
   ) {
     throw new Error(
-      'ProductSelection.byTypes is not supported on v3 prequalify; the v3 envelope accepts explicit products only. Use ProductSelection.of(...) here, or pin apiVersion { prequalify: "v2" } to select by product class.',
+      "ProductSelection.byTypes is not supported on v3 prequalify; the v3 envelope accepts explicit products only. Use ProductSelection.of(...) here, or pin apiVersion { prequalify: \"v2\" } to select by product class.",
     );
   }
-  const productsList = Array.isArray(productsWire['products'])
-    ? (productsWire['products'] as readonly unknown[]).map((p) => String(p))
+  const productsList = Array.isArray(productsWire["products"])
+    ? (productsWire["products"] as readonly unknown[]).map((p) => String(p))
     : [];
   const applicantWire: Record<string, unknown> = {
     sex: applicant.sex as string,
@@ -360,10 +358,10 @@ export function serializeV3PrequalifyBody(request: PrequalifyV3Request): string 
     nicotine: serializeV3Nicotine(applicant.nicotineUse),
   };
   if (applicant.conditions !== undefined && applicant.conditions.length > 0) {
-    applicantWire['conditions'] = applicant.conditions.map(serializeV3Condition);
+    applicantWire["conditions"] = applicant.conditions.map(serializeV3Condition);
   }
   if (applicant.medications !== undefined && applicant.medications.length > 0) {
-    applicantWire['medications'] = applicant.medications.map(serializeV3Medication);
+    applicantWire["medications"] = applicant.medications.map(serializeV3Medication);
   }
   const payload: Record<string, unknown> = {
     applicant: applicantWire,
@@ -374,9 +372,9 @@ export function serializeV3PrequalifyBody(request: PrequalifyV3Request): string 
     applySharedV3Options(payload, options);
   }
   if (options?.includeIneligible !== undefined) {
-    payload['include_ineligible'] = options.includeIneligible;
+    payload["include_ineligible"] = options.includeIneligible;
   } else {
-    payload['include_ineligible'] = true;
+    payload["include_ineligible"] = true;
   }
   return JSON.stringify(payload);
 }
@@ -392,8 +390,8 @@ export function serializeV3PrequalifyBody(request: PrequalifyV3Request): string 
 export function serializeWireBody(request: {
   readonly applicant: Applicant;
   readonly coverage: CoverageInput;
-  readonly products: PrequalifyV3Request['products'];
-  readonly options?: PrequalifyV3Request['options'];
+  readonly products: PrequalifyV3Request["products"];
+  readonly options?: PrequalifyV3Request["options"];
 }): string {
   const { applicant, coverage, products, options } = request;
   const payload: Record<string, unknown> = {
@@ -406,27 +404,27 @@ export function serializeWireBody(request: {
     conditions: applicant.conditions ?? [],
     medications: applicant.medications ?? [],
     quote_options: {
-      quote_type: coverage.type === 'face_value' ? QuoteType.FaceAmounts : QuoteType.MonthlyBudget,
+      quote_type: coverage.type === "face_value" ? QuoteType.FaceAmounts : QuoteType.MonthlyBudget,
       amounts: extractAmounts(coverage).map((n) => String(n)),
     },
     ...products.toWireFields(),
   };
   if (applicant.zip !== undefined) {
-    payload['zip'] = applicant.zip;
+    payload["zip"] = applicant.zip;
   }
   if (options) {
     applySharedV3Options(payload, options);
     if (options.includeProductClass !== undefined && options.includeProductClass.length > 0) {
-      const fromSelection = payload['include_product_class'] as string[] | undefined;
+      const fromSelection = payload["include_product_class"] as string[] | undefined;
       const extra = options.includeProductClass.map((t) => t.wireToken);
-      payload['include_product_class'] = [...new Set([...(fromSelection ?? []), ...extra])];
+      payload["include_product_class"] = [...new Set([...(fromSelection ?? []), ...extra])];
     }
     if (options.includeIneligible !== undefined) {
-      payload['include_ineligible'] = options.includeIneligible;
+      payload["include_ineligible"] = options.includeIneligible;
     }
   }
-  if (payload['include_ineligible'] === undefined) {
-    payload['include_ineligible'] = true;
+  if (payload["include_ineligible"] === undefined) {
+    payload["include_ineligible"] = true;
   }
   return JSON.stringify(payload);
 }
@@ -436,9 +434,9 @@ function extractAmounts(coverage: CoverageInput): readonly number[] {
 }
 
 function serializeNicotineUsage(
-  nicotineUse: Applicant['nicotineUse'],
+  nicotineUse: Applicant["nicotineUse"],
 ): { last_used: string; product_usage?: Array<{ type: string; frequency: string }> } {
-  if (typeof nicotineUse === 'object' && nicotineUse !== null) {
+  if (typeof nicotineUse === "object" && nicotineUse !== null) {
     const input = nicotineUse as NicotineUsageInput;
     const result: { last_used: string; product_usage?: Array<{ type: string; frequency: string }> } = {
       last_used: input.lastUsed as string,
@@ -485,17 +483,17 @@ export async function buildHeaders(args: {
 }): Promise<Record<string, string>> {
   const signer = args.signer ?? licenseSigner(args.auth, args.clock ?? systemClock);
   const authHeaders = await signer.signHeaders({
-    method: 'POST',
+    method: "POST",
     path: args.path,
     body: args.body,
   });
   const headers: Record<string, string> = {
     ...authHeaders,
-    'Content-Type': 'application/json',
-    'Idempotency-Key': args.idempotencyKey,
+    "Content-Type": "application/json",
+    "Idempotency-Key": args.idempotencyKey,
   };
-  if (args.apiVersion !== undefined && args.apiVersion !== '') {
-    headers['Api-Version'] = args.apiVersion;
+  if (args.apiVersion !== undefined && args.apiVersion !== "") {
+    headers["Api-Version"] = args.apiVersion;
   }
   return headers;
 }
@@ -508,10 +506,9 @@ export async function buildHeaders(args: {
 
 export function mintUuidV4(): string {
   const bytes = new Uint8Array(16);
-  const cryptoApi: { getRandomValues?: (a: Uint8Array) => Uint8Array } | undefined =
-    typeof globalThis !== 'undefined'
-      ? (globalThis as { crypto?: { getRandomValues?: (a: Uint8Array) => Uint8Array } }).crypto
-      : undefined;
+  const cryptoApi: { getRandomValues?: (a: Uint8Array) => Uint8Array } | undefined = typeof globalThis !== "undefined"
+    ? (globalThis as { crypto?: { getRandomValues?: (a: Uint8Array) => Uint8Array } }).crypto
+    : undefined;
   if (cryptoApi?.getRandomValues) {
     cryptoApi.getRandomValues(bytes);
   } else {
@@ -524,18 +521,18 @@ export function mintUuidV4(): string {
   bytes[8] = ((bytes[8] ?? 0) & 0x3f) | 0x80;
   const hex: string[] = [];
   for (let i = 0; i < bytes.length; i++) {
-    hex.push((bytes[i] ?? 0).toString(16).padStart(2, '0'));
+    hex.push((bytes[i] ?? 0).toString(16).padStart(2, "0"));
   }
   return (
-    hex.slice(0, 4).join('') +
-    '-' +
-    hex.slice(4, 6).join('') +
-    '-' +
-    hex.slice(6, 8).join('') +
-    '-' +
-    hex.slice(8, 10).join('') +
-    '-' +
-    hex.slice(10, 16).join('')
+    hex.slice(0, 4).join("")
+    + "-"
+    + hex.slice(4, 6).join("")
+    + "-"
+    + hex.slice(6, 8).join("")
+    + "-"
+    + hex.slice(8, 10).join("")
+    + "-"
+    + hex.slice(10, 16).join("")
   );
 }
 
@@ -557,18 +554,18 @@ function parsePrequalifyEnvelope(
     );
   }
   const root = isRecord(parsed) ? parsed : {};
-  const requestId = toStr(root['request_id']);
-  const echoKey = toStr(root['idempotency_key']) || idempotencyKey;
-  const livemode = root['livemode'] === undefined ? true : toBool(root['livemode']);
-  const data = isRecord(root['data']) ? (root['data'] as Record<string, unknown>) : {};
+  const requestId = toStr(root["request_id"]);
+  const echoKey = toStr(root["idempotency_key"]) || idempotencyKey;
+  const livemode = root["livemode"] === undefined ? true : toBool(root["livemode"]);
+  const data = isRecord(root["data"]) ? (root["data"] as Record<string, unknown>) : {};
   // The v3 response is always a flat `plans[]` array — single amount and
   // multi-amount alike. Group client-side with `byAmount` on the requested
   // dimension (deathBenefit for face amounts, budget for monthly budgets).
   // Absent plans (vs present-but-empty) indicates wire-shape drift; fail fast.
-  if (!('plans' in data)) {
-    throw new Error('ZyIns prequalifyV3: missing plans field in v3 response');
+  if (!("plans" in data)) {
+    throw new Error("ZyIns prequalifyV3: missing plans field in v3 response");
   }
-  const plansRaw = Array.isArray(data['plans']) ? (data['plans'] as unknown[]) : [];
+  const plansRaw = Array.isArray(data["plans"]) ? (data["plans"] as unknown[]) : [];
   const plans = plansRaw.map(coerceV3Offer);
   return {
     plans,
@@ -581,18 +578,17 @@ function parsePrequalifyEnvelope(
 
 function coerceEligibility(raw: unknown): V3Eligibility {
   const r = isRecord(raw) ? raw : {};
-  const categoryRaw = r['category'];
-  const category: V3EligibilityCategory =
-    categoryRaw === 'immediate' ||
-    categoryRaw === 'graded' ||
-    categoryRaw === 'rop' ||
-    categoryRaw === 'other'
-      ? categoryRaw
-      : null;
-  const reasonsRaw = Array.isArray(r['reasons']) ? (r['reasons'] as unknown[]) : [];
+  const categoryRaw = r["category"];
+  const category: V3EligibilityCategory = categoryRaw === "immediate"
+      || categoryRaw === "graded"
+      || categoryRaw === "rop"
+      || categoryRaw === "other"
+    ? categoryRaw
+    : null;
+  const reasonsRaw = Array.isArray(r["reasons"]) ? (r["reasons"] as unknown[]) : [];
   return {
     category,
-    eligible: toBool(r['eligible']),
+    eligible: toBool(r["eligible"]),
     reasons: reasonsRaw.map((x) => toStr(x)),
   };
 }
@@ -600,30 +596,29 @@ function coerceEligibility(raw: unknown): V3Eligibility {
 function coercePremium(raw: unknown): V3Premium | undefined {
   if (raw === null || raw === undefined) return undefined;
   if (!isRecord(raw)) return undefined;
-  const modesRaw = isRecord(raw['modes']) ? (raw['modes'] as Record<string, unknown>) : {};
+  const modesRaw = isRecord(raw["modes"]) ? (raw["modes"] as Record<string, unknown>) : {};
   const modes: Record<string, V3Amount> = {};
   for (const [k, v] of Object.entries(modesRaw)) {
     modes[k] = coerceAmount(v);
   }
-  const defaultMode = toStr(raw['default_mode']);
+  const defaultMode = toStr(raw["default_mode"]);
   // `amount` is byte-identical to `modes[default_mode]`; read it from the wire
   // `amount` when present, else fall back to the mode grid so a server that
   // only populated `modes` still yields the headline value.
-  const amount =
-    raw['amount'] !== undefined
-      ? coerceAmount(raw['amount'])
-      : (modes[defaultMode] ?? coerceAmount(undefined));
+  const amount = raw["amount"] !== undefined
+    ? coerceAmount(raw["amount"])
+    : (modes[defaultMode] ?? coerceAmount(undefined));
   return { amount, defaultMode, modes };
 }
 
 export function coercePricingRow(raw: unknown): V3PricingRow {
   const r = isRecord(raw) ? raw : {};
-  const premium = coercePremium(r['premium']);
+  const premium = coercePremium(r["premium"]);
   const base: V3PricingRow = {
-    rateClass: toStr(r['rate_class']),
-    primary: toBool(r['primary']),
-    eligibility: coerceEligibility(r['eligibility']),
-    rank: toNullableNum(r['rank']),
+    rateClass: toStr(r["rate_class"]),
+    primary: toBool(r["primary"]),
+    eligibility: coerceEligibility(r["eligibility"]),
+    rank: toNullableNum(r["rank"]),
     ...(premium === undefined ? {} : { premium }),
   };
   return base;
@@ -636,24 +631,24 @@ export function coercePricingRow(raw: unknown): V3PricingRow {
  */
 export function coerceV3Offer(raw: unknown): V3Offer {
   const r = isRecord(raw) ? raw : {};
-  const pricingRaw = Array.isArray(r['pricing']) ? (r['pricing'] as unknown[]) : [];
-  const metadata = isRecord(r['metadata']) ? (r['metadata'] as Record<string, unknown>) : {};
-  const planInfo = coercePlanInfo(r['plan_info']);
+  const pricingRaw = Array.isArray(r["pricing"]) ? (r["pricing"] as unknown[]) : [];
+  const metadata = isRecord(r["metadata"]) ? (r["metadata"] as Record<string, unknown>) : {};
+  const planInfo = coercePlanInfo(r["plan_info"]);
   // death_benefit is null on the wire for premium-only products (medsup);
   // a Money object for life products. Preserve the null rather than coercing
   // it into a zero-cents Money, so consumers null-check medsup correctly.
-  const deathBenefit = isRecord(r['death_benefit']) ? coerceMoney(r['death_benefit']) : null;
+  const deathBenefit = isRecord(r["death_benefit"]) ? coerceMoney(r["death_benefit"]) : null;
   const base: V3Offer = {
-    object: 'plan_offer',
-    id: toStr(r['id']),
-    eligible: toBool(r['eligible']),
-    carrier: coerceCarrier(r['carrier']),
-    product: coerceProduct(r['product']),
+    object: "plan_offer",
+    id: toStr(r["id"]),
+    eligible: toBool(r["eligible"]),
+    carrier: coerceCarrier(r["carrier"]),
+    product: coerceProduct(r["product"]),
     planInfo: planInfo.array,
     deathBenefit,
     pricing: pricingRaw.map(coercePricingRow),
     metadata,
-    ...(isRecord(r['budget']) ? { budget: coerceMoney(r['budget']) } : {}),
+    ...(isRecord(r["budget"]) ? { budget: coerceMoney(r["budget"]) } : {}),
   };
   return base;
 }

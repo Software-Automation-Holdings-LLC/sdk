@@ -4,10 +4,10 @@
  * `cases.ts` only assembles its body and routes status codes.
  */
 
-import { type AuthContext } from './auth.js';
-import { type Transport } from '../zyins/transport.js';
-import { deriveIdempotencyKey } from '../zyins/idempotency.js';
-import { buildLicenseHMACHeaders, type Clock, systemClock } from '../core/index.js';
+import { buildLicenseHMACHeaders, type Clock, systemClock } from "../core/index.js";
+import { deriveIdempotencyKey } from "../zyins/idempotency.js";
+import { type Transport } from "../zyins/transport.js";
+import { type AuthContext } from "./auth.js";
 
 /** The auth + transport context a signed case request needs. */
 export interface TCaseRequestContext {
@@ -20,7 +20,7 @@ export interface TCaseRequestContext {
 
 /** A single signed `/v1/case` request: method, path, body, and idempotency. */
 export interface TSignedRequestSpec {
-  method: 'GET' | 'POST';
+  method: "GET" | "POST";
   path: string;
   body: string;
   /** When set, an `Idempotency-Key` is derived (or taken from ctx) for the op. */
@@ -49,12 +49,11 @@ export async function signedCaseRequest(
     ctx.auth.deviceId,
     ctx.clock ?? systemClock,
   );
-  const requestHeaders: Record<string, string> = { ...headers, Accept: 'application/json' };
-  if (spec.method === 'POST') requestHeaders['Content-Type'] = 'application/json';
+  const requestHeaders: Record<string, string> = { ...headers, Accept: "application/json" };
+  if (spec.method === "POST") requestHeaders["Content-Type"] = "application/json";
   if (spec.idempotencyOp !== undefined) {
-    requestHeaders['Idempotency-Key'] =
-      ctx.idempotencyKey ??
-      (await deriveIdempotencyKey({
+    requestHeaders["Idempotency-Key"] = ctx.idempotencyKey
+      ?? (await deriveIdempotencyKey({
         deviceId: ctx.auth.deviceId,
         op: spec.idempotencyOp,
         body: spec.body,

@@ -47,19 +47,19 @@ export class DefaultAutocorrector {
     correct(text, options) {
         if (!text)
             return text;
-        const trailingWhitespace = text.endsWith(' ') ? ' ' : '';
+        const trailingWhitespace = text.endsWith(" ") ? " " : "";
         const upper = text.toUpperCase();
         // Match PHP's PREG_SPLIT_NO_EMPTY / Python's str.split() — drop empty
         // tokens that .split(/\s+/) emits at string boundaries. Otherwise a
         // trailing space produces an empty trailing token that survives all
         // the way to the join and concatenates with `trailingWhitespace` to
         // emit a double space (cross-language SDK contract requires single).
-        const words = upper.split(/\s+/).filter((w) => w !== '');
+        const words = upper.split(/\s+/).filter((w) => w !== "");
         if (words.length === 0)
             return text;
         if (this.typoMap.size === 0)
-            return words.join(' ') + trailingWhitespace;
-        const result = new Array(words.length);
+            return words.join(" ") + trailingWhitespace;
+        const result = Array.from({ length: words.length });
         const consumed = new Set();
         let changed = false;
         // Process larger phrases first while keeping each pass to its exact
@@ -69,12 +69,12 @@ export class DefaultAutocorrector {
                 const ngram = words.slice(i, i + windowSize + 1);
                 if (ngram.length !== windowSize + 1)
                     continue;
-                const key = ngram.join(' ');
+                const key = ngram.join(" ");
                 const correction = this.typoMap.get(key);
                 if (correction === undefined)
                     continue;
                 const correctionUpper = correction.toUpperCase();
-                const shouldCorrect = options.mode === 'keyup'
+                const shouldCorrect = options.mode === "keyup"
                     ? !(correctionUpper.includes(key) && correctionUpper.length > key.length)
                     : !containsPhrase(words, correctionUpper);
                 if (!shouldCorrect)
@@ -103,7 +103,7 @@ export class DefaultAutocorrector {
         }
         // Filter out the undefineds (positions that were absorbed into a
         // multi-word correction at a lower index) before joining.
-        const joined = result.filter((x) => x !== undefined).join(' ') + trailingWhitespace;
+        const joined = result.filter((x) => x !== undefined).join(" ") + trailingWhitespace;
         if (changed && this._onApplied !== undefined) {
             this._onApplied({ input: text, output: joined, mode: options.mode });
         }
@@ -130,7 +130,7 @@ export class DefaultAutocorrector {
     }
 }
 function containsPhrase(words, phrase) {
-    const phraseWords = phrase.split(/\s+/).filter((w) => w !== '');
+    const phraseWords = phrase.split(/\s+/).filter((w) => w !== "");
     if (phraseWords.length === 0 || phraseWords.length > words.length)
         return false;
     for (let start = 0; start <= words.length - phraseWords.length; start++) {

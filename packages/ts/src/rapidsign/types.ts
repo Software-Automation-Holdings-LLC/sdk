@@ -10,7 +10,7 @@
  */
 
 /** Lifecycle state of a document on the server. */
-export type EnvelopeStatus = 'pending' | 'saved' | 'notified';
+export type EnvelopeStatus = "pending" | "saved" | "notified";
 
 /** Recipient (a single signer; v1 is one-signer-per-doc). */
 export interface Recipient {
@@ -51,6 +51,17 @@ export interface SendRequest {
    * UUIDv4 per call; supplying one is reserved for advanced cases.
    */
   readonly idempotencyKey?: string;
+  /**
+   * Identifies the RapidSign form the notify template should render for
+   * the recipient. Omit when the signer flow is not form-driven.
+   */
+  readonly formId?: string;
+  /**
+   * Whether the notify email embeds the signer's access code directly in
+   * the sign link (vs requiring it be entered separately). Defaults to
+   * `false`.
+   */
+  readonly includeCodeInLink?: boolean;
 }
 
 /** The packet that came back from `documents.send` / `documents.get`. */
@@ -96,6 +107,28 @@ export interface CancelRequest {
   readonly reason: string;
 }
 
+/** Options for `documents.get`. */
+export interface GetOpts {
+  /** Optional session id forwarded as the `session_id` query parameter. */
+  readonly sessionId?: string;
+  /**
+   * AbortSignal for caller-driven cancellation. When aborted, the call
+   * rejects with `AbortError` and stops retrying immediately.
+   */
+  readonly signal?: AbortSignal;
+}
+
+/** Options for `documents.download`. */
+export interface DownloadOpts {
+  /** Optional session id forwarded as the `session_id` query parameter. */
+  readonly sessionId?: string;
+  /**
+   * AbortSignal for caller-driven cancellation. When aborted, the call
+   * rejects with `AbortError` and stops retrying immediately.
+   */
+  readonly signal?: AbortSignal;
+}
+
 /** Options for `awaitSignature` polling. */
 export interface AwaitOpts {
   /**
@@ -110,4 +143,58 @@ export interface AwaitOpts {
    * rejects with `AbortError` and stops polling immediately.
    */
   readonly signal?: AbortSignal;
+}
+
+/**
+ * One step behavior in a voice script. Mirrors `api.rapidsign.v1`'s
+ * voice-sign step kinds; kept open (autocomplete for known kinds, but any
+ * string type-checks) so future server-side additions do not require an
+ * SDK release — mirrors Go `VoiceStepKind`, a named string type that
+ * accepts any value for the same reason. The `string & {}` branded-empty
+ * trick keeps literal-union autocomplete without narrowing the type to a
+ * closed enum (a bare `string` would drop it entirely).
+ */
+export type VoiceStepKind = "say" | "play" | "confirm" | "capture-name" | (string & {});
+
+/** One carrier-configured ceremony step. Mirrors Go `VoiceStep`. */
+export interface VoiceStep {
+  readonly kind: VoiceStepKind;
+  readonly text?: string;
+  readonly audioUrl?: string;
+}
+
+/**
+ * The ordered step list plus the mandatory recording-disclosure copy a
+ * voice ceremony opens with. Pass a `VoiceScript` on `MintCodeRequest` to
+ * publish (or republish) the script for a form; omit it to mint against
+ * whatever was published earlier for the same `form`. Mirrors Go
+ * `VoiceScript`.
+ */
+export interface VoiceScript {
+  readonly disclosureText?: string;
+  readonly steps: ReadonlyArray<VoiceStep>;
+  readonly expectedSignerName?: string;
+}
+
+/** Inputs accepted by `voice.mintCode`. Mirrors Go `MintCodeRequest`. */
+export interface MintCodeRequest {
+  readonly sessionId: string;
+  readonly secretKey: string;
+  readonly form: string;
+  readonly signer: string;
+  /**
+   * When supplied, publishes the voice script for `form` before minting
+   * the code. Omit to mint against an already-published script.
+   */
+  readonly script?: VoiceScript;
+}
+
+/**
+ * A freshly minted, single-use code a signer dials into the ceremony's
+ * universal number with. Mirrors Go `VoiceCode`.
+ */
+export interface VoiceCode {
+  readonly signId: string;
+  readonly code: string;
+  readonly expiresAt: Date;
 }

@@ -12,22 +12,22 @@
  */
 
 const SPECIAL_LABELS: Readonly<Record<string, string>> = {
-  eapp: 'eApp',
-  url: 'URL',
-  pdf: 'PDF',
-  faq: 'FAQ',
-  api: 'API',
-  id: 'ID',
+  eapp: "eApp",
+  url: "URL",
+  pdf: "PDF",
+  faq: "FAQ",
+  api: "API",
+  id: "ID",
 };
 
 /** Title-Case a snake_case / kebab-case plan-info key. */
 export function titleCaseLabel(key: string): string {
-  if (key === '') return '';
+  if (key === "") return "";
   return key
     .split(/[_-]+/)
     .filter((part) => part.length > 0)
     .map(capitalizeWord)
-    .join(' ');
+    .join(" ");
 }
 
 function capitalizeWord(word: string): string {

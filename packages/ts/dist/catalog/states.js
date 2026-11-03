@@ -188,17 +188,19 @@ const BY_NAME = Object.freeze({
 });
 const ALL_STATES = Object.freeze(Object.values(State));
 export const States = Object.freeze({
+    /** Return every state and territory abbreviation in display-name order. */
     values() {
         return ALL_STATES;
     },
+    /** Return state metadata entries in display-name order. */
     entries() {
         return ALL_STATES.map((s) => [s, METADATA[s]]);
     },
+    /** Return metadata for a state abbreviation, or throw for unknown input. */
     metadata(s) {
-        const m = METADATA[s];
-        if (!m)
+        if (!Object.hasOwn(METADATA, s))
             throw new Error(`States.metadata: unknown state '${s}'`);
-        return m;
+        return METADATA[s];
     },
     /**
      * Look up a state by its ISO abbreviation (case-insensitive) or by its
@@ -207,10 +209,10 @@ export const States = Object.freeze({
      */
     byAbbreviation(abbr) {
         const upper = abbr.toUpperCase();
-        if (upper in METADATA)
+        if (Object.hasOwn(METADATA, upper))
             return upper;
-        const fromName = BY_NAME[abbr.toLowerCase()];
-        return fromName ? fromName : undefined;
+        const lower = abbr.toLowerCase();
+        return Object.hasOwn(BY_NAME, lower) ? BY_NAME[lower] : undefined;
     },
 });
 //# sourceMappingURL=states.js.map

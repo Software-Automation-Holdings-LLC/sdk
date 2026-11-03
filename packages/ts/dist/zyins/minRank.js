@@ -9,15 +9,15 @@
  * `string` escape hatch on the option types rather than narrowing the field.
  */
 export const MinRank = {
-    Immediate: 'immediate',
-    Graded: 'graded',
-    Rop: 'rop',
+    Immediate: "immediate",
+    Graded: "graded",
+    Rop: "rop",
     /** Synonym for {@link MinRank.Rop}. */
-    ReturnOfPremium: 'rop',
-    Guaranteed: 'guaranteed',
+    ReturnOfPremium: "rop",
+    Guaranteed: "guaranteed",
     /** Synonym for {@link MinRank.Guaranteed}. */
-    GuaranteedIssue: 'guaranteed',
+    GuaranteedIssue: "guaranteed",
     /** Synonym for {@link MinRank.Guaranteed}. */
-    Gi: 'guaranteed',
+    Gi: "guaranteed",
 };
 //# sourceMappingURL=minRank.js.map

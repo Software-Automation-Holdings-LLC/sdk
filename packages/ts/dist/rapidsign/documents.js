@@ -14,12 +14,12 @@
  * `cancel` throws `NotImplemented` until the matching server endpoint ships
  * (tracked in issue #38). The SDK surface is the product.
  */
-import { RapidSignError, fromHttpResponse, } from './errors.js';
-import { decodeGzipBase64 } from './internal/decompress.js';
-import { isIso8601Duration, parseDuration, MAX_DURATION_MS } from './internal/duration.js';
+import { fromHttpResponse, RapidSignError } from "./errors.js";
+import { decodeGzipBase64 } from "./internal/decompress.js";
+import { isIso8601Duration, MAX_DURATION_MS, parseDuration } from "./internal/duration.js";
 /** Path prefixes (a single source of truth for routing). */
 const PATH = {
-    documents: '/v1/documents',
+    documents: "/v1/documents",
     document: (signId) => `/v1/documents/${encodeURIComponent(signId)}`,
     notify: (signId) => `/v1/documents/${encodeURIComponent(signId)}/notify`,
     download: (signId) => `/v1/documents/${encodeURIComponent(signId)}/download`,
@@ -31,7 +31,7 @@ const POLL_MAX_MS = 30_000;
 const POLL_JITTER = 0.25; // ±25%
 const DEFAULT_AWAIT_TIMEOUT_MS = 24 * 60 * 60 * 1_000;
 /** Issue #38 tracks the missing server-side endpoints. */
-const ISSUE_URL = 'https://github.com/Software-Automation-Holdings-LLC/isa-platform/issues/38';
+const ISSUE_URL = "https://github.com/Software-Automation-Holdings-LLC/isa-platform/issues/38";
 /** Public service object exposed as `isa.rapidsign.documents`. */
 export class DocumentsService {
     ctx;
@@ -51,20 +51,22 @@ export class DocumentsService {
         const idempotencyKey = request.idempotencyKey ?? this.ctx.uuid();
         const createBody = buildCreateBody(request, sessionId, signId);
         const created = await this.callJSON({
-            method: 'POST',
+            method: "POST",
             path: PATH.documents,
             body: createBody,
             idempotencyKey,
         });
         const resolvedSignId = extractSignId(created, signId);
         await this.callJSON({
-            method: 'POST',
+            method: "POST",
             path: PATH.notify(resolvedSignId),
             body: {
                 sign_id: resolvedSignId,
                 session_id: sessionId,
                 to: request.recipient.email,
                 ...(request.notificationKey !== undefined && { key: request.notificationKey }),
+                ...(request.formId !== undefined && { form_id: request.formId }),
+                ...(request.includeCodeInLink === true && { include_code_in_link: true }),
             },
             idempotencyKey: this.ctx.uuid(),
         });
@@ -80,17 +82,23 @@ export class DocumentsService {
      * Fetch current state for a signed-or-pending envelope. Returns a
      * Signature when the document has been signed; throws `NotFound` when
      * the sign id is unknown or no signature has been captured yet.
+     *
+     * Pre-1.0 API correction: `sessionId` and `signal` are accepted via a
+     * single options object. The earlier positional `(signId, sessionId,
+     * signal)` shape silently coerced an `AbortSignal` to a string when
+     * callers omitted `sessionId` and passed `signal` second.
      */
-    async get(signId, sessionId, signal) {
+    async get(signId, opts = {}) {
         requireSignId(signId);
+        const { sessionId, signal } = opts;
         const url = `${this.ctx.baseUrl}${PATH.document(signId)}${querystring({ session_id: sessionId })}`;
         let attempt = 0;
         while (true) {
             const response = await this.ctx.transport({
                 url,
-                method: 'GET',
+                method: "GET",
                 headers: this.headers(),
-                body: '',
+                body: "",
                 signal,
             });
             if (response.status === 200) {
@@ -122,7 +130,7 @@ export class DocumentsService {
         while (true) {
             opts.signal?.throwIfAborted?.();
             try {
-                return await this.get(signId, undefined, opts.signal);
+                return await this.get(signId, opts.signal !== undefined ? { signal: opts.signal } : {});
             }
             catch (err) {
                 if (!(err instanceof RapidSignError.NotFound))
@@ -148,7 +156,7 @@ export class DocumentsService {
             const elapsed = this.ctx.clock() - start;
             const remaining = timeoutMs - elapsed;
             if (remaining <= 0) {
-                throw new RapidSignError.DeadlineExceeded(`awaitSignature: timed out after ${timeoutMs}ms waiting for ${signId}`, { httpStatus: 408, requestId: '' });
+                throw new RapidSignError.DeadlineExceeded(`awaitSignature: timed out after ${timeoutMs}ms waiting for ${signId}`, { httpStatus: 408, requestId: "" });
             }
             const delay = Math.min(remaining, nextPollDelayMs(attempt, this.ctx.uuid));
             await this.ctx.sleeper(delay, opts.signal);
@@ -159,25 +167,30 @@ export class DocumentsService {
      * Download the signed PDF as a fresh `Buffer`. The wire response is
      * gzip + base64; decompression is transparent. Throws `NotFound` if the
      * sign id is unknown.
+     *
+     * Pre-1.0 API correction: `sessionId` and `signal` are accepted via a
+     * single options object, mirroring `get` so the surface is consistent.
      */
-    async download(signId, sessionId) {
+    async download(signId, opts = {}) {
         requireSignId(signId);
+        const { sessionId, signal } = opts;
         const url = `${this.ctx.baseUrl}${PATH.download(signId)}${querystring({ session_id: sessionId })}`;
         let attempt = 0;
         while (true) {
             const response = await this.ctx.transport({
                 url,
-                method: 'GET',
+                method: "GET",
                 headers: this.headers(),
-                body: '',
+                body: "",
+                signal,
             });
             if (response.status === 200) {
                 const parsed = safeParseJson(response.body);
-                if (!parsed || typeof parsed.pdf_gzip_base64 !== 'string') {
-                    throw new RapidSignError.Unknown('download: server returned a 200 with an unparseable body', { httpStatus: 200, requestId: response.headers['x-request-id'] ?? '' });
+                if (!parsed || typeof parsed.pdf_gzip_base64 !== "string") {
+                    throw new RapidSignError.Unknown("download: server returned a 200 with an unparseable body", { httpStatus: 200, requestId: response.headers["x-request-id"] ?? "" });
                 }
                 if (parsed.compressed === false) {
-                    return Buffer.from(parsed.pdf_gzip_base64, 'base64');
+                    return Buffer.from(parsed.pdf_gzip_base64, "base64");
                 }
                 return decodeGzipBase64(parsed.pdf_gzip_base64, this.ctx.decompressor);
             }
@@ -186,7 +199,7 @@ export class DocumentsService {
                 throw err;
             }
             const delay = err.retryAfterMs ?? backoffMs(attempt, this.ctx.uuid);
-            await this.ctx.sleeper(delay);
+            await this.ctx.sleeper(delay, signal);
             attempt += 1;
         }
     }
@@ -200,21 +213,21 @@ export class DocumentsService {
      */
     async cancel(signId, request) {
         requireSignId(signId);
-        if (!request || typeof request.reason !== 'string' || request.reason.length === 0) {
-            throw new RapidSignError.ValidationError('cancel: request.reason is required', {
+        if (!request || typeof request.reason !== "string" || request.reason.length === 0) {
+            throw new RapidSignError.ValidationError("cancel: request.reason is required", {
                 httpStatus: 400,
-                requestId: '',
-                param: 'reason',
+                requestId: "",
+                param: "reason",
             });
         }
-        throw new RapidSignError.NotImplemented(`documents.cancel is not yet implemented on the server (tracking: ${ISSUE_URL})`, { httpStatus: 501, requestId: '' });
+        throw new RapidSignError.NotImplemented(`documents.cancel is not yet implemented on the server (tracking: ${ISSUE_URL})`, { httpStatus: 501, requestId: "" });
     }
     /** Authorization + UA + JSON content-type. Per-call extras are merged in. */
     headers(extras = {}) {
         return {
             Authorization: `Bearer ${this.ctx.token}`,
-            'User-Agent': this.ctx.userAgent,
-            Accept: 'application/json, application/problem+json',
+            "User-Agent": this.ctx.userAgent,
+            Accept: "application/json, application/problem+json",
             ...extras,
         };
     }
@@ -223,10 +236,10 @@ export class DocumentsService {
      * `maxRetries`) and surfaces the typed error funnel.
      */
     async callJSON(args) {
-        const serialized = args.body === undefined ? '' : JSON.stringify(args.body);
+        const serialized = args.body === undefined ? "" : JSON.stringify(args.body);
         const headers = this.headers({
-            'Content-Type': 'application/json',
-            ...(args.idempotencyKey !== undefined && { 'Idempotency-Key': args.idempotencyKey }),
+            "Content-Type": "application/json",
+            ...(args.idempotencyKey !== undefined && { "Idempotency-Key": args.idempotencyKey }),
         });
         let attempt = 0;
         while (true) {
@@ -256,9 +269,9 @@ export class DocumentsService {
         const url = `${this.ctx.baseUrl}${PATH.download(signId)}`;
         const response = await this.ctx.transport({
             url,
-            method: 'GET',
+            method: "GET",
             headers: this.headers(),
-            body: '',
+            body: "",
             signal,
         });
         if (response.status === 404) {
@@ -273,30 +286,30 @@ export class DocumentsService {
 /* ---------- helpers ---------- */
 function validateSendRequest(request) {
     if (!request) {
-        throw new RapidSignError.ValidationError('send: request is required', {
+        throw new RapidSignError.ValidationError("send: request is required", {
             httpStatus: 400,
-            requestId: '',
+            requestId: "",
         });
     }
     if (!Array.isArray(request.packet) || request.packet.length === 0) {
-        throw new RapidSignError.ValidationError('send: packet must be a non-empty array', {
+        throw new RapidSignError.ValidationError("send: packet must be a non-empty array", {
             httpStatus: 400,
-            requestId: '',
-            param: 'packet',
+            requestId: "",
+            param: "packet",
         });
     }
     for (const [i, source] of request.packet.entries()) {
-        if (!source.url || typeof source.url !== 'string') {
-            throw new RapidSignError.ValidationError(`send: packet[${i}].url is required`, { httpStatus: 400, requestId: '', param: `packet[${i}].url` });
+        if (!source.url || typeof source.url !== "string") {
+            throw new RapidSignError.ValidationError(`send: packet[${i}].url is required`, { httpStatus: 400, requestId: "", param: `packet[${i}].url` });
         }
     }
-    if (!request.recipient ||
-        typeof request.recipient.email !== 'string' ||
-        request.recipient.email.length === 0) {
-        throw new RapidSignError.ValidationError('send: recipient.email is required', {
+    if (!request.recipient
+        || typeof request.recipient.email !== "string"
+        || request.recipient.email.length === 0) {
+        throw new RapidSignError.ValidationError("send: recipient.email is required", {
             httpStatus: 400,
-            requestId: '',
-            param: 'recipient.email',
+            requestId: "",
+            param: "recipient.email",
         });
     }
 }
@@ -324,7 +337,7 @@ function buildCreateBody(request, sessionId, signId) {
     return body;
 }
 function normalizeTtl(value) {
-    if (typeof value === 'string' && isIso8601Duration(value)) {
+    if (typeof value === "string" && isIso8601Duration(value)) {
         return value.trim().toUpperCase();
     }
     const ms = parseDuration(value);
@@ -335,7 +348,7 @@ function extractSignId(created, clientSignId) {
     if (Array.isArray(created.sign_ids) && created.sign_ids.length > 0) {
         return created.sign_ids[0];
     }
-    if (typeof created.sign_id === 'string' && created.sign_id.length > 0) {
+    if (typeof created.sign_id === "string" && created.sign_id.length > 0) {
         return created.sign_id;
     }
     return clientSignId;
@@ -344,21 +357,21 @@ function assembleEnvelope(args) {
     const { request, signId, created, now } = args;
     const id = created.document_id;
     if (!id) {
-        throw new RapidSignError.Unknown('send: server response did not include document_id', { httpStatus: 200, requestId: '' });
+        throw new RapidSignError.Unknown("send: server response did not include document_id", { httpStatus: 200, requestId: "" });
     }
     const recipient = {
         email: request.recipient.email,
         ...(request.recipient.name !== undefined && { name: request.recipient.name }),
     };
-    const status = 'notified';
+    const status = "notified";
     const createdAt = parseTimestamp(created.created_at) ?? new Date(now);
-    const expiresAt = parseTimestamp(created.expires_at) ??
-        new Date(now + (request.expiresIn !== undefined ? parseDuration(request.expiresIn) : 30 * 24 * 60 * 60 * 1_000));
+    const expiresAt = parseTimestamp(created.expires_at)
+        ?? new Date(now + (request.expiresIn !== undefined ? parseDuration(request.expiresIn) : 30 * 24 * 60 * 60 * 1_000));
     return {
         id,
         signId,
-        signUrl: created.sign_url ?? '',
-        viewUrl: created.view_url ?? '',
+        signUrl: created.sign_url ?? "",
+        viewUrl: created.view_url ?? "",
         status,
         recipient,
         hashes: created.hashes ?? {},
@@ -375,31 +388,31 @@ function parseTimestamp(value) {
 }
 function parseSignatureBody(body, now) {
     const parsed = safeParseJson(body);
-    if (!parsed || typeof parsed.signature !== 'string') {
-        throw new RapidSignError.Unknown('get: server returned a 200 with an unparseable body', { httpStatus: 200, requestId: '' });
+    if (!parsed || typeof parsed.signature !== "string") {
+        throw new RapidSignError.Unknown("get: server returned a 200 with an unparseable body", { httpStatus: 200, requestId: "" });
     }
-    const signedAtMs = typeof parsed.timestamp === 'number' ? parsed.timestamp * 1_000 : now;
+    const signedAtMs = typeof parsed.timestamp === "number" ? parsed.timestamp * 1_000 : now;
     const metadata = coerceMetadata(parsed.user_metadata);
     return {
-        signId: parsed.sign_id ?? '',
-        signature: Buffer.from(parsed.signature, 'base64'),
+        signId: parsed.sign_id ?? "",
+        signature: Buffer.from(parsed.signature, "base64"),
         signedAt: new Date(signedAtMs),
-        signerIp: parsed.signer_ip ?? metadata.ip ?? '',
-        userAgent: parsed.user_agent ?? metadata.user_agent ?? '',
+        signerIp: parsed.signer_ip ?? metadata.ip ?? "",
+        userAgent: parsed.user_agent ?? metadata.user_agent ?? "",
         metadata,
     };
 }
 function coerceMetadata(raw) {
     if (raw === undefined || raw === null)
         return {};
-    if (typeof raw === 'string') {
+    if (typeof raw === "string") {
         const parsed = safeParseJson(raw);
-        if (parsed && typeof parsed === 'object') {
+        if (parsed && typeof parsed === "object") {
             return stringifyEntries(parsed);
         }
         return {};
     }
-    if (typeof raw === 'object') {
+    if (typeof raw === "object") {
         return stringifyEntries(raw);
     }
     return {};
@@ -407,20 +420,20 @@ function coerceMetadata(raw) {
 function stringifyEntries(obj) {
     const out = {};
     for (const [k, v] of Object.entries(obj)) {
-        if (typeof v === 'string')
+        if (typeof v === "string")
             out[k] = v;
-        else if (typeof v === 'number' || typeof v === 'boolean')
+        else if (typeof v === "number" || typeof v === "boolean")
             out[k] = String(v);
     }
     return out;
 }
 function querystring(params) {
-    const entries = Object.entries(params).filter(([, v]) => v !== undefined && v !== '');
+    const entries = Object.entries(params).filter(([, v]) => v !== undefined && v !== "");
     if (entries.length === 0)
-        return '';
+        return "";
     const qs = entries
         .map(([k, v]) => `${encodeURIComponent(k)}=${encodeURIComponent(v)}`)
-        .join('&');
+        .join("&");
     return `?${qs}`;
 }
 function safeParseJson(body) {
@@ -434,11 +447,11 @@ function safeParseJson(body) {
     }
 }
 function requireSignId(signId) {
-    if (typeof signId !== 'string' || signId.length === 0) {
-        throw new RapidSignError.ValidationError('signId is required', {
+    if (typeof signId !== "string" || signId.length === 0) {
+        throw new RapidSignError.ValidationError("signId is required", {
             httpStatus: 400,
-            requestId: '',
-            param: 'signId',
+            requestId: "",
+            param: "signId",
         });
     }
 }
@@ -447,7 +460,7 @@ function clampTimeout(timeout) {
         return DEFAULT_AWAIT_TIMEOUT_MS;
     const ms = parseDuration(timeout);
     if (ms > MAX_DURATION_MS) {
-        throw new RapidSignError.ValidationError(`awaitSignature: timeout ${ms}ms exceeds maximum of ${MAX_DURATION_MS}ms`, { httpStatus: 400, requestId: '', param: 'timeout' });
+        throw new RapidSignError.ValidationError(`awaitSignature: timeout ${ms}ms exceeds maximum of ${MAX_DURATION_MS}ms`, { httpStatus: 400, requestId: "", param: "timeout" });
     }
     return ms;
 }
@@ -469,7 +482,7 @@ function applyJitter(targetMs, uuid) {
     // Pull 6 bits of entropy from the UUID's first hex chars to derive a
     // jitter factor in [-POLL_JITTER, +POLL_JITTER].
     const id = uuid();
-    const hex = id.replace(/-/g, '').slice(0, 2);
+    const hex = id.replace(/-/g, "").slice(0, 2);
     const v = Number.parseInt(hex, 16) / 255; // [0, 1]
     const offset = (v * 2 - 1) * POLL_JITTER;
     return Math.floor(targetMs * (1 + offset));

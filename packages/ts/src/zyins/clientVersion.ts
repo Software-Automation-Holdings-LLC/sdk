@@ -19,7 +19,7 @@ export interface ClientVersionStatus {
   minimum: string;
   /** Consumer-supplied identifier (Isa constructor option). */
   ours: string;
-  level: 'soft';
+  level: "soft";
 }
 
 /** Listener registered via `Isa.onClientVersionMismatch`. */
@@ -39,15 +39,15 @@ export function evaluateClientVersion(
   ours: string | undefined,
 ): ClientVersionStatus | undefined {
   if (!ours) return undefined;
-  const current = headers['x-client-current'] ?? headers['X-Client-Current'] ?? '';
-  const minimum = headers['x-client-minimum'] ?? headers['X-Client-Minimum'] ?? '';
+  const current = headers["x-client-current"] ?? headers["X-Client-Current"] ?? "";
+  const minimum = headers["x-client-minimum"] ?? headers["X-Client-Minimum"] ?? "";
   if (!current && !minimum) return undefined;
   if (current && ours === current) return undefined;
   if (current && ours !== current) {
-    return { current, minimum, ours, level: 'soft' };
+    return { current, minimum, ours, level: "soft" };
   }
   if (minimum && ours !== minimum) {
-    return { current, minimum, ours, level: 'soft' };
+    return { current, minimum, ours, level: "soft" };
   }
   return undefined;
 }

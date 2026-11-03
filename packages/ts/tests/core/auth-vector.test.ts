@@ -10,14 +10,11 @@
  * and bump every SDK's major version — the change is breaking.
  */
 
-import { readFileSync } from 'node:fs';
-import { resolve } from 'node:path';
-import { describe, it, expect } from 'vitest';
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
+import { describe, expect, it } from "vitest";
 
-import {
-  buildBootstrapSignature,
-  buildBootstrapSignatureAsync,
-} from '../../src/core/internal/auth/bootstrap';
+import { buildBootstrapSignature, buildBootstrapSignatureAsync } from "../../src/core/internal/auth/bootstrap";
 
 interface AuthVectorFixture {
   readonly inputs: {
@@ -32,48 +29,54 @@ interface AuthVectorFixture {
   readonly serializedBody: string;
   readonly canonical: string;
   readonly expected: {
-    readonly algorithm: 'HMAC-SHA256';
+    readonly algorithm: "HMAC-SHA256";
     readonly hex: string;
+    readonly headerName: string;
+    readonly headerValue: string;
+    readonly headerLine: string;
     readonly header: string;
   };
 }
 
 const fixturePath = resolve(
   __dirname,
-  '..',
-  '..',
-  '..',
-  '..',
-  'tests',
-  'conformance',
-  'fixtures',
-  'auth-vector.json',
+  "..",
+  "..",
+  "..",
+  "..",
+  "tests",
+  "conformance",
+  "fixtures",
+  "auth-vector.json",
 );
 
-const fixture: AuthVectorFixture = JSON.parse(readFileSync(fixturePath, 'utf8'));
+const fixture: AuthVectorFixture = JSON.parse(readFileSync(fixturePath, "utf8"));
 
-describe('embedded HMAC bootstrap signature — auth vector', () => {
-  it('serializes the body in source order with no whitespace', () => {
+describe("embedded HMAC bootstrap signature — auth vector", () => {
+  it("serializes the body in source order with no whitespace", () => {
     const result = buildBootstrapSignature(fixture.inputs);
     expect(result.serializedBody).toBe(fixture.serializedBody);
   });
 
-  it('builds the canonical signing string per the documented form', () => {
+  it("builds the canonical signing string per the documented form", () => {
     const result = buildBootstrapSignature(fixture.inputs);
     expect(result.canonical).toBe(fixture.canonical);
   });
 
-  it('reproduces the documented hex bytewise (sync / Node crypto)', () => {
+  it("reproduces the documented hex bytewise (sync / Node crypto)", () => {
     const result = buildBootstrapSignature(fixture.inputs);
     expect(result.hex).toBe(fixture.expected.hex);
   });
 
-  it('emits the ISA-Signature header in the documented form', () => {
+  it("emits the ISA-Signature header fields in the documented form", () => {
     const result = buildBootstrapSignature(fixture.inputs);
-    expect(result.header).toBe(fixture.expected.header);
+    expect(result.headerName).toBe(fixture.expected.headerName);
+    expect(result.headerValue).toBe(fixture.expected.headerValue);
+    expect(result.headerLine).toBe(fixture.expected.headerLine);
+    expect(result.headerLine).toBe(fixture.expected.header);
   });
 
-  it('reproduces the documented hex via SubtleCrypto (browser path)', async () => {
+  it("reproduces the documented hex via SubtleCrypto (browser path)", async () => {
     // Node ≥20 exposes globalThis.crypto.subtle; the SubtleCrypto path
     // is what bpp2.0 actually uses in the browser. Asserting it here
     // proves both code paths agree on the bytes.
@@ -82,7 +85,7 @@ describe('embedded HMAC bootstrap signature — auth vector', () => {
     expect(result.serializedBody).toBe(fixture.serializedBody);
   });
 
-  it('keeps deviceId out of the canonical string outside the body', () => {
+  it("keeps deviceId out of the canonical string outside the body", () => {
     // Anti-regression: an earlier draft included deviceId in the canonical
     // path. Locked spec sends it as X-Device-ID header only; the only
     // canonical appearance is inside the body JSON for POST /v1/sessions.

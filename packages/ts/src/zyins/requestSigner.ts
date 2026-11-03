@@ -15,8 +15,8 @@
  * in every call site.
  */
 
-import { type AuthContext } from './auth.js';
-import { buildLicenseHMACHeaders, type Clock, systemClock } from '../core/index.js';
+import { buildLicenseHMACHeaders, type Clock, systemClock } from "../core/index.js";
+import { type AuthContext } from "./auth.js";
 
 /** Inputs a signer needs to bind auth headers to a specific request. */
 export interface SignableRequest {
@@ -71,8 +71,8 @@ export function licenseSigner(auth: AuthContext, clock: Clock = systemClock): Re
  */
 export function bearerSigner(token: string): RequestSigner {
   const trimmed = token.trim();
-  if (trimmed === '') {
-    throw new Error('requestSigner: bearer signer refuses an empty token');
+  if (trimmed === "") {
+    throw new Error("requestSigner: bearer signer refuses an empty token");
   }
   const header = `Bearer ${trimmed}`;
   return {

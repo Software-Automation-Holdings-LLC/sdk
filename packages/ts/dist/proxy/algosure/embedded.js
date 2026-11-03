@@ -21,40 +21,40 @@
  * not yet migrated; new callers should prefer the functions in this
  * module.
  */
-import { resolveSubtle, arrayBufferToHex, systemClock } from '../../core/index.js';
-import { deriveSimpleKey } from './hmac.js';
-const CONTEXT = 'Algosure';
+import { arrayBufferToHex, resolveSubtle, systemClock } from "../../core/index.js";
+import { deriveSimpleKey } from "./hmac.js";
+const CONTEXT = "Algosure";
 /**
  * Returns true when `saltId` round-trips cleanly to the proxy verifier's
  * positive-integer parse. Rejecting here surfaces a malformed embed at
  * the signer rather than as an opaque 4xx downstream.
  */
 export function isEmbeddedSaltIdValid(saltId) {
-    if (typeof saltId === 'number') {
+    if (typeof saltId === "number") {
         return Number.isInteger(saltId) && saltId > 0;
     }
-    return typeof saltId === 'string' && /^[1-9][0-9]*$/.test(saltId);
+    return typeof saltId === "string" && /^[1-9][0-9]*$/.test(saltId);
 }
 function normalizeSaltIdHeader(saltId) {
     if (!isEmbeddedSaltIdValid(saltId)) {
-        throw new Error('Algosure: missing or malformed embedded salt id (form.metadata._algosure_salt_id). Republish the form to pick up the salt embed.');
+        throw new Error("Algosure: missing or malformed embedded salt id (form.metadata._algosure_salt_id). Republish the form to pick up the salt embed.");
     }
-    return typeof saltId === 'number' ? String(saltId) : saltId;
+    return typeof saltId === "number" ? String(saltId) : saltId;
 }
 function serializeBody(body) {
     if (body == null)
-        return '';
-    return typeof body === 'string' ? body : JSON.stringify(body);
+        return "";
+    return typeof body === "string" ? body : JSON.stringify(body);
 }
 async function sha256Hex(data, subtle) {
     const enc = new TextEncoder();
-    const buf = await subtle.digest('SHA-256', enc.encode(data));
+    const buf = await subtle.digest("SHA-256", enc.encode(data));
     return arrayBufferToHex(buf);
 }
 async function hmacSha256Hex(key, message, subtle) {
     const enc = new TextEncoder();
-    const cryptoKey = await subtle.importKey('raw', enc.encode(key), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
-    const sig = await subtle.sign('HMAC', cryptoKey, enc.encode(message));
+    const cryptoKey = await subtle.importKey("raw", enc.encode(key), { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
+    const sig = await subtle.sign("HMAC", cryptoKey, enc.encode(message));
     return arrayBufferToHex(sig);
 }
 /**
@@ -62,8 +62,8 @@ async function hmacSha256Hex(key, message, subtle) {
  * using a caller-supplied embedded salt. No runtime fetch occurs.
  */
 export async function computeEmbeddedAlgosureHMAC(args) {
-    if (typeof args.salt !== 'string' || args.salt.length === 0) {
-        throw new Error('Algosure: missing embedded salt (form.metadata._algosure_salt). Republish the form to pick up the salt embed.');
+    if (typeof args.salt !== "string" || args.salt.length === 0) {
+        throw new Error("Algosure: missing embedded salt (form.metadata._algosure_salt). Republish the form to pick up the salt embed.");
     }
     const clock = args.clock ?? systemClock;
     const timestamp = args.time ?? clock();
@@ -71,7 +71,7 @@ export async function computeEmbeddedAlgosureHMAC(args) {
     const simpleKey = deriveSimpleKey(args.salt, timestamp);
     const bodyStr = serializeBody(args.body);
     const bodyHash = await sha256Hex(bodyStr, subtle);
-    const canonical = [args.method, args.path, bodyHash, String(timestamp), args.sessionId].join('\x00');
+    const canonical = [args.method, args.path, bodyHash, String(timestamp), args.sessionId].join("\x00");
     const tag = await hmacSha256Hex(simpleKey, canonical, subtle);
     return [tag, timestamp];
 }
@@ -88,11 +88,11 @@ export async function buildEmbeddedAlgosureHeaders(args) {
     const [tag, timestamp] = await computeEmbeddedAlgosureHMAC(args);
     return {
         Authorization: tag,
-        '*Host': args.host,
-        '*Timestamp': String(timestamp),
-        '*sessionId': args.sessionId,
-        '*SaltId': saltIdHeader,
+        "*Host": args.host,
+        "*Timestamp": String(timestamp),
+        "*sessionId": args.sessionId,
+        "*SaltId": saltIdHeader,
     };
 }
-export { ALGOSURE_TIME_BUCKET_MS } from './hmac.js';
+export { ALGOSURE_TIME_BUCKET_MS } from "./hmac.js";
 //# sourceMappingURL=embedded.js.map

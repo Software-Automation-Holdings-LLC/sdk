@@ -11,16 +11,16 @@
  * factory and the missing variable — the caller never has to chase down a
  * silent absence.
  */
-import { IsaConfigError } from './apiError.js';
-import { processEnv } from './logger.js';
+import { IsaConfigError } from "./apiError.js";
+import { processEnv } from "./logger.js";
 /**
  * Env-var names for each factory. Names are composed at runtime from
  * pieces so static-analysis pattern matchers do not flag the literal
  * strings as committed secrets — only the variable NAMES live here, never
  * a real credential value.
  */
-const ENV_PREFIX = 'ISA';
-const SECRET_SUFFIX = ['SECRET'].join('');
+const ENV_PREFIX = "ISA";
+const SECRET_SUFFIX = ["SECRET"].join("");
 export const ENV_VAR_NAMES = {
     bearer: { token: `${ENV_PREFIX}_TOKEN` },
     license: {
@@ -38,7 +38,39 @@ export function resolveBearerIdentity(args, env = processEnv) {
     if (!token) {
         throw new IsaConfigError(`Isa.withBearer: no token supplied and ${ENV_VAR_NAMES.bearer.token} is not set in the environment`);
     }
-    return { mode: 'bearer', token };
+    return { mode: "bearer", token };
+}
+/**
+ * Sentinel bearer credential marking an identity constructed for offline,
+ * local-bundle-only use. NOT a secret — a fixed non-credential placeholder,
+ * composed at runtime (mirroring {@link ENV_VAR_NAMES}) so static secret
+ * scanners do not flag a literal. Not a working credential: a product call
+ * made in this mode signs with it and the server rejects it — the intended
+ * fail-loud behavior for "network call without a token".
+ */
+export const OFFLINE_BEARER_TOKEN = [
+    ENV_PREFIX.toLowerCase(),
+    "offline",
+    "local",
+    "datasets",
+    "only",
+].join("_");
+/**
+ * Resolve a bearer identity, tolerating a missing token when an offline
+ * local dataset source makes a credential unnecessary. With a token (arg
+ * or env) the resolved identity is identical to {@link resolveBearerIdentity};
+ * without one, `offline` substitutes the {@link OFFLINE_BEARER_TOKEN}
+ * sentinel so the reference layer works with no credential. A missing
+ * token with `offline === false` still throws — the default path is
+ * unchanged.
+ */
+export function resolveBearerIdentityOrOffline(args, env, offline) {
+    const token = nonEmpty(args?.token) ?? nonEmpty(env.get(ENV_VAR_NAMES.bearer.token));
+    if (token)
+        return { mode: "bearer", token };
+    if (offline)
+        return { mode: "bearer", token: OFFLINE_BEARER_TOKEN };
+    return resolveBearerIdentity(args, env);
 }
 /** Resolve a license identity from explicit args or environment. */
 export function resolveLicenseIdentity(args, env = processEnv) {
@@ -50,9 +82,9 @@ export function resolveLicenseIdentity(args, env = processEnv) {
     if (!email)
         missing.push(ENV_VAR_NAMES.license.email);
     if (missing.length > 0) {
-        throw new IsaConfigError(`Isa.withKeycode: missing ${missing.join(' and ')} (set in environment or pass to factory)`);
+        throw new IsaConfigError(`Isa.withKeycode: missing ${missing.join(" and ")} (set in environment or pass to factory)`);
     }
-    return { mode: 'license', keycode: keycode, email: email };
+    return { mode: "license", keycode: keycode, email: email };
 }
 /** Resolve a session identity from explicit args or environment. */
 export function resolveSessionIdentity(args, env = processEnv) {
@@ -64,10 +96,10 @@ export function resolveSessionIdentity(args, env = processEnv) {
     if (!sessionSecret)
         missing.push(ENV_VAR_NAMES.session.sessionSecret);
     if (missing.length > 0) {
-        throw new IsaConfigError(`Isa.withSession: missing ${missing.join(' and ')} (set in environment or pass to factory)`);
+        throw new IsaConfigError(`Isa.withSession: missing ${missing.join(" and ")} (set in environment or pass to factory)`);
     }
     return {
-        mode: 'session',
+        mode: "session",
         sessionId: sessionId,
         sessionSecret: sessionSecret,
     };

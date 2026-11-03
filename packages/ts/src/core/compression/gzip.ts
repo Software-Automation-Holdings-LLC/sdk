@@ -14,7 +14,7 @@
  * (`SAH_Compress` / `SAH_Decompress`).
  */
 
-const GZIP_ENCODING = 'gzip';
+const GZIP_ENCODING = "gzip";
 const GZIP_OS_BYTE_OFFSET = 9;
 const LEGACY_GZIP_OS_BYTE = 0x13;
 
@@ -23,8 +23,8 @@ const LEGACY_GZIP_OS_BYTE = 0x13;
  * The shape matches the Form.enc wire protocol: `{compressed: true, body}`.
  */
 export interface CompressionEnvelope {
-    readonly compressed: true;
-    readonly body: string;
+  readonly compressed: true;
+  readonly body: string;
 }
 
 /**
@@ -34,21 +34,21 @@ export interface CompressionEnvelope {
  * The returned `body` is base64 of the gzip stream.
  */
 export async function compress(input: string | Uint8Array): Promise<CompressionEnvelope> {
-    const bytes = typeof input === 'string' ? new TextEncoder().encode(input) : input;
-    const compressedBytes = await gzipBytes(bytes);
-    const body = bytesToBase64(compressedBytes);
-    return { compressed: true, body };
+  const bytes = typeof input === "string" ? new TextEncoder().encode(input) : input;
+  const compressedBytes = await gzipBytes(bytes);
+  const body = bytesToBase64(compressedBytes);
+  return { compressed: true, body };
 }
 
 /**
  * Decompress a Form.enc wire envelope back to the original UTF-8 string.
  */
 export async function decompress(envelope: CompressionEnvelope): Promise<string> {
-    if (!envelope || envelope.compressed !== true || typeof envelope.body !== 'string') {
-        throw new Error('decompress: envelope must be {compressed: true, body: string}');
-    }
-    const compressedBytes = base64ToBytes(envelope.body);
-    return gunzipBytes(compressedBytes);
+  if (!envelope || envelope.compressed !== true || typeof envelope.body !== "string") {
+    throw new Error("decompress: envelope must be {compressed: true, body: string}");
+  }
+  const compressedBytes = base64ToBytes(envelope.body);
+  return gunzipBytes(compressedBytes);
 }
 
 /**
@@ -56,42 +56,42 @@ export async function decompress(envelope: CompressionEnvelope): Promise<string>
  * Exported for interop with legacy callers that bypass the envelope.
  */
 export async function gzipBytes(bytes: Uint8Array): Promise<Uint8Array> {
-    const CS = (globalThis as { CompressionStream?: typeof CompressionStream }).CompressionStream;
-    if (typeof CS === 'undefined') {
-        throw new Error('CompressionStream is not supported in this environment');
-    }
-    const stream = new CS(GZIP_ENCODING);
-    const writer = stream.writable.getWriter();
-    try {
-        await writer.write(toArrayBufferView(bytes));
-        await writer.close();
-    } finally {
-        writer.releaseLock();
-    }
-    const buffer = await new Response(stream.readable).arrayBuffer();
-    const out = new Uint8Array(buffer);
-    out[GZIP_OS_BYTE_OFFSET] = LEGACY_GZIP_OS_BYTE;
-    return out;
+  const CS = (globalThis as { CompressionStream?: typeof CompressionStream }).CompressionStream;
+  if (typeof CS === "undefined") {
+    throw new Error("CompressionStream is not supported in this environment");
+  }
+  const stream = new CS(GZIP_ENCODING);
+  const writer = stream.writable.getWriter();
+  try {
+    await writer.write(toArrayBufferView(bytes));
+    await writer.close();
+  } finally {
+    writer.releaseLock();
+  }
+  const buffer = await new Response(stream.readable).arrayBuffer();
+  const out = new Uint8Array(buffer);
+  out[GZIP_OS_BYTE_OFFSET] = LEGACY_GZIP_OS_BYTE;
+  return out;
 }
 
 /**
  * Lower-level: decompress bytes via the platform DecompressionStream API.
  */
 export async function gunzipBytes(bytes: Uint8Array): Promise<string> {
-    const DS = (globalThis as { DecompressionStream?: typeof DecompressionStream }).DecompressionStream;
-    if (typeof DS === 'undefined') {
-        throw new Error('DecompressionStream is not supported in this environment');
-    }
-    const stream = new DS(GZIP_ENCODING);
-    const writer = stream.writable.getWriter();
-    try {
-        await writer.write(toArrayBufferView(bytes));
-        await writer.close();
-    } finally {
-        writer.releaseLock();
-    }
-    const buffer = await new Response(stream.readable).arrayBuffer();
-    return new TextDecoder().decode(buffer);
+  const DS = (globalThis as { DecompressionStream?: typeof DecompressionStream }).DecompressionStream;
+  if (typeof DS === "undefined") {
+    throw new Error("DecompressionStream is not supported in this environment");
+  }
+  const stream = new DS(GZIP_ENCODING);
+  const writer = stream.writable.getWriter();
+  try {
+    await writer.write(toArrayBufferView(bytes));
+    await writer.close();
+  } finally {
+    writer.releaseLock();
+  }
+  const buffer = await new Response(stream.readable).arrayBuffer();
+  return new TextDecoder().decode(buffer);
 }
 
 /**
@@ -101,9 +101,9 @@ export async function gunzipBytes(bytes: Uint8Array): Promise<string> {
  * fresh ArrayBuffer is always safe for our use case.
  */
 function toArrayBufferView(bytes: Uint8Array): Uint8Array<ArrayBuffer> {
-    const copy = new Uint8Array(new ArrayBuffer(bytes.byteLength));
-    copy.set(bytes);
-    return copy;
+  const copy = new Uint8Array(new ArrayBuffer(bytes.byteLength));
+  copy.set(bytes);
+  return copy;
 }
 
 /**
@@ -112,21 +112,21 @@ function toArrayBufferView(bytes: Uint8Array): Uint8Array<ArrayBuffer> {
  * decoder expects.
  */
 function bytesToBase64(bytes: Uint8Array): string {
-    let binary = '';
-    for (let i = 0; i < bytes.length; i++) {
-        binary += String.fromCharCode(bytes[i] as number);
-    }
-    return btoa(binary);
+  let binary = "";
+  for (let i = 0; i < bytes.length; i++) {
+    binary += String.fromCharCode(bytes[i] as number);
+  }
+  return btoa(binary);
 }
 
 /**
  * Convert base64 → bytes via the inverse of {@link bytesToBase64}.
  */
 function base64ToBytes(base64: string): Uint8Array {
-    const binary = atob(base64);
-    const out = new Uint8Array(binary.length);
-    for (let i = 0; i < binary.length; i++) {
-        out[i] = binary.charCodeAt(i);
-    }
-    return out;
+  const binary = atob(base64);
+  const out = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) {
+    out[i] = binary.charCodeAt(i);
+  }
+  return out;
 }

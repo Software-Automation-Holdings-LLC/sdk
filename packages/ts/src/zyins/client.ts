@@ -17,31 +17,15 @@
  *   - Retries and backoff are NOT exposed here; they live in Tier 2.
  */
 
-import { type AuthContext } from './auth.js';
-import { type RequestSigner } from './requestSigner.js';
-import { type Transport, defaultTransport } from './transport.js';
-import { type Clock, systemClock } from '../core/index.js';
-import {
-  prequalify,
-  type PrequalifyRequest,
-  type PrequalifyResult,
-} from './prequalify.js';
-import {
-  prequalifyV2,
-  type PrequalifyV2Request,
-  type PrequalifyV2Result,
-} from './prequalify-v2.js';
-import {
-  prequalifyV3,
-  type PrequalifyV3Request,
-  type PrequalifyV3Result,
-} from './prequalify-v3.js';
-import {
-  quoteV3,
-  type QuoteV3Request,
-  type QuoteV3Result,
-} from './quote-v3.js';
-import { DatasetsV3SubClient } from './datasets-v3.js';
+import { DEFAULT_CASE_VIEWER_BASE_URL } from "../account/cases.js";
+import { type Clock, systemClock } from "../core/index.js";
+import { type AuthContext } from "./auth.js";
+import { type BrandingDetail, lookup as brandingLookup } from "./branding.js";
+import { type CaseEmailRequest, type CaseEmailResult, email } from "./case.js";
+import { type CaseShareRequest, type CaseShareResult, share as casesShare } from "./cases.js";
+import { DatasetsV3SubClient } from "./datasets-v3.js";
+import { DatasetsSubClient } from "./datasets.js";
+import { getReadiness, type ReadinessResult } from "./health.js";
 import {
   activate as licenseActivate,
   check as licenseCheck,
@@ -52,25 +36,21 @@ import {
   type LicenseCheckResult,
   type LicenseDeactivateRequest,
   type LicenseDeactivateResult,
-} from './license.js';
-import { getReadiness, type ReadinessResult } from './health.js';
-import { email, type CaseEmailRequest, type CaseEmailResult } from './case.js';
-import { lookup as brandingLookup, type BrandingDetail } from './branding.js';
-import { DatasetsSubClient } from './datasets.js';
+} from "./license.js";
+import { type LogosFetch, LogosSubClient } from "./logos.js";
 import {
   lookup as preferencesLookup,
-  set as preferencesSet,
   type PreferencesLookupResult,
   type PreferencesSetRequest,
   type PreferencesSetResult,
-} from './preferences.js';
-import {
-  share as casesShare,
-  type CaseShareRequest,
-  type CaseShareResult,
-} from './cases.js';
-import { DEFAULT_CASE_VIEWER_BASE_URL } from '../account/cases.js';
-import { LogosSubClient, type LogosFetch } from './logos.js';
+  set as preferencesSet,
+} from "./preferences.js";
+import { prequalifyV2, type PrequalifyV2Request, type PrequalifyV2Result } from "./prequalify-v2.js";
+import { prequalifyV3, type PrequalifyV3Request, type PrequalifyV3Result } from "./prequalify-v3.js";
+import { prequalify, type PrequalifyRequest, type PrequalifyResult } from "./prequalify.js";
+import { quoteV3, type QuoteV3Request, type QuoteV3Result } from "./quote-v3.js";
+import { type RequestSigner } from "./requestSigner.js";
+import { defaultTransport, type Transport } from "./transport.js";
 
 /** Per-call context shared across sub-clients. */
 export interface OperationContext {
@@ -91,7 +71,7 @@ export interface OperationContext {
 }
 
 /** Production ZyINS endpoint. Override only for staging / local. */
-export const DEFAULT_ZYINS_BASE_URL = 'https://zyins.isaapi.com';
+export const DEFAULT_ZYINS_BASE_URL = "https://zyins.isaapi.com";
 
 /** Construction options for `ZyInsClient`. */
 export interface ZyInsClientOptions {

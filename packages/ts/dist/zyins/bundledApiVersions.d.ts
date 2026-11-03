@@ -22,9 +22,9 @@
  * The set of ZyINS API surfaces that carry an independent version. Adding
  * a new surface here requires the same addition to {@link BundledApiVersions}.
  */
-export type IsaApiSurface = 'prequalify' | 'quote' | 'datasets' | 'reference' | 'sessions' | 'branding' | 'cases';
+export type IsaApiSurface = "prequalify" | "quote" | "datasets" | "reference" | "sessions" | "branding" | "cases";
 /** Major-version token sent in the `Api-Version` request header. */
-export type IsaApiVersion = 'v1' | 'v2' | 'v3';
+export type IsaApiVersion = "v1" | "v2" | "v3";
 /**
  * Per-surface override accepted on `IsaCreateOptions.apiVersion` and the
  * legacy factory `IsaFactoryOptions.apiVersion`. Surfaces absent from the

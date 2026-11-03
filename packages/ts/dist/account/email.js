@@ -11,25 +11,25 @@
  * BPP enqueue surface; both values are accepted and normalized to
  * `'queued'`.
  */
-import { fromHttpResponse } from '../zyins/errors.js';
-import { deriveIdempotencyKey } from '../zyins/idempotency.js';
-import { buildLicenseHMACHeaders } from '../core/index.js';
-import { systemClock } from '../core/index.js';
-const EMAIL_PATH = '/v1/email/enqueue';
+import { buildLicenseHMACHeaders } from "../core/index.js";
+import { systemClock } from "../core/index.js";
+import { fromHttpResponse } from "../zyins/errors.js";
+import { deriveIdempotencyKey } from "../zyins/idempotency.js";
+const EMAIL_PATH = "/v1/email/enqueue";
 /** Enqueue a transactional email. */
 export async function enqueue(request, ctx) {
     if (!request) {
-        throw new Error('account: email.enqueue requires a request');
+        throw new Error("account: email.enqueue requires a request");
     }
     const recipients = normalizeRecipients(request.to);
     if (recipients.length === 0) {
-        throw new Error('account: email.enqueue requires at least one recipient');
+        throw new Error("account: email.enqueue requires at least one recipient");
     }
-    if (typeof request.subject !== 'string') {
-        throw new Error('account: email.enqueue requires a subject');
+    if (typeof request.subject !== "string") {
+        throw new Error("account: email.enqueue requires a subject");
     }
-    if (typeof request.body !== 'string') {
-        throw new Error('account: email.enqueue requires a body');
+    if (typeof request.body !== "string") {
+        throw new Error("account: email.enqueue requires a body");
     }
     const wire = {
         to: Array.isArray(request.to) ? recipients : recipients[0],
@@ -38,40 +38,40 @@ export async function enqueue(request, ctx) {
     };
     if (request.attachment) {
         const attachment = request.attachment;
-        wire['attachment'] = {
+        wire["attachment"] = {
             filename: attachment.filename,
             content_base64: attachment.content,
         };
     }
     const wireBody = JSON.stringify(wire);
-    const idempotencyKey = ctx.idempotencyKey ??
-        (await deriveIdempotencyKey({
+    const idempotencyKey = ctx.idempotencyKey
+        ?? (await deriveIdempotencyKey({
             deviceId: ctx.auth.deviceId,
-            op: 'email_enqueue',
+            op: "email_enqueue",
             body: wireBody,
         }));
-    const headers = await buildLicenseHMACHeaders(ctx.auth.licenseKey, ctx.auth.orderId, ctx.auth.email, 'POST', EMAIL_PATH, wireBody, ctx.auth.deviceId, ctx.clock ?? systemClock);
+    const headers = await buildLicenseHMACHeaders(ctx.auth.licenseKey, ctx.auth.orderId, ctx.auth.email, "POST", EMAIL_PATH, wireBody, ctx.auth.deviceId, ctx.clock ?? systemClock);
     const response = await ctx.transport({
         url: `${ctx.baseUrl}${EMAIL_PATH}`,
-        method: 'POST',
+        method: "POST",
         headers: {
             ...headers,
-            'Content-Type': 'application/json',
-            Accept: 'application/json',
-            'Idempotency-Key': idempotencyKey,
+            "Content-Type": "application/json",
+            Accept: "application/json",
+            "Idempotency-Key": idempotencyKey,
         },
         body: wireBody,
     });
     if (response.status >= 200 && response.status < 300) {
-        return { status: 'queued' };
+        return { status: "queued" };
     }
     throw fromHttpResponse(response.status, response.body);
 }
 function normalizeRecipients(to) {
     if (Array.isArray(to)) {
-        return to.filter((entry) => typeof entry === 'string' && entry.length > 0);
+        return to.filter((entry) => typeof entry === "string" && entry.length > 0);
     }
-    if (typeof to === 'string' && to.length > 0)
+    if (typeof to === "string" && to.length > 0)
         return [to];
     return [];
 }

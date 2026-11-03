@@ -8,10 +8,10 @@
  * Header assembly is the caller's responsibility; this facade moves bytes.
  */
 
-import { resolveFetch } from '../../core/index.js';
+import { resolveFetch } from "../../core/index.js";
 
 /** Supported HTTP methods. */
-export type HttpMethod = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
+export type HttpMethod = "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
 
 /** Outbound request as seen by the transport facade. */
 export interface TransportRequest {
@@ -40,13 +40,13 @@ export type Transport = (request: TransportRequest) => Promise<TransportResponse
  * client's lookups (`headers['x-request-id']`) are case-insensitive.
  */
 export function defaultTransport(fetchImpl?: typeof fetch): Transport {
-  const f = resolveFetch(fetchImpl, 'RapidSignTransport');
+  const f = resolveFetch(fetchImpl, "RapidSignTransport");
   return async (request) => {
     const init: RequestInit = {
       method: request.method,
       headers: request.headers,
     };
-    if (request.method !== 'GET' && request.method !== 'DELETE') {
+    if (request.method !== "GET" && request.method !== "DELETE") {
       init.body = request.body;
     }
     if (request.signal) {

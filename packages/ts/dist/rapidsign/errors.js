@@ -8,7 +8,7 @@
  * The base is abstract so `new RapidSignError(...)` is impossible — every
  * thrown error has a specific subclass with a stable `code`.
  */
-import { isProblemDetails } from '../core/index.js';
+import { isProblemDetails } from "../core/index.js";
 /**
  * Abstract base class. Every error thrown by the RapidSign SDK is a subclass.
  * Callers `import { RapidSignError } from '@isa-sdk/rapidsign'` and either:
@@ -46,42 +46,42 @@ export class RapidSignError extends Error {
 (function (RapidSignError) {
     /** 401 — missing or invalid bearer token. */
     class Unauthorized extends RapidSignError {
-        code = 'unauthorized';
+        code = "unauthorized";
     }
     RapidSignError.Unauthorized = Unauthorized;
     /** 401 specifically signalled with TOKEN_EXPIRED — caller should refresh. */
     class TokenExpired extends RapidSignError {
-        code = 'token_expired';
+        code = "token_expired";
     }
     RapidSignError.TokenExpired = TokenExpired;
     /** 401 specifically signalled with INVALID_TOKEN. */
     class InvalidToken extends RapidSignError {
-        code = 'invalid_token';
+        code = "invalid_token";
     }
     RapidSignError.InvalidToken = InvalidToken;
     /** 403 — authenticated but lacking the scope for this operation. */
     class Forbidden extends RapidSignError {
-        code = 'forbidden';
+        code = "forbidden";
     }
     RapidSignError.Forbidden = Forbidden;
     /** 404 — document or sign id does not exist. */
     class NotFound extends RapidSignError {
-        code = 'not_found';
+        code = "not_found";
     }
     RapidSignError.NotFound = NotFound;
     /** 405 — HTTP method not allowed on this path. */
     class MethodNotAllowed extends RapidSignError {
-        code = 'method_not_allowed';
+        code = "method_not_allowed";
     }
     RapidSignError.MethodNotAllowed = MethodNotAllowed;
     /** 409 — state conflict (already signed, already cancelled, etc.). */
     class Conflict extends RapidSignError {
-        code = 'conflict';
+        code = "conflict";
     }
     RapidSignError.Conflict = Conflict;
     /** 400 — request body failed schema/domain validation; `param` is set. */
     class ValidationError extends RapidSignError {
-        code = 'validation_error';
+        code = "validation_error";
         /** Field path the validator rejected (e.g. `applicant.dob`). */
         field;
         constructor(message, init) {
@@ -93,7 +93,7 @@ export class RapidSignError extends Error {
     RapidSignError.ValidationError = ValidationError;
     /** 423 — license is locked (admin action or too many devices). */
     class LicenseLocked extends RapidSignError {
-        code = 'license_locked';
+        code = "license_locked";
     }
     RapidSignError.LicenseLocked = LicenseLocked;
     /** 429 — rate limit exceeded. `retryAfterMs` is always set. */
@@ -107,7 +107,7 @@ export class RapidSignError extends Error {
     RapidSignError.RateLimited = RateLimited;
     /** 500 — unhandled server fault. */
     class InternalError extends RapidSignError {
-        code = 'internal_error';
+        code = "internal_error";
         constructor(message, init) {
             super(message, { ...init, retryable: true });
         }
@@ -115,7 +115,7 @@ export class RapidSignError extends Error {
     RapidSignError.InternalError = InternalError;
     /** 502 — upstream dependency returned an unusable response. */
     class BadGateway extends RapidSignError {
-        code = 'bad_gateway';
+        code = "bad_gateway";
         constructor(message, init) {
             super(message, { ...init, retryable: true });
         }
@@ -123,7 +123,7 @@ export class RapidSignError extends Error {
     RapidSignError.BadGateway = BadGateway;
     /** 504 — upstream dependency did not respond. */
     class GatewayTimeout extends RapidSignError {
-        code = 'gateway_timeout';
+        code = "gateway_timeout";
         constructor(message, init) {
             super(message, { ...init, retryable: true });
         }
@@ -134,12 +134,12 @@ export class RapidSignError extends Error {
      * Distinct from server `gateway_timeout` (504).
      */
     class DeadlineExceeded extends RapidSignError {
-        code = 'deadline_exceeded';
+        code = "deadline_exceeded";
     }
     RapidSignError.DeadlineExceeded = DeadlineExceeded;
     /** 503 — service is intentionally unavailable. */
     class ServiceUnavailable extends RapidSignError {
-        code = 'service_unavailable';
+        code = "service_unavailable";
         constructor(message, init) {
             super(message, { ...init, retryable: true });
         }
@@ -153,12 +153,12 @@ export class RapidSignError extends Error {
      * methods throw `NotImplemented` with a message naming the tracking issue.
      */
     class NotImplemented extends RapidSignError {
-        code = 'not_implemented';
+        code = "not_implemented";
     }
     RapidSignError.NotImplemented = NotImplemented;
     /** Fallback for malformed bodies, network anomalies, etc. */
     class Unknown extends RapidSignError {
-        code = 'unknown';
+        code = "unknown";
     }
     RapidSignError.Unknown = Unknown;
 })(RapidSignError || (RapidSignError = {}));
@@ -175,8 +175,8 @@ export class RapidSignError extends Error {
  * returned for malformed responses.
  */
 export function fromHttpResponse(status, body, headers) {
-    const requestId = headers['x-request-id'] ?? headers['request-id'] ?? '';
-    const retryAfterMs = parseRetryAfter(headers['retry-after']);
+    const requestId = headers["x-request-id"] ?? headers["request-id"] ?? "";
+    const retryAfterMs = parseRetryAfter(headers["retry-after"]);
     const problem = tryParseProblemDetails(body);
     if (problem !== undefined) {
         return fromProblemDetails(problem, { requestId, retryAfterMs });
@@ -248,7 +248,7 @@ const ERROR_CLASS_BY_STATUS = {
 /** Best-effort ProblemDetails parse; returns `undefined` for non-JSON bodies. */
 function tryParseProblemDetails(body) {
     const trimmed = body.trim();
-    if (!trimmed.startsWith('{'))
+    if (!trimmed.startsWith("{"))
         return undefined;
     try {
         const parsed = JSON.parse(trimmed);
@@ -266,15 +266,25 @@ function tryParseProblemDetails(body) {
     }
 }
 function looksLikeProblemDetails(v) {
-    if (v === null || typeof v !== 'object')
+    if (v === null || typeof v !== "object")
         return false;
     const o = v;
-    return (typeof o.title === 'string' &&
-        typeof o.status === 'number' &&
-        Number.isInteger(o.status) &&
-        o.status >= 100 &&
-        o.status <= 599 &&
-        typeof o.code === 'string');
+    return (
+    // RFC 7807 §3.1: ProblemDetails MUST carry a `type` URI reference
+    // (default `about:blank`). Without this check, generic upstream JSON
+    // error envelopes that happen to carry `title` / `status` / `code` got
+    // misclassified as ProblemDetails and surfaced with the wrong shape.
+    // We require a non-blank string rather than a structurally valid URI:
+    // RFC permits any URI reference, including `about:blank` and relative
+    // references, so URI-shape validation would reject legitimate inputs.
+    typeof o.type === "string"
+        && o.type.trim().length > 0
+        && typeof o.title === "string"
+        && typeof o.status === "number"
+        && Number.isInteger(o.status)
+        && o.status >= 100
+        && o.status <= 599
+        && typeof o.code === "string");
 }
 const RETRY_AFTER_SECONDS_MAX = 86_400;
 const RETRY_AFTER_MS_MAX = RETRY_AFTER_SECONDS_MAX * 1_000;
@@ -299,9 +309,9 @@ function parseRetryAfter(value) {
     return undefined;
 }
 function resolveRateLimitCode(wireCode) {
-    if (wireCode === 'rate_limited' || wireCode === 'rate_limit_exceeded') {
+    if (wireCode === "rate_limited" || wireCode === "rate_limit_exceeded") {
         return wireCode;
     }
-    return 'rate_limit_exceeded';
+    return "rate_limit_exceeded";
 }
 //# sourceMappingURL=errors.js.map

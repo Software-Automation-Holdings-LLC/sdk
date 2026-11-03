@@ -1,13 +1,11 @@
 /**
- * RFC 7807 Problem Details types shared with platform-php's ProblemException.
+ * RFC 7807 Problem Details types.
  *
  * Error codes are drawn from ADR-012 (the platform-wide error taxonomy). The
- * list below is the v1 set; revisions MUST update both this file and the PHP
- * ProblemException enum in the same commit to preserve type parity.
+ * list below is the v1 set.
  */
 /**
- * The authoritative list of platform error codes. Revisions MUST update both
- * this array and `platform-php`'s `ProblemException` enum in the same commit.
+ * The authoritative list of platform error codes.
  */
 export declare const PROBLEM_DETAILS_CODES: readonly ["unauthorized", "token_expired", "validation_error", "license_locked", "not_found", "forbidden", "conflict", "rate_limit_exceeded", "rate_limited", "internal_error", "service_unavailable", "idempotency_conflict"];
 export type ProblemDetailsCode = (typeof PROBLEM_DETAILS_CODES)[number];

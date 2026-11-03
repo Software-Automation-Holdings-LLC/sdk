@@ -10,10 +10,10 @@
  * @see go/zyins/server/auth_middleware.go
  * @see go/zyins/server/device_signature.go
  */
-import { base64EncodeUtf8, resolveSubtle, arrayBufferToHex, systemClock, } from '../internal/crypto.js';
-const QUOTE_CHAR = '"';
+import { arrayBufferToHex, base64EncodeUtf8, resolveSubtle, systemClock } from "../internal/crypto.js";
+const QUOTE_CHAR = "\"";
 /** Module label used for error attribution by runtime resolvers. */
-const LICENSE_CONTEXT = 'License';
+const LICENSE_CONTEXT = "License";
 /** Prefix for errors raised inside the License module. */
 const LICENSE_ERROR_PREFIX = `${LICENSE_CONTEXT}: `;
 /**
@@ -36,8 +36,8 @@ export const computeDeviceSignature = async (body, deviceId, subtle) => {
     const cryptoSubtle = resolveSubtle(subtle, LICENSE_CONTEXT);
     const cleanDeviceId = stripQuotes(deviceId);
     const encoder = new TextEncoder();
-    const key = await cryptoSubtle.importKey('raw', encoder.encode(cleanDeviceId), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
-    const signature = await cryptoSubtle.sign('HMAC', key, encoder.encode(body));
+    const key = await cryptoSubtle.importKey("raw", encoder.encode(cleanDeviceId), { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
+    const signature = await cryptoSubtle.sign("HMAC", key, encoder.encode(body));
     return arrayBufferToHex(signature);
 };
 /**
@@ -84,11 +84,11 @@ export const buildLicenseHMACHeaders = async (licenseKey, orderId, email, method
     const signature = await computeDeviceSignature(body, deviceId, subtle);
     return {
         Authorization: buildLicenseHeader(licenseKey, orderId, email),
-        'X-Device-ID': stripQuotes(deviceId),
-        'X-Device-Signature': signature,
-        'X-License-Method': method,
-        'X-License-URI': requestURI,
-        'X-License-Timestamp': timestamp,
+        "X-Device-ID": stripQuotes(deviceId),
+        "X-Device-Signature": signature,
+        "X-License-Method": method,
+        "X-License-URI": requestURI,
+        "X-License-Timestamp": timestamp,
     };
 };
 /**

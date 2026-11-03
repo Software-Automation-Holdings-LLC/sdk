@@ -9,31 +9,31 @@
  * thrown error has a specific subclass with a stable `code`.
  */
 
-import { isProblemDetails, type ProblemDetails } from '../core/index.js';
+import { isProblemDetails, type ProblemDetails } from "../core/index.js";
 
 /**
  * Wire-stable error codes mirroring `api.isa.v1.ErrorCode` values in their
  * lowercase snake_case form. Cross-language SDKs share this set.
  */
 export type ErrorCode =
-  | 'unauthorized'
-  | 'token_expired'
-  | 'invalid_token'
-  | 'forbidden'
-  | 'not_found'
-  | 'method_not_allowed'
-  | 'conflict'
-  | 'validation_error'
-  | 'license_locked'
-  | 'rate_limit_exceeded'
-  | 'rate_limited'
-  | 'internal_error'
-  | 'bad_gateway'
-  | 'gateway_timeout'
-  | 'deadline_exceeded'
-  | 'service_unavailable'
-  | 'not_implemented'
-  | 'unknown';
+  | "unauthorized"
+  | "token_expired"
+  | "invalid_token"
+  | "forbidden"
+  | "not_found"
+  | "method_not_allowed"
+  | "conflict"
+  | "validation_error"
+  | "license_locked"
+  | "rate_limit_exceeded"
+  | "rate_limited"
+  | "internal_error"
+  | "bad_gateway"
+  | "gateway_timeout"
+  | "deadline_exceeded"
+  | "service_unavailable"
+  | "not_implemented"
+  | "unknown";
 
 /** Fields every RapidSignError subclass receives at construction. */
 export interface RapidSignErrorInit {
@@ -85,42 +85,42 @@ export abstract class RapidSignError extends Error {
 export namespace RapidSignError {
   /** 401 — missing or invalid bearer token. */
   export class Unauthorized extends RapidSignError {
-    public override readonly code = 'unauthorized' as const;
+    public override readonly code = "unauthorized" as const;
   }
 
   /** 401 specifically signalled with TOKEN_EXPIRED — caller should refresh. */
   export class TokenExpired extends RapidSignError {
-    public override readonly code = 'token_expired' as const;
+    public override readonly code = "token_expired" as const;
   }
 
   /** 401 specifically signalled with INVALID_TOKEN. */
   export class InvalidToken extends RapidSignError {
-    public override readonly code = 'invalid_token' as const;
+    public override readonly code = "invalid_token" as const;
   }
 
   /** 403 — authenticated but lacking the scope for this operation. */
   export class Forbidden extends RapidSignError {
-    public override readonly code = 'forbidden' as const;
+    public override readonly code = "forbidden" as const;
   }
 
   /** 404 — document or sign id does not exist. */
   export class NotFound extends RapidSignError {
-    public override readonly code = 'not_found' as const;
+    public override readonly code = "not_found" as const;
   }
 
   /** 405 — HTTP method not allowed on this path. */
   export class MethodNotAllowed extends RapidSignError {
-    public override readonly code = 'method_not_allowed' as const;
+    public override readonly code = "method_not_allowed" as const;
   }
 
   /** 409 — state conflict (already signed, already cancelled, etc.). */
   export class Conflict extends RapidSignError {
-    public override readonly code = 'conflict' as const;
+    public override readonly code = "conflict" as const;
   }
 
   /** 400 — request body failed schema/domain validation; `param` is set. */
   export class ValidationError extends RapidSignError {
-    public override readonly code = 'validation_error' as const;
+    public override readonly code = "validation_error" as const;
     /** Field path the validator rejected (e.g. `applicant.dob`). */
     public readonly field?: string;
     constructor(message: string, init: RapidSignErrorInit) {
@@ -131,7 +131,7 @@ export namespace RapidSignError {
 
   /** 423 — license is locked (admin action or too many devices). */
   export class LicenseLocked extends RapidSignError {
-    public override readonly code = 'license_locked' as const;
+    public override readonly code = "license_locked" as const;
   }
 
   /** 429 — rate limit exceeded. `retryAfterMs` is always set. */
@@ -145,7 +145,7 @@ export namespace RapidSignError {
 
   /** 500 — unhandled server fault. */
   export class InternalError extends RapidSignError {
-    public override readonly code = 'internal_error' as const;
+    public override readonly code = "internal_error" as const;
     constructor(message: string, init: RapidSignErrorInit) {
       super(message, { ...init, retryable: true });
     }
@@ -153,7 +153,7 @@ export namespace RapidSignError {
 
   /** 502 — upstream dependency returned an unusable response. */
   export class BadGateway extends RapidSignError {
-    public override readonly code = 'bad_gateway' as const;
+    public override readonly code = "bad_gateway" as const;
     constructor(message: string, init: RapidSignErrorInit) {
       super(message, { ...init, retryable: true });
     }
@@ -161,7 +161,7 @@ export namespace RapidSignError {
 
   /** 504 — upstream dependency did not respond. */
   export class GatewayTimeout extends RapidSignError {
-    public override readonly code = 'gateway_timeout' as const;
+    public override readonly code = "gateway_timeout" as const;
     constructor(message: string, init: RapidSignErrorInit) {
       super(message, { ...init, retryable: true });
     }
@@ -172,12 +172,12 @@ export namespace RapidSignError {
    * Distinct from server `gateway_timeout` (504).
    */
   export class DeadlineExceeded extends RapidSignError {
-    public override readonly code = 'deadline_exceeded' as const;
+    public override readonly code = "deadline_exceeded" as const;
   }
 
   /** 503 — service is intentionally unavailable. */
   export class ServiceUnavailable extends RapidSignError {
-    public override readonly code = 'service_unavailable' as const;
+    public override readonly code = "service_unavailable" as const;
     constructor(message: string, init: RapidSignErrorInit) {
       super(message, { ...init, retryable: true });
     }
@@ -191,12 +191,12 @@ export namespace RapidSignError {
    * methods throw `NotImplemented` with a message naming the tracking issue.
    */
   export class NotImplemented extends RapidSignError {
-    public override readonly code = 'not_implemented' as const;
+    public override readonly code = "not_implemented" as const;
   }
 
   /** Fallback for malformed bodies, network anomalies, etc. */
   export class Unknown extends RapidSignError {
-    public override readonly code = 'unknown' as const;
+    public override readonly code = "unknown" as const;
   }
 }
 /* eslint-enable @typescript-eslint/no-namespace */
@@ -217,8 +217,8 @@ export function fromHttpResponse(
   body: string,
   headers: Record<string, string>,
 ): RapidSignError {
-  const requestId = headers['x-request-id'] ?? headers['request-id'] ?? '';
-  const retryAfterMs = parseRetryAfter(headers['retry-after']);
+  const requestId = headers["x-request-id"] ?? headers["request-id"] ?? "";
+  const retryAfterMs = parseRetryAfter(headers["retry-after"]);
   const problem = tryParseProblemDetails(body);
   if (problem !== undefined) {
     return fromProblemDetails(problem, { requestId, retryAfterMs });
@@ -264,7 +264,7 @@ function fromHttpStatus(
   return new Ctor(message, { ...init, httpStatus: status });
 }
 
-const ERROR_CLASS_BY_CODE: Readonly<Record<string, new (m: string, i: RapidSignErrorInit) => RapidSignError>> = {
+const ERROR_CLASS_BY_CODE: Readonly<Record<string, new(m: string, i: RapidSignErrorInit) => RapidSignError>> = {
   unauthorized: RapidSignError.Unauthorized,
   token_expired: RapidSignError.TokenExpired,
   invalid_token: RapidSignError.InvalidToken,
@@ -283,7 +283,7 @@ const ERROR_CLASS_BY_CODE: Readonly<Record<string, new (m: string, i: RapidSignE
   not_implemented: RapidSignError.NotImplemented,
 };
 
-const ERROR_CLASS_BY_STATUS: Readonly<Record<number, new (m: string, i: RapidSignErrorInit) => RapidSignError>> = {
+const ERROR_CLASS_BY_STATUS: Readonly<Record<number, new(m: string, i: RapidSignErrorInit) => RapidSignError>> = {
   400: RapidSignError.ValidationError,
   401: RapidSignError.Unauthorized,
   403: RapidSignError.Forbidden,
@@ -302,7 +302,7 @@ const ERROR_CLASS_BY_STATUS: Readonly<Record<number, new (m: string, i: RapidSig
 /** Best-effort ProblemDetails parse; returns `undefined` for non-JSON bodies. */
 function tryParseProblemDetails(body: string): ProblemDetails | undefined {
   const trimmed = body.trim();
-  if (!trimmed.startsWith('{')) return undefined;
+  if (!trimmed.startsWith("{")) return undefined;
   try {
     const parsed: unknown = JSON.parse(trimmed);
     if (isProblemDetails(parsed)) return parsed;
@@ -317,15 +317,24 @@ function tryParseProblemDetails(body: string): ProblemDetails | undefined {
 }
 
 function looksLikeProblemDetails(v: unknown): boolean {
-  if (v === null || typeof v !== 'object') return false;
+  if (v === null || typeof v !== "object") return false;
   const o = v as Record<string, unknown>;
   return (
-    typeof o.title === 'string' &&
-    typeof o.status === 'number' &&
-    Number.isInteger(o.status) &&
-    o.status >= 100 &&
-    o.status <= 599 &&
-    typeof o.code === 'string'
+    // RFC 7807 §3.1: ProblemDetails MUST carry a `type` URI reference
+    // (default `about:blank`). Without this check, generic upstream JSON
+    // error envelopes that happen to carry `title` / `status` / `code` got
+    // misclassified as ProblemDetails and surfaced with the wrong shape.
+    // We require a non-blank string rather than a structurally valid URI:
+    // RFC permits any URI reference, including `about:blank` and relative
+    // references, so URI-shape validation would reject legitimate inputs.
+    typeof o.type === "string"
+    && o.type.trim().length > 0
+    && typeof o.title === "string"
+    && typeof o.status === "number"
+    && Number.isInteger(o.status)
+    && o.status >= 100
+    && o.status <= 599
+    && typeof o.code === "string"
   );
 }
 
@@ -352,8 +361,8 @@ function parseRetryAfter(value: string | undefined): number | undefined {
 }
 
 function resolveRateLimitCode(wireCode: ErrorCode | undefined): ErrorCode {
-  if (wireCode === 'rate_limited' || wireCode === 'rate_limit_exceeded') {
+  if (wireCode === "rate_limited" || wireCode === "rate_limit_exceeded") {
     return wireCode;
   }
-  return 'rate_limit_exceeded';
+  return "rate_limit_exceeded";
 }

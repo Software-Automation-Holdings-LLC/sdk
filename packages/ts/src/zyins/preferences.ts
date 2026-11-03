@@ -11,16 +11,16 @@
  * stays unchanged.
  */
 
-import { type AuthContext } from './auth.js';
-import { type Transport } from './transport.js';
-import { fromHttpResponse } from './errors.js';
-import { deriveIdempotencyKey } from './idempotency.js';
-import { isRecord, parseJsonResponse, unwrapEnvelope } from './response.js';
-import { buildLicenseHMACHeaders } from '../core/index.js';
-import { type Clock, systemClock } from '../core/index.js';
+import { buildLicenseHMACHeaders } from "../core/index.js";
+import { type Clock, systemClock } from "../core/index.js";
+import { type AuthContext } from "./auth.js";
+import { fromHttpResponse } from "./errors.js";
+import { deriveIdempotencyKey } from "./idempotency.js";
+import { isRecord, parseJsonResponse, unwrapEnvelope } from "./response.js";
+import { type Transport } from "./transport.js";
 
-const PREFERENCES_RESTORE_PATH = '/v2/preferences/restore';
-const PREFERENCES_BACKUP_PATH = '/v2/preferences/backup';
+const PREFERENCES_RESTORE_PATH = "/v2/preferences/restore";
+const PREFERENCES_BACKUP_PATH = "/v2/preferences/backup";
 
 /** Opaque preferences document. */
 export type PreferencesDocument = Record<string, unknown>;
@@ -51,17 +51,17 @@ export async function lookup(ctx: PreferencesContext): Promise<PreferencesLookup
     ctx.auth.licenseKey,
     ctx.auth.orderId,
     ctx.auth.email,
-    'GET',
+    "GET",
     PREFERENCES_RESTORE_PATH,
-    '',
+    "",
     ctx.auth.deviceId,
     ctx.clock ?? systemClock,
   );
   const response = await ctx.transport({
     url: `${ctx.baseUrl}${PREFERENCES_RESTORE_PATH}`,
-    method: 'GET',
-    headers: { ...headers, Accept: 'application/json' },
-    body: '',
+    method: "GET",
+    headers: { ...headers, Accept: "application/json" },
+    body: "",
   });
   if (response.status >= 200 && response.status < 300) {
     return { prefs: parsePrefsBody(response.body) };
@@ -75,17 +75,16 @@ export async function set(
   ctx: PreferencesContext,
 ): Promise<PreferencesSetResult> {
   if (!request || !isRecord(request.prefs)) {
-    throw new Error('zyins: preferences.set requires a prefs object');
+    throw new Error("zyins: preferences.set requires a prefs object");
   }
   const body = JSON.stringify({ prefs: request.prefs });
-  const idempotencyKey =
-    ctx.idempotencyKey ??
-    (await deriveIdempotencyKey({ deviceId: ctx.auth.deviceId, op: 'preferences_set', body }));
+  const idempotencyKey = ctx.idempotencyKey
+    ?? (await deriveIdempotencyKey({ deviceId: ctx.auth.deviceId, op: "preferences_set", body }));
   const headers = await buildLicenseHMACHeaders(
     ctx.auth.licenseKey,
     ctx.auth.orderId,
     ctx.auth.email,
-    'POST',
+    "POST",
     PREFERENCES_BACKUP_PATH,
     body,
     ctx.auth.deviceId,
@@ -93,12 +92,12 @@ export async function set(
   );
   const response = await ctx.transport({
     url: `${ctx.baseUrl}${PREFERENCES_BACKUP_PATH}`,
-    method: 'POST',
+    method: "POST",
     headers: {
       ...headers,
-      'Content-Type': 'application/json',
-      Accept: 'application/json',
-      'Idempotency-Key': idempotencyKey,
+      "Content-Type": "application/json",
+      Accept: "application/json",
+      "Idempotency-Key": idempotencyKey,
     },
     body,
   });
@@ -115,9 +114,9 @@ export async function set(
  */
 function parsePrefsBody(body: string, fallback?: PreferencesDocument): PreferencesDocument {
   if (!body) return fallback ?? {};
-  const parsed = parseJsonResponse(body, 'preferences');
+  const parsed = parseJsonResponse(body, "preferences");
   const root = unwrapEnvelope(parsed);
-  if (isRecord(root) && 'prefs' in root) {
+  if (isRecord(root) && "prefs" in root) {
     const prefs = root.prefs;
     if (isRecord(prefs)) {
       return prefs;

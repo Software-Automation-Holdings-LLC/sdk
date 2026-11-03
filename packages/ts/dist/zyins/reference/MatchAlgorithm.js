@@ -22,9 +22,9 @@
  * });
  * ```
  */
-import { _makeKey } from './_makeKey.js';
-import { _checkKey } from './_checkKey.js';
-import { buildUnknownConcept } from './referenceIndex.js';
+import { _checkKey } from "./_checkKey.js";
+import { _makeKey } from "./_makeKey.js";
+import { buildUnknownConcept } from "./referenceIndex.js";
 /**
  * Default matcher. Normalizes query, candidate names, and candidate IDs via the
  * server-mirrored `make_key`, then does an exact-equality lookup.

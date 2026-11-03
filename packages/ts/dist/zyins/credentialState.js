@@ -14,7 +14,7 @@
  * single process so per-call AsyncStorage round-trips stay off the hot
  * path.
  */
-import { CREDENTIAL_KEYS } from '../core/index.js';
+import { CREDENTIAL_KEYS } from "../core/index.js";
 /**
  * Holds the shared `AuthContext` reference plus a small event-emitter for
  * `onLicenseRefreshed`. One instance per `Isa`.
@@ -99,7 +99,7 @@ export class IsaCredentialState {
             // Persistence is best-effort; in-memory state remains authoritative
             // for the active process.
         }
-        this.auth.licenseKey = '';
+        this.auth.licenseKey = "";
     }
 }
 //# sourceMappingURL=credentialState.js.map

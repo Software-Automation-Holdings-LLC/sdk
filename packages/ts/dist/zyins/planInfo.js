@@ -1,6 +1,6 @@
-import { titleCaseLabel } from './planInfoLabel.js';
-const toStr = (v) => (typeof v === 'string' ? v : '');
-const isRecord = (v) => typeof v === 'object' && v !== null && !Array.isArray(v);
+import { titleCaseLabel } from "./planInfoLabel.js";
+const toStr = (v) => (typeof v === "string" ? v : "");
+const isRecord = (v) => typeof v === "object" && v !== null && !Array.isArray(v);
 /**
  * Coerce either plan-info wire shape into the typed array surface plus a
  * legacy-map mirror.
@@ -11,13 +11,13 @@ export function coercePlanInfo(raw) {
         for (const entry of raw) {
             if (!isRecord(entry))
                 continue;
-            const key = toStr(entry['key']);
-            if (key === '')
+            const key = toStr(entry["key"]);
+            if (key === "")
                 continue;
-            const labelRaw = toStr(entry['label']);
-            const label = labelRaw !== '' ? labelRaw : titleCaseLabel(key);
-            const values = Array.isArray(entry['values'])
-                ? entry['values'].map((x) => toStr(x))
+            const labelRaw = toStr(entry["label"]);
+            const label = labelRaw !== "" ? labelRaw : titleCaseLabel(key);
+            const values = Array.isArray(entry["values"])
+                ? entry["values"].map((x) => toStr(x))
                 : [];
             items.push({ key, label, values });
         }

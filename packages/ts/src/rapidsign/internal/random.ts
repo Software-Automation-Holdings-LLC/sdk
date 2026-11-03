@@ -6,7 +6,7 @@
  * from `RapidSignClient`; error parsing uses `systemClock` for Retry-After.
  */
 
-import { randomUUID as nodeRandomUUID } from 'node:crypto';
+import { randomUUID as nodeRandomUUID } from "node:crypto";
 
 /** Pluggable UUIDv4 generator. */
 export type UUIDGenerator = () => string;
@@ -40,13 +40,13 @@ export const defaultSleeper: Sleeper = (ms, signal) =>
       if (timer !== undefined) clearTimeout(timer);
       reject(abortError(signal!));
     };
-    signal?.addEventListener('abort', onAbort, { once: true });
+    signal?.addEventListener("abort", onAbort, { once: true });
     if (signal?.aborted) return onAbort();
 
     timer = setTimeout(() => {
       if (settled) return;
       settled = true;
-      signal?.removeEventListener('abort', onAbort);
+      signal?.removeEventListener("abort", onAbort);
       resolve();
     }, ms);
   });
@@ -54,7 +54,7 @@ export const defaultSleeper: Sleeper = (ms, signal) =>
 function abortError(signal: AbortSignal): Error {
   const reason = (signal as { reason?: unknown }).reason;
   if (reason instanceof Error) return reason;
-  const err = new Error('aborted');
-  err.name = 'AbortError';
+  const err = new Error("aborted");
+  err.name = "AbortError";
   return err;
 }

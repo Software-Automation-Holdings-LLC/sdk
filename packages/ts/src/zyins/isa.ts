@@ -11,8 +11,9 @@
  *   - Typed `IsaConfigError` thrown when env is missing.
  *   - `ISA_LOG=debug` activates a stderr request/response logger.
  *   - Idempotency-conflict 409 funnels into `IsaIdempotencyConflictError`.
- *   - Every method exposes a `.withRawResponse` sibling returning
- *     `{ data, response }` where `response` carries status/headers/url.
+ *   - Every method exposes a `*Raw` sibling (e.g. `prequalifyRaw`)
+ *     returning `{ data, response }` where `response` carries
+ *     status/headers/url.
  *   - `Envelope<T>` carries typed `requestId`, `idempotencyKey`,
  *     `retryAttempts` named fields.
  *
@@ -20,106 +21,95 @@
  * flight calls on one instance are safe (see README "Concurrency safety").
  */
 
+import { DEFAULT_CASE_VIEWER_BASE_URL } from "../account/cases.js";
+import { buildAccountNamespace } from "../account/factory.js";
+import { AccountNamespace } from "../account/index.js";
+import { CREDENTIAL_KEYS, type CredentialStore, inMemoryCredentialStore, loadOrMintDeviceId } from "../core/index.js";
 import {
+  assertSessionIdentityForProxyCall,
+  proxyCall as runProxyCall,
+  type ProxyCallOptions,
+  type ProxyCallResult,
+} from "../proxy/call.js";
+import { WebhooksService } from "../rapidsign/webhooks.js";
+import {
+  type IsaApiError,
+  IsaConfigError,
+  type IsaIdempotencyConflictError,
+  IsaNotActivatedError,
+  isApiError,
+  IsaTimeoutError,
+  isIdempotencyConflictError,
+  isNotActivatedError,
+} from "./apiError.js";
+import { type AuthContext } from "./auth.js";
+import { surfaceForPath } from "./bundledApiVersions.js";
+import type { CaseStorage } from "./cases/CaseStorage.js";
+import { ZeroKnowledgeCaseStorage } from "./cases/ZeroKnowledgeCaseStorage.js";
+import { DEFAULT_ZYINS_BASE_URL, ZyInsClient, type ZyInsClientOptions } from "./client.js";
+import { type ClientVersionListener, type ClientVersionStatus, evaluateClientVersion } from "./clientVersion.js";
+import { IsaCredentialState, type LicenseRefreshedListener } from "./credentialState.js";
+import { ApiDatasetSource, type DatasetSource, type DatasetSourceInput, toDatasetSource } from "./datasetSource.js";
+import { type Envelope, type RawResponse, type RawResponseResult } from "./envelope.js";
+import {
+  ENV_VAR_NAMES,
   type IsaIdentity,
   type LicenseIdentity,
-  resolveBearerIdentity,
+  resolveBearerIdentityOrOffline,
   resolveLicenseIdentity,
   resolveSessionIdentity,
-  ENV_VAR_NAMES,
-} from './envFactory.js';
-import { IsaConfigError, IsaNotActivatedError, IsaTimeoutError } from './apiError.js';
+} from "./envFactory.js";
 import {
-  type CredentialStore,
-  CREDENTIAL_KEYS,
-  inMemoryCredentialStore,
-  loadOrMintDeviceId,
-} from '../core/index.js';
+  type AutocompleteAlgorithm,
+  type Autocorrector,
+  BrandingFacade,
+  CasesFacade,
+  DatasetsFacade,
+  DefaultAutocorrector,
+  type DefaultAutocorrectorOptions,
+  EmailFacade,
+  LicenseFacade,
+  LogosFacade,
+  type MatchAlgorithm,
+  PreferencesFacade,
+  ReferenceBundleCache,
+  ReferenceConditionsFacade,
+  ReferenceFacade,
+  ReferenceMedicationsFacade,
+} from "./isaNamespaces.js";
 import {
-  IsaCredentialState,
-  type LicenseRefreshedListener,
-} from './credentialState.js';
+  DEFAULT_TIMEOUT_MS,
+  type IsaApiSurface,
+  type IsaApiVersion,
+  type IsaApiVersionOverride,
+  type IsaAuthSupplier,
+  type IsaCreateOptions,
+  resolveApiVersions,
+  type ResolvedIsaOptions,
+  resolveIsaOptions,
+} from "./isaOptions.js";
 import {
   type DebugLogger,
+  debugLoggerFromEnv,
   type EnvReader,
   type LogSink,
-  debugLoggerFromEnv,
   processEnv,
   stderrSink,
-} from './logger.js';
-import {
-  type Envelope,
-  type RawResponse,
-  type RawResponseResult,
-} from './envelope.js';
-import { type AuthContext } from './auth.js';
-import { bearerSigner } from './requestSigner.js';
-import { ZyInsClient, DEFAULT_ZYINS_BASE_URL, type ZyInsClientOptions } from './client.js';
-import { defaultTransport, type Transport } from './transport.js';
-import { type LogosFetch } from './logos.js';
-import {
-  type PrequalifyRequest,
-  type PrequalifyResult,
-} from './prequalify.js';
-import {
-  type PrequalifyV2Request,
-  type PrequalifyV2Result,
-} from './prequalify-v2.js';
+} from "./logger.js";
+import { type LogosFetch } from "./logos.js";
+import { type PrequalifyV2Request, type PrequalifyV2Result } from "./prequalify-v2.js";
 import {
   type PrequalifyV3Request,
   type PrequalifyV3Result,
   type QuoteV3Request,
   type QuoteV3Result,
-} from './prequalify-v3-types.js';
-import { SDK_RETRY_ATTEMPTS_HEADER } from './retryAttempts.js';
-import { WebhooksService } from '../rapidsign/webhooks.js';
-import {
-  type ProxyCallOptions,
-  type ProxyCallResult,
-  assertSessionIdentityForProxyCall,
-  proxyCall as runProxyCall,
-} from '../proxy/call.js';
-import {
-  BrandingFacade,
-  DatasetsFacade,
-  PreferencesFacade,
-  CasesFacade,
-  EmailFacade,
-  LicenseFacade,
-  LogosFacade,
-  ReferenceFacade,
-  ReferenceMedicationsFacade,
-  ReferenceConditionsFacade,
-  ReferenceBundleCache,
-  DefaultAutocorrector,
-  type Autocorrector,
-  type MatchAlgorithm,
-  type AutocompleteAlgorithm,
-  type DefaultAutocorrectorOptions,
-} from './isaNamespaces.js';
-import { ProductsFacade } from './products.js';
-import {
-  type ClientVersionListener,
-  type ClientVersionStatus,
-  evaluateClientVersion,
-} from './clientVersion.js';
-import { AccountNamespace } from '../account/index.js';
-import { buildAccountNamespace } from '../account/factory.js';
-import {
-  type IsaApiVersion,
-  type IsaApiVersionOverride,
-  type IsaApiSurface,
-  type IsaCreateOptions,
-  type IsaAuthSupplier,
-  type ResolvedIsaOptions,
-  resolveIsaOptions,
-  resolveApiVersions,
-  DEFAULT_TIMEOUT_MS,
-} from './isaOptions.js';
-import { surfaceForPath } from './bundledApiVersions.js';
-import type { CaseStorage } from './cases/CaseStorage.js';
-import { ZeroKnowledgeCaseStorage } from './cases/ZeroKnowledgeCaseStorage.js';
-import { DEFAULT_CASE_VIEWER_BASE_URL } from '../account/cases.js';
+} from "./prequalify-v3-types.js";
+import { type PrequalifyRequest, type PrequalifyResult } from "./prequalify.js";
+import { ProductsFacade } from "./products.js";
+import { bearerSigner } from "./requestSigner.js";
+import { SDK_RETRY_ATTEMPTS_HEADER } from "./retryAttempts.js";
+import { sessionSigner } from "./sessionSigner.js";
+import { defaultTransport, type Transport } from "./transport.js";
 
 /** Constructor options for `Isa`. */
 export interface IsaOptions {
@@ -127,6 +117,13 @@ export interface IsaOptions {
   identity: IsaIdentity;
   /** Base URL override; defaults to the production ZyINS endpoint. */
   baseUrl?: string;
+  /**
+   * Account-service origin override for the license-mode session
+   * bootstrap (see `sessionSigner.ts`); defaults to the production
+   * account service. Point this at a local double for tests/staging —
+   * isa-mock does not itself serve `/v1/sessions`.
+   */
+  accountBaseUrl?: string;
   /** Proxy origin override; defaults to the production proxy endpoint. */
   proxyOrigin?: string;
   /**
@@ -209,12 +206,26 @@ export interface IsaOptions {
    * `autocomplete()` accessor.
    */
   autocompleteAlgorithm?: AutocompleteAlgorithm;
+  /**
+   * Explicit reference-bundle source. A string is a local file path; a
+   * {@link DatasetBundleV3} is used directly; a {@link DatasetSource} is
+   * used as given. When set, the reference layer warms from it at factory
+   * time and `conditions.match(...)` resolves offline. Omitted keeps the
+   * unchanged API-fetch default.
+   */
+  datasets?: DatasetSourceInput;
 }
 
 /** Optional transport/facade overrides accepted by `Isa` factories. */
 export interface IsaFactoryOptions {
   /** Base URL override; defaults to the production ZyINS endpoint. */
   baseUrl?: string;
+  /**
+   * Account-service origin override for the license-mode session
+   * bootstrap; defaults to the production account service. See
+   * {@link IsaOptions.accountBaseUrl}.
+   */
+  accountBaseUrl?: string;
   /** Viewer origin used to assemble case share links. */
   caseViewerBaseUrl?: string;
   /** Proxy origin override; defaults to the production proxy endpoint. */
@@ -230,7 +241,7 @@ export interface IsaFactoryOptions {
   logosFetch?: LogosFetch;
   /**
    * Optional transport override. Used by {@link Isa.forForm} for the
-   * `/v1/sessions/reissue` exchange; tests inject a stub here so the
+   * `/v1/sessions` FormToken mint; tests inject a stub here so the
    * factory can be exercised without a live HTTP layer.
    */
   transport?: Transport;
@@ -253,6 +264,12 @@ export interface IsaFactoryOptions {
   matchAlgorithm?: MatchAlgorithm;
   /** Replace the default ranker. */
   autocompleteAlgorithm?: AutocompleteAlgorithm;
+  /**
+   * Explicit reference-bundle source (file path, bundle, or
+   * {@link DatasetSource}). When set, the reference layer warms from it at
+   * factory time; omitted keeps the API-fetch default.
+   */
+  datasets?: DatasetSourceInput;
 }
 
 /**
@@ -319,9 +336,8 @@ export class Isa {
     this.identity = opts.identity;
     this.clientVersion = opts.clientVersion;
     this.apiVersion = resolveApiVersions(opts.apiVersion);
-    this.logger =
-      opts.logger ??
-      debugLoggerFromEnv(opts.env ?? processEnv, opts.logSink ?? stderrSink);
+    this.logger = opts.logger
+      ?? debugLoggerFromEnv(opts.env ?? processEnv, opts.logSink ?? stderrSink);
     this.credentialState = buildCredentialStateIfLicense(opts);
     if (this.credentialState && opts.onLicenseRefreshed) {
       this.credentialState.onLicenseRefreshed(opts.onLicenseRefreshed);
@@ -340,6 +356,7 @@ export class Isa {
       apiVersion: this.apiVersion,
     };
     if (opts.baseUrl !== undefined) nsOpts.baseUrl = opts.baseUrl;
+    if (opts.accountBaseUrl !== undefined) nsOpts.accountBaseUrl = opts.accountBaseUrl;
     if (opts.caseViewerBaseUrl !== undefined) nsOpts.caseViewerBaseUrl = opts.caseViewerBaseUrl;
     if (this.logger !== undefined) nsOpts.logger = this.logger;
     if (this.credentialState !== undefined) nsOpts.credentialState = this.credentialState;
@@ -351,8 +368,12 @@ export class Isa {
     if (opts.autocompleteAlgorithm !== undefined) {
       nsOpts.autocompleteAlgorithm = opts.autocompleteAlgorithm;
     }
+    if (opts.datasets !== undefined) {
+      nsOpts.datasetSource = toDatasetSource(opts.datasets);
+    }
     this.zyins = new ZyInsNamespace(nsOpts);
-    this.rapidsign = new RapidSignNamespace();
+    this.webhooks = new WebhooksService();
+    this.rapidsign = new RapidSignNamespace(this.webhooks);
     this.proxy = new ProxyNamespace({
       identity: opts.identity,
       proxyOrigin: opts.proxyOrigin ?? DEFAULT_PROXY_ORIGIN,
@@ -366,7 +387,6 @@ export class Isa {
       ...(this.credentialState !== undefined && { credentialState: this.credentialState }),
       transport: wrappedTransport,
     });
-    this.webhooks = new WebhooksService();
   }
 
   /**
@@ -412,7 +432,7 @@ export class Isa {
   onLicenseRefreshed(listener: LicenseRefreshedListener): () => void {
     if (!this.credentialState) {
       throw new IsaConfigError(
-        'Isa.onLicenseRefreshed is available only on license-mode instances',
+        "Isa.onLicenseRefreshed is available only on license-mode instances",
       );
     }
     return this.credentialState.onLicenseRefreshed(listener);
@@ -423,16 +443,26 @@ export class Isa {
    * With no arguments, reads `ISA_TOKEN` from the environment. Throws
    * `IsaConfigError` when neither is supplied.
    *
-   * Async for surface uniformity across every factory; the body is trivial
-   * today but the contract leaves room to probe a credential store in a
-   * later phase without an API-shape break.
+   * When `options.datasets` supplies a local reference-bundle source, the
+   * token requirement is relaxed: the reference layer (`conditions.match`,
+   * `medications.match`, autocomplete, fuzzy, autocorrect) works fully
+   * offline, so no credential is needed. The factory warms the reference
+   * index from the source before resolving — the first synchronous
+   * `match()` already sees a primed catalog. Product calls in that mode
+   * still require a token and fail loud if one was never supplied.
+   *
+   * Async for surface uniformity across every factory; the body also awaits
+   * the offline bundle warm-up when a local `datasets` source is set.
    */
   static async withBearer(
     args?: { token?: string },
     env: EnvReader = processEnv,
     options: IsaFactoryOptions = {},
   ): Promise<Isa> {
-    return new Isa({ identity: resolveBearerIdentity(args, env), ...options });
+    const identity = resolveBearerIdentityOrOffline(args, env, options.datasets !== undefined);
+    const isa = new Isa({ identity, ...options });
+    await isa.zyins.warmReferenceBundle();
+    return isa;
   }
 
   /**
@@ -475,8 +505,7 @@ export class Isa {
     // store backs the process when no store is supplied.
     const store = args?.credentialStore ?? inMemoryCredentialStore();
     const deviceId = await loadOrMintDeviceId(store);
-    const licenseKey =
-      args?.licenseKey ?? (await store.get(CREDENTIAL_KEYS.licenseKey));
+    const licenseKey = args?.licenseKey ?? (await store.get(CREDENTIAL_KEYS.licenseKey));
 
     const opts: IsaOptions = { identity, ...options };
     opts.deviceId = deviceId;
@@ -490,7 +519,9 @@ export class Isa {
     if (args?.autocompleteAlgorithm !== undefined) {
       opts.autocompleteAlgorithm = args.autocompleteAlgorithm;
     }
-    return new Isa(opts);
+    const isa = new Isa(opts);
+    await isa.zyins.warmReferenceBundle();
+    return isa;
   }
 
   /**
@@ -509,24 +540,31 @@ export class Isa {
     env: EnvReader = processEnv,
     options: IsaFactoryOptions = {},
   ): Promise<Isa> {
-    return new Isa({ identity: resolveSessionIdentity(args, env), ...options });
+    const isa = new Isa({ identity: resolveSessionIdentity(args, env), ...options });
+    await isa.zyins.warmReferenceBundle();
+    return isa;
   }
 
   /**
    * Construct from a one-shot form token (embedded eApp forms). The SDK
-   * POSTs the token to `/v1/sessions/reissue`, receives a session
+   * POSTs the token to {@link SESSIONS_PATH} (`POST /v1/sessions`) with
+   * `Authorization: FormToken <token>`, receives a session
    * `{ sessionId, sessionSecret }`, and constructs a session-mode `Isa`
    * internally so the consumer never handles session credentials directly.
    *
-   * The reissue endpoint lands server-side per task #98; until then the
-   * call shape is anchored on the constant
-   * {@link SESSIONS_REISSUE_PATH} so the SDK plumbing is ready.
+   * Session rotation (after mint) is {@link SESSIONS_REISSUE_PATH} with
+   * `Authorization: Session <secret>` + `X-Isa-Session-Id` — FormToken is
+   * mint-only (account ADR-037).
+   *
+   * Note: the resulting `Isa` is session-mode — `zyins`/`account` product
+   * methods throw `IsaConfigError` until bearer/session product wiring
+   * lands (see {@link ZyInsNamespace}); only `isa.identity` is usable today.
    *
    * @example
    * ```ts
    * const formToken = form.metadata._isa_form_token;
    * const isa = await Isa.forForm({ formToken });
-   * await isa.zyins.prequalify(req);
+   * // isa.zyins / isa.account throw IsaConfigError until product wiring lands
    * ```
    */
   static async forForm(
@@ -535,7 +573,7 @@ export class Isa {
   ): Promise<Isa> {
     if (!args?.formToken || args.formToken.length === 0) {
       throw new IsaConfigError(
-        'Isa.forForm: formToken is required (typically read from form.metadata._isa_form_token)',
+        "Isa.forForm: formToken is required (typically read from form.metadata._isa_form_token)",
       );
     }
     const baseUrl = options.baseUrl ?? DEFAULT_ZYINS_BASE_URL;
@@ -543,26 +581,28 @@ export class Isa {
       options.transport ?? defaultTransport(),
       options.timeout ?? DEFAULT_TIMEOUT_MS,
     );
-    const reissueUrl = `${baseUrl.replace(/\/$/, '')}${SESSIONS_REISSUE_PATH}`;
+    const mintUrl = `${baseUrl.replace(/\/$/, "")}${SESSIONS_PATH}`;
     const response = await transport({
-      method: 'POST',
-      url: reissueUrl,
+      method: "POST",
+      url: mintUrl,
       headers: {
-        'Content-Type': 'application/json',
+        "Content-Type": "application/json",
         Authorization: `FormToken ${args.formToken}`,
       },
-      body: '{}',
+      body: "{}",
     });
     if (response.status < 200 || response.status >= 300) {
       throw new IsaConfigError(
-        `Isa.forForm: ${SESSIONS_REISSUE_PATH} returned ${response.status}; expected 2xx`,
+        `Isa.forForm: ${SESSIONS_PATH} returned ${response.status}; expected 2xx`,
       );
     }
-    const { sessionId, sessionSecret } = parseReissueResponse(response.body);
-    return new Isa({
-      identity: { mode: 'session', sessionId, sessionSecret },
+    const { sessionId, sessionSecret } = parseSessionMintResponse(response.body);
+    const isa = new Isa({
+      identity: { mode: "session", sessionId, sessionSecret },
       ...options,
     });
+    await isa.zyins.warmReferenceBundle();
+    return isa;
   }
 
   /**
@@ -596,7 +636,7 @@ export class Isa {
       return Isa.forForm(args, options ?? {});
     }
     throw new IsaConfigError(
-      'Isa.authenticate: argument did not match any auth mode (expected {keycode, email}, {token}, or {formToken})',
+      "Isa.authenticate: argument did not match any auth mode (expected {keycode, email}, {token}, or {formToken})",
     );
   }
 
@@ -640,16 +680,68 @@ export class Isa {
       `Isa.fromEnv: no recognized credential in environment (set ${ENV_VAR_NAMES.bearer.token}, or ${ENV_VAR_NAMES.license.keycode} + ${ENV_VAR_NAMES.license.email})`,
     );
   }
+
+  /**
+   * Prototype-independent guard for {@link IsaApiError}. Use this instead of
+   * `instanceof IsaApiError` — `instanceof` breaks when the error crossed a
+   * module boundary that produced a second copy of the class (vendored
+   * tarball, test mock, duplicated dependency). Mirrors Stripe's
+   * `Stripe.errors.StripeError.isStripeError`.
+   *
+   * @example
+   * ```ts
+   * try {
+   *   await isa.zyins.prequalify(req);
+   * } catch (e) {
+   *   if (Isa.isApiError(e)) console.error(e.code, e.status, e.requestId);
+   * }
+   * ```
+   */
+  static isApiError(value: unknown): value is IsaApiError {
+    return isApiError(value);
+  }
+
+  /**
+   * Prototype-independent guard for {@link IsaNotActivatedError}. Narrows so
+   * the caller can branch on `code` and re-activate the license.
+   *
+   * @example
+   * ```ts
+   * if (Isa.isNotActivatedError(e)) await isa.zyins.license.activate();
+   * ```
+   */
+  static isNotActivatedError(value: unknown): value is IsaNotActivatedError {
+    return isNotActivatedError(value);
+  }
+
+  /**
+   * Prototype-independent guard for {@link IsaIdempotencyConflictError}.
+   * Narrows so the caller can read `key` / `firstSeenAt`.
+   *
+   * @example
+   * ```ts
+   * if (Isa.isIdempotencyConflictError(e)) console.warn(e.key, e.firstSeenAt);
+   * ```
+   */
+  static isIdempotencyConflictError(
+    value: unknown,
+  ): value is IsaIdempotencyConflictError {
+    return isIdempotencyConflictError(value);
+  }
 }
 
 /**
- * Server-side path for the form-token → session exchange. Anchored as a
- * constant so test stubs and the live transport agree on the URL. The
- * endpoint itself lands per task #98 (`account.sessions` surface); the
- * SDK plumbing is wired ahead of the server so consumers can adopt
- * `Isa.forForm` the day it ships.
+ * Public mint path for sessions — license HMAC bootstrap and FormToken
+ * form mint share this route (account ADR-037). Anchored as a constant so
+ * test stubs and the live transport agree on the URL.
  */
-export const SESSIONS_REISSUE_PATH = '/v1/sessions/reissue';
+export const SESSIONS_PATH = "/v1/sessions";
+
+/**
+ * Session rotation path. Requires `Authorization: Session <secret>` +
+ * `X-Isa-Session-Id`. FormToken is rejected here (mint at {@link SESSIONS_PATH}).
+ */
+export const SESSIONS_REISSUE_PATH = "/v1/sessions/reissue";
 
 /** Tagless union accepted by {@link Isa.authenticate}. */
 export type IsaAuthArgs =
@@ -661,26 +753,25 @@ function isKeycodeAuthArgs(
   args: IsaAuthArgs,
 ): args is { keycode: string; email: string; credentialStore?: CredentialStore } {
   return (
-    typeof (args as { keycode?: unknown }).keycode === 'string' &&
-    typeof (args as { email?: unknown }).email === 'string'
+    typeof (args as { keycode?: unknown }).keycode === "string"
+    && typeof (args as { email?: unknown }).email === "string"
   );
 }
 
 function isBearerAuthArgs(args: IsaAuthArgs): args is { token: string } {
-  return typeof (args as { token?: unknown }).token === 'string';
+  return typeof (args as { token?: unknown }).token === "string";
 }
 
 function isFormAuthArgs(args: IsaAuthArgs): args is { formToken: string } {
-  return typeof (args as { formToken?: unknown }).formToken === 'string';
+  return typeof (args as { formToken?: unknown }).formToken === "string";
 }
 
 /**
- * Parse a `/v1/sessions/reissue` response body. The server returns a
- * standard SDK envelope with `data: { session_id, session_secret }`; the
- * shape is validated lazily so a server-side change surfaces as a typed
- * SDK error rather than `undefined` propagating into the HMAC signer.
+ * Parse a session mint/reissue response body. The server returns a
+ * standard envelope with `data: { sessionId, sessionSecret }` (camelCase
+ * on account handlers; snake_case tolerated for older fixtures).
  */
-function parseReissueResponse(body: string): {
+function parseSessionMintResponse(body: string): {
   sessionId: string;
   sessionSecret: string;
 } {
@@ -689,20 +780,17 @@ function parseReissueResponse(body: string): {
     parsed = JSON.parse(body);
   } catch {
     throw new IsaConfigError(
-      `Isa.forForm: ${SESSIONS_REISSUE_PATH} returned non-JSON body`,
+      `Isa.forForm: ${SESSIONS_PATH} returned non-JSON body`,
     );
   }
-  const data =
-    (parsed as { data?: unknown }).data ?? parsed; // tolerate envelope OR bare object
-  const sessionId =
-    (data as { sessionId?: unknown; session_id?: unknown }).sessionId ??
-    (data as { session_id?: unknown }).session_id;
-  const sessionSecret =
-    (data as { sessionSecret?: unknown; session_secret?: unknown }).sessionSecret ??
-    (data as { session_secret?: unknown }).session_secret;
-  if (typeof sessionId !== 'string' || typeof sessionSecret !== 'string') {
+  const data = (parsed as { data?: unknown }).data ?? parsed; // tolerate envelope OR bare object
+  const sessionId = (data as { sessionId?: unknown; session_id?: unknown }).sessionId
+    ?? (data as { session_id?: unknown }).session_id;
+  const sessionSecret = (data as { sessionSecret?: unknown; session_secret?: unknown }).sessionSecret
+    ?? (data as { session_secret?: unknown }).session_secret;
+  if (typeof sessionId !== "string" || typeof sessionSecret !== "string") {
     throw new IsaConfigError(
-      `Isa.forForm: ${SESSIONS_REISSUE_PATH} response missing session_id/session_secret`,
+      `Isa.forForm: ${SESSIONS_PATH} response missing sessionId/sessionSecret`,
     );
   }
   return { sessionId, sessionSecret };
@@ -714,6 +802,8 @@ interface ZyInsNamespaceOptions {
   /** Resolved per-surface API-version map inherited from the parent `Isa`. */
   apiVersion: Readonly<Record<IsaApiSurface, IsaApiVersion>>;
   baseUrl?: string;
+  /** Account-service origin for the license-mode session bootstrap. */
+  accountBaseUrl?: string;
   /** Viewer origin for case share links; forwarded to the client context. */
   caseViewerBaseUrl?: string;
   logger?: DebugLogger;
@@ -735,6 +825,14 @@ interface ZyInsNamespaceOptions {
   matchAlgorithm?: MatchAlgorithm;
   /** Optional ranker override (forwarded to `ReferenceFacade`). */
   autocompleteAlgorithm?: AutocompleteAlgorithm;
+  /**
+   * Optional explicit reference-bundle source. When set, the namespace
+   * loads the bundle from it and warms the reference index at factory time
+   * — `isa.zyins.conditions.match(...)` then resolves with no network. When
+   * omitted, the reference index stays warmed only by `datasets.get()` (the
+   * unchanged API default).
+   */
+  datasetSource?: DatasetSource;
 }
 
 /**
@@ -760,7 +858,7 @@ const AUTOCORRECTOR_KERNEL: AutocorrectorKernel = {
 
 /**
  * `isa.zyins.*` — methods for the ZyINS product. Each method has a
- * `.withRawResponse` sibling returning `{ data, response }`.
+ * `*Raw` sibling (e.g. `prequalifyRaw`) returning `{ data, response }`.
  *
  * Bearer and session-mode product calls are reserved for a follow-up phase
  * (transport wiring exists in @isa-sdk/core; the namespace stub raises a
@@ -769,6 +867,8 @@ const AUTOCORRECTOR_KERNEL: AutocorrectorKernel = {
 export class ZyInsNamespace {
   private readonly opts: ZyInsNamespaceOptions;
   private readonly clientOnce: () => ZyInsClient;
+  private readonly referenceBundleCache: ReferenceBundleCache;
+  private readonly datasetSource: DatasetSource | undefined;
   /** `isa.zyins.branding` — whitelabel lookup. */
   public readonly branding: BrandingFacade;
   /** `isa.zyins.datasets` — reference-data bundle for picker UIs. */
@@ -901,9 +1001,14 @@ export class ZyInsNamespace {
     // `isa.zyins.reference.medications.match()` works without any
     // consumer-side plumbing once `datasets.getV3()` has been awaited.
     const referenceBundleCache = new ReferenceBundleCache();
-    this.datasets = new DatasetsFacade(this.clientOnce, (bundle) =>
-      referenceBundleCache.setBundle(bundle),
-    );
+    this.referenceBundleCache = referenceBundleCache;
+    this.datasets = new DatasetsFacade(this.clientOnce, (bundle) => referenceBundleCache.setBundle(bundle));
+    // An explicit source warms the reference index from a local artifact;
+    // its absence leaves the API path (`datasets.get()`) as the only
+    // warmer — the unchanged default. The ApiDatasetSource below is only
+    // the fallback wired into a ResolvingDatasetSource by the caller; the
+    // namespace never auto-fetches it.
+    this.datasetSource = opts.datasetSource;
     this.reference = new ReferenceFacade(referenceBundleCache, {
       ...(opts.autocorrector !== undefined && { autocorrector: opts.autocorrector }),
       ...(opts.matchAlgorithm !== undefined && { matchAlgorithm: opts.matchAlgorithm }),
@@ -926,8 +1031,7 @@ export class ZyInsNamespace {
       }
       return cachedStorage;
     };
-    const caseViewerBaseUrlOnce = (): string =>
-      opts.caseViewerBaseUrl ?? DEFAULT_CASE_VIEWER_BASE_URL;
+    const caseViewerBaseUrlOnce = (): string => opts.caseViewerBaseUrl ?? DEFAULT_CASE_VIEWER_BASE_URL;
     this.cases = new CasesFacade(this.clientOnce, caseStorageOnce, caseViewerBaseUrlOnce);
     this.email = new EmailFacade(this.clientOnce);
     this.prequalifyV1 = buildPrequalifyV1Callable(this.clientOnce, opts.apiVersion.prequalify);
@@ -939,28 +1043,50 @@ export class ZyInsNamespace {
     // `quoteV3` instance (reference-identical) and any other pin gets a
     // callable that rejects with a `quote`-named config error — never the
     // internal `quoteV3` alias the consumer did not type.
-    this.quote =
-      opts.apiVersion.quote === 'v3'
-        ? this.quoteV3
-        : buildQuoteUnsupportedCallable(opts.apiVersion.quote);
+    this.quote = opts.apiVersion.quote === "v3"
+      ? this.quoteV3
+      : buildQuoteUnsupportedCallable(opts.apiVersion.quote);
     // The de-versioned `prequalify` is typed as the bundled-default v3
     // surface (`PrequalifyV3Callable`) so documented examples reach
     // `pricing[]` / `deathBenefit` without narrowing. A v1/v2 pin re-routes
     // the runtime call; that path's wire shape is reached through the
     // explicit `prequalifyV1` / `prequalifyV2` callables, so the cast is the
     // single point where the static v3 type and the runtime routing meet.
-    this.prequalify =
-      opts.apiVersion.prequalify === 'v1'
-        ? (this.prequalifyV1 as unknown as PrequalifyV3Callable)
-        : opts.apiVersion.prequalify === 'v3'
-          ? this.prequalifyV3
-          : (this.prequalifyV2 as unknown as PrequalifyV3Callable);
+    this.prequalify = opts.apiVersion.prequalify === "v1"
+      ? (this.prequalifyV1 as unknown as PrequalifyV3Callable)
+      : opts.apiVersion.prequalify === "v3"
+      ? this.prequalifyV3
+      : (this.prequalifyV2 as unknown as PrequalifyV3Callable);
     this.products = new ProductsFacade(this.datasets);
     this.license = buildLicenseFacade(opts);
     this.logos = new LogosFacade(
       opts.baseUrl ?? DEFAULT_ZYINS_BASE_URL,
       opts.logosFetch,
     );
+  }
+
+  /**
+   * Load the reference bundle from the configured {@link DatasetSource} and
+   * warm the reference index — `conditions.match()` / `medications.match()`
+   * then resolve with no network. A no-op when no source is configured (the
+   * unchanged API-fetch default). Called once by the factory before the
+   * `Isa` instance is handed back so the first synchronous `match()` sees a
+   * primed catalog.
+   */
+  async warmReferenceBundle(): Promise<void> {
+    if (this.datasetSource === undefined) return;
+    const bundle = await this.datasetSource.load();
+    this.referenceBundleCache.setBundle(bundle);
+  }
+
+  /**
+   * An {@link ApiDatasetSource} bound to this namespace's configured
+   * credential — the current `datasets.get()` HTTP path. Exposed so a
+   * caller can place it last in a {@link ResolvingDatasetSource} chain
+   * (local file → generate hook → this) without minting a second client.
+   */
+  apiDatasetSource(): ApiDatasetSource {
+    return new ApiDatasetSource(() => this.datasets.get());
   }
 
   /**
@@ -976,14 +1102,14 @@ export class ZyInsNamespace {
   ): Promise<RawResponseResult<PrequalifyV3Result>> => {
     const client = this.clientOnce();
     const pinned = this.opts.apiVersion.prequalify;
-    if (pinned === 'v1') {
+    if (pinned === "v1") {
       const result = await client.prequalify(request as unknown as PrequalifyRequest);
       return {
         data: result as unknown as PrequalifyV3Result,
         response: synthesizeRawResponse(result.requestId),
       };
     }
-    if (pinned === 'v2') {
+    if (pinned === "v2") {
       const result = await client.prequalifyV2(request as unknown as PrequalifyV2Request);
       return {
         data: result as unknown as PrequalifyV3Result,
@@ -998,7 +1124,7 @@ export class ZyInsNamespace {
   prequalifyV2Raw = async (
     request: PrequalifyV2Request,
   ): Promise<RawResponseResult<PrequalifyV2Result>> => {
-    assertPrequalifyApiVersion(this.opts.apiVersion.prequalify, 'v2', 'prequalifyV2Raw');
+    assertPrequalifyApiVersion(this.opts.apiVersion.prequalify, "v2", "prequalifyV2Raw");
     const client = this.clientOnce();
     const result = await client.prequalifyV2(request);
     return { data: result, response: synthesizeRawResponse(result.requestId) };
@@ -1008,7 +1134,7 @@ export class ZyInsNamespace {
   prequalifyV3Raw = async (
     request: PrequalifyV3Request,
   ): Promise<RawResponseResult<PrequalifyV3Result>> => {
-    assertPrequalifyApiVersion(this.opts.apiVersion.prequalify, 'v3', 'prequalifyV3Raw');
+    assertPrequalifyApiVersion(this.opts.apiVersion.prequalify, "v3", "prequalifyV3Raw");
     const client = this.clientOnce();
     const result = await client.prequalifyV3(request);
     return { data: result, response: synthesizeRawResponse(result.requestId) };
@@ -1018,7 +1144,7 @@ export class ZyInsNamespace {
   quoteV3Raw = async (
     request: QuoteV3Request,
   ): Promise<RawResponseResult<QuoteV3Result>> => {
-    assertQuoteApiVersion(this.opts.apiVersion.quote, 'v3', 'quoteV3Raw');
+    assertQuoteApiVersion(this.opts.apiVersion.quote, "v3", "quoteV3Raw");
     const client = this.clientOnce();
     const result = await client.quoteV3(request);
     return { data: result, response: synthesizeRawResponse(result.requestId) };
@@ -1049,7 +1175,7 @@ function buildPrequalifyV1Callable(
   apiVersion: IsaApiVersion,
 ): PrequalifyV1Callable {
   return async (request: PrequalifyRequest): Promise<Envelope<PrequalifyResult>> => {
-    assertPrequalifyApiVersion(apiVersion, 'v1', 'prequalifyV1');
+    assertPrequalifyApiVersion(apiVersion, "v1", "prequalifyV1");
     const client = clientOnce();
     const result = await client.prequalify(request);
     return wrapEnvelope(
@@ -1076,7 +1202,7 @@ function buildPrequalifyV2Callable(
   apiVersion: IsaApiVersion,
 ): PrequalifyV2Callable {
   return async (request: PrequalifyV2Request): Promise<Envelope<PrequalifyV2Result>> => {
-    assertPrequalifyApiVersion(apiVersion, 'v2', 'prequalifyV2');
+    assertPrequalifyApiVersion(apiVersion, "v2", "prequalifyV2");
     const client = clientOnce();
     const result = await client.prequalifyV2(request);
     return wrapEnvelope(
@@ -1114,7 +1240,7 @@ function buildPrequalifyV3Callable(
   apiVersion: IsaApiVersion,
 ): PrequalifyV3Callable {
   return async (request: PrequalifyV3Request): Promise<Envelope<PrequalifyV3Result>> => {
-    assertPrequalifyApiVersion(apiVersion, 'v3', 'prequalifyV3');
+    assertPrequalifyApiVersion(apiVersion, "v3", "prequalifyV3");
     const client = clientOnce();
     const result = await client.prequalifyV3(request);
     return wrapEnvelope(
@@ -1141,7 +1267,7 @@ function buildQuoteV3Callable(
   apiVersion: IsaApiVersion,
 ): QuoteV3Callable {
   return async (request: QuoteV3Request): Promise<Envelope<QuoteV3Result>> => {
-    assertQuoteApiVersion(apiVersion, 'v3', 'quoteV3');
+    assertQuoteApiVersion(apiVersion, "v3", "quoteV3");
     const client = clientOnce();
     const result = await client.quoteV3(request);
     return wrapEnvelope(
@@ -1162,7 +1288,7 @@ function buildQuoteV3Callable(
  */
 function buildQuoteUnsupportedCallable(apiVersion: IsaApiVersion): QuoteV3Callable {
   return (_request: QuoteV3Request): Promise<Envelope<QuoteV3Result>> =>
-    Promise.reject(quoteVersionError(apiVersion, 'v3', 'quote'));
+    Promise.reject(quoteVersionError(apiVersion, "v3", "quote"));
 }
 
 /**
@@ -1206,7 +1332,7 @@ export interface RawCallable<TArgs extends unknown[], TResult> {
 export function wrapEnvelope<T>(
   data: T,
   requestId: string,
-  idempotencyKey = '',
+  idempotencyKey = "",
   livemode = true,
   retryAttempts = 0,
 ): Envelope<T> {
@@ -1230,37 +1356,55 @@ export function wrapEnvelope<T>(
 function synthesizeRawResponse(requestId: string): RawResponse {
   return {
     status: 200,
-    headers: { 'x-isa-request-id': requestId },
-    url: '',
+    headers: { "x-isa-request-id": requestId },
+    url: "",
   };
 }
 
 /**
  * Build the underlying `ZyInsClient` for the namespace's auth identity.
  *
- * License mode signs each v3 request with License-HMAC (BPP agents);
- * bearer mode attaches `Authorization: Bearer <token>` (API-licensing
- * customers reaching `/v3` server-to-server). Session-mode product calls
- * are not yet wired and throw `IsaConfigError` describing what's missing.
+ * License mode signs each v3 request with a transparently-bootstrapped
+ * session (see {@link sessionSigner}), never the raw license key; bearer
+ * mode attaches `Authorization: Bearer <token>` (API-licensing customers
+ * reaching `/v3` server-to-server). Session-mode product calls are not
+ * yet wired and throw `IsaConfigError` describing what's missing.
  */
 function buildZyInsClient(opts: ZyInsNamespaceOptions): ZyInsClient {
   switch (opts.identity.mode) {
-    case 'license':
+    case "license":
       return buildLicenseClient(opts);
-    case 'bearer':
+    case "bearer":
       return buildBearerClient(opts, opts.identity.token);
-    case 'session':
+    case "session":
       throw new IsaConfigError(
         `isa.zyins.* product methods do not yet support Isa.withSession() — session transport wiring lands in a follow-up. Use Isa.withBearer() or Isa.withKeycode().`,
       );
   }
 }
 
-/** Build the License-HMAC `ZyInsClient` (keycode / BPP-agent path). */
+/**
+ * Build the `ZyInsClient` for the keycode / BPP-agent path.
+ *
+ * The credential a caller supplies (`Isa.withKeycode`) is the license
+ * identity; the credential that actually travels on the wire is a
+ * short-lived session, transparently bootstrapped and renewed by
+ * {@link sessionSigner}. Callers never see this — they still call
+ * `isa.zyins.*` exactly as before. Only v3 product surfaces
+ * (prequalify-v3, quote-v3, datasets-v3) read `ctx.signer`; older
+ * surfaces (branding, preferences, cases, v1/v2 endpoints) still build
+ * their own `Authorization: License base64(...)` header directly and are
+ * unaffected by this change — see the SDK's tracked follow-up.
+ */
 function buildLicenseClient(opts: ZyInsNamespaceOptions): ZyInsClient {
   if (!opts.credentialState) {
     throw new IsaConfigError(
-      'isa.zyins.* product methods require a credential state (constructed by Isa.withKeycode)',
+      "isa.zyins.* product methods require a credential state (constructed by Isa.withKeycode)",
+    );
+  }
+  if (opts.identity.mode !== "license") {
+    throw new IsaConfigError(
+      "isa.zyins.* product methods require Isa.withKeycode() — got a non-license identity",
     );
   }
   const clientOpts: ZyInsClientOptions = {
@@ -1275,6 +1419,12 @@ function buildLicenseClient(opts: ZyInsNamespaceOptions): ZyInsClient {
     opts.credentialState,
   );
   clientOpts.transport = baseTransport;
+  clientOpts.signer = sessionSigner({
+    keycode: opts.identity.keycode,
+    auth: opts.credentialState.auth,
+    transport: baseTransport,
+    ...(opts.accountBaseUrl !== undefined && { accountBaseUrl: opts.accountBaseUrl }),
+  });
   if (opts.logosFetch) {
     clientOpts.logosFetch = opts.logosFetch;
   }
@@ -1312,16 +1462,16 @@ function buildBearerClient(opts: ZyInsNamespaceOptions, token: string): ZyInsCli
  * since no License-HMAC request is ever signed in bearer mode.
  */
 const BEARER_PLACEHOLDER_AUTH: AuthContext = {
-  licenseKey: '',
-  orderId: '',
-  email: '',
-  deviceId: '',
+  licenseKey: "",
+  orderId: "",
+  email: "",
+  deviceId: "",
 };
 
 function guardTransportWithLicenseKey(inner: Transport, state: IsaCredentialState): Transport {
   return async (request) => {
     if (!state.auth.licenseKey.trim()) {
-      throw new IsaNotActivatedError('requires_activation');
+      throw new IsaNotActivatedError("requires_activation");
     }
     return inner(request);
   };
@@ -1339,7 +1489,7 @@ function buildLicenseTransport(opts: ZyInsNamespaceOptions): Transport {
  * facade; other modes get a stub that raises `IsaConfigError` on first use.
  */
 function buildLicenseFacade(opts: ZyInsNamespaceOptions): LicenseFacade {
-  if (opts.identity.mode !== 'license' || !opts.credentialState) {
+  if (opts.identity.mode !== "license" || !opts.credentialState) {
     return licenseNotConfigured();
   }
   return new LicenseFacade({
@@ -1353,7 +1503,7 @@ function buildLicenseFacade(opts: ZyInsNamespaceOptions): LicenseFacade {
 function licenseNotConfigured(): LicenseFacade {
   const fail = (): never => {
     throw new IsaConfigError(
-      'isa.zyins.license requires Isa.withKeycode({ keycode, email, ... })',
+      "isa.zyins.license requires Isa.withKeycode({ keycode, email, ... })",
     );
   };
   return new Proxy(Object.create(LicenseFacade.prototype) as LicenseFacade, {
@@ -1367,14 +1517,14 @@ function licenseNotConfigured(): LicenseFacade {
  * use the license HMAC auth path yet.
  */
 function buildCredentialStateIfLicense(opts: IsaOptions): IsaCredentialState | undefined {
-  if (opts.identity.mode !== 'license') return undefined;
+  if (opts.identity.mode !== "license") return undefined;
   // `Isa.withKeycode` is the only path that constructs a license-mode Isa
   // (constructor is private). That factory always populates `deviceId` +
   // `credentialStore` via `loadOrMintDeviceId`, so both fields are present
   // by contract here.
   if (!opts.deviceId || !opts.credentialStore) {
     throw new IsaConfigError(
-      'internal: license-mode Isa constructed without deviceId/credentialStore — use Isa.withKeycode()',
+      "internal: license-mode Isa constructed without deviceId/credentialStore — use Isa.withKeycode()",
     );
   }
   return new IsaCredentialState(
@@ -1382,7 +1532,7 @@ function buildCredentialStateIfLicense(opts: IsaOptions): IsaCredentialState | u
       keycode: licenseKeyFor(opts.identity),
       email: opts.identity.email,
       deviceId: opts.deviceId,
-      licenseKey: opts.licenseKey ?? '',
+      licenseKey: opts.licenseKey ?? "",
       orderId: opts.orderId ?? licenseKeyFor(opts.identity),
     },
     opts.credentialStore,
@@ -1412,16 +1562,16 @@ function wrapTransportWithLogger(inner: Transport, logger: DebugLogger): Transpo
       status: response.status,
       headers: response.headers,
       body: response.body,
-      bodyKind: 'unknown',
+      bodyKind: "unknown",
     });
     return response;
   };
 }
 
-function detectBodyKind(body: string): 'json' | 'form' | 'unknown' {
-  if (body.startsWith('{') || body.startsWith('[')) return 'json';
-  if (body.includes('=')) return 'form';
-  return 'unknown';
+function detectBodyKind(body: string): "json" | "form" | "unknown" {
+  if (body.startsWith("{") || body.startsWith("[")) return "json";
+  if (body.includes("=")) return "form";
+  return "unknown";
 }
 
 /**
@@ -1443,12 +1593,21 @@ function licenseKeyFor(identity: LicenseIdentity): string {
  * are scoped per envelope, not per `Isa`.
  */
 export class RapidSignNamespace {
-  /** Webhook verifier — alias of `isa.webhooks` for spec-alignment. */
-  readonly webhooks: WebhooksService = new WebhooksService();
+  /**
+   * Webhook verifier. `Isa` injects its own `isa.webhooks` instance here
+   * (see the constructor call site) so the two stay the same object for
+   * spec-alignment; constructed standalone (`new RapidSignNamespace()`),
+   * this defaults to a fresh, independent `WebhooksService`.
+   */
+  readonly webhooks: WebhooksService;
+
+  constructor(webhooks: WebhooksService = new WebhooksService()) {
+    this.webhooks = webhooks;
+  }
 }
 
 /** Default origin for the platform proxy `/v1/call` endpoint. */
-export const DEFAULT_PROXY_ORIGIN = 'https://proxy.isaapi.com';
+export const DEFAULT_PROXY_ORIGIN = "https://proxy.isaapi.com";
 
 interface ProxyNamespaceOptions {
   identity: IsaIdentity;
@@ -1527,11 +1686,11 @@ async function dispatchAuthSupplier(
   factoryOptions: IsaFactoryOptions,
 ): Promise<Isa> {
   switch (auth.kind) {
-    case 'bearer': {
+    case "bearer": {
       const args = auth.token !== undefined ? { token: auth.token } : undefined;
       return Isa.withBearer(args, processEnv, factoryOptions);
     }
-    case 'license': {
+    case "license": {
       // `deviceId` is SDK-internal — derived from the credential store, never
       // passed through. See docs/sdk-syntax-proposal.md §2.8.
       const args: Parameters<typeof Isa.withKeycode>[0] = {};
@@ -1543,9 +1702,9 @@ async function dispatchAuthSupplier(
       if (auth.onLicenseRefreshed !== undefined) args.onLicenseRefreshed = auth.onLicenseRefreshed;
       return Isa.withKeycode(args, processEnv, factoryOptions);
     }
-    case 'form':
+    case "form":
       return Isa.forForm({ formToken: auth.formToken }, factoryOptions);
-    case 'session':
+    case "session":
       return Isa.withSession(
         { sessionId: auth.sessionId, sessionSecret: auth.sessionSecret },
         processEnv,
@@ -1559,8 +1718,8 @@ async function dispatchAuthSupplier(
  * The header is additive; consumer-supplied transports cannot accidentally
  * override it because the wrapper writes after the inner build.
  */
-const API_VERSION_HEADER = 'Api-Version';
-const IDEMPOTENCY_KEY_HEADER = 'Idempotency-Key';
+const API_VERSION_HEADER = "Api-Version";
+const IDEMPOTENCY_KEY_HEADER = "Idempotency-Key";
 
 function wrapTransportPinApiVersion(
   inner: Transport,
@@ -1622,13 +1781,13 @@ function composeAbortSignals(
     abort();
     return { signal: controller.signal, cleanup: () => undefined };
   }
-  callerSignal.addEventListener('abort', abort, { once: true });
-  timeoutSignal.addEventListener('abort', abort, { once: true });
+  callerSignal.addEventListener("abort", abort, { once: true });
+  timeoutSignal.addEventListener("abort", abort, { once: true });
   return {
     signal: controller.signal,
     cleanup: () => {
-      callerSignal.removeEventListener('abort', abort);
-      timeoutSignal.removeEventListener('abort', abort);
+      callerSignal.removeEventListener("abort", abort);
+      timeoutSignal.removeEventListener("abort", abort);
     },
   };
 }
@@ -1678,12 +1837,12 @@ function isIdempotencyConflictBody(body: string): boolean {
   } catch {
     return false;
   }
-  if (typeof parsed !== 'object' || parsed === null) return false;
+  if (typeof parsed !== "object" || parsed === null) return false;
   const root = parsed as { code?: unknown; error?: unknown };
-  if (root.code === 'idempotency_conflict') return true;
-  if (typeof root.error === 'object' && root.error !== null) {
+  if (root.code === "idempotency_conflict") return true;
+  if (typeof root.error === "object" && root.error !== null) {
     const errCode = (root.error as { code?: unknown }).code;
-    if (errCode === 'idempotency_conflict') return true;
+    if (errCode === "idempotency_conflict") return true;
   }
   return false;
 }
@@ -1705,20 +1864,20 @@ function withoutHeader(headers: Record<string, string>, headerName: string): Rec
 
 function mintFreshIdempotencyKey(): string {
   const g = globalThis as { crypto?: { randomUUID?: () => string } };
-  if (g.crypto && typeof g.crypto.randomUUID === 'function') {
+  if (g.crypto && typeof g.crypto.randomUUID === "function") {
     return g.crypto.randomUUID();
   }
   // Last-resort fallback. Uniqueness is sufficient because the server
   // only requires that the new key differ from the colliding one.
-  const hex = '0123456789abcdef';
-  let out = '';
+  const hex = "0123456789abcdef";
+  let out = "";
   for (let i = 0; i < 36; i++) {
     if (i === 8 || i === 13 || i === 18 || i === 23) {
-      out += '-';
+      out += "-";
       continue;
     }
     if (i === 14) {
-      out += '4';
+      out += "4";
       continue;
     }
     const r = Math.floor(Math.random() * 16);
@@ -1730,4 +1889,3 @@ function mintFreshIdempotencyKey(): string {
   }
   return out;
 }
-

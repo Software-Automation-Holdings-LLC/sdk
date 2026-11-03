@@ -13,11 +13,45 @@
  * resolves a raw response into the right subclass.
  */
 
+import { API_ERROR_BRAND, brand, hasBrand, IDEMPOTENCY_CONFLICT_BRAND, NOT_ACTIVATED_BRAND } from "./errorBrand.js";
+
+/**
+ * Prototype-independent guard for {@link IsaApiError} and its subclasses.
+ * Prefer this over `instanceof IsaApiError`, which silently returns `false`
+ * when the error came from a different copy of the SDK module (vendored
+ * tarball, test mock, duplicated dependency). Surfaced publicly as
+ * {@link Isa.isApiError}, which carries a worked example.
+ */
+export function isApiError(value: unknown): value is IsaApiError {
+  return hasBrand(value, API_ERROR_BRAND);
+}
+
+/**
+ * Prototype-independent guard for {@link IsaNotActivatedError}; narrows so
+ * callers can read `code`. Surfaced publicly as {@link Isa.isNotActivatedError}.
+ */
+export function isNotActivatedError(
+  value: unknown,
+): value is IsaNotActivatedError {
+  return hasBrand(value, NOT_ACTIVATED_BRAND);
+}
+
+/**
+ * Prototype-independent guard for {@link IsaIdempotencyConflictError};
+ * narrows so callers can read `key` / `firstSeenAt`. Surfaced publicly as
+ * {@link Isa.isIdempotencyConflictError}.
+ */
+export function isIdempotencyConflictError(
+  value: unknown,
+): value is IsaIdempotencyConflictError {
+  return hasBrand(value, IDEMPOTENCY_CONFLICT_BRAND);
+}
+
 /** Base error for every SDK failure mode. */
 export class IsaError extends Error {
   constructor(message: string) {
     super(message);
-    this.name = 'IsaError';
+    this.name = "IsaError";
   }
 }
 
@@ -25,7 +59,7 @@ export class IsaError extends Error {
 export class IsaConfigError extends IsaError {
   constructor(message: string) {
     super(message);
-    this.name = 'IsaConfigError';
+    this.name = "IsaConfigError";
   }
 }
 
@@ -33,7 +67,7 @@ export class IsaConfigError extends IsaError {
 export class IsaTimeoutError extends IsaError {
   constructor(message: string) {
     super(message);
-    this.name = 'IsaTimeoutError';
+    this.name = "IsaTimeoutError";
   }
 }
 
@@ -50,7 +84,7 @@ export class IsaCaseExpiredError extends IsaError {
 
   constructor(caseId: string) {
     super(`case ${caseId} is unavailable (expired or never existed)`);
-    this.name = 'IsaCaseExpiredError';
+    this.name = "IsaCaseExpiredError";
     this.caseId = caseId;
   }
 }
@@ -64,11 +98,11 @@ export class IsaCaseExpiredError extends IsaError {
  * errors land (tracked as task #197).
  */
 export type IsaNotActivatedCode =
-  | 'requires_activation'
-  | 'max_activations'
-  | 'inactive'
-  | 'active_elsewhere'
-  | 'locked';
+  | "requires_activation"
+  | "max_activations"
+  | "inactive"
+  | "active_elsewhere"
+  | "locked";
 
 /**
  * The `isa.zyins.*` product surface was invoked on a license-mode `Isa`
@@ -79,12 +113,13 @@ export type IsaNotActivatedCode =
 export class IsaNotActivatedError extends IsaError {
   public readonly code: IsaNotActivatedCode;
 
-  constructor(code: IsaNotActivatedCode = 'requires_activation', message?: string) {
+  constructor(code: IsaNotActivatedCode = "requires_activation", message?: string) {
     super(
-      message ??
-        'isa.zyins.* product methods require an active license. Call isa.zyins.license.activate() first.',
+      message
+        ?? "isa.zyins.* product methods require an active license. Call isa.zyins.license.activate() first.",
     );
-    this.name = 'IsaNotActivatedError';
+    brand(this, NOT_ACTIVATED_BRAND);
+    this.name = "IsaNotActivatedError";
     this.code = code;
   }
 }
@@ -113,7 +148,8 @@ export class IsaApiError extends IsaError {
     raw?: unknown;
   }) {
     super(opts.message);
-    this.name = 'IsaApiError';
+    brand(this, API_ERROR_BRAND);
+    this.name = "IsaApiError";
     this.code = opts.code;
     this.status = opts.status;
     this.requestId = opts.requestId;
@@ -138,12 +174,12 @@ export class IsaUnauthorizedError extends IsaApiError {
   }) {
     super({
       message: opts.message,
-      code: opts.code ?? 'unauthorized',
+      code: opts.code ?? "unauthorized",
       status: 401,
       ...(opts.requestId !== undefined && { requestId: opts.requestId }),
       ...(opts.raw !== undefined && { raw: opts.raw }),
     });
-    this.name = 'IsaUnauthorizedError';
+    this.name = "IsaUnauthorizedError";
   }
 }
 
@@ -161,13 +197,13 @@ export class IsaValidationError extends IsaApiError {
   }) {
     super({
       message: opts.message,
-      code: opts.code ?? 'validation_error',
+      code: opts.code ?? "validation_error",
       status: 400,
       ...(opts.param !== undefined && { param: opts.param }),
       ...(opts.requestId !== undefined && { requestId: opts.requestId }),
       ...(opts.raw !== undefined && { raw: opts.raw }),
     });
-    this.name = 'IsaValidationError';
+    this.name = "IsaValidationError";
   }
 }
 
@@ -193,13 +229,14 @@ export class IsaIdempotencyConflictError extends IsaApiError {
   }) {
     super({
       message: opts.message,
-      code: 'idempotency_conflict',
+      code: "idempotency_conflict",
       status: 409,
       ...(opts.requestId !== undefined && { requestId: opts.requestId }),
       ...(opts.docUrl !== undefined && { docUrl: opts.docUrl }),
       ...(opts.raw !== undefined && { raw: opts.raw }),
     });
-    this.name = 'IsaIdempotencyConflictError';
+    brand(this, IDEMPOTENCY_CONFLICT_BRAND);
+    this.name = "IsaIdempotencyConflictError";
     this.key = opts.key;
     this.firstSeenAt = opts.firstSeenAt;
   }
@@ -211,13 +248,13 @@ export class IsaIdempotencyConflictError extends IsaApiError {
  * SDK releases, so consumers switch on `error.code` rather than the message.
  */
 export type IsaLicenseErrorCode =
-  | 'max_activations'
-  | 'inactive'
-  | 'active_elsewhere'
-  | 'locked'
-  | 'invalid_credentials'
-  | 'no_email'
-  | 'unknown';
+  | "max_activations"
+  | "inactive"
+  | "active_elsewhere"
+  | "locked"
+  | "invalid_credentials"
+  | "no_email"
+  | "unknown";
 
 /**
  * License activation / deactivation failure (the licensing server's `ERR_*`
@@ -227,7 +264,11 @@ export type IsaLicenseErrorCode =
 export class IsaLicenseError extends IsaApiError {
   public override readonly code: IsaLicenseErrorCode;
 
-  constructor(code: IsaLicenseErrorCode, message: string, opts: { status?: number; requestId?: string; raw?: unknown } = {}) {
+  constructor(
+    code: IsaLicenseErrorCode,
+    message: string,
+    opts: { status?: number; requestId?: string; raw?: unknown } = {},
+  ) {
     super({
       message,
       code,
@@ -235,7 +276,7 @@ export class IsaLicenseError extends IsaApiError {
       ...(opts.requestId !== undefined && { requestId: opts.requestId }),
       ...(opts.raw !== undefined && { raw: opts.raw }),
     });
-    this.name = 'IsaLicenseError';
+    this.name = "IsaLicenseError";
     this.code = code;
   }
 }
@@ -252,12 +293,12 @@ export class IsaRateLimitError extends IsaApiError {
   constructor(opts: { message: string; code?: string; retryAfterSeconds?: number; requestId?: string; raw?: unknown }) {
     super({
       message: opts.message,
-      code: opts.code ?? 'rate_limit_exceeded',
+      code: opts.code ?? "rate_limit_exceeded",
       status: 429,
       ...(opts.requestId !== undefined && { requestId: opts.requestId }),
       ...(opts.raw !== undefined && { raw: opts.raw }),
     });
-    this.name = 'IsaRateLimitError';
+    this.name = "IsaRateLimitError";
     this.retryAfterSeconds = opts.retryAfterSeconds;
   }
 }

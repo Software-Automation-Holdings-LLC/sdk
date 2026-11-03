@@ -13,8 +13,8 @@
  * contract carries `ciphertext` and `tag` separately (mirroring zyins #363),
  * so this module splits on encrypt and rejoins on decrypt.
  */
-import { resolveSubtle, base64ToBytes, bytesToBase64, bytesToBase64Url, systemRandomBytes, } from '../core/index.js';
-import { IsaError } from '../zyins/apiError.js';
+import { base64ToBytes, bytesToBase64, bytesToBase64Url, resolveSubtle, systemRandomBytes, } from "../core/index.js";
+import { IsaError } from "../zyins/apiError.js";
 /** AES-128 data-key length in bytes used for fresh case keys. Decrypt is
  * length-agnostic, so 256-bit (32-byte) keys from earlier envelopes still
  * open — this constant governs generation only. */
@@ -26,9 +26,9 @@ const TAG_BITS = 128;
 /** AES-GCM authentication-tag length in bytes. */
 const TAG_BYTES = TAG_BITS / 8;
 /** WebCrypto algorithm name for the data-key import + AES-GCM operations. */
-const ALGORITHM = 'AES-GCM';
+const ALGORITHM = "AES-GCM";
 /** Context label passed to runtime resolvers for error attribution. */
-const CASE_CRYPTO_CONTEXT = 'CaseCrypto';
+const CASE_CRYPTO_CONTEXT = "CaseCrypto";
 /**
  * Raised when an envelope fails AES-GCM authentication — a tampered, corrupt,
  * or `product`-mismatched payload, or a wrong fragment key. The recipient
@@ -37,7 +37,7 @@ const CASE_CRYPTO_CONTEXT = 'CaseCrypto';
 export class IsaCaseDecryptError extends IsaError {
     constructor(message) {
         super(message);
-        this.name = 'IsaCaseDecryptError';
+        this.name = "IsaCaseDecryptError";
     }
 }
 /**
@@ -57,10 +57,10 @@ export async function encryptCase(product, payload, options = {}) {
     const random = options.randomBytes ?? systemRandomBytes;
     const rawKey = random(KEY_BYTES);
     const iv = random(IV_BYTES);
-    const key = await importKey(subtle, rawKey, ['encrypt']);
+    const key = await importKey(subtle, rawKey, ["encrypt"]);
     const serialized = JSON.stringify(payload);
     if (serialized === undefined) {
-        throw new Error('CaseCrypto: payload must be JSON-serializable');
+        throw new Error("CaseCrypto: payload must be JSON-serializable");
     }
     const plaintext = new TextEncoder().encode(serialized);
     const sealed = new Uint8Array(await subtle.encrypt(gcmParams(iv, product), key, toArrayBuffer(plaintext)));
@@ -88,14 +88,14 @@ export async function decryptCase(product, envelope, keyFragment, options = {}) 
     const subtle = resolveSubtle(options.subtle, CASE_CRYPTO_CONTEXT);
     const rawKey = base64ToBytes(keyFragment);
     const iv = base64ToBytes(envelope.iv);
-    const key = await importKey(subtle, rawKey, ['decrypt']);
+    const key = await importKey(subtle, rawKey, ["decrypt"]);
     const sealed = concat(base64ToBytes(envelope.ciphertext), base64ToBytes(envelope.tag));
     const plaintext = await openSealed(subtle, key, iv, product, sealed);
     return JSON.parse(new TextDecoder().decode(plaintext));
 }
 /** Imports raw key bytes as a non-extractable AES-GCM key. */
 function importKey(subtle, rawKey, usages) {
-    return subtle.importKey('raw', toArrayBuffer(rawKey), { name: ALGORITHM }, false, [...usages]);
+    return subtle.importKey("raw", toArrayBuffer(rawKey), { name: ALGORITHM }, false, [...usages]);
 }
 /** Builds the AES-GCM parameter bag with `product` bound as AEAD data. */
 function gcmParams(iv, product) {

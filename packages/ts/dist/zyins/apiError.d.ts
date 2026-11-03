@@ -12,6 +12,25 @@
  * The error funnel in `./errors` (`fromHttpResponse`/`fromProblemDetails`)
  * resolves a raw response into the right subclass.
  */
+/**
+ * Prototype-independent guard for {@link IsaApiError} and its subclasses.
+ * Prefer this over `instanceof IsaApiError`, which silently returns `false`
+ * when the error came from a different copy of the SDK module (vendored
+ * tarball, test mock, duplicated dependency). Surfaced publicly as
+ * {@link Isa.isApiError}, which carries a worked example.
+ */
+export declare function isApiError(value: unknown): value is IsaApiError;
+/**
+ * Prototype-independent guard for {@link IsaNotActivatedError}; narrows so
+ * callers can read `code`. Surfaced publicly as {@link Isa.isNotActivatedError}.
+ */
+export declare function isNotActivatedError(value: unknown): value is IsaNotActivatedError;
+/**
+ * Prototype-independent guard for {@link IsaIdempotencyConflictError};
+ * narrows so callers can read `key` / `firstSeenAt`. Surfaced publicly as
+ * {@link Isa.isIdempotencyConflictError}.
+ */
+export declare function isIdempotencyConflictError(value: unknown): value is IsaIdempotencyConflictError;
 /** Base error for every SDK failure mode. */
 export declare class IsaError extends Error {
     constructor(message: string);
@@ -44,7 +63,7 @@ export declare class IsaCaseExpiredError extends IsaError {
  * from the server's `licenses.activate` response once typed activation
  * errors land (tracked as task #197).
  */
-export type IsaNotActivatedCode = 'requires_activation' | 'max_activations' | 'inactive' | 'active_elsewhere' | 'locked';
+export type IsaNotActivatedCode = "requires_activation" | "max_activations" | "inactive" | "active_elsewhere" | "locked";
 /**
  * The `isa.zyins.*` product surface was invoked on a license-mode `Isa`
  * that has no usable licenseKey. Consumers dispatch on `error.code` rather
@@ -129,7 +148,7 @@ export declare class IsaIdempotencyConflictError extends IsaApiError {
  * the licensing server's `ERR_*` set; the string values never change across
  * SDK releases, so consumers switch on `error.code` rather than the message.
  */
-export type IsaLicenseErrorCode = 'max_activations' | 'inactive' | 'active_elsewhere' | 'locked' | 'invalid_credentials' | 'no_email' | 'unknown';
+export type IsaLicenseErrorCode = "max_activations" | "inactive" | "active_elsewhere" | "locked" | "invalid_credentials" | "no_email" | "unknown";
 /**
  * License activation / deactivation failure (the licensing server's `ERR_*`
  * responses, absorbed into the typed funnel). `code` is the contract;

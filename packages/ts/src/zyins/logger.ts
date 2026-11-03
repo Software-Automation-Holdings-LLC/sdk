@@ -47,18 +47,18 @@ export const stderrSink: LogSink = {
 /** Header names whose values are always redacted. */
 const REDACT_HEADER_NAMES = new Set(
   [
-    'authorization',
-    'x-device-signature',
-    'x-session-signature',
-    'cookie',
-    'set-cookie',
+    "authorization",
+    "x-device-signature",
+    "x-session-signature",
+    "cookie",
+    "set-cookie",
   ].map((h) => h.toLowerCase()),
 );
 
 /** Body fields whose values are always redacted. */
-const REDACT_BODY_FIELDS = new Set(['email', 'dob', 'ssn', 'phone']);
+const REDACT_BODY_FIELDS = new Set(["email", "dob", "ssn", "phone"]);
 
-const REDACTED = '[redacted]';
+const REDACTED = "[redacted]";
 
 /** Redact sensitive headers in-place safe (returns a new object). */
 export function redactHeaders(headers: Record<string, string>): Record<string, string> {
@@ -77,7 +77,7 @@ export function redactBody(value: unknown): unknown {
   if (Array.isArray(value)) {
     return value.map((entry) => redactBody(entry));
   }
-  if (value !== null && typeof value === 'object') {
+  if (value !== null && typeof value === "object") {
     const out: Record<string, unknown> = {};
     for (const [key, child] of Object.entries(value as Record<string, unknown>)) {
       out[key] = REDACT_BODY_FIELDS.has(key.toLowerCase()) ? REDACTED : redactBody(child);
@@ -93,11 +93,11 @@ export function redactBody(value: unknown): unknown {
  * are not corrupted; the caller may pass `kind: 'form'` to opt into
  * form-field redaction.
  */
-export function redactBodyString(body: string, kind: 'json' | 'form' | 'unknown' = 'unknown'): string {
-  if (kind === 'form' || (kind === 'unknown' && body.includes('=') && !body.startsWith('{'))) {
+export function redactBodyString(body: string, kind: "json" | "form" | "unknown" = "unknown"): string {
+  if (kind === "form" || (kind === "unknown" && body.includes("=") && !body.startsWith("{"))) {
     return redactFormBody(body);
   }
-  if (!body.startsWith('{') && !body.startsWith('[')) return body;
+  if (!body.startsWith("{") && !body.startsWith("[")) return body;
   try {
     const parsed: unknown = JSON.parse(body);
     return JSON.stringify(redactBody(parsed));
@@ -108,9 +108,9 @@ export function redactBodyString(body: string, kind: 'json' | 'form' | 'unknown'
 
 function redactFormBody(body: string): string {
   return body
-    .split('&')
+    .split("&")
     .map((pair) => {
-      const eq = pair.indexOf('=');
+      const eq = pair.indexOf("=");
       if (eq < 0) return pair;
       const key = pair.slice(0, eq);
       const decoded = (() => {
@@ -123,7 +123,7 @@ function redactFormBody(body: string): string {
       if (REDACT_BODY_FIELDS.has(decoded)) return `${key}=${REDACTED}`;
       return pair;
     })
-    .join('&');
+    .join("&");
 }
 
 /** Debug logger emitting redacted request/response records to a sink. */
@@ -133,7 +133,7 @@ export interface DebugLogger {
     url: string;
     headers: Record<string, string>;
     body: string;
-    bodyKind?: 'json' | 'form' | 'unknown';
+    bodyKind?: "json" | "form" | "unknown";
     retryAttempt?: number;
   }): void;
   response(record: {
@@ -142,7 +142,7 @@ export interface DebugLogger {
     status: number;
     headers: Record<string, string>;
     body: string;
-    bodyKind?: 'json' | 'form' | 'unknown';
+    bodyKind?: "json" | "form" | "unknown";
     retryAttempt?: number;
   }): void;
 }
@@ -152,8 +152,8 @@ export function debugLoggerFromEnv(
   env: EnvReader = processEnv,
   sink: LogSink = stderrSink,
 ): DebugLogger | undefined {
-  const level = env.get('ISA_LOG');
-  if (level !== 'debug') return undefined;
+  const level = env.get("ISA_LOG");
+  if (level !== "debug") return undefined;
   return makeLogger(sink);
 }
 
@@ -163,11 +163,11 @@ export function makeLogger(sink: LogSink): DebugLogger {
     request({ method, url, headers, body, bodyKind, retryAttempt }) {
       const line = JSON.stringify({
         ts: new Date().toISOString(),
-        kind: 'request',
+        kind: "request",
         method,
         url,
         headers: redactHeaders(headers),
-        body: redactBodyString(body, bodyKind ?? 'unknown'),
+        body: redactBodyString(body, bodyKind ?? "unknown"),
         ...(retryAttempt !== undefined && { retryAttempt }),
       });
       sink.write(`isa-sdk ${line}\n`);
@@ -175,12 +175,12 @@ export function makeLogger(sink: LogSink): DebugLogger {
     response({ method, url, status, headers, body, bodyKind, retryAttempt }) {
       const line = JSON.stringify({
         ts: new Date().toISOString(),
-        kind: 'response',
+        kind: "response",
         method,
         url,
         status,
         headers: redactHeaders(headers),
-        body: redactBodyString(body, bodyKind ?? 'unknown'),
+        body: redactBodyString(body, bodyKind ?? "unknown"),
         ...(retryAttempt !== undefined && { retryAttempt }),
       });
       sink.write(`isa-sdk ${line}\n`);

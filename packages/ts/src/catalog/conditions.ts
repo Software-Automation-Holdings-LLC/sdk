@@ -6,7 +6,6 @@
  *
  * Source data:
  *   - insurance/v2_conditions.json
- *   - insurance/v2_medications.json
  */
 
 /**
@@ -26,13 +25,15 @@ const CATEGORIES: Readonly<Record<string, ConditionCategoryMetadata>> = Object.f
 
 const ALL_CATEGORIES: readonly string[] = Object.freeze([]);
 
+/** Catalog API for condition categories. */
 export const ConditionCategories = Object.freeze({
+  /** Return every condition category slug in stable catalog order. */
   values(): readonly string[] {
     return ALL_CATEGORIES;
   },
+  /** Return metadata for a condition category, or throw for unknown input. */
   metadata(c: string): ConditionCategoryMetadata {
-    const m = CATEGORIES[c];
-    if (!m) throw new Error(`ConditionCategories.metadata: unknown category '${c}'`);
-    return m;
+    if (!Object.hasOwn(CATEGORIES, c)) throw new Error(`ConditionCategories.metadata: unknown category '${c}'`);
+    return CATEGORIES[c]!;
   },
 });

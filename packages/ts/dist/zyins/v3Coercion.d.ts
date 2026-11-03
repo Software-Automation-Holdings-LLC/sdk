@@ -1,7 +1,7 @@
 /** Shared v3 response coercion helpers for prequalify and quote parsing. */
-import { isRecord } from './response.js';
-import type { OfferCarrier, OfferProduct } from './prequalify-v2-types.js';
-import type { V3Amount, V3Money } from './prequalify-v3-types.js';
+import type { OfferCarrier, OfferProduct } from "./prequalify-v2-types.js";
+import type { V3Amount, V3Money } from "./prequalify-v3-types.js";
+import { isRecord } from "./response.js";
 export { isRecord };
 export declare const toStr: (v: unknown) => string;
 export declare const toNum: (v: unknown) => number;
