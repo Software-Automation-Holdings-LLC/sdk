@@ -183,17 +183,6 @@ class ErrorDocUrls
     public function all() : array
     public function for(ErrorCode $code) : string
 
-=== Catalog/MedicationUseMetadata.php ===
-namespace Isa\Sdk\Catalog;
-class MedicationUseMetadata
-    public function __construct(public string $displayName, public array $medications,)
-
-=== Catalog/MedicationUses.php ===
-namespace Isa\Sdk\Catalog;
-class MedicationUses
-    public function values() : array
-    public function metadata(string $use) : MedicationUseMetadata
-
 === Catalog/Product.php ===
 namespace Isa\Sdk\Catalog;
 class Product
@@ -486,7 +475,7 @@ interface TokenSource
 namespace Isa\Sdk;
 class Isa
     public function onLicenseRefreshed(\Closure $listener) : \Closure
-    public function withBearer(?string $token = null, ?LoggerInterface $logger = null, ?AutocorrectorInterface $autocorrector = null, ?MatchAlgorithmInterface $matchAlgorithm = null, ?AutocompleteAlgorithmInterface $autocompleteAlgorithm = null,) : self
+    public function withBearer(?string $token = null, ?LoggerInterface $logger = null, ?AutocorrectorInterface $autocorrector = null, ?MatchAlgorithmInterface $matchAlgorithm = null, ?AutocompleteAlgorithmInterface $autocompleteAlgorithm = null, DatasetSource|string|null $datasets = null,) : self
     public function autocorrector() : AutocorrectorFactory
     public function withLicense(?string $keycode = null, ?string $email = null, ?LoggerInterface $logger = null, ?CredentialStore $store = null, ?string $deviceId = null, ?AutocorrectorInterface $autocorrector = null, ?MatchAlgorithmInterface $matchAlgorithm = null, ?AutocompleteAlgorithmInterface $autocompleteAlgorithm = null,) : self
     public function withKeycode(?string $keycode = null, ?string $email = null, ?LoggerInterface $logger = null, ?CredentialStore $store = null, ?string $deviceId = null, ?AutocorrectorInterface $autocorrector = null, ?MatchAlgorithmInterface $matchAlgorithm = null, ?AutocompleteAlgorithmInterface $autocompleteAlgorithm = null,) : self
@@ -683,7 +672,7 @@ class Recipient
 === RapidSign/Documents/SendRequest.php ===
 namespace Isa\Sdk\RapidSign\Documents;
 class SendRequest
-    public function __construct(public array $packet, public Recipient $recipient, public ?string $legalText = null, public array $metadata = [], public string|int|null $expiresIn = null, public ?string $notificationKey = null, public ?string $idempotencyKey = null,)
+    public function __construct(public array $packet, public Recipient $recipient, public ?string $legalText = null, public array $metadata = [], public string|int|null $expiresIn = null, public ?string $notificationKey = null, public ?string $idempotencyKey = null, public ?string $formId = null, public bool $includeCodeInLink = false,)
 
 === RapidSign/Documents/Service.php ===
 namespace Isa\Sdk\RapidSign\Documents;
@@ -865,6 +854,21 @@ namespace Isa\Sdk\RapidSign\Webhooks;
 class WebhookEvent
     public function __construct(public string $id, public string $type, public DateTimeImmutable $createdAt, public mixed $data,)
 
+=== UnsupportedAuthProduct.php ===
+namespace Isa\Sdk;
+class UnsupportedAuthProduct
+    public function __construct(private readonly string $product, private readonly string $scheme,)
+    public function __call(string $name, array $args) : never
+    public function __get(string $name) : never
+    public function __isset(string $name) : bool
+    public function access(string $member) : never
+
+=== Zyins/ApiDatasetSource.php ===
+namespace Isa\Sdk\Zyins;
+class ApiDatasetSource implements DatasetSource
+    public function __construct(callable $fetch)
+    public function load() : DatasetBundleV3
+
 === Zyins/Applicant.php ===
 namespace Isa\Sdk\Zyins;
 class Applicant
@@ -962,6 +966,15 @@ class Coverage
     public const TYPE_FACE_VALUE
     public const TYPE_MONTHLY_BUDGET
 
+=== Zyins/DatasetSource.php ===
+namespace Isa\Sdk\Zyins;
+interface DatasetSource
+    public function load() : DatasetBundleV3
+
+=== Zyins/DatasetSourceException.php ===
+namespace Isa\Sdk\Zyins;
+class DatasetSourceException extends RuntimeException
+
 === Zyins/Datasets/Service.php ===
 namespace Isa\Sdk\Zyins\Datasets;
 class Service
@@ -1042,6 +1055,12 @@ namespace Isa\Sdk\Zyins\Exception;
 class IsaValidationException extends IsaException
     public function __construct(string $message, ?int $httpStatus = null, ?string $requestId = null, ?string $param = null, private readonly array $details = [],)
     public function details() : array
+
+=== Zyins/FileDatasetSource.php ===
+namespace Isa\Sdk\Zyins;
+class FileDatasetSource implements DatasetSource
+    public function __construct(private readonly string $path, ?callable $read = null,)
+    public function load() : DatasetBundleV3
 
 === Zyins/Health/ProbeResult.php ===
 namespace Isa\Sdk\Zyins\Health;
@@ -1522,6 +1541,7 @@ namespace Isa\Sdk\Zyins\Reference;
 class DatasetsV3
     public function __construct(private Transport $transport, private ?ReferenceBundleCache $cache = null,)
     public function get(?DatasetsV3GetOptions $options = null, ?RequestOptions $requestOptions = null,) : DatasetBundleV3|DatasetsV3NotModified
+    public function parseEnvelope(string $body, ?string $etag) : DatasetBundleV3
 
 === Zyins/Reference/DatasetsV3GetOptions.php ===
 namespace Isa\Sdk\Zyins\Reference;
@@ -1890,6 +1910,12 @@ class RequestOptions
     public function withVersion(string $version) : self
     public function withExtraHeaders(array $headers) : self
 
+=== Zyins/ResolvingDatasetSource.php ===
+namespace Isa\Sdk\Zyins;
+class ResolvingDatasetSource implements DatasetSource
+    public function __construct(array $sources, ?callable $onMissing = null)
+    public function load() : DatasetBundleV3
+
 === Zyins/Sex.php ===
 namespace Isa\Sdk\Zyins;
 enum Sex : string
@@ -1901,6 +1927,12 @@ class SignRequest
     public function canonicalString(string $method, string $path, string $body, string $timestamp, string $sessionId) : string
     public function formatTimestamp(DateTimeInterface $now) : string
     public function sign(string $method, string $path, string $body, string $sessionId, string $sessionSecret, ?DateTimeInterface $now = null) : array
+
+=== Zyins/StaticDatasetSource.php ===
+namespace Isa\Sdk\Zyins;
+class StaticDatasetSource implements DatasetSource
+    public function __construct(private readonly DatasetBundleV3 $bundle)
+    public function load() : DatasetBundleV3
 
 === Zyins/Transport.php ===
 namespace Isa\Sdk\Zyins;
@@ -1937,9 +1969,8 @@ class Weight
 === Zyins/ZyInsClient.php ===
 namespace Isa\Sdk\Zyins;
 class ZyInsClient
-    public function __construct(string|Auth $token, ?ClientInterface $httpClient = null, ?IdempotencyKeySource $idempotency = null, string $baseUrl = Transport::DEFAULT_BASE_URL, string $apiVersion = self::DEFAULT_API_VERSION, ?string $userAgent = null, ?LoggerInterface $logger = null, ?CaseStorage $caseStorage = null, array $apiVersionMap = [], ?AutocorrectorInterface $autocorrector = null, ?MatchAlgorithmInterface $matchAlgorithm = null, ?AutocompleteAlgorithmInterface $autocompleteAlgorithm = null,)
+    public function __construct(string|Auth $token, ?ClientInterface $httpClient = null, ?IdempotencyKeySource $idempotency = null, string $baseUrl = Transport::DEFAULT_BASE_URL, string $apiVersion = self::DEFAULT_API_VERSION, ?string $userAgent = null, ?LoggerInterface $logger = null, ?CaseStorage $caseStorage = null, array $apiVersionMap = [], ?AutocorrectorInterface $autocorrector = null, ?MatchAlgorithmInterface $matchAlgorithm = null, ?AutocompleteAlgorithmInterface $autocompleteAlgorithm = null, ?DatasetSource $datasetSource = null,)
     public function withBearer(?string $token = null, ?LoggerInterface $logger = null, ?CaseStorage $caseStorage = null, array $apiVersionMap = [],) : self
     public function withLicense(?string $keycode = null, ?string $email = null, ?LoggerInterface $logger = null, ?CaseStorage $caseStorage = null, array $apiVersionMap = [],) : self
     public function withSession(?string $sessionId = null, ?string $sessionSecret = null, ?LoggerInterface $logger = null, ?CaseStorage $caseStorage = null, array $apiVersionMap = [],) : self
     public const DEFAULT_API_VERSION
-

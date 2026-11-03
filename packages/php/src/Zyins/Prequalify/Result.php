@@ -111,16 +111,37 @@ final readonly class Result
         if (! is_array($pricing)) {
             return 0.0;
         }
-        // Try the "default" tier first, then fall back to the first available tier.
-        $tier = $pricing['default'] ?? reset($pricing);
+        // Try the "default" tier first; if absent or malformed, fall back to
+        // the first array-valued tier in the pricing map.
+        $tier = $pricing['default'] ?? null;
         if (! is_array($tier)) {
-            return 0.0;
+            $tier = self::firstArrayTier($pricing);
+            if ($tier === null) {
+                return 0.0;
+            }
         }
         $monthly = $tier['monthly'] ?? null;
         if (is_numeric($monthly)) {
             return (float) $monthly;
         }
         return 0.0;
+    }
+
+    /**
+     * Find the first array-valued tier in a pricing map, skipping any
+     * malformed (non-array) entries.
+     *
+     * @param array<int|string,mixed> $pricing
+     * @return array<int|string,mixed>|null
+     */
+    private static function firstArrayTier(array $pricing): ?array
+    {
+        foreach ($pricing as $candidate) {
+            if (is_array($candidate)) {
+                return $candidate;
+            }
+        }
+        return null;
     }
 
     /**

@@ -181,6 +181,7 @@ final readonly class ZyInsClient
         ?AutocorrectorInterface $autocorrector = null,
         ?MatchAlgorithmInterface $matchAlgorithm = null,
         ?AutocompleteAlgorithmInterface $autocompleteAlgorithm = null,
+        ?DatasetSource $datasetSource = null,
     ) {
         $this->auth = $token instanceof Auth ? $token : new Auth($token);
         $this->transport = new Transport(
@@ -200,6 +201,13 @@ final readonly class ZyInsClient
         // consumer-side plumbing.
         $referenceCache = new ReferenceBundleCache();
         $this->datasetsV3 = new DatasetsV3($this->transport, $referenceCache);
+        // A configured local source warms the reference index from a local
+        // artifact at construction — `conditions->match(...)` then resolves
+        // with no network. Its absence leaves the API path (`datasetsV3->get()`)
+        // as the sole warmer: the unchanged default.
+        if ($datasetSource !== null) {
+            $referenceCache->setBundle($datasetSource->load());
+        }
         $this->prequalifyV3 = new PrequalifyV3($this->transport);
         $this->quoteV3 = new QuoteV3($this->transport);
 

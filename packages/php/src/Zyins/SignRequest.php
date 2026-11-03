@@ -14,7 +14,7 @@ use InvalidArgumentException;
  *
  * Emits the four headers the ISA Platform session verifier requires:
  *
- *   Authorization:    Bearer <sessionSecret>
+ *   Authorization:    Session <sessionSecret>
  *   X-Isa-Session-Id: <sessionId>
  *   X-Isa-Timestamp:  <iso8601_z>
  *   X-Isa-Signature:  hex(HMAC-SHA256(sessionSecret, canonical))
@@ -30,6 +30,14 @@ final class SignRequest
 {
     private const EMPTY_SHA256 =
         'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855';
+
+    /**
+     * Authorization scheme the proxy session verifier requires. Not
+     * "Bearer" — the value is an HMAC secret, not a bearer token.
+     *
+     * @see services/proxy/internal/auth/session.go (authzSchemeName)
+     */
+    private const SESSION_AUTH_SCHEME = 'Session';
 
     /**
      * Build the canonical signing string. Pure function; exported for
@@ -111,7 +119,7 @@ final class SignRequest
         $signature = hash_hmac('sha256', $canonical, $sessionSecret);
 
         return [
-            'Authorization' => 'Bearer ' . $sessionSecret,
+            'Authorization' => self::SESSION_AUTH_SCHEME . ' ' . $sessionSecret,
             'X-Isa-Session-Id' => $sessionId,
             'X-Isa-Timestamp' => $timestamp,
             'X-Isa-Signature' => $signature,

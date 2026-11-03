@@ -14,9 +14,15 @@ namespace Isa\Sdk\RapidSign\Documents;
 final readonly class SendRequest
 {
     /**
-     * @param list<PdfSource>      $packet         Ordered PDF sources merged into the packet.
-     * @param array<string,string> $metadata       Caller-defined metadata stored verbatim (≤ 64 keys).
-     * @param string|int|null      $expiresIn      ISO-8601 duration, shorthand string, or milliseconds.
+     * @param list<PdfSource>      $packet             Ordered PDF sources merged into the packet.
+     * @param array<string,string> $metadata           Caller-defined metadata stored verbatim (≤ 64 keys).
+     * @param string|int|null      $expiresIn          ISO-8601 duration, shorthand string, or milliseconds.
+     * @param string|null          $formId             Identifies the RapidSign form the notify template should
+     *                                                  render for the recipient. Omit when the signer flow is
+     *                                                  not form-driven.
+     * @param bool                 $includeCodeInLink  Whether the notify email embeds the signer's access code
+     *                                                  directly in the sign link (vs requiring it be entered
+     *                                                  separately). Defaults to false.
      */
     public function __construct(
         public array $packet,
@@ -26,6 +32,8 @@ final readonly class SendRequest
         public string|int|null $expiresIn = null,
         public ?string $notificationKey = null,
         public ?string $idempotencyKey = null,
+        public ?string $formId = null,
+        public bool $includeCodeInLink = false,
     ) {
     }
 }
