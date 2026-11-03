@@ -10,10 +10,10 @@
  * it without credentials. We still send any auth headers attached to
  * the client; the server ignores them on this route.
  */
-import { type AuthContext } from './auth.js';
-import { type Transport } from './transport.js';
+import { type AuthContext } from "./auth.js";
+import { type Transport } from "./transport.js";
 /** Mirror of proto `ServingStatus`. Wire values are lower-case. */
-export type ServingStatus = 'serving' | 'not_serving' | 'unknown';
+export type ServingStatus = "serving" | "not_serving" | "unknown";
 /** Per-dependency probe outcome. */
 export interface ProbeResult {
     status: ServingStatus;

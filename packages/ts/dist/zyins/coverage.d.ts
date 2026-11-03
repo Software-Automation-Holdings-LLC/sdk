@@ -22,7 +22,7 @@ export declare enum QuoteType {
     MonthlyBudget = "monthly_budget"
 }
 /** Internal — string-form of the type discriminator carried on every input. */
-export type CoverageType = 'face_value' | 'monthly_budget';
+export type CoverageType = "face_value" | "monthly_budget";
 /** Single coverage amount. */
 export interface SingleCoverage {
     readonly type: CoverageType;
@@ -39,11 +39,11 @@ export type CoverageInput = SingleCoverage | MultiCoverage;
 export type Coverage = CoverageInput;
 /** @deprecated retained for type-name compatibility. */
 export type FaceValueCoverage = SingleCoverage & {
-    type: 'face_value';
+    type: "face_value";
 };
 /** @deprecated retained for type-name compatibility. */
 export type MonthlyBudgetCoverage = SingleCoverage & {
-    type: 'monthly_budget';
+    type: "monthly_budget";
 };
 /** Type guard for multi-amount coverage. */
 export declare function isMulti(c: CoverageInput): c is MultiCoverage;

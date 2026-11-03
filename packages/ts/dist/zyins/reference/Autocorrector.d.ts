@@ -47,7 +47,7 @@ export interface AutocorrectOptions {
      * Typing-state mode. `'keyup'` for live correction during typing;
      * `'submit'` for post-commit (blur, enter, form submit) correction.
      */
-    readonly mode: 'keyup' | 'submit';
+    readonly mode: "keyup" | "submit";
 }
 /** Event emitted by {@link DefaultAutocorrector.onApplied}. */
 export interface AutocorrectAppliedEvent {
@@ -56,7 +56,7 @@ export interface AutocorrectAppliedEvent {
     /** Post-correction output. */
     readonly output: string;
     /** Mode the consumer passed. */
-    readonly mode: 'keyup' | 'submit';
+    readonly mode: "keyup" | "submit";
 }
 /** Constructor options for {@link DefaultAutocorrector}. */
 export interface DefaultAutocorrectorOptions {

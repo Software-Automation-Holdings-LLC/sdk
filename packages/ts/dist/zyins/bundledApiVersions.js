@@ -24,13 +24,13 @@
  * {@link IsaApiVersionOverride} on construction; they do not mutate this.
  */
 export const BundledApiVersions = Object.freeze({
-    prequalify: 'v3',
-    quote: 'v3',
-    datasets: 'v3',
-    reference: 'v3',
-    sessions: 'v1',
-    branding: 'v1',
-    cases: 'v1',
+    prequalify: "v3",
+    quote: "v3",
+    datasets: "v3",
+    reference: "v3",
+    sessions: "v1",
+    branding: "v1",
+    cases: "v1",
 });
 /**
  * Resolves a per-surface version by overlaying an optional override onto
@@ -56,24 +56,24 @@ export function resolveApiVersions(override) {
  * any future `/v1/...` catchall.
  */
 const SURFACE_PATH_PREFIXES = Object.freeze([
-    ['/v1/case', 'cases'],
-    ['/v2/case', 'cases'],
-    ['/v1/branding', 'branding'],
-    ['/v2/branding', 'branding'],
-    ['/v1/sessions', 'sessions'],
-    ['/v2/sessions', 'sessions'],
-    ['/v1/datasets', 'datasets'],
-    ['/v2/datasets', 'datasets'],
-    ['/v3/datasets', 'datasets'],
-    ['/v1/reference', 'reference'],
-    ['/v2/reference', 'reference'],
-    ['/v3/reference', 'reference'],
-    ['/v1/quote', 'quote'],
-    ['/v2/quote', 'quote'],
-    ['/v3/quote', 'quote'],
-    ['/v1/prequalify', 'prequalify'],
-    ['/v2/prequalify', 'prequalify'],
-    ['/v3/prequalify', 'prequalify'],
+    ["/v1/case", "cases"],
+    ["/v2/case", "cases"],
+    ["/v1/branding", "branding"],
+    ["/v2/branding", "branding"],
+    ["/v1/sessions", "sessions"],
+    ["/v2/sessions", "sessions"],
+    ["/v1/datasets", "datasets"],
+    ["/v2/datasets", "datasets"],
+    ["/v3/datasets", "datasets"],
+    ["/v1/reference", "reference"],
+    ["/v2/reference", "reference"],
+    ["/v3/reference", "reference"],
+    ["/v1/quote", "quote"],
+    ["/v2/quote", "quote"],
+    ["/v3/quote", "quote"],
+    ["/v1/prequalify", "prequalify"],
+    ["/v2/prequalify", "prequalify"],
+    ["/v3/prequalify", "prequalify"],
 ]);
 /**
  * Map a request path to the surface that owns it. Returns `undefined` for

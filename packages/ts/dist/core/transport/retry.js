@@ -14,14 +14,14 @@ export const systemSleeper = {
             return Promise.resolve();
         return new Promise((resolve, reject) => {
             const handle = setTimeout(() => {
-                signal?.removeEventListener('abort', onAbort);
+                signal?.removeEventListener("abort", onAbort);
                 resolve();
             }, ms);
             const onAbort = () => {
                 clearTimeout(handle);
-                reject(new Error('transport: retry sleeper aborted'));
+                reject(new Error("transport: retry sleeper aborted"));
             };
-            signal?.addEventListener('abort', onAbort, { once: true });
+            signal?.addEventListener("abort", onAbort, { once: true });
         });
     },
 };
@@ -44,12 +44,11 @@ export class RetryTransport {
     sleeper;
     constructor(inner, cfg = {}) {
         if (!inner) {
-            throw new Error('transport: RetryTransport requires an inner fetch');
+            throw new Error("transport: RetryTransport requires an inner fetch");
         }
         this.inner = inner;
         const maxAttempts = cfg.maxAttempts ?? DEFAULT_MAX_ATTEMPTS;
-        this.maxAttempts =
-            Number.isFinite(maxAttempts) && maxAttempts > 0 ? maxAttempts : DEFAULT_MAX_ATTEMPTS;
+        this.maxAttempts = Number.isFinite(maxAttempts) && maxAttempts > 0 ? maxAttempts : DEFAULT_MAX_ATTEMPTS;
         this.baseDelayMs = cfg.baseDelayMs ?? DEFAULT_BASE_DELAY_MS;
         this.maxDelayMs = cfg.maxDelayMs ?? DEFAULT_MAX_DELAY_MS;
         this.clock = cfg.clock ?? Date.now;
@@ -99,7 +98,7 @@ export class RetryTransport {
     }
     computeDelay(prev, retryCount) {
         if (prev) {
-            const hint = parseRetryAfter(prev.headers.get('Retry-After'), this.clock());
+            const hint = parseRetryAfter(prev.headers.get("Retry-After"), this.clock());
             if (hint !== undefined) {
                 return Math.min(hint, this.maxDelayMs);
             }

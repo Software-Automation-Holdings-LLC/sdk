@@ -12,7 +12,7 @@
  * When the License auth path is replaced by session credentials (#149), the
  * change lands in `zyins/auth.ts` and propagates here unchanged.
  */
-export { type AuthContext, isAuthContext } from '../zyins/auth.js';
+export { type AuthContext, isAuthContext } from "../zyins/auth.js";
 //# sourceMappingURL=auth.d.ts.map
 === dist/account/branding.d.ts ===
 /**
@@ -29,9 +29,9 @@ export { type AuthContext, isAuthContext } from '../zyins/auth.js';
  * query parameter when supplied so we don't churn the typed surface when
  * the server lands the extension.
  */
-import { type AuthContext } from './auth.js';
-import { type Transport } from '../zyins/transport.js';
-import { type Clock } from '../core/index.js';
+import { type Clock } from "../core/index.js";
+import { type Transport } from "../zyins/transport.js";
+import { type AuthContext } from "./auth.js";
 /** Whitelabel detail returned by `account.branding.lookup`. */
 export interface BrandingDetail {
     /** Display name of the agency. */
@@ -88,8 +88,8 @@ export declare function lookup(request: BrandingLookupRequest | undefined, ctx: 
  * contract carries `ciphertext` and `tag` separately (mirroring zyins #363),
  * so this module splits on encrypt and rejoins on decrypt.
  */
-import { type RandomBytes } from '../core/index.js';
-import { IsaError } from '../zyins/apiError.js';
+import { type RandomBytes } from "../core/index.js";
+import { IsaError } from "../zyins/apiError.js";
 /** The opaque crypto fields the server stores, all base64 (std alphabet). */
 export interface TCaseEnvelope {
     /** Base64 AES-GCM ciphertext (auth tag stripped). */
@@ -168,8 +168,8 @@ export declare function decryptCase(product: string, envelope: TCaseEnvelope, ke
  * caller already holds. Downstream consumers (bpp2.0, Phase 3) must scrub
  * `location.hash` before any telemetry call.
  */
-import { type TCaseListEntry } from './caseWire.js';
-import { type TCaseRequestContext } from './caseTransport.js';
+import { type TCaseRequestContext } from "./caseTransport.js";
+import { type TCaseListEntry } from "./caseWire.js";
 /**
  * Default share-link viewer origin. The SDK appends `/<code>#k=<key>`; any
  * product prefix rides inside this base URL so a deployment can point the
@@ -181,7 +181,7 @@ export declare const DEFAULT_CASE_VIEWER_BASE_URL = "https://link.isaapi.com";
  * mirrors the known zyins #363 product set while preserving server-side
  * forward compatibility for future product values.
  */
-export type TCaseProduct = 'zyins' | 'eapp' | 'rapidsign' | (string & {});
+export type TCaseProduct = "zyins" | "eapp" | "rapidsign" | (string & {});
 /** Inputs for `account.cases.create`. */
 export interface CaseCreateRequest {
     /** Routing tag stored cleartext and bound as AEAD data during encryption. */
@@ -271,9 +271,9 @@ export declare function email(request: CaseEmailRequest, ctx: CasesContext): Pro
  * License-HMAC header construction + transport call so each operation in
  * `cases.ts` only assembles its body and routes status codes.
  */
-import { type AuthContext } from './auth.js';
-import { type Transport } from '../zyins/transport.js';
-import { type Clock } from '../core/index.js';
+import { type Clock } from "../core/index.js";
+import { type Transport } from "../zyins/transport.js";
+import { type AuthContext } from "./auth.js";
 /** The auth + transport context a signed case request needs. */
 export interface TCaseRequestContext {
     baseUrl: string;
@@ -284,7 +284,7 @@ export interface TCaseRequestContext {
 }
 /** A single signed `/v1/case` request: method, path, body, and idempotency. */
 export interface TSignedRequestSpec {
-    method: 'GET' | 'POST';
+    method: "GET" | "POST";
     path: string;
     body: string;
     /** When set, an `Idempotency-Key` is derived (or taken from ctx) for the op. */
@@ -305,13 +305,13 @@ export declare function isSuccess(status: number): boolean;
 /**
  * Wire helpers for the zero-knowledge case store: share-link assembly +
  * parsing, and response decoding for `/v1/case`. Kept separate from the
- * operation logic in `cases.ts` so each file stays focused (link/​parse vs.
+ * operation logic in `cases.ts` so each file stays focused (link/parse vs.
  * transport orchestration).
  *
  * The link is the capability: it carries the case id in the path and the
  * decryption key in the `#k=` fragment. These helpers never log it.
  */
-import { type TCaseEnvelope } from './caseCrypto.js';
+import { type TCaseEnvelope } from "./caseCrypto.js";
 /** A case's id and fragment key, parsed out of a share link. */
 export interface TParsedLink {
     id: string;
@@ -361,9 +361,9 @@ export declare function parseCaseList(body: string): TCaseListEntry[];
  * BPP enqueue surface; both values are accepted and normalized to
  * `'queued'`.
  */
-import { type AuthContext } from './auth.js';
-import { type Transport } from '../zyins/transport.js';
-import { type Clock } from '../core/index.js';
+import { type Clock } from "../core/index.js";
+import { type Transport } from "../zyins/transport.js";
+import { type AuthContext } from "./auth.js";
 /** One attachment in an email-enqueue request. */
 export interface EmailAttachment {
     filename: string;
@@ -383,7 +383,7 @@ export interface EmailEnqueueRequest {
 }
 export interface EmailEnqueueResult {
     /** Normalized to `'queued'` regardless of which legacy literal the server returns. */
-    status: 'queued';
+    status: "queued";
 }
 export interface EmailContext {
     baseUrl: string;
@@ -407,10 +407,10 @@ export declare function enqueue(request: EmailEnqueueRequest, ctx: EmailContext)
  * license callers receive a stub namespace whose first method call throws
  * `IsaConfigError` with a description of what's missing.
  */
-import { type IsaIdentity } from '../zyins/envFactory.js';
-import { type IsaCredentialState } from '../zyins/credentialState.js';
-import { type Transport } from '../zyins/transport.js';
-import { AccountNamespace } from './index.js';
+import { type IsaCredentialState } from "../zyins/credentialState.js";
+import { type IsaIdentity } from "../zyins/envFactory.js";
+import { type Transport } from "../zyins/transport.js";
+import { AccountNamespace } from "./index.js";
 /** Inputs the unified `Isa` factory hands down for namespace construction. */
 export interface AccountFactoryOptions {
     identity: IsaIdentity;
@@ -451,13 +451,13 @@ export declare function buildAccountNamespace(opts: AccountFactoryOptions): Acco
  * deprecated `isa.account.referenceData` surface has been removed per
  * `/tmp/sdk-syntax-proposal.md` post-lock correction #3.
  */
-import { type AuthContext } from './auth.js';
-import { type Transport } from '../zyins/transport.js';
-import { type Clock } from '../core/index.js';
-import { type BrandingDetail, type BrandingLookupRequest } from './branding.js';
-import { type PreferencesLookupRequest, type PreferencesLookupResult, type PreferencesSetRequest, type PreferencesSetResult } from './preferences.js';
-import { type CaseCreateRequest, type CaseCreateResult, type CaseOpenResult, type CaseEmailRequest, type CaseEmailResult, type CaseSummary, type TCaseProduct } from './cases.js';
-import { type EmailEnqueueRequest, type EmailEnqueueResult } from './email.js';
+import { type Clock } from "../core/index.js";
+import { type Transport } from "../zyins/transport.js";
+import { type AuthContext } from "./auth.js";
+import { type BrandingDetail, type BrandingLookupRequest } from "./branding.js";
+import { type CaseCreateRequest, type CaseCreateResult, type CaseEmailRequest, type CaseEmailResult, type CaseOpenResult, type CaseSummary, type TCaseProduct } from "./cases.js";
+import { type EmailEnqueueRequest, type EmailEnqueueResult } from "./email.js";
+import { type PreferencesLookupRequest, type PreferencesLookupResult, type PreferencesSetRequest, type PreferencesSetResult } from "./preferences.js";
 /** Construction options for {@link AccountNamespace}. */
 export interface AccountNamespaceOptions {
     auth: AuthContext;
@@ -557,7 +557,7 @@ export declare class AccountEmail {
     constructor(ctx: OperationContext);
     enqueue(request: EmailEnqueueRequest): Promise<EmailEnqueueResult>;
 }
-export type { BrandingDetail, BrandingLookupRequest, PreferencesLookupRequest, PreferencesLookupResult, PreferencesSetRequest, PreferencesSetResult, CaseCreateRequest, CaseCreateResult, CaseOpenResult, CaseEmailRequest, CaseEmailResult, CaseSummary, TCaseProduct, EmailEnqueueRequest, EmailEnqueueResult, };
+export type { BrandingDetail, BrandingLookupRequest, CaseCreateRequest, CaseCreateResult, CaseEmailRequest, CaseEmailResult, CaseOpenResult, CaseSummary, EmailEnqueueRequest, EmailEnqueueResult, PreferencesLookupRequest, PreferencesLookupResult, PreferencesSetRequest, PreferencesSetResult, TCaseProduct, };
 //# sourceMappingURL=index.d.ts.map
 === dist/account/preferences.d.ts ===
 /**
@@ -572,9 +572,9 @@ export type { BrandingDetail, BrandingLookupRequest, PreferencesLookupRequest, P
  * settings shape and pass through. Identity comes from License-HMAC auth
  * headers — body carries no credentials.
  */
-import { type AuthContext } from './auth.js';
-import { type Transport } from '../zyins/transport.js';
-import { type Clock } from '../core/index.js';
+import { type Clock } from "../core/index.js";
+import { type Transport } from "../zyins/transport.js";
+import { type AuthContext } from "./auth.js";
 /** Opaque preferences document — keys and values are caller-defined. */
 export type PreferencesDocument = Record<string, unknown>;
 /** Input for `account.preferences.lookup`. */
@@ -618,8 +618,8 @@ export declare function set(request: PreferencesSetRequest, ctx: PreferencesCont
  * Source data:
  *   - insurance/v2_products.json
  */
-import { Product } from './products.js';
-import type { State } from './states.js';
+import { Product } from "./products.js";
+import type { State } from "./states.js";
 /** Public metadata for a single carrier. */
 export interface ProductCarrierMetadata {
     readonly displayName: string;
@@ -635,7 +635,9 @@ export interface ProductCarrierMetadata {
  * surfaced in the public reference data. Treat as advisory.
  */
 export declare const ProductCarriers: Readonly<{
+    /** Return every carrier slug in stable catalog order. */
     values(): readonly string[];
+    /** Return metadata for a carrier slug, or throw for unknown input. */
     metadata(c: string): ProductCarrierMetadata;
 }>;
 //# sourceMappingURL=carriers.d.ts.map
@@ -662,8 +664,11 @@ export interface ConditionCategoryMetadata {
     /** Canonical condition names (uppercase, engine wire format). */
     readonly conditions: readonly string[];
 }
+/** Catalog API for condition categories. */
 export declare const ConditionCategories: Readonly<{
+    /** Return every condition category slug in stable catalog order. */
     values(): readonly string[];
+    /** Return metadata for a condition category, or throw for unknown input. */
     metadata(c: string): ConditionCategoryMetadata;
 }>;
 //# sourceMappingURL=conditions.d.ts.map
@@ -696,6 +701,8 @@ export declare enum ErrorCode {
     Forbidden = "forbidden",
     /** Upstream dependency did not respond within the budget. */
     GatewayTimeout = "gateway_timeout",
+    /** Idempotency key conflict: same key sent with a different body. Client must retry with a new idempotency key. */
+    IdempotencyConflict = "idempotency_conflict",
     /** Unhandled server fault. Request ID identifies the log entry. */
     InternalError = "internal_error",
     /** Bearer token or license signature does not validate. */
@@ -742,45 +749,15 @@ export declare const ErrorDocUrls: Readonly<Record<ErrorCode, string>>;
  * Source data:
  *   - (barrel re-export of every catalog module in this directory)
  */
-export { Product, Products, type ProductMetadata } from './products.js';
-export { ProductType, Products as ProductsByType, type Product as TypedProduct, type ProductTypeValue, } from './productsByType.js';
-export { State, States, type StateMetadata } from './states.js';
-export { ProductCarriers, type ProductCarrierMetadata } from './carriers.js';
-export { ConditionCategories, type ConditionCategoryMetadata } from './conditions.js';
-export { MedicationUses, type MedicationUseMetadata } from './medications.js';
-export { Scope, ScopeDescriptions } from './scopes.js';
-export { SignEvent, SignEventLabels } from './signEvents.js';
-export { ErrorCode, ErrorAdviceCodes, ErrorDocUrls } from './errors.js';
+export { type ProductCarrierMetadata, ProductCarriers } from "./carriers.js";
+export { ConditionCategories, type ConditionCategoryMetadata } from "./conditions.js";
+export { ErrorAdviceCodes, ErrorCode, ErrorDocUrls } from "./errors.js";
+export { Product, type ProductMetadata, Products } from "./products.js";
+export { type Product as TypedProduct, Products as ProductsByType, ProductType, type ProductTypeValue, } from "./productsByType.js";
+export { Scope, ScopeDescriptions } from "./scopes.js";
+export { SignEvent, SignEventLabels } from "./signEvents.js";
+export { State, type StateMetadata, States } from "./states.js";
 //# sourceMappingURL=index.d.ts.map
-=== dist/catalog/medications.d.ts ===
-/**
- * Generated catalog module — do not hand-edit; rerun the generator.
- *
- * Produced by `packages/ts/scripts/gen-catalog.mjs`.
- * Regenerate with `npm run gen:catalog` (runs automatically before `build`).
- *
- * Source data:
- *   - insurance/v2_conditions.json
- *   - insurance/v2_medications.json
- */
-/**
- * Medication uses (indications). A "use" is a canonical condition name
- * (engine wire format) that at least one medication treats. The
- * `medications` array lists every medication recorded as treating
- * that use.
- *
- * Catalog size is large (~3000 uses; ~6000 medications); only the names
- * you import are retained by tree-shakers.
- */
-export interface MedicationUseMetadata {
-    readonly displayName: string;
-    readonly medications: readonly string[];
-}
-export declare const MedicationUses: Readonly<{
-    values(): readonly string[];
-    metadata(u: string): MedicationUseMetadata;
-}>;
-//# sourceMappingURL=medications.d.ts.map
 === dist/catalog/products.d.ts ===
 /**
  * Generated catalog module — do not hand-edit; rerun the generator.
@@ -1133,8 +1110,11 @@ export interface StateMetadata {
     readonly isTerritory: boolean;
 }
 export declare const States: Readonly<{
+    /** Return every state and territory abbreviation in display-name order. */
     values(): readonly State[];
+    /** Return state metadata entries in display-name order. */
     entries(): ReadonlyArray<readonly [State, StateMetadata]>;
+    /** Return metadata for a state abbreviation, or throw for unknown input. */
     metadata(s: State): StateMetadata;
     /**
      * Look up a state by its ISO abbreviation (case-insensitive) or by its
@@ -1151,7 +1131,7 @@ export declare const States: Readonly<{
  * Produces the four headers required by the ISA Platform session-auth
  * verifier (`shared/go/auth/session/verifier.go`):
  *
- *   Authorization:     Bearer <sessionSecret>
+ *   Authorization:     Session <sessionSecret>
  *   X-Isa-Session-Id:  <sessionId>
  *   X-Isa-Timestamp:   <iso8601_z>
  *   X-Isa-Signature:   hex(HMAC-SHA256(sessionSecret, canonicalString))
@@ -1180,7 +1160,7 @@ export interface SignRequestInput {
     body: string | Uint8Array;
     /** Session id (`sess_…`). Travels in `X-Isa-Session-Id`. */
     sessionId: string;
-    /** HMAC key. Travels as `Authorization: Bearer <secret>`. */
+    /** HMAC key. Travels as `Authorization: Session <secret>`. */
     sessionSecret: string;
     /** Injectable clock. Defaults to `() => new Date()`. */
     clock?: SignClock;
@@ -1190,9 +1170,9 @@ export interface SignRequestInput {
 /** Headers emitted by {@link signRequest}. */
 export interface SignRequestHeaders {
     Authorization: string;
-    'X-Isa-Session-Id': string;
-    'X-Isa-Timestamp': string;
-    'X-Isa-Signature': string;
+    "X-Isa-Session-Id": string;
+    "X-Isa-Timestamp": string;
+    "X-Isa-Signature": string;
 }
 /** Output of {@link signRequest}. */
 export interface SignRequestResult {
@@ -1295,7 +1275,7 @@ export * from "./request.js";
  * behind injectable facades so the same primitive serves web, React Native,
  * and Node.
  */
-import { type RequestMethod, type HttpReturnType } from './constants.js';
+import { type HttpReturnType, type RequestMethod } from "./constants.js";
 /** Structured logger facade. Callers can inject console, pino, winston, etc. */
 export interface Logger {
     debug: (msg: string, ctx?: unknown) => void;
@@ -1379,17 +1359,18 @@ export declare function httpRequest<T = unknown>(opts: HttpRequestOptions): Prom
  * workspace protocol during development; the publish workflow pins
  * the workspace dep to a concrete sdk/core/v* tag at publish time.
  */
-export { resolveSubtle, arrayBufferToHex, resolveFetch, base64EncodeUtf8, base64ToBytes, bytesToBase64, bytesToBase64Url, systemRandomBytes, systemClock, } from './internal/crypto.js';
-export type { Clock, RandomBytes } from './internal/crypto.js';
-export * from './license/deviceAuth.js';
-export * from './problem-details/types.js';
-export * from './http/constants.js';
-export * from './http/request.js';
-export * from './transport/index.js';
-export { canonicalString, formatTimestamp, signRequest, type SignClock, type SignRequestHeaders, type SignRequestInput, type SignRequestResult, } from './auth/signRequest.js';
-export * as compression from './compression/gzip.js';
-export * as obfuscation from './obfuscation/xor.js';
-export { type CredentialStore, type AsyncStorageLike, type SyncStorageLike, CREDENTIAL_KEYS, inMemoryCredentialStore, fromAsyncStorage, fromLocalStorage, loadOrMintDeviceId, mintDeviceId, } from './storage/index.js';
+export { arrayBufferToHex, base64EncodeUtf8, base64ToBytes, bytesToBase64, bytesToBase64Url, resolveFetch, resolveSubtle, systemClock, systemRandomBytes, } from "./internal/crypto.js";
+export type { Clock, RandomBytes } from "./internal/crypto.js";
+export { canonicalString, formatTimestamp, type SignClock, signRequest, type SignRequestHeaders, type SignRequestInput, type SignRequestResult, } from "./auth/signRequest.js";
+export * from "./http/constants.js";
+export * from "./http/request.js";
+export { type BootstrapInput, buildBootstrapSignatureAsync } from "./internal/auth/bootstrap.js";
+export * from "./license/deviceAuth.js";
+export * from "./problem-details/types.js";
+export * from "./transport/index.js";
+export * as compression from "./compression/gzip.js";
+export * as obfuscation from "./obfuscation/xor.js";
+export { type AsyncStorageLike, CREDENTIAL_KEYS, type CredentialStore, fromAsyncStorage, fromLocalStorage, inMemoryCredentialStore, loadOrMintDeviceId, mintDeviceId, type SyncStorageLike, } from "./storage/index.js";
 //# sourceMappingURL=index.d.ts.map
 === dist/core/internal/auth/bootstrap.d.ts ===
 /**
@@ -1448,12 +1429,16 @@ export interface BootstrapSignature {
     readonly canonical: string;
     /** Lowercase hex HMAC-SHA256 over canonical, keyed by licenseKey. */
     readonly hex: string;
-    /** `ISA-Signature: t=<ts>,v1=<hex>` — ready to set as a header value. */
-    readonly header: string;
+    /** Header name callers should set. */
+    readonly headerName: "ISA-Signature";
+    /** `t=<ts>,v1=<hex>` — ready to set as the header value. */
+    readonly headerValue: string;
+    /** Complete header line for docs and conformance output. */
+    readonly headerLine: string;
 }
 /**
  * Synchronous Node-only implementation. Used by the conformance test and
- * any server-side code that runs in Node ≥20. Browser callers should use
+ * any server-side code that runs in Node ≥20.16. Browser callers should use
  * {@link buildBootstrapSignatureAsync} which delegates to SubtleCrypto.
  */
 export declare function buildBootstrapSignature(input: BootstrapInput): BootstrapSignature;
@@ -1560,7 +1545,7 @@ export declare const systemClock: Clock;
  * @see go/zyins/server/auth_middleware.go
  * @see go/zyins/server/device_signature.go
  */
-import { type Clock } from '../internal/crypto.js';
+import { type Clock } from "../internal/crypto.js";
 /**
  * Strips surrounding double-quote characters from a string.
  * AsyncStorage values may retain JSON serialization quotes depending on the
@@ -1594,11 +1579,11 @@ export declare const buildLicenseHeader: (licenseKey: string, orderId: string, e
  */
 export interface LicenseHMACHeaders {
     Authorization: string;
-    'X-Device-ID': string;
-    'X-Device-Signature': string;
-    'X-License-Method': string;
-    'X-License-URI': string;
-    'X-License-Timestamp': string;
+    "X-Device-ID": string;
+    "X-Device-Signature": string;
+    "X-License-Method": string;
+    "X-License-URI": string;
+    "X-License-Timestamp": string;
 }
 /**
  * Builds the HMAC-signed License authentication headers, binding the license
@@ -1685,15 +1670,13 @@ export declare function isObfuscated(value: string, threshold?: number): boolean
 //# sourceMappingURL=xor.d.ts.map
 === dist/core/problem-details/types.d.ts ===
 /**
- * RFC 7807 Problem Details types shared with platform-php's ProblemException.
+ * RFC 7807 Problem Details types.
  *
  * Error codes are drawn from ADR-012 (the platform-wide error taxonomy). The
- * list below is the v1 set; revisions MUST update both this file and the PHP
- * ProblemException enum in the same commit to preserve type parity.
+ * list below is the v1 set.
  */
 /**
- * The authoritative list of platform error codes. Revisions MUST update both
- * this array and `platform-php`'s `ProblemException` enum in the same commit.
+ * The authoritative list of platform error codes.
  */
 export declare const PROBLEM_DETAILS_CODES: readonly ["unauthorized", "token_expired", "validation_error", "license_locked", "not_found", "forbidden", "conflict", "rate_limit_exceeded", "rate_limited", "internal_error", "service_unavailable", "idempotency_conflict"];
 export type ProblemDetailsCode = (typeof PROBLEM_DETAILS_CODES)[number];
@@ -1802,7 +1785,7 @@ export declare function fromLocalStorage(storage: SyncStorageLike): CredentialSt
  * requirement on the value; the only invariant is that it is stable across
  * a device's lifetime so HMAC signatures stay verifiable.
  */
-import { type CredentialStore } from './credentialStore.js';
+import { type CredentialStore } from "./credentialStore.js";
 /**
  * Load the persisted device id from `store`, or mint a new one and persist
  * it. The result is stable across calls within a single process AND across
@@ -1821,8 +1804,8 @@ export declare function mintDeviceId(): string;
  * and synchronous browser `localStorage`, an in-memory default, and the
  * device-id mint+persist helpers.
  */
-export { type CredentialStore, type AsyncStorageLike, type SyncStorageLike, CREDENTIAL_KEYS, inMemoryCredentialStore, fromAsyncStorage, fromLocalStorage, } from './credentialStore.js';
-export { loadOrMintDeviceId, mintDeviceId } from './deviceId.js';
+export { type AsyncStorageLike, CREDENTIAL_KEYS, type CredentialStore, fromAsyncStorage, fromLocalStorage, inMemoryCredentialStore, type SyncStorageLike, } from "./credentialStore.js";
+export { loadOrMintDeviceId, mintDeviceId } from "./deviceId.js";
 //# sourceMappingURL=index.d.ts.map
 === dist/core/transport/bearer.d.ts ===
 /** Minimal subset of the WHATWG fetch surface this module depends on. */
@@ -1863,8 +1846,8 @@ export declare class BearerTransport {
 //# sourceMappingURL=bearer.d.ts.map
 === dist/core/transport/index.d.ts ===
 export * from "./bearer.js";
-export * from "./retry.js";
 export * from "./response_extractor.js";
+export * from "./retry.js";
 //# sourceMappingURL=index.d.ts.map
 === dist/core/transport/response_extractor.d.ts ===
 export interface Envelope<T = unknown> {
@@ -1901,7 +1884,7 @@ export declare function extractData<T>(response: Response, validator: DataValida
 export declare function extractEnvelope(response: Response): Promise<Envelope<unknown>>;
 //# sourceMappingURL=response_extractor.d.ts.map
 === dist/core/transport/retry.d.ts ===
-import type { FetchImpl } from './bearer.js';
+import type { FetchImpl } from "./bearer.js";
 /** Returns the current instant in ms since epoch. */
 export type Clock = () => number;
 /** Sleeps for a duration. Tests inject a recording fake. */
@@ -1970,36 +1953,38 @@ export declare function parseRetryAfter(raw: string | null, nowMs: number): numb
  * only the names you use keeps unused product namespaces out of your
  * bundle.
  */
-export { Isa, ZyInsNamespace, RapidSignNamespace, ProxyNamespace, SESSIONS_REISSUE_PATH, type IsaOptions, type IsaFactoryOptions, type IsaAuthArgs } from './zyins/isa.js';
-export { AccountNamespace, AccountBranding, AccountPreferences, AccountCases, AccountEmail, type AccountNamespaceOptions, type BrandingDetail as AccountBrandingDetail, type BrandingLookupRequest as AccountBrandingLookupRequest, type PreferencesLookupRequest as AccountPreferencesLookupRequest, type PreferencesLookupResult as AccountPreferencesLookupResult, type PreferencesSetRequest as AccountPreferencesSetRequest, type PreferencesSetResult as AccountPreferencesSetResult, type CaseCreateRequest as AccountCaseCreateRequest, type CaseCreateResult as AccountCaseCreateResult, type CaseOpenResult as AccountCaseOpenResult, type CaseEmailRequest as AccountCaseEmailRequest, type CaseEmailResult as AccountCaseEmailResult, type CaseSummary as AccountCaseSummary, type TCaseProduct, type EmailEnqueueRequest as AccountEmailEnqueueRequest, type EmailEnqueueResult as AccountEmailEnqueueResult, } from './account/index.js';
-export { type IsaIdentity, type BearerIdentity, type LicenseIdentity, resolveBearerIdentity, resolveLicenseIdentity, ENV_VAR_NAMES } from './zyins/envFactory.js';
-export { IsaError, IsaApiError, IsaConfigError, IsaCaseExpiredError, IsaIdempotencyConflictError, IsaLicenseError, IsaNotActivatedError, IsaRateLimitError, IsaTimeoutError, IsaUnauthorizedError, IsaValidationError, type IsaLicenseErrorCode, type IsaNotActivatedCode, } from './zyins/apiError.js';
-export { encryptCase, decryptCase, IsaCaseDecryptError, type TCaseEnvelope, type TEncryptedCase, type TCaseCryptoOptions } from './account/caseCrypto.js';
-export { type Envelope, type RawResponse, type RawResponseResult } from './zyins/envelope.js';
-export { canonicalString, formatTimestamp, signRequest, type SignClock, type SignRequestHeaders, type SignRequestInput, type SignRequestResult } from './core/auth/signRequest.js';
-export { Sex, NicotineUsage, NicotineDuration, Height, Weight, type Applicant, type Medication, type Condition, type NicotineUsageInput, type NicotineProductUsage } from './zyins/applicant.js';
-export { Coverage, QuoteType, isMulti, type CoverageInput, type CoverageType, type SingleCoverage, type MultiCoverage, type FaceValueCoverage, type MonthlyBudgetCoverage } from './zyins/coverage.js';
-export { ProductSelection, ProductClass, ProductType, Products, type Product, type ProductClassValue } from './zyins/product.js';
-export { MinRank, type MinRankValue } from './zyins/minRank.js';
-export { ReferenceSort, type DatasetBundleV3, type DatasetCategory, type DatasetEntry, type ReferenceEntity, type ConditionEntity, type ConditionTreatedWith, type MedicationEntity, type MedicationUsedFor, type NicotineOptionEntity, type SpellingCorrectionEntity, type Concept, type ConceptKind, type ConditionConcept, type MedicationConcept, type UnknownConcept, type Suggestion, type Autocorrector, type AutocorrectOptions, type MatchAlgorithm, FuzzyMatchAlgorithm, type FuzzyMatchAlgorithmOptions, type AutocompleteAlgorithm, type AutocompleteOptions, type ReferenceAdapters, } from './zyins/index.js';
-export { type PrequalifyV2Request, type PrequalifyV2Result, type PrequalifyV2Options, type PlanOffer, type OtherOffer, type OfferEligibility, type OfferCategory, type OfferCarrier, type OfferProduct, type OfferPlanInfo, type OfferPlanInfoItem, type OfferPlanInfoLegacy, type OfferDeathBenefit, type OfferPremium, type OfferMoney, } from './zyins/prequalify-v2.js';
-export { type PrequalifyRequest, type PrequalifyResult, type PrequalifyPlan, type Plan, type PrequalifyOptions, type PrequalifyResultMeta, type SinglePrequalifyResult, type MultiPrequalifyResult, } from './zyins/prequalify.js';
-export { byAmount, offerPremium, type PrequalifyV3Request, type PrequalifyV3Result, type PrequalifyV3Options, type V3Offer, type V3Eligibility, type V3EligibilityCategory, type V3Amount, type V3Money, type V3Period, type V3Premium, type V3PricingRow, } from './zyins/prequalify-v3.js';
-export { BearerAuth, LicenseAuth, FormAuth, RemoteEngine, LocalEngine, ProxyEngine, InMemoryEngine, inMemoryEngineWith, resolveIsaOptions, DEFAULT_TIMEOUT_MS, BundledApiVersions, resolveApiVersions, type IsaApiVersion, type IsaApiVersionOverride, type IsaApiSurface, type IsaAuthSupplier, type IsaEngine, type IsaCreateOptions, type ResolvedIsaOptions, } from './zyins/isaOptions.js';
-export type { CaseStorage, CaseRecord, CaseStoragePutResult } from './zyins/cases/CaseStorage.js';
-export { ZeroKnowledgeCaseStorage } from './zyins/cases/ZeroKnowledgeCaseStorage.js';
-export { type LogosGetOptions, type LogosFetch, type LogosResponse } from './zyins/logos.js';
-export { Product as ProductSlug, Products as ProductSlugs, type ProductMetadata, State, States, type StateMetadata, ProductCarriers, type ProductCarrierMetadata, ConditionCategories, type ConditionCategoryMetadata, MedicationUses, type MedicationUseMetadata, Scope, ScopeDescriptions, SignEvent, SignEventLabels, ErrorCode, ErrorAdviceCodes, ErrorDocUrls, } from './catalog/index.js';
-export { type DebugLogger, type EnvReader, type LogSink, debugLoggerFromEnv, makeLogger, redactHeaders, redactBody, redactBodyString, processEnv, stderrSink } from './zyins/logger.js';
+export { Isa, type IsaAuthArgs, type IsaFactoryOptions, type IsaOptions, ProxyNamespace, RapidSignNamespace, SESSIONS_PATH, SESSIONS_REISSUE_PATH, ZyInsNamespace, } from "./zyins/isa.js";
+export { AccountBranding, AccountCases, AccountEmail, AccountNamespace, type AccountNamespaceOptions, AccountPreferences, type BrandingDetail as AccountBrandingDetail, type BrandingLookupRequest as AccountBrandingLookupRequest, type CaseCreateRequest as AccountCaseCreateRequest, type CaseCreateResult as AccountCaseCreateResult, type CaseEmailRequest as AccountCaseEmailRequest, type CaseEmailResult as AccountCaseEmailResult, type CaseOpenResult as AccountCaseOpenResult, type CaseSummary as AccountCaseSummary, type EmailEnqueueRequest as AccountEmailEnqueueRequest, type EmailEnqueueResult as AccountEmailEnqueueResult, type PreferencesLookupRequest as AccountPreferencesLookupRequest, type PreferencesLookupResult as AccountPreferencesLookupResult, type PreferencesSetRequest as AccountPreferencesSetRequest, type PreferencesSetResult as AccountPreferencesSetResult, type TCaseProduct, } from "./account/index.js";
+export { type AuthContext, isAuthContext } from "./zyins/auth.js";
+export { type BearerIdentity, ENV_VAR_NAMES, type IsaIdentity, type LicenseIdentity, resolveBearerIdentity, resolveLicenseIdentity, } from "./zyins/envFactory.js";
+export { IsaApiError, IsaCaseExpiredError, IsaConfigError, IsaError, IsaIdempotencyConflictError, IsaLicenseError, type IsaLicenseErrorCode, type IsaNotActivatedCode, IsaNotActivatedError, isApiError, IsaRateLimitError, IsaTimeoutError, IsaUnauthorizedError, IsaValidationError, isIdempotencyConflictError, isNotActivatedError, } from "./zyins/apiError.js";
+export { decryptCase, encryptCase, IsaCaseDecryptError, type TCaseCryptoOptions, type TCaseEnvelope, type TEncryptedCase, } from "./account/caseCrypto.js";
+export { canonicalString, formatTimestamp, type SignClock, signRequest, type SignRequestHeaders, type SignRequestInput, type SignRequestResult, } from "./core/auth/signRequest.js";
+export { type Envelope, type RawResponse, type RawResponseResult } from "./zyins/envelope.js";
+export { type Applicant, type Condition, Height, type Medication, NicotineDuration, type NicotineProductUsage, NicotineUsage, type NicotineUsageInput, Sex, Weight, } from "./zyins/applicant.js";
+export { Coverage, type CoverageInput, type CoverageType, type FaceValueCoverage, isMulti, type MonthlyBudgetCoverage, type MultiCoverage, QuoteType, type SingleCoverage, } from "./zyins/coverage.js";
+export { MinRank, type MinRankValue } from "./zyins/minRank.js";
+export { type Product, ProductClass, type ProductClassValue, Products, ProductSelection, ProductType, } from "./zyins/product.js";
+export { ApiDatasetSource, type AutocompleteAlgorithm, type AutocompleteOptions, type AutocorrectOptions, type Autocorrector, type Concept, type ConceptKind, type ConditionConcept, type ConditionEntity, type ConditionTreatedWith, type DatasetBundleV3, type DatasetCategory, type DatasetEntry, type DatasetSource, DatasetSourceError, type DatasetSourceInput, FileDatasetSource, type FileReader, FuzzyMatchAlgorithm, type FuzzyMatchAlgorithmOptions, type MatchAlgorithm, type MedicationConcept, type MedicationEntity, type MedicationUsedFor, type NicotineOptionEntity, type OnMissingHook, platformFileReader, type ReferenceAdapters, type ReferenceEntity, ReferenceSort, ResolvingDatasetSource, type SpellingCorrectionEntity, StaticDatasetSource, type Suggestion, toDatasetSource, type UnknownConcept, } from "./zyins/index.js";
+export { type OfferCarrier, type OfferCategory, type OfferDeathBenefit, type OfferEligibility, type OfferMoney, type OfferPlanInfo, type OfferPlanInfoItem, type OfferPlanInfoLegacy, type OfferPremium, type OfferProduct, type OtherOffer, type PlanOffer, type PrequalifyV2Options, type PrequalifyV2Request, type PrequalifyV2Result, } from "./zyins/prequalify-v2.js";
+export { type MultiPrequalifyResult, type Plan, type PrequalifyOptions, type PrequalifyPlan, type PrequalifyRequest, type PrequalifyResult, type PrequalifyResultMeta, type SinglePrequalifyResult, } from "./zyins/prequalify.js";
+export { formatMoney, type FormatMoneyOptions } from "./zyins/money.js";
+export { byAmount, offerPremium, type PrequalifyV3Options, type PrequalifyV3Request, type PrequalifyV3Result, type V3Amount, type V3Eligibility, type V3EligibilityCategory, type V3Money, type V3Offer, type V3Period, type V3Premium, type V3PricingRow, } from "./zyins/prequalify-v3.js";
+export type { CaseRecord, CaseStorage, CaseStoragePutResult } from "./zyins/cases/CaseStorage.js";
+export { ZeroKnowledgeCaseStorage } from "./zyins/cases/ZeroKnowledgeCaseStorage.js";
+export { BearerAuth, BundledApiVersions, DEFAULT_TIMEOUT_MS, FormAuth, InMemoryEngine, inMemoryEngineWith, type IsaApiSurface, type IsaApiVersion, type IsaApiVersionOverride, type IsaAuthSupplier, type IsaCreateOptions, type IsaEngine, LicenseAuth, LocalEngine, ProxyEngine, RemoteEngine, resolveApiVersions, type ResolvedIsaOptions, resolveIsaOptions, } from "./zyins/isaOptions.js";
+export { type LogosFetch, type LogosGetOptions, type LogosResponse } from "./zyins/logos.js";
+export { ConditionCategories, type ConditionCategoryMetadata, ErrorAdviceCodes, ErrorCode, ErrorDocUrls, Product as ProductSlug, type ProductCarrierMetadata, ProductCarriers, type ProductMetadata, Products as ProductSlugs, Scope, ScopeDescriptions, SignEvent, SignEventLabels, State, type StateMetadata, States, } from "./catalog/index.js";
+export { type DebugLogger, debugLoggerFromEnv, type EnvReader, type LogSink, makeLogger, processEnv, redactBody, redactBodyString, redactHeaders, stderrSink, } from "./zyins/logger.js";
 //# sourceMappingURL=index.d.ts.map
 === dist/proxy/algosure/embedded.d.ts ===
-import { type Clock } from '../../core/index.js';
+import { type Clock } from "../../core/index.js";
 export type EmbeddedAlgosureHeaders = {
-    'Authorization': string;
-    '*Host': string;
-    '*Timestamp': string;
-    '*sessionId': string;
-    '*SaltId': string;
+    "Authorization": string;
+    "*Host": string;
+    "*Timestamp": string;
+    "*sessionId": string;
+    "*SaltId": string;
 };
 export interface EmbeddedAlgosureArgs {
     /** Embedded salt content (form.metadata._algosure_salt). */
@@ -2043,10 +2028,10 @@ export declare function computeEmbeddedAlgosureHMAC(args: EmbeddedAlgosureArgs):
  * regardless of minor clock skew; the verifier still enforces ±30s drift.
  */
 export declare function buildEmbeddedAlgosureHeaders(args: EmbeddedAlgosureArgs): Promise<EmbeddedAlgosureHeaders>;
-export { ALGOSURE_TIME_BUCKET_MS } from './hmac.js';
+export { ALGOSURE_TIME_BUCKET_MS } from "./hmac.js";
 //# sourceMappingURL=embedded.d.ts.map
 === dist/proxy/algosure/hmac.d.ts ===
-import { type Clock } from '../../core/index.js';
+import { type Clock } from "../../core/index.js";
 /** 30-second buckets for clock-skew tolerance. Must match server. */
 export declare const ALGOSURE_TIME_BUCKET_MS = 30000;
 /** Default proxy for fetching the rotating salt. */
@@ -2091,10 +2076,10 @@ export interface AlgosureHMACArgs {
     saltTimeout?: number;
 }
 export type AlgosureHeaders = {
-    'Authorization': string;
-    '*Host': string;
-    '*Timestamp': string;
-    '*sessionId': string;
+    "Authorization": string;
+    "*Host": string;
+    "*Timestamp": string;
+    "*sessionId": string;
 };
 /**
  * Computes an HMAC-SHA256 authentication tag for an Algosure-authenticated
@@ -2117,8 +2102,8 @@ export declare function buildAlgosureHeaders(args: AlgosureHMACArgs): Promise<Al
 export declare function deriveSimpleKey(saltContent: string, timestampMs: number): string;
 //# sourceMappingURL=hmac.d.ts.map
 === dist/proxy/algosure/index.d.ts ===
-export * from "./hmac.js";
 export * from "./embedded.js";
+export * from "./hmac.js";
 //# sourceMappingURL=index.d.ts.map
 === dist/proxy/call.d.ts ===
 /**
@@ -2139,8 +2124,8 @@ export * from "./embedded.js";
  * This is the SDK↔proxy hop. The proxy↔downstream hop remains Algosure
  * HMAC and is handled server-side — see ADR-035 (amended in this PR).
  */
-import { type SessionIdentity } from '../zyins/envFactory.js';
-import { type SignClock } from '../core/auth/signRequest.js';
+import { type SignClock } from "../core/auth/signRequest.js";
+import { type SessionIdentity } from "../zyins/envFactory.js";
 /** Inputs to {@link proxyCall}. Exactly one of integrationUuid/integrationId. */
 export interface ProxyCallOptions {
     /** Preferred opaque identifier (UUID). Mutually exclusive with integrationId. */
@@ -2190,15 +2175,15 @@ export declare function assertSessionIdentityForProxyCall(identity: {
  * dependency (ADR-035 "Proxy is internal-facing").
  */
 export * from "./algosure/index.js";
+export { assertSessionIdentityForProxyCall, proxyCall as proxyCallV2, type ProxyCallBinding, type ProxyCallOptions, type ProxyCallResult, } from "./call.js";
 export * from "./transport/call.js";
-export { type ProxyCallBinding, type ProxyCallOptions, type ProxyCallResult, assertSessionIdentityForProxyCall, proxyCall as proxyCallV2, } from "./call.js";
 //# sourceMappingURL=index.d.ts.map
 === dist/proxy/transport/call.d.ts ===
 /**
  * Structured proxy-call helper. Wraps httpRequest with the `/v1/call` envelope
  * shape and the Algosure HMAC headers required by the platform proxy.
  */
-import { type Clock } from '../../core/index.js';
+import { type Clock } from "../../core/index.js";
 export interface ProxyCallParams {
     /** e.g., "https://proxy.isaapi.com" */
     proxyOrigin: string;
@@ -2263,11 +2248,12 @@ export * from "./call.js";
  * mandatory: a curator only using RapidSign can construct this class
  * directly and skip the umbrella entirely.
  */
-import { DocumentsService } from './documents.js';
-import { WebhooksService } from './webhooks.js';
-import { type Transport } from './internal/transport.js';
-import { type Decompressor } from './internal/decompress.js';
-import { type Clock, type Sleeper, type UUIDGenerator } from './internal/random.js';
+import { DocumentsService } from "./documents.js";
+import { type Decompressor } from "./internal/decompress.js";
+import { type Clock, type Sleeper, type UUIDGenerator } from "./internal/random.js";
+import { type Transport } from "./internal/transport.js";
+import { VoiceService } from "./voice.js";
+import { WebhooksService } from "./webhooks.js";
 /** Production RapidSign endpoint. Override only for staging / local. */
 export declare const DEFAULT_RAPIDSIGN_BASE_URL = "https://rapidsign.isaapi.com";
 /** Default User-Agent string. The version is updated on each release. */
@@ -2297,10 +2283,11 @@ export interface RapidSignClientOptions {
 }
 /**
  * The RapidSign client. Construct once per bearer token; methods are
- * grouped under typed sub-clients (`documents`, `webhooks`).
+ * grouped under typed sub-clients (`documents`, `voice`, `webhooks`).
  */
 export declare class RapidSignClient {
     readonly documents: DocumentsService;
+    readonly voice: VoiceService;
     readonly webhooks: WebhooksService;
     constructor(token: string, options?: RapidSignClientOptions);
 }
@@ -2322,10 +2309,10 @@ export declare class RapidSignClient {
  * `cancel` throws `NotImplemented` until the matching server endpoint ships
  * (tracked in issue #38). The SDK surface is the product.
  */
-import { type AwaitOpts, type CancelRequest, type Envelope, type SendRequest, type Signature } from './types.js';
-import { type Transport } from './internal/transport.js';
-import { type Decompressor } from './internal/decompress.js';
-import { type Clock, type Sleeper, type UUIDGenerator } from './internal/random.js';
+import { type Decompressor } from "./internal/decompress.js";
+import { type Clock, type Sleeper, type UUIDGenerator } from "./internal/random.js";
+import { type Transport } from "./internal/transport.js";
+import { type AwaitOpts, type CancelRequest, type DownloadOpts, type Envelope, type GetOpts, type SendRequest, type Signature } from "./types.js";
 /** Per-call context the parent client injects. */
 export interface DocumentsContext {
     readonly token: string;
@@ -2353,8 +2340,13 @@ export declare class DocumentsService {
      * Fetch current state for a signed-or-pending envelope. Returns a
      * Signature when the document has been signed; throws `NotFound` when
      * the sign id is unknown or no signature has been captured yet.
+     *
+     * Pre-1.0 API correction: `sessionId` and `signal` are accepted via a
+     * single options object. The earlier positional `(signId, sessionId,
+     * signal)` shape silently coerced an `AbortSignal` to a string when
+     * callers omitted `sessionId` and passed `signal` second.
      */
-    get(signId: string, sessionId?: string, signal?: AbortSignal): Promise<Signature>;
+    get(signId: string, opts?: GetOpts): Promise<Signature>;
     /**
      * Poll `get` on a jittered exponential backoff until the document is
      * signed, the AbortSignal fires, or the timeout elapses.
@@ -2368,8 +2360,11 @@ export declare class DocumentsService {
      * Download the signed PDF as a fresh `Buffer`. The wire response is
      * gzip + base64; decompression is transparent. Throws `NotFound` if the
      * sign id is unknown.
+     *
+     * Pre-1.0 API correction: `sessionId` and `signal` are accepted via a
+     * single options object, mirroring `get` so the surface is consistent.
      */
-    download(signId: string, sessionId?: string): Promise<Buffer>;
+    download(signId: string, opts?: DownloadOpts): Promise<Buffer>;
     /**
      * Cancel a pending envelope.
      *
@@ -2404,12 +2399,12 @@ export declare class DocumentsService {
  * The base is abstract so `new RapidSignError(...)` is impossible — every
  * thrown error has a specific subclass with a stable `code`.
  */
-import { type ProblemDetails } from '../core/index.js';
+import { type ProblemDetails } from "../core/index.js";
 /**
  * Wire-stable error codes mirroring `api.isa.v1.ErrorCode` values in their
  * lowercase snake_case form. Cross-language SDKs share this set.
  */
-export type ErrorCode = 'unauthorized' | 'token_expired' | 'invalid_token' | 'forbidden' | 'not_found' | 'method_not_allowed' | 'conflict' | 'validation_error' | 'license_locked' | 'rate_limit_exceeded' | 'rate_limited' | 'internal_error' | 'bad_gateway' | 'gateway_timeout' | 'deadline_exceeded' | 'service_unavailable' | 'not_implemented' | 'unknown';
+export type ErrorCode = "unauthorized" | "token_expired" | "invalid_token" | "forbidden" | "not_found" | "method_not_allowed" | "conflict" | "validation_error" | "license_locked" | "rate_limit_exceeded" | "rate_limited" | "internal_error" | "bad_gateway" | "gateway_timeout" | "deadline_exceeded" | "service_unavailable" | "not_implemented" | "unknown";
 /** Fields every RapidSignError subclass receives at construction. */
 export interface RapidSignErrorInit {
     readonly httpStatus: number;
@@ -2558,21 +2553,24 @@ export declare function fromProblemDetails(problem: ProblemDetails, extra: {
  *   - `RapidSignError`    — error base + specific subclasses
  *   - Value types         — `Envelope`, `Signature`, `Recipient`, `PdfSource`,
  *                           `SendRequest`, `CancelRequest`, `AwaitOpts`
+ *   - Voice types         — `VoiceStep`, `VoiceStepKind`, `VoiceScript`,
+ *                           `MintCodeRequest`, `VoiceCode` (see `client.voice`)
  *   - Facade types        — `Transport`, `Clock`, `Sleeper`, `UUIDGenerator`,
  *                           `Decompressor` for tests + advanced usage
  *
  * Cross-language naming: these names are the spec the Go and PHP agents
  * mirror with their language casing. Renames are breaking.
  */
-export { RapidSignClient, DEFAULT_RAPIDSIGN_BASE_URL, DEFAULT_USER_AGENT, DEFAULT_MAX_RETRIES, type RapidSignClientOptions, } from './client.js';
-export { RapidSignError, fromHttpResponse, fromProblemDetails, type ErrorCode, type RapidSignErrorInit, } from './errors.js';
-export { type Envelope, type EnvelopeStatus, type Recipient, type PdfSource, type SendRequest, type CancelRequest, type AwaitOpts, type Signature, } from './types.js';
-export { DocumentsService, type DocumentsContext } from './documents.js';
-export { WebhooksService, type WebhookEvent } from './webhooks.js';
-export { defaultTransport, type Transport, type TransportRequest, type TransportResponse, type HttpMethod, } from './internal/transport.js';
-export { defaultDecompressor, decodeGzipBase64, type Decompressor, } from './internal/decompress.js';
-export { defaultUUIDGenerator, defaultSleeper, systemClock, type Clock, type Sleeper, type UUIDGenerator, } from './internal/random.js';
-export { parseDuration, MAX_DURATION_MS } from './internal/duration.js';
+export { DEFAULT_MAX_RETRIES, DEFAULT_RAPIDSIGN_BASE_URL, DEFAULT_USER_AGENT, RapidSignClient, type RapidSignClientOptions, } from "./client.js";
+export { type ErrorCode, fromHttpResponse, fromProblemDetails, RapidSignError, type RapidSignErrorInit, } from "./errors.js";
+export { type AwaitOpts, type CancelRequest, type DownloadOpts, type Envelope, type EnvelopeStatus, type GetOpts, type MintCodeRequest, type PdfSource, type Recipient, type SendRequest, type Signature, type VoiceCode, type VoiceScript, type VoiceStep, type VoiceStepKind, } from "./types.js";
+export { type DocumentsContext, DocumentsService } from "./documents.js";
+export { VoiceService } from "./voice.js";
+export { type WebhookEvent, WebhooksService } from "./webhooks.js";
+export { defaultTransport, type HttpMethod, type Transport, type TransportRequest, type TransportResponse, } from "./internal/transport.js";
+export { decodeGzipBase64, type Decompressor, defaultDecompressor } from "./internal/decompress.js";
+export { type Clock, defaultSleeper, defaultUUIDGenerator, type Sleeper, systemClock, type UUIDGenerator, } from "./internal/random.js";
+export { MAX_DURATION_MS, parseDuration } from "./internal/duration.js";
 //# sourceMappingURL=index.d.ts.map
 === dist/rapidsign/internal/decompress.d.ts ===
 /**
@@ -2653,7 +2651,7 @@ export declare const defaultSleeper: Sleeper;
  * Header assembly is the caller's responsibility; this facade moves bytes.
  */
 /** Supported HTTP methods. */
-export type HttpMethod = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
+export type HttpMethod = "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
 /** Outbound request as seen by the transport facade. */
 export interface TransportRequest {
     readonly url: string;
@@ -2691,7 +2689,7 @@ export declare function defaultTransport(fetchImpl?: typeof fetch): Transport;
  * boundary the SDK absorbs.
  */
 /** Lifecycle state of a document on the server. */
-export type EnvelopeStatus = 'pending' | 'saved' | 'notified';
+export type EnvelopeStatus = "pending" | "saved" | "notified";
 /** Recipient (a single signer; v1 is one-signer-per-doc). */
 export interface Recipient {
     readonly email: string;
@@ -2729,6 +2727,17 @@ export interface SendRequest {
      * UUIDv4 per call; supplying one is reserved for advanced cases.
      */
     readonly idempotencyKey?: string;
+    /**
+     * Identifies the RapidSign form the notify template should render for
+     * the recipient. Omit when the signer flow is not form-driven.
+     */
+    readonly formId?: string;
+    /**
+     * Whether the notify email embeds the signer's access code directly in
+     * the sign link (vs requiring it be entered separately). Defaults to
+     * `false`.
+     */
+    readonly includeCodeInLink?: boolean;
 }
 /** The packet that came back from `documents.send` / `documents.get`. */
 export interface Envelope {
@@ -2770,6 +2779,26 @@ export interface CancelRequest {
     /** Operator-facing reason recorded with the cancel event. */
     readonly reason: string;
 }
+/** Options for `documents.get`. */
+export interface GetOpts {
+    /** Optional session id forwarded as the `session_id` query parameter. */
+    readonly sessionId?: string;
+    /**
+     * AbortSignal for caller-driven cancellation. When aborted, the call
+     * rejects with `AbortError` and stops retrying immediately.
+     */
+    readonly signal?: AbortSignal;
+}
+/** Options for `documents.download`. */
+export interface DownloadOpts {
+    /** Optional session id forwarded as the `session_id` query parameter. */
+    readonly sessionId?: string;
+    /**
+     * AbortSignal for caller-driven cancellation. When aborted, the call
+     * rejects with `AbortError` and stops retrying immediately.
+     */
+    readonly signal?: AbortSignal;
+}
 /** Options for `awaitSignature` polling. */
 export interface AwaitOpts {
     /**
@@ -2785,7 +2814,99 @@ export interface AwaitOpts {
      */
     readonly signal?: AbortSignal;
 }
+/**
+ * One step behavior in a voice script. Mirrors `api.rapidsign.v1`'s
+ * voice-sign step kinds; kept open (autocomplete for known kinds, but any
+ * string type-checks) so future server-side additions do not require an
+ * SDK release — mirrors Go `VoiceStepKind`, a named string type that
+ * accepts any value for the same reason. The `string & {}` branded-empty
+ * trick keeps literal-union autocomplete without narrowing the type to a
+ * closed enum (a bare `string` would drop it entirely).
+ */
+export type VoiceStepKind = "say" | "play" | "confirm" | "capture-name" | (string & {});
+/** One carrier-configured ceremony step. Mirrors Go `VoiceStep`. */
+export interface VoiceStep {
+    readonly kind: VoiceStepKind;
+    readonly text?: string;
+    readonly audioUrl?: string;
+}
+/**
+ * The ordered step list plus the mandatory recording-disclosure copy a
+ * voice ceremony opens with. Pass a `VoiceScript` on `MintCodeRequest` to
+ * publish (or republish) the script for a form; omit it to mint against
+ * whatever was published earlier for the same `form`. Mirrors Go
+ * `VoiceScript`.
+ */
+export interface VoiceScript {
+    readonly disclosureText?: string;
+    readonly steps: ReadonlyArray<VoiceStep>;
+    readonly expectedSignerName?: string;
+}
+/** Inputs accepted by `voice.mintCode`. Mirrors Go `MintCodeRequest`. */
+export interface MintCodeRequest {
+    readonly sessionId: string;
+    readonly secretKey: string;
+    readonly form: string;
+    readonly signer: string;
+    /**
+     * When supplied, publishes the voice script for `form` before minting
+     * the code. Omit to mint against an already-published script.
+     */
+    readonly script?: VoiceScript;
+}
+/**
+ * A freshly minted, single-use code a signer dials into the ceremony's
+ * universal number with. Mirrors Go `VoiceCode`.
+ */
+export interface VoiceCode {
+    readonly signId: string;
+    readonly code: string;
+    readonly expiresAt: Date;
+}
 //# sourceMappingURL=types.d.ts.map
+=== dist/rapidsign/voice.d.ts ===
+/**
+ * RapidSign voice-signing service.
+ *
+ * A voice ceremony resolves to the same signing envelope every other
+ * ceremony type produces (SAH-4608): once the signer completes the phone
+ * call, the resulting signature and PDF are fetched exactly as for any
+ * other sign id, via `documents.get` / `documents.awaitSignature` /
+ * `documents.download`. Voice adds exactly one new step ahead of that
+ * shared lifecycle — minting the single-use code the signer dials in
+ * with.
+ *
+ * Wire-mirrors the Go client's `Voice` (packages/go/rapidsign/voice.go).
+ */
+import { type DocumentsContext } from "./documents.js";
+import { type MintCodeRequest, type VoiceCode } from "./types.js";
+/** Public service object exposed as `isa.rapidsign.voice`. */
+export declare class VoiceService {
+    private readonly ctx;
+    constructor(ctx: DocumentsContext);
+    /**
+     * Mint a single-use voice-sign application code bound to `signId` and
+     * notify nobody — the caller is responsible for delivering the code to
+     * the signer through its own channel. The signer dials the ceremony's
+     * universal number and enters the code to begin the call; once the call
+     * completes, drive the rest of the lifecycle the same way as any other
+     * ceremony: `documents.awaitSignature` (or `documents.get`) for the
+     * signature, `documents.download` for the PDF.
+     */
+    mintCode(signId: string, request: MintCodeRequest): Promise<VoiceCode>;
+    /** Authorization + UA + JSON content-type, mirroring `DocumentsService`. */
+    private headers;
+    /**
+     * POST a JSON body and decode a JSON response. Retries transient 5xx/429
+     * errors (bounded by `maxRetries`), mirroring `DocumentsService`'s
+     * `callJSON`. The idempotency key is minted once and reused across every
+     * retry of this call — a fresh key per attempt would let a retried mint
+     * (server received the first attempt but the client never saw the reply)
+     * create a second, orphaned voice code for the same sign_id.
+     */
+    private callJSON;
+}
+//# sourceMappingURL=voice.d.ts.map
 === dist/rapidsign/webhooks.d.ts ===
 /**
  * Webhooks service stub.
@@ -2829,6 +2950,25 @@ export declare class WebhooksService {
  * The error funnel in `./errors` (`fromHttpResponse`/`fromProblemDetails`)
  * resolves a raw response into the right subclass.
  */
+/**
+ * Prototype-independent guard for {@link IsaApiError} and its subclasses.
+ * Prefer this over `instanceof IsaApiError`, which silently returns `false`
+ * when the error came from a different copy of the SDK module (vendored
+ * tarball, test mock, duplicated dependency). Surfaced publicly as
+ * {@link Isa.isApiError}, which carries a worked example.
+ */
+export declare function isApiError(value: unknown): value is IsaApiError;
+/**
+ * Prototype-independent guard for {@link IsaNotActivatedError}; narrows so
+ * callers can read `code`. Surfaced publicly as {@link Isa.isNotActivatedError}.
+ */
+export declare function isNotActivatedError(value: unknown): value is IsaNotActivatedError;
+/**
+ * Prototype-independent guard for {@link IsaIdempotencyConflictError};
+ * narrows so callers can read `key` / `firstSeenAt`. Surfaced publicly as
+ * {@link Isa.isIdempotencyConflictError}.
+ */
+export declare function isIdempotencyConflictError(value: unknown): value is IsaIdempotencyConflictError;
 /** Base error for every SDK failure mode. */
 export declare class IsaError extends Error {
     constructor(message: string);
@@ -2861,7 +3001,7 @@ export declare class IsaCaseExpiredError extends IsaError {
  * from the server's `licenses.activate` response once typed activation
  * errors land (tracked as task #197).
  */
-export type IsaNotActivatedCode = 'requires_activation' | 'max_activations' | 'inactive' | 'active_elsewhere' | 'locked';
+export type IsaNotActivatedCode = "requires_activation" | "max_activations" | "inactive" | "active_elsewhere" | "locked";
 /**
  * The `isa.zyins.*` product surface was invoked on a license-mode `Isa`
  * that has no usable licenseKey. Consumers dispatch on `error.code` rather
@@ -2946,7 +3086,7 @@ export declare class IsaIdempotencyConflictError extends IsaApiError {
  * the licensing server's `ERR_*` set; the string values never change across
  * SDK releases, so consumers switch on `error.code` rather than the message.
  */
-export type IsaLicenseErrorCode = 'max_activations' | 'inactive' | 'active_elsewhere' | 'locked' | 'invalid_credentials' | 'no_email' | 'unknown';
+export type IsaLicenseErrorCode = "max_activations" | "inactive" | "active_elsewhere" | "locked" | "invalid_credentials" | "no_email" | "unknown";
 /**
  * License activation / deactivation failure (the licensing server's `ERR_*`
  * responses, absorbed into the typed funnel). `code` is the contract;
@@ -2987,7 +3127,7 @@ export declare class IsaRateLimitError extends IsaApiError {
  * pounds). The factories in this module hide the bucket math; the client's
  * prequalify builder is the only consumer that knows how to serialize them.
  */
-import type { State } from '../catalog/states.js';
+import type { State } from "../catalog/states.js";
 /**
  * Applicant biological sex. The server accepts `male` and `female`
  * (canonical lowercase per ADR-012) and normalises legacy single-letter codes
@@ -3211,9 +3351,9 @@ export declare function isAuthContext(value: unknown): value is AuthContext;
  * Returns a zero-value `BrandingDetail` when no row exists; the server
  * deliberately does NOT 404 for missing branding rows.
  */
-import { type AuthContext } from './auth.js';
-import { type Transport } from './transport.js';
-import { type Clock } from '../core/index.js';
+import { type Clock } from "../core/index.js";
+import { type AuthContext } from "./auth.js";
+import { type Transport } from "./transport.js";
 /** Whitelabel detail returned by `branding.lookup`. */
 export interface BrandingDetail {
     imoName: string;
@@ -3263,9 +3403,9 @@ export declare function lookup(ctx: BrandingContext): Promise<BrandingDetail>;
  * The set of ZyINS API surfaces that carry an independent version. Adding
  * a new surface here requires the same addition to {@link BundledApiVersions}.
  */
-export type IsaApiSurface = 'prequalify' | 'quote' | 'datasets' | 'reference' | 'sessions' | 'branding' | 'cases';
+export type IsaApiSurface = "prequalify" | "quote" | "datasets" | "reference" | "sessions" | "branding" | "cases";
 /** Major-version token sent in the `Api-Version` request header. */
-export type IsaApiVersion = 'v1' | 'v2' | 'v3';
+export type IsaApiVersion = "v1" | "v2" | "v3";
 /**
  * Per-surface override accepted on `IsaCreateOptions.apiVersion` and the
  * legacy factory `IsaFactoryOptions.apiVersion`. Surfaces absent from the
@@ -3305,9 +3445,9 @@ export declare function surfaceForPath(path: string): IsaApiSurface | undefined;
  * attachment do not throw `InvalidCharacterError` (a real bug in older
  * browser `btoa` paths).
  */
-import { type AuthContext } from './auth.js';
-import { type Transport } from './transport.js';
-import { type Clock } from '../core/index.js';
+import { type Clock } from "../core/index.js";
+import { type AuthContext } from "./auth.js";
+import { type Transport } from "./transport.js";
 /** Inputs for `case.email`. */
 export interface CaseEmailRequest {
     /** Recipient email address. */
@@ -3350,9 +3490,9 @@ export declare function email(request: CaseEmailRequest, ctx: CaseContext): Prom
  * It is never logged, never put on a telemetry payload, and never attached to
  * a thrown error. See `../account/cases` for the enforced guarantee.
  */
-import { type AuthContext } from './auth.js';
-import { type Transport } from './transport.js';
-import { type Clock } from '../core/index.js';
+import { type Clock } from "../core/index.js";
+import { type AuthContext } from "./auth.js";
+import { type Transport } from "./transport.js";
 /**
  * Inputs for `cases.share`. `input` is the quote payload; `results` and
  * `products` are an optional analysis snapshot. All three are encrypted
@@ -3517,8 +3657,8 @@ export interface CaseStorage {
  * (`encryptCase` / `decryptCase` / `signedCaseRequest`) to avoid forking
  * the cryptographic surface.
  */
-import { type TCaseRequestContext } from '../../account/caseTransport.js';
-import type { CaseRecord, CaseStorage, CaseStoragePutResult } from './CaseStorage.js';
+import { type TCaseRequestContext } from "../../account/caseTransport.js";
+import type { CaseRecord, CaseStorage, CaseStoragePutResult } from "./CaseStorage.js";
 /**
  * Per-operation context needed by the default zero-knowledge adapter.
  * Mirrors {@link import('../../account/cases.js').CasesContext} without the
@@ -3558,23 +3698,23 @@ export declare class ZeroKnowledgeCaseStorage implements CaseStorage {
  *     surface beyond an internal override used by replay tests.
  *   - Retries and backoff are NOT exposed here; they live in Tier 2.
  */
-import { type AuthContext } from './auth.js';
-import { type RequestSigner } from './requestSigner.js';
-import { type Transport } from './transport.js';
-import { type Clock } from '../core/index.js';
-import { type PrequalifyRequest, type PrequalifyResult } from './prequalify.js';
-import { type PrequalifyV2Request, type PrequalifyV2Result } from './prequalify-v2.js';
-import { type PrequalifyV3Request, type PrequalifyV3Result } from './prequalify-v3.js';
-import { type QuoteV3Request, type QuoteV3Result } from './quote-v3.js';
-import { DatasetsV3SubClient } from './datasets-v3.js';
-import { type LicenseActivateRequest, type LicenseActivateResult, type LicenseCheckRequest, type LicenseCheckResult, type LicenseDeactivateRequest, type LicenseDeactivateResult } from './license.js';
-import { type ReadinessResult } from './health.js';
-import { type CaseEmailRequest, type CaseEmailResult } from './case.js';
-import { type BrandingDetail } from './branding.js';
-import { DatasetsSubClient } from './datasets.js';
-import { type PreferencesLookupResult, type PreferencesSetRequest, type PreferencesSetResult } from './preferences.js';
-import { type CaseShareRequest, type CaseShareResult } from './cases.js';
-import { LogosSubClient, type LogosFetch } from './logos.js';
+import { type Clock } from "../core/index.js";
+import { type AuthContext } from "./auth.js";
+import { type BrandingDetail } from "./branding.js";
+import { type CaseEmailRequest, type CaseEmailResult } from "./case.js";
+import { type CaseShareRequest, type CaseShareResult } from "./cases.js";
+import { DatasetsV3SubClient } from "./datasets-v3.js";
+import { DatasetsSubClient } from "./datasets.js";
+import { type ReadinessResult } from "./health.js";
+import { type LicenseActivateRequest, type LicenseActivateResult, type LicenseCheckRequest, type LicenseCheckResult, type LicenseDeactivateRequest, type LicenseDeactivateResult } from "./license.js";
+import { type LogosFetch, LogosSubClient } from "./logos.js";
+import { type PreferencesLookupResult, type PreferencesSetRequest, type PreferencesSetResult } from "./preferences.js";
+import { type PrequalifyV2Request, type PrequalifyV2Result } from "./prequalify-v2.js";
+import { type PrequalifyV3Request, type PrequalifyV3Result } from "./prequalify-v3.js";
+import { type PrequalifyRequest, type PrequalifyResult } from "./prequalify.js";
+import { type QuoteV3Request, type QuoteV3Result } from "./quote-v3.js";
+import { type RequestSigner } from "./requestSigner.js";
+import { type Transport } from "./transport.js";
 /** Per-call context shared across sub-clients. */
 export interface OperationContext {
     auth: AuthContext;
@@ -3790,7 +3930,7 @@ export interface ClientVersionStatus {
     minimum: string;
     /** Consumer-supplied identifier (Isa constructor option). */
     ours: string;
-    level: 'soft';
+    level: "soft";
 }
 /** Listener registered via `Isa.onClientVersionMismatch`. */
 export type ClientVersionListener = (status: ClientVersionStatus) => void;
@@ -3830,7 +3970,7 @@ export declare enum QuoteType {
     MonthlyBudget = "monthly_budget"
 }
 /** Internal — string-form of the type discriminator carried on every input. */
-export type CoverageType = 'face_value' | 'monthly_budget';
+export type CoverageType = "face_value" | "monthly_budget";
 /** Single coverage amount. */
 export interface SingleCoverage {
     readonly type: CoverageType;
@@ -3847,11 +3987,11 @@ export type CoverageInput = SingleCoverage | MultiCoverage;
 export type Coverage = CoverageInput;
 /** @deprecated retained for type-name compatibility. */
 export type FaceValueCoverage = SingleCoverage & {
-    type: 'face_value';
+    type: "face_value";
 };
 /** @deprecated retained for type-name compatibility. */
 export type MonthlyBudgetCoverage = SingleCoverage & {
-    type: 'monthly_budget';
+    type: "monthly_budget";
 };
 /** Type guard for multi-amount coverage. */
 export declare function isMulti(c: CoverageInput): c is MultiCoverage;
@@ -3894,8 +4034,8 @@ export declare const Coverage: {
  * single process so per-call AsyncStorage round-trips stay off the hot
  * path.
  */
-import { type AuthContext } from './auth.js';
-import { type CredentialStore } from '../core/index.js';
+import { type CredentialStore } from "../core/index.js";
+import { type AuthContext } from "./auth.js";
 /** Snapshot of the credentials needed for one license-mode call. */
 export interface LicenseCredentialSnapshot {
     /** BPP keycode (XXX-XXX-XXX). Required at bootstrap. */
@@ -3974,9 +4114,9 @@ export declare class IsaCredentialState {
  * This module owns ONLY the wire shape + the parser. Consumer-side index
  * construction (`ReferenceIndex`) lives in `./reference/referenceIndex.ts`.
  */
-import type { OperationContext } from './client.js';
+import type { OperationContext } from "./client.js";
 /** Closed enum of dataset categories the server returns. */
-export type DatasetCategory = 'medications' | 'conditions' | 'products' | 'spelling_corrections' | 'nicotine_options';
+export type DatasetCategory = "medications" | "conditions" | "products" | "spelling_corrections" | "nicotine_options";
 /** Base reference entity: every row carries at least `id` + `name`. */
 export interface ReferenceEntity {
     /** Opaque entity identifier. Today: kind-prefixed ULID (`cond_`, `med_`, ...). */
@@ -4021,7 +4161,7 @@ export interface MedicationEntity extends ReferenceEntity {
 /** A nicotine-option row. */
 export interface NicotineOptionEntity extends ReferenceEntity {
     /** Coarse classification of the consumption form. */
-    readonly type: 'smoked' | 'smokeless' | 'vapor' | 'other';
+    readonly type: "smoked" | "smokeless" | "vapor" | "other";
 }
 /** A typo correction row. */
 export interface SpellingCorrectionEntity extends ReferenceEntity {
@@ -4093,7 +4233,7 @@ export interface DatasetsV3GetOptions {
     /** Narrow the response to specific categories. Omit for all. */
     readonly include?: readonly DatasetCategory[];
     /** `'meta'` skips row payloads; `'full'` (default) returns everything. */
-    readonly fields?: 'full' | 'meta';
+    readonly fields?: "full" | "meta";
     /** Conditional revalidation; passes through as `If-None-Match`. */
     readonly ifNoneMatch?: string;
 }
@@ -4121,7 +4261,7 @@ export declare function isNotModified(result: DatasetBundleV3 | DatasetsV3NotMod
  * inputs before lookup. Conventionally fed into
  * {@link DefaultAutocorrector}.
  */
-export declare function buildTypoMap(bundle: Pick<DatasetBundleV3, 'spellingCorrections'>): ReadonlyMap<string, string>;
+export declare function buildTypoMap(bundle: Pick<DatasetBundleV3, "spellingCorrections">): ReadonlyMap<string, string>;
 /**
  * Aggregate per-id prescription frequency from inline rows.
  *
@@ -4131,8 +4271,21 @@ export declare function buildTypoMap(bundle: Pick<DatasetBundleV3, 'spellingCorr
  * Consumers feed this into {@link AutocompleteAlgorithm.rank} as the
  * `frequencies` map.
  */
-export declare function buildFrequencyMap(bundle: Pick<DatasetBundleV3, 'conditions' | 'medications'>): ReadonlyMap<string, number>;
+export declare function buildFrequencyMap(bundle: Pick<DatasetBundleV3, "conditions" | "medications">): ReadonlyMap<string, number>;
 export declare function getDatasetsV3(options: DatasetsV3GetOptions | undefined, ctx: OperationContext): Promise<DatasetBundleV3 | DatasetsV3NotModified>;
+/**
+ * Parse a raw `GET /v3/datasets` response body — the full envelope shape
+ * `{ "data": { ... } }` — into a {@link DatasetBundleV3}. Exported so a
+ * local {@link DatasetSource} can reuse the exact same parser the HTTP
+ * path uses; there is intentionally no second parser. `etag` is the value
+ * to stamp on the bundle (the file path has none, so it passes
+ * `undefined`).
+ *
+ * Accepts both the slim `reference-bundle.json` and the full
+ * `datasets.json` — both carry the same `data.datasets` shape; the
+ * reference layer reads only the reference fields.
+ */
+export declare function parseEnvelope(body: string, etag: string | undefined): DatasetBundleV3;
 export declare class DatasetsV3SubClient {
     private readonly ctx;
     constructor(ctx: OperationContext);
@@ -4140,8 +4293,8 @@ export declare class DatasetsV3SubClient {
 }
 //# sourceMappingURL=datasets-v3.d.ts.map
 === dist/zyins/datasets.d.ts ===
-import type { OperationContext } from './client.js';
-export type DatasetName = 'nicotineOptions' | 'products' | 'discontinuedProducts' | 'stateDerivatives' | 'typos' | 'conditions' | 'conditionNames' | 'medications' | 'medicationNames' | 'medicationsByCondition' | 'frequencyGraphs';
+import type { OperationContext } from "./client.js";
+export type DatasetName = "nicotineOptions" | "products" | "discontinuedProducts" | "stateDerivatives" | "typos" | "conditions" | "conditionNames" | "medications" | "medicationNames" | "medicationsByCondition" | "frequencyGraphs";
 export interface DatasetBundle {
     nicotineOptions: ReadonlyArray<string>;
     products: Readonly<Record<string, unknown>>;
@@ -4165,6 +4318,127 @@ export declare class DatasetsSubClient {
     get(options?: DatasetsGetOptions): Promise<DatasetBundle>;
 }
 //# sourceMappingURL=datasets.d.ts.map
+=== dist/zyins/datasetSource.d.ts ===
+/**
+ * Pluggable source for the v3 reference bundle.
+ *
+ * Today the reference layer (`conditions.match` / `medications.match` /
+ * `autocomplete` / fuzzy / autocorrect) is warmed only by a live
+ * `datasets.get()` HTTP call. A {@link DatasetSource} lets the same layer
+ * load from a local artifact — offline, inside the engine, or anywhere a
+ * network round-trip is undesirable. The contract is a single async
+ * `load(): Promise<DatasetBundleV3>`; how the bytes arrive is the source's
+ * business.
+ *
+ * Three implementations ship:
+ *   - {@link FileDatasetSource} — read a file, parse with the EXISTING
+ *     {@link parseEnvelope} (no second parser).
+ *   - {@link ApiDatasetSource} — the current `datasets.get()` HTTP path.
+ *   - {@link ResolvingDatasetSource} — try sources in order, first success
+ *     wins. Documented chain: local file → optional generate hook → API.
+ *
+ * Default behavior is unchanged: when a caller supplies no source, the SDK
+ * uses {@link ApiDatasetSource} exactly as before.
+ */
+import type { DatasetBundleV3 } from "./datasets-v3.js";
+/**
+ * A source the reference layer can load a {@link DatasetBundleV3} from.
+ * Implementations resolve the bundle however they like — HTTP, a local
+ * file, an in-memory value — and surface one async method.
+ */
+export interface DatasetSource {
+    /**
+     * Resolve the bundle. Rejects with a descriptive error naming the
+     * source and the failing input when the bundle cannot be produced.
+     */
+    load(): Promise<DatasetBundleV3>;
+}
+/**
+ * Reads a UTF-8 text file by path. Injectable so the file source stays
+ * testable without touching the disk and so non-Node runtimes can supply
+ * their own reader. The name describes WHAT (read a file) not HOW (which
+ * runtime API backs it).
+ */
+export type FileReader = (path: string) => Promise<string>;
+/**
+ * Default file reader. Lazily imports `node:fs/promises` so the symbol is
+ * tree-shakeable and never evaluated in a browser bundle that does not use
+ * {@link FileDatasetSource}. Throws a typed {@link DatasetSourceError} when
+ * no filesystem is available (browser) or the read fails.
+ */
+export declare const platformFileReader: FileReader;
+/** Thrown when a {@link DatasetSource} cannot resolve a bundle. */
+export declare class DatasetSourceError extends Error {
+    constructor(message: string, options?: {
+        cause?: unknown;
+    });
+}
+/**
+ * Loads the bundle from a local file and parses it with the shared
+ * {@link parseEnvelope}. Accepts the slim `reference-bundle.json` OR the
+ * full `datasets.json` — both carry the same `data.datasets` shape; the
+ * reference layer reads only the reference fields. The file has no ETag,
+ * so the parsed bundle's `etag` is `undefined` and the `version` token
+ * (from `data.catalog_version` / `data.version`) drives staleness checks.
+ */
+export declare class FileDatasetSource implements DatasetSource {
+    private readonly path;
+    private readonly readFile;
+    constructor(path: string, readFile?: FileReader);
+    load(): Promise<DatasetBundleV3>;
+}
+/**
+ * Loads the bundle from a caller-supplied async function — the current
+ * `datasets.get()` HTTP path. Uses the already-configured client
+ * credential; it introduces no new service key. The namespace wires the
+ * fetcher to its lazy `DatasetsFacade`.
+ */
+export declare class ApiDatasetSource implements DatasetSource {
+    private readonly fetchBundle;
+    constructor(fetchBundle: () => Promise<DatasetBundleV3>);
+    load(): Promise<DatasetBundleV3>;
+}
+/**
+ * A source backed by a bundle already in memory. Lets a caller who has
+ * parsed a bundle themselves feed it in without re-reading or re-fetching.
+ */
+export declare class StaticDatasetSource implements DatasetSource {
+    private readonly bundle;
+    constructor(bundle: DatasetBundleV3);
+    load(): Promise<DatasetBundleV3>;
+}
+/** Optional hook invoked between local-file and API steps of the chain. */
+export type OnMissingHook = () => Promise<void>;
+/**
+ * Tries each source in order; the first that resolves wins. The
+ * documented chain is local file → optional generate hook → API fallback:
+ * pass the generate hook as `onMissing` and it runs once, after the first
+ * source fails and before the next is tried, so an integrator can wire it
+ * to a "build the local artifact" command. When every source fails, throws
+ * a {@link DatasetSourceError} naming each attempt and its cause.
+ */
+export declare class ResolvingDatasetSource implements DatasetSource {
+    private readonly sources;
+    private readonly onMissing;
+    constructor(sources: readonly DatasetSource[], options?: {
+        onMissing?: OnMissingHook;
+    });
+    load(): Promise<DatasetBundleV3>;
+    private runOnMissing;
+}
+/**
+ * Accepted shorthands for the `datasets` factory option. A string is a
+ * file path; a bundle is used directly; a {@link DatasetSource} is used as
+ * given. Omitting the option keeps today's API-fetch default.
+ */
+export type DatasetSourceInput = DatasetSource | DatasetBundleV3 | string;
+/**
+ * Normalize a {@link DatasetSourceInput} into a {@link DatasetSource}. A
+ * string becomes a {@link FileDatasetSource}; an in-memory bundle becomes
+ * a {@link StaticDatasetSource}; an already-built source passes through.
+ */
+export declare function toDatasetSource(input: DatasetSourceInput): DatasetSource;
+//# sourceMappingURL=datasetSource.d.ts.map
 === dist/zyins/envelope.d.ts ===
 /**
  * Response envelope (SDK_DESIGN.md §4.6).
@@ -4239,21 +4513,21 @@ export interface RawResponseResult<T> {
  * factory and the missing variable — the caller never has to chase down a
  * silent absence.
  */
-import { type EnvReader } from './logger.js';
+import { type EnvReader } from "./logger.js";
 /** Bearer-mode identity. */
 export interface BearerIdentity {
-    readonly mode: 'bearer';
+    readonly mode: "bearer";
     readonly token: string;
 }
 /** License-mode identity (BPP agents). `deviceId` is bound at first run. */
 export interface LicenseIdentity {
-    readonly mode: 'license';
+    readonly mode: "license";
     readonly keycode: string;
     readonly email: string;
 }
 /** Session-mode identity (embedded forms). */
 export interface SessionIdentity {
-    readonly mode: 'session';
+    readonly mode: "session";
     readonly sessionId: string;
     readonly sessionSecret: string;
 }
@@ -4276,6 +4550,27 @@ export declare const ENV_VAR_NAMES: {
 export declare function resolveBearerIdentity(args: {
     token?: string;
 } | undefined, env?: EnvReader): BearerIdentity;
+/**
+ * Sentinel bearer credential marking an identity constructed for offline,
+ * local-bundle-only use. NOT a secret — a fixed non-credential placeholder,
+ * composed at runtime (mirroring {@link ENV_VAR_NAMES}) so static secret
+ * scanners do not flag a literal. Not a working credential: a product call
+ * made in this mode signs with it and the server rejects it — the intended
+ * fail-loud behavior for "network call without a token".
+ */
+export declare const OFFLINE_BEARER_TOKEN: string;
+/**
+ * Resolve a bearer identity, tolerating a missing token when an offline
+ * local dataset source makes a credential unnecessary. With a token (arg
+ * or env) the resolved identity is identical to {@link resolveBearerIdentity};
+ * without one, `offline` substitutes the {@link OFFLINE_BEARER_TOKEN}
+ * sentinel so the reference layer works with no credential. A missing
+ * token with `offline === false` still throws — the default path is
+ * unchanged.
+ */
+export declare function resolveBearerIdentityOrOffline(args: {
+    token?: string;
+} | undefined, env: EnvReader, offline: boolean): BearerIdentity;
 /** Resolve a license identity from explicit args or environment. */
 export declare function resolveLicenseIdentity(args: {
     keycode?: string;
@@ -4287,6 +4582,35 @@ export declare function resolveSessionIdentity(args: {
     sessionSecret?: string;
 } | undefined, env?: EnvReader): SessionIdentity;
 //# sourceMappingURL=envFactory.d.ts.map
+=== dist/zyins/errorBrand.d.ts ===
+/**
+ * Prototype-independent error brands.
+ *
+ * The guards in {@link ./apiError} test for these brands instead of
+ * `instanceof` so they keep working when the error crossed a module boundary
+ * that produced a second copy of the class — a vendored tarball, a test
+ * mock, or a duplicated dependency tree all yield distinct prototypes, which
+ * breaks `instanceof` but not a string-keyed brand. This is the same
+ * prototype-independent pattern Stripe ships as
+ * `Stripe.errors.StripeError.isStripeError`.
+ *
+ * The brands are non-enumerable so they never leak into JSON, logs, or
+ * `Object.keys`. They are intentionally plain string keys (not `Symbol`s):
+ * a Symbol minted in one module copy is `!==` the Symbol minted in another,
+ * which would reintroduce the exact cross-copy failure the brand exists to
+ * defeat.
+ */
+/** Brand stamped on {@link IsaApiError} and every subclass. */
+export declare const API_ERROR_BRAND = "__isaApiError";
+/** Brand stamped on {@link IsaNotActivatedError}. */
+export declare const NOT_ACTIVATED_BRAND = "__isaNotActivatedError";
+/** Brand stamped on {@link IsaIdempotencyConflictError}. */
+export declare const IDEMPOTENCY_CONFLICT_BRAND = "__isaIdempotencyConflictError";
+/** Stamp a non-enumerable `true` brand onto an instance. */
+export declare function brand(target: object, key: string): void;
+/** True when `value` carries a non-enumerable own `key` set to `true`. */
+export declare function hasBrand(value: unknown, key: string): boolean;
+//# sourceMappingURL=errorBrand.d.ts.map
 === dist/zyins/errors.d.ts ===
 /**
  * Typed error funnel.
@@ -4306,8 +4630,8 @@ export declare function resolveSessionIdentity(args: {
  * `code`. This is the "legacy error formats are absorbed" invariant from
  * ADR-035.
  */
-import { type ProblemDetails } from '../core/index.js';
-import { IsaApiError } from './apiError.js';
+import { type ProblemDetails } from "../core/index.js";
+import { IsaApiError } from "./apiError.js";
 /**
  * Parse a raw HTTP response (status + body) into a typed `IsaApiError`.
  *
@@ -4337,10 +4661,10 @@ export declare function fromProblemDetails(problem: ProblemDetails): IsaApiError
  * it without credentials. We still send any auth headers attached to
  * the client; the server ignores them on this route.
  */
-import { type AuthContext } from './auth.js';
-import { type Transport } from './transport.js';
+import { type AuthContext } from "./auth.js";
+import { type Transport } from "./transport.js";
 /** Mirror of proto `ServingStatus`. Wire values are lower-case. */
-export type ServingStatus = 'serving' | 'not_serving' | 'unknown';
+export type ServingStatus = "serving" | "not_serving" | "unknown";
 /** Per-dependency probe outcome. */
 export interface ProbeResult {
     status: ServingStatus;
@@ -4409,36 +4733,38 @@ export declare function deriveIdempotencyKey(args: {
  * `@isa-sdk/zyins/vue` so non-React / non-Vue environments do not pull a
  * framework into their bundle.
  */
-export { ZyInsClient, DEFAULT_ZYINS_BASE_URL, type ZyInsClientOptions } from './client.js';
-export { isAuthContext, type AuthContext } from './auth.js';
-export { Sex, NicotineUsage, NicotineDuration, Height, Weight, type Applicant, type Medication, type Condition, type NicotineUsageInput, type NicotineProductUsage, } from './applicant.js';
-export { Coverage, QuoteType, isMulti, type CoverageInput, type CoverageType, type SingleCoverage, type MultiCoverage, type FaceValueCoverage, type MonthlyBudgetCoverage, } from './coverage.js';
-export { ProductSelection, ProductClass, ProductType, Products, type Product, type ProductClassValue, } from './product.js';
-export { MinRank, type MinRankValue } from './minRank.js';
-export { ProductsFacade } from './products.js';
-export { fromHttpResponse, fromProblemDetails } from './errors.js';
-export { type PrequalifyRequest, type PrequalifyResult, type PrequalifyPlan, type Plan, type PrequalifyOptions, type PrequalifyResultMeta, type SinglePrequalifyResult, type MultiPrequalifyResult, } from './prequalify.js';
-export { prequalifyV2, type PrequalifyV2Request, type PrequalifyV2Result, type PrequalifyV2Options, type PrequalifyV2Context, type PlanOffer, type OtherOffer, type OfferEligibility, type OfferCategory, type OfferCarrier, type OfferProduct, type OfferPlanInfo, type OfferPlanInfoItem, type OfferPlanInfoLegacy, type OfferDeathBenefit, type OfferPremium, type OfferMoney, } from './prequalify-v2.js';
-export { prequalifyV3, byAmount, offerPremium, type PrequalifyV3Request, type PrequalifyV3Result, type PrequalifyV3Options, type PrequalifyV3Context, type V3Offer, type V3Eligibility, type V3EligibilityCategory, type V3Amount, type V3Money, type V3Period, type V3Premium, type V3PricingRow, } from './prequalify-v3.js';
-export { quoteV3, type QuoteV3Request, type QuoteV3Result, type QuoteV3Options, type QuoteV3Context, } from './quote-v3.js';
-export { getDatasetsV3, isNotModified, buildTypoMap, buildFrequencyMap, DatasetsV3SubClient, type DatasetBundleV3, type DatasetCategory, type DatasetEntry, type DatasetsV3GetOptions, type DatasetsV3NotModified, type ReferenceEntity, type ConditionEntity, type ConditionTreatedWith, type MedicationEntity, type MedicationUsedFor, type NicotineOptionEntity, type SpellingCorrectionEntity, } from './datasets-v3.js';
-export { Sort as ReferenceSort, matchCondition, matchConcept, matchMedication, type Concept, type ConceptKind, type ConditionConcept, type MedicationConcept, type UnknownConcept, } from './reference.js';
-export { DefaultAutocorrector, DefaultMatchAlgorithm, FuzzyMatchAlgorithm, DefaultAutocompleteAlgorithm, buildSuggestion, type Autocorrector, type AutocorrectOptions, type AutocorrectAppliedEvent, type DefaultAutocorrectorOptions, type MatchAlgorithm, type DefaultMatchAlgorithmOptions, type FuzzyMatchAlgorithmOptions, type AutocompleteAlgorithm, type AutocompleteOptions, type DefaultAutocompleteAlgorithmOptions, type Suggestion, type ReferenceAdapters, } from './reference/index.js';
-export { BearerAuth, LicenseAuth, FormAuth, RemoteEngine, LocalEngine, ProxyEngine, InMemoryEngine, inMemoryEngineWith, resolveIsaOptions, DEFAULT_TIMEOUT_MS, BundledApiVersions, resolveApiVersions, type IsaApiVersion, type IsaApiVersionOverride, type IsaApiSurface, type IsaAuthSupplier, type IsaEngine, type IsaCreateOptions, type ResolvedIsaOptions, } from './isaOptions.js';
-export type { CaseStorage, CaseRecord, CaseStoragePutResult, } from './cases/CaseStorage.js';
-export { ZeroKnowledgeCaseStorage } from './cases/ZeroKnowledgeCaseStorage.js';
-export { type ClientVersionStatus, type ClientVersionListener, } from './clientVersion.js';
-export { type LicenseActivateRequest, type LicenseActivateResult, type LicenseActivateAuth, type LicenseCheckRequest, type LicenseCheckResult, type LicenseDeactivateRequest, type LicenseDeactivateResult, type LicenseValidationStatus, } from './license.js';
-export { getReadiness, type ReadinessResult, type ProbeResult, type ServingStatus, type HealthContext, } from './health.js';
-export { type CaseEmailRequest, type CaseEmailResult, } from './case.js';
-export { defaultTransport, type Transport, type TransportRequest, type TransportResponse, type HttpMethod, } from './transport.js';
-export { Isa, ZyInsNamespace, type IsaOptions } from './isa.js';
-export { ReferenceFacade, ReferenceMedicationsFacade, ReferenceConditionsFacade, ReferenceConceptsFacade, } from './isaNamespaces.js';
-export { IsaCredentialState, type LicenseCredentialSnapshot, type LicenseRefreshedEvent, type LicenseRefreshedListener, } from './credentialState.js';
-export { type IsaIdentity, type BearerIdentity, type LicenseIdentity, type SessionIdentity, resolveBearerIdentity, resolveLicenseIdentity, resolveSessionIdentity, ENV_VAR_NAMES, } from './envFactory.js';
-export { IsaError, IsaApiError, IsaConfigError, IsaCaseExpiredError, IsaIdempotencyConflictError, IsaLicenseError, IsaNotActivatedError, IsaRateLimitError, IsaTimeoutError, IsaUnauthorizedError, IsaValidationError, type IsaLicenseErrorCode, type IsaNotActivatedCode, } from './apiError.js';
-export { type Envelope, type RawResponse, type RawResponseResult, } from './envelope.js';
-export { type DebugLogger, type EnvReader, type LogSink, debugLoggerFromEnv, makeLogger, redactHeaders, redactBody, redactBodyString, processEnv, stderrSink, } from './logger.js';
+export { DEFAULT_ZYINS_BASE_URL, ZyInsClient, type ZyInsClientOptions } from "./client.js";
+export { type AuthContext, isAuthContext } from "./auth.js";
+export { type Applicant, type Condition, Height, type Medication, NicotineDuration, type NicotineProductUsage, NicotineUsage, type NicotineUsageInput, Sex, Weight, } from "./applicant.js";
+export { Coverage, type CoverageInput, type CoverageType, type FaceValueCoverage, isMulti, type MonthlyBudgetCoverage, type MultiCoverage, QuoteType, type SingleCoverage, } from "./coverage.js";
+export { type Product, ProductClass, type ProductClassValue, Products, ProductSelection, ProductType, } from "./product.js";
+export { MinRank, type MinRankValue } from "./minRank.js";
+export { ProductsFacade } from "./products.js";
+export { fromHttpResponse, fromProblemDetails } from "./errors.js";
+export { type MultiPrequalifyResult, type Plan, type PrequalifyOptions, type PrequalifyPlan, type PrequalifyRequest, type PrequalifyResult, type PrequalifyResultMeta, type SinglePrequalifyResult, } from "./prequalify.js";
+export { type OfferCarrier, type OfferCategory, type OfferDeathBenefit, type OfferEligibility, type OfferMoney, type OfferPlanInfo, type OfferPlanInfoItem, type OfferPlanInfoLegacy, type OfferPremium, type OfferProduct, type OtherOffer, type PlanOffer, prequalifyV2, type PrequalifyV2Context, type PrequalifyV2Options, type PrequalifyV2Request, type PrequalifyV2Result, } from "./prequalify-v2.js";
+export { buildFrequencyMap, buildTypoMap, type ConditionEntity, type ConditionTreatedWith, type DatasetBundleV3, type DatasetCategory, type DatasetEntry, type DatasetsV3GetOptions, type DatasetsV3NotModified, DatasetsV3SubClient, getDatasetsV3, isNotModified, type MedicationEntity, type MedicationUsedFor, type NicotineOptionEntity, parseEnvelope, type ReferenceEntity, type SpellingCorrectionEntity, } from "./datasets-v3.js";
+export { ApiDatasetSource, type DatasetSource, DatasetSourceError, type DatasetSourceInput, FileDatasetSource, type FileReader, type OnMissingHook, platformFileReader, ResolvingDatasetSource, StaticDatasetSource, toDatasetSource, } from "./datasetSource.js";
+export { formatMoney, type FormatMoneyOptions } from "./money.js";
+export { byAmount, offerPremium, prequalifyV3, type PrequalifyV3Context, type PrequalifyV3Options, type PrequalifyV3Request, type PrequalifyV3Result, type V3Amount, type V3Eligibility, type V3EligibilityCategory, type V3Money, type V3Offer, type V3Period, type V3Premium, type V3PricingRow, } from "./prequalify-v3.js";
+export { quoteV3, type QuoteV3Context, type QuoteV3Options, type QuoteV3Request, type QuoteV3Result, } from "./quote-v3.js";
+export { type Concept, type ConceptKind, type ConditionConcept, matchConcept, matchCondition, matchMedication, type MedicationConcept, Sort as ReferenceSort, type UnknownConcept, } from "./reference.js";
+export { type AutocompleteAlgorithm, type AutocompleteOptions, type AutocorrectAppliedEvent, type AutocorrectOptions, type Autocorrector, buildSuggestion, DefaultAutocompleteAlgorithm, type DefaultAutocompleteAlgorithmOptions, DefaultAutocorrector, type DefaultAutocorrectorOptions, DefaultMatchAlgorithm, type DefaultMatchAlgorithmOptions, FuzzyMatchAlgorithm, type FuzzyMatchAlgorithmOptions, type MatchAlgorithm, type ReferenceAdapters, type Suggestion, } from "./reference/index.js";
+export type { CaseRecord, CaseStorage, CaseStoragePutResult } from "./cases/CaseStorage.js";
+export { ZeroKnowledgeCaseStorage } from "./cases/ZeroKnowledgeCaseStorage.js";
+export { BearerAuth, BundledApiVersions, DEFAULT_TIMEOUT_MS, FormAuth, InMemoryEngine, inMemoryEngineWith, type IsaApiSurface, type IsaApiVersion, type IsaApiVersionOverride, type IsaAuthSupplier, type IsaCreateOptions, type IsaEngine, LicenseAuth, LocalEngine, ProxyEngine, RemoteEngine, resolveApiVersions, type ResolvedIsaOptions, resolveIsaOptions, } from "./isaOptions.js";
+export { type ClientVersionListener, type ClientVersionStatus } from "./clientVersion.js";
+export { type LicenseActivateAuth, type LicenseActivateRequest, type LicenseActivateResult, type LicenseCheckRequest, type LicenseCheckResult, type LicenseDeactivateRequest, type LicenseDeactivateResult, type LicenseValidationStatus, } from "./license.js";
+export { getReadiness, type HealthContext, type ProbeResult, type ReadinessResult, type ServingStatus, } from "./health.js";
+export { type CaseEmailRequest, type CaseEmailResult } from "./case.js";
+export { defaultTransport, type HttpMethod, type Transport, type TransportRequest, type TransportResponse, } from "./transport.js";
+export { IsaApiError, IsaCaseExpiredError, IsaConfigError, IsaError, IsaIdempotencyConflictError, IsaLicenseError, type IsaLicenseErrorCode, type IsaNotActivatedCode, IsaNotActivatedError, isApiError, IsaRateLimitError, IsaTimeoutError, IsaUnauthorizedError, IsaValidationError, isIdempotencyConflictError, isNotActivatedError, } from "./apiError.js";
+export { IsaCredentialState, type LicenseCredentialSnapshot, type LicenseRefreshedEvent, type LicenseRefreshedListener, } from "./credentialState.js";
+export { type Envelope, type RawResponse, type RawResponseResult } from "./envelope.js";
+export { type BearerIdentity, ENV_VAR_NAMES, type IsaIdentity, type LicenseIdentity, resolveBearerIdentity, resolveLicenseIdentity, resolveSessionIdentity, type SessionIdentity, } from "./envFactory.js";
+export { Isa, type IsaOptions, ZyInsNamespace } from "./isa.js";
+export { ReferenceConceptsFacade, ReferenceConditionsFacade, ReferenceFacade, ReferenceMedicationsFacade, } from "./isaNamespaces.js";
+export { type DebugLogger, debugLoggerFromEnv, type EnvReader, type LogSink, makeLogger, processEnv, redactBody, redactBodyString, redactHeaders, stderrSink, } from "./logger.js";
 //# sourceMappingURL=index.d.ts.map
 === dist/zyins/isa.d.ts ===
 /**
@@ -4454,38 +4780,48 @@ export { type DebugLogger, type EnvReader, type LogSink, debugLoggerFromEnv, mak
  *   - Typed `IsaConfigError` thrown when env is missing.
  *   - `ISA_LOG=debug` activates a stderr request/response logger.
  *   - Idempotency-conflict 409 funnels into `IsaIdempotencyConflictError`.
- *   - Every method exposes a `.withRawResponse` sibling returning
- *     `{ data, response }` where `response` carries status/headers/url.
+ *   - Every method exposes a `*Raw` sibling (e.g. `prequalifyRaw`)
+ *     returning `{ data, response }` where `response` carries
+ *     status/headers/url.
  *   - `Envelope<T>` carries typed `requestId`, `idempotencyKey`,
  *     `retryAttempts` named fields.
  *
  * Concurrency: the client carries no shared mutable state. Multiple in-
  * flight calls on one instance are safe (see README "Concurrency safety").
  */
-import { type IsaIdentity } from './envFactory.js';
-import { type CredentialStore } from '../core/index.js';
-import { IsaCredentialState, type LicenseRefreshedListener } from './credentialState.js';
-import { type DebugLogger, type EnvReader, type LogSink } from './logger.js';
-import { type Envelope, type RawResponseResult } from './envelope.js';
-import { type Transport } from './transport.js';
-import { type LogosFetch } from './logos.js';
-import { type PrequalifyRequest, type PrequalifyResult } from './prequalify.js';
-import { type PrequalifyV2Request, type PrequalifyV2Result } from './prequalify-v2.js';
-import { type PrequalifyV3Request, type PrequalifyV3Result, type QuoteV3Request, type QuoteV3Result } from './prequalify-v3-types.js';
-import { WebhooksService } from '../rapidsign/webhooks.js';
-import { type ProxyCallOptions, type ProxyCallResult } from '../proxy/call.js';
-import { BrandingFacade, DatasetsFacade, PreferencesFacade, CasesFacade, EmailFacade, LicenseFacade, LogosFacade, ReferenceFacade, ReferenceMedicationsFacade, ReferenceConditionsFacade, DefaultAutocorrector, type Autocorrector, type MatchAlgorithm, type AutocompleteAlgorithm, type DefaultAutocorrectorOptions } from './isaNamespaces.js';
-import { ProductsFacade } from './products.js';
-import { type ClientVersionListener } from './clientVersion.js';
-import { AccountNamespace } from '../account/index.js';
-import { type IsaApiVersion, type IsaApiVersionOverride, type IsaApiSurface, type IsaCreateOptions } from './isaOptions.js';
-import type { CaseStorage } from './cases/CaseStorage.js';
+import { AccountNamespace } from "../account/index.js";
+import { type CredentialStore } from "../core/index.js";
+import { type ProxyCallOptions, type ProxyCallResult } from "../proxy/call.js";
+import { WebhooksService } from "../rapidsign/webhooks.js";
+import { type IsaApiError, type IsaIdempotencyConflictError, IsaNotActivatedError } from "./apiError.js";
+import type { CaseStorage } from "./cases/CaseStorage.js";
+import { type ClientVersionListener } from "./clientVersion.js";
+import { IsaCredentialState, type LicenseRefreshedListener } from "./credentialState.js";
+import { ApiDatasetSource, type DatasetSource, type DatasetSourceInput } from "./datasetSource.js";
+import { type Envelope, type RawResponseResult } from "./envelope.js";
+import { type IsaIdentity } from "./envFactory.js";
+import { type AutocompleteAlgorithm, type Autocorrector, BrandingFacade, CasesFacade, DatasetsFacade, DefaultAutocorrector, type DefaultAutocorrectorOptions, EmailFacade, LicenseFacade, LogosFacade, type MatchAlgorithm, PreferencesFacade, ReferenceConditionsFacade, ReferenceFacade, ReferenceMedicationsFacade } from "./isaNamespaces.js";
+import { type IsaApiSurface, type IsaApiVersion, type IsaApiVersionOverride, type IsaCreateOptions } from "./isaOptions.js";
+import { type DebugLogger, type EnvReader, type LogSink } from "./logger.js";
+import { type LogosFetch } from "./logos.js";
+import { type PrequalifyV2Request, type PrequalifyV2Result } from "./prequalify-v2.js";
+import { type PrequalifyV3Request, type PrequalifyV3Result, type QuoteV3Request, type QuoteV3Result } from "./prequalify-v3-types.js";
+import { type PrequalifyRequest, type PrequalifyResult } from "./prequalify.js";
+import { ProductsFacade } from "./products.js";
+import { type Transport } from "./transport.js";
 /** Constructor options for `Isa`. */
 export interface IsaOptions {
     /** Auth identity from one of the three factories. */
     identity: IsaIdentity;
     /** Base URL override; defaults to the production ZyINS endpoint. */
     baseUrl?: string;
+    /**
+     * Account-service origin override for the license-mode session
+     * bootstrap (see `sessionSigner.ts`); defaults to the production
+     * account service. Point this at a local double for tests/staging —
+     * isa-mock does not itself serve `/v1/sessions`.
+     */
+    accountBaseUrl?: string;
     /** Proxy origin override; defaults to the production proxy endpoint. */
     proxyOrigin?: string;
     /**
@@ -4568,11 +4904,25 @@ export interface IsaOptions {
      * `autocomplete()` accessor.
      */
     autocompleteAlgorithm?: AutocompleteAlgorithm;
+    /**
+     * Explicit reference-bundle source. A string is a local file path; a
+     * {@link DatasetBundleV3} is used directly; a {@link DatasetSource} is
+     * used as given. When set, the reference layer warms from it at factory
+     * time and `conditions.match(...)` resolves offline. Omitted keeps the
+     * unchanged API-fetch default.
+     */
+    datasets?: DatasetSourceInput;
 }
 /** Optional transport/facade overrides accepted by `Isa` factories. */
 export interface IsaFactoryOptions {
     /** Base URL override; defaults to the production ZyINS endpoint. */
     baseUrl?: string;
+    /**
+     * Account-service origin override for the license-mode session
+     * bootstrap; defaults to the production account service. See
+     * {@link IsaOptions.accountBaseUrl}.
+     */
+    accountBaseUrl?: string;
     /** Viewer origin used to assemble case share links. */
     caseViewerBaseUrl?: string;
     /** Proxy origin override; defaults to the production proxy endpoint. */
@@ -4588,7 +4938,7 @@ export interface IsaFactoryOptions {
     logosFetch?: LogosFetch;
     /**
      * Optional transport override. Used by {@link Isa.forForm} for the
-     * `/v1/sessions/reissue` exchange; tests inject a stub here so the
+     * `/v1/sessions` FormToken mint; tests inject a stub here so the
      * factory can be exercised without a live HTTP layer.
      */
     transport?: Transport;
@@ -4611,6 +4961,12 @@ export interface IsaFactoryOptions {
     matchAlgorithm?: MatchAlgorithm;
     /** Replace the default ranker. */
     autocompleteAlgorithm?: AutocompleteAlgorithm;
+    /**
+     * Explicit reference-bundle source (file path, bundle, or
+     * {@link DatasetSource}). When set, the reference layer warms from it at
+     * factory time; omitted keeps the API-fetch default.
+     */
+    datasets?: DatasetSourceInput;
 }
 /**
  * Unified SDK entry point.
@@ -4689,9 +5045,16 @@ export declare class Isa {
      * With no arguments, reads `ISA_TOKEN` from the environment. Throws
      * `IsaConfigError` when neither is supplied.
      *
-     * Async for surface uniformity across every factory; the body is trivial
-     * today but the contract leaves room to probe a credential store in a
-     * later phase without an API-shape break.
+     * When `options.datasets` supplies a local reference-bundle source, the
+     * token requirement is relaxed: the reference layer (`conditions.match`,
+     * `medications.match`, autocomplete, fuzzy, autocorrect) works fully
+     * offline, so no credential is needed. The factory warms the reference
+     * index from the source before resolving — the first synchronous
+     * `match()` already sees a primed catalog. Product calls in that mode
+     * still require a token and fail loud if one was never supplied.
+     *
+     * Async for surface uniformity across every factory; the body also awaits
+     * the offline bundle warm-up when a local `datasets` source is set.
      */
     static withBearer(args?: {
         token?: string;
@@ -4725,19 +5088,24 @@ export declare class Isa {
     }, env?: EnvReader, options?: IsaFactoryOptions): Promise<Isa>;
     /**
      * Construct from a one-shot form token (embedded eApp forms). The SDK
-     * POSTs the token to `/v1/sessions/reissue`, receives a session
+     * POSTs the token to {@link SESSIONS_PATH} (`POST /v1/sessions`) with
+     * `Authorization: FormToken <token>`, receives a session
      * `{ sessionId, sessionSecret }`, and constructs a session-mode `Isa`
      * internally so the consumer never handles session credentials directly.
      *
-     * The reissue endpoint lands server-side per task #98; until then the
-     * call shape is anchored on the constant
-     * {@link SESSIONS_REISSUE_PATH} so the SDK plumbing is ready.
+     * Session rotation (after mint) is {@link SESSIONS_REISSUE_PATH} with
+     * `Authorization: Session <secret>` + `X-Isa-Session-Id` — FormToken is
+     * mint-only (account ADR-037).
+     *
+     * Note: the resulting `Isa` is session-mode — `zyins`/`account` product
+     * methods throw `IsaConfigError` until bearer/session product wiring
+     * lands (see {@link ZyInsNamespace}); only `isa.identity` is usable today.
      *
      * @example
      * ```ts
      * const formToken = form.metadata._isa_form_token;
      * const isa = await Isa.forForm({ formToken });
-     * await isa.zyins.prequalify(req);
+     * // isa.zyins / isa.account throw IsaConfigError until product wiring lands
      * ```
      */
     static forForm(args: {
@@ -4779,13 +5147,53 @@ export declare class Isa {
      * threads the resolved engine + apiVersion into the underlying options.
      */
     static create(opts: IsaCreateOptions): Promise<Isa>;
+    /**
+     * Prototype-independent guard for {@link IsaApiError}. Use this instead of
+     * `instanceof IsaApiError` — `instanceof` breaks when the error crossed a
+     * module boundary that produced a second copy of the class (vendored
+     * tarball, test mock, duplicated dependency). Mirrors Stripe's
+     * `Stripe.errors.StripeError.isStripeError`.
+     *
+     * @example
+     * ```ts
+     * try {
+     *   await isa.zyins.prequalify(req);
+     * } catch (e) {
+     *   if (Isa.isApiError(e)) console.error(e.code, e.status, e.requestId);
+     * }
+     * ```
+     */
+    static isApiError(value: unknown): value is IsaApiError;
+    /**
+     * Prototype-independent guard for {@link IsaNotActivatedError}. Narrows so
+     * the caller can branch on `code` and re-activate the license.
+     *
+     * @example
+     * ```ts
+     * if (Isa.isNotActivatedError(e)) await isa.zyins.license.activate();
+     * ```
+     */
+    static isNotActivatedError(value: unknown): value is IsaNotActivatedError;
+    /**
+     * Prototype-independent guard for {@link IsaIdempotencyConflictError}.
+     * Narrows so the caller can read `key` / `firstSeenAt`.
+     *
+     * @example
+     * ```ts
+     * if (Isa.isIdempotencyConflictError(e)) console.warn(e.key, e.firstSeenAt);
+     * ```
+     */
+    static isIdempotencyConflictError(value: unknown): value is IsaIdempotencyConflictError;
 }
 /**
- * Server-side path for the form-token → session exchange. Anchored as a
- * constant so test stubs and the live transport agree on the URL. The
- * endpoint itself lands per task #98 (`account.sessions` surface); the
- * SDK plumbing is wired ahead of the server so consumers can adopt
- * `Isa.forForm` the day it ships.
+ * Public mint path for sessions — license HMAC bootstrap and FormToken
+ * form mint share this route (account ADR-037). Anchored as a constant so
+ * test stubs and the live transport agree on the URL.
+ */
+export declare const SESSIONS_PATH = "/v1/sessions";
+/**
+ * Session rotation path. Requires `Authorization: Session <secret>` +
+ * `X-Isa-Session-Id`. FormToken is rejected here (mint at {@link SESSIONS_PATH}).
  */
 export declare const SESSIONS_REISSUE_PATH = "/v1/sessions/reissue";
 /** Tagless union accepted by {@link Isa.authenticate}. */
@@ -4804,6 +5212,8 @@ interface ZyInsNamespaceOptions {
     /** Resolved per-surface API-version map inherited from the parent `Isa`. */
     apiVersion: Readonly<Record<IsaApiSurface, IsaApiVersion>>;
     baseUrl?: string;
+    /** Account-service origin for the license-mode session bootstrap. */
+    accountBaseUrl?: string;
     /** Viewer origin for case share links; forwarded to the client context. */
     caseViewerBaseUrl?: string;
     logger?: DebugLogger;
@@ -4825,6 +5235,14 @@ interface ZyInsNamespaceOptions {
     matchAlgorithm?: MatchAlgorithm;
     /** Optional ranker override (forwarded to `ReferenceFacade`). */
     autocompleteAlgorithm?: AutocompleteAlgorithm;
+    /**
+     * Optional explicit reference-bundle source. When set, the namespace
+     * loads the bundle from it and warms the reference index at factory time
+     * — `isa.zyins.conditions.match(...)` then resolves with no network. When
+     * omitted, the reference index stays warmed only by `datasets.get()` (the
+     * unchanged API default).
+     */
+    datasetSource?: DatasetSource;
 }
 /**
  * Top-level domain-agnostic autocorrector kernel exposed as
@@ -4844,7 +5262,7 @@ export interface AutocorrectorKernel {
 }
 /**
  * `isa.zyins.*` — methods for the ZyINS product. Each method has a
- * `.withRawResponse` sibling returning `{ data, response }`.
+ * `*Raw` sibling (e.g. `prequalifyRaw`) returning `{ data, response }`.
  *
  * Bearer and session-mode product calls are reserved for a follow-up phase
  * (transport wiring exists in @isa-sdk/core; the namespace stub raises a
@@ -4853,6 +5271,8 @@ export interface AutocorrectorKernel {
 export declare class ZyInsNamespace {
     private readonly opts;
     private readonly clientOnce;
+    private readonly referenceBundleCache;
+    private readonly datasetSource;
     /** `isa.zyins.branding` — whitelabel lookup. */
     readonly branding: BrandingFacade;
     /** `isa.zyins.datasets` — reference-data bundle for picker UIs. */
@@ -4972,6 +5392,22 @@ export declare class ZyInsNamespace {
     readonly logos: LogosFacade;
     constructor(opts: ZyInsNamespaceOptions);
     /**
+     * Load the reference bundle from the configured {@link DatasetSource} and
+     * warm the reference index — `conditions.match()` / `medications.match()`
+     * then resolve with no network. A no-op when no source is configured (the
+     * unchanged API-fetch default). Called once by the factory before the
+     * `Isa` instance is handed back so the first synchronous `match()` sees a
+     * primed catalog.
+     */
+    warmReferenceBundle(): Promise<void>;
+    /**
+     * An {@link ApiDatasetSource} bound to this namespace's configured
+     * credential — the current `datasets.get()` HTTP path. Exposed so a
+     * caller can place it last in a {@link ResolvingDatasetSource} chain
+     * (local file → generate hook → this) without minting a second client.
+     */
+    apiDatasetSource(): ApiDatasetSource;
+    /**
      * Raw-response sibling of {@link prequalify}; follows the pinned API
      * version at runtime but is typed against the bundled-default v3 shape
      * (`PrequalifyV3Request` → `RawResponseResult<PrequalifyV3Result>`) so the
@@ -5045,8 +5481,14 @@ export declare function wrapEnvelope<T>(data: T, requestId: string, idempotencyK
  * are scoped per envelope, not per `Isa`.
  */
 export declare class RapidSignNamespace {
-    /** Webhook verifier — alias of `isa.webhooks` for spec-alignment. */
+    /**
+     * Webhook verifier. `Isa` injects its own `isa.webhooks` instance here
+     * (see the constructor call site) so the two stay the same object for
+     * spec-alignment; constructed standalone (`new RapidSignNamespace()`),
+     * this defaults to a fresh, independent `WebhooksService`.
+     */
     readonly webhooks: WebhooksService;
+    constructor(webhooks?: WebhooksService);
 }
 /** Default origin for the platform proxy `/v1/call` endpoint. */
 export declare const DEFAULT_PROXY_ORIGIN = "https://proxy.isaapi.com";
@@ -5090,22 +5532,22 @@ export {};
  * Separated from `isa.ts` to keep that file under the 250-line cap; this
  * module owns only the facade shape, not the unified `Isa` class itself.
  */
-import { type ZyInsClient } from './client.js';
-import { type BrandingDetail } from './branding.js';
-import { type PreferencesLookupResult, type PreferencesSetRequest, type PreferencesSetResult } from './preferences.js';
-import { type CaseShareRequest, type CaseShareResult } from './cases.js';
-import { type CaseEmailRequest, type CaseEmailResult } from './case.js';
-import type { CaseRecord, CaseStorage, CaseStoragePutResult } from './cases/CaseStorage.js';
-import { type DatasetBundle, type DatasetsGetOptions } from './datasets.js';
-import { type DatasetBundleV3, type DatasetsV3GetOptions, type DatasetsV3NotModified } from './datasets-v3.js';
-import { type Concept, type ConditionConcept, type MedicationConcept, type UnknownConcept } from './reference.js';
-export { ReferenceFacade, ReferenceMedicationsFacade, ReferenceConditionsFacade, ReferenceConceptsFacade, ReferenceBundleCache, DefaultAutocorrector, DefaultMatchAlgorithm, FuzzyMatchAlgorithm, DefaultAutocompleteAlgorithm, buildSuggestion, } from './reference/index.js';
-export type { Autocorrector, AutocorrectOptions, AutocorrectAppliedEvent, DefaultAutocorrectorOptions, MatchAlgorithm, DefaultMatchAlgorithmOptions, FuzzyMatchAlgorithmOptions, AutocompleteAlgorithm, AutocompleteOptions, DefaultAutocompleteAlgorithmOptions, Suggestion, ReferenceAdapters, } from './reference/index.js';
-import { type LicenseActivateRequest, type LicenseActivateResult, type LicenseCheckRequest, type LicenseCheckResult, type LicenseDeactivateRequest, type LicenseDeactivateResult } from './license.js';
-import { type IsaCredentialState } from './credentialState.js';
-import { type Transport } from './transport.js';
-import { type Clock } from '../core/index.js';
-import { type LogosFetch, type LogosGetOptions } from './logos.js';
+import { type BrandingDetail } from "./branding.js";
+import { type CaseEmailRequest, type CaseEmailResult } from "./case.js";
+import { type CaseShareRequest, type CaseShareResult } from "./cases.js";
+import type { CaseRecord, CaseStorage, CaseStoragePutResult } from "./cases/CaseStorage.js";
+import { type ZyInsClient } from "./client.js";
+import { type DatasetBundleV3, type DatasetsV3GetOptions, type DatasetsV3NotModified } from "./datasets-v3.js";
+import { type DatasetBundle, type DatasetsGetOptions } from "./datasets.js";
+import { type PreferencesLookupResult, type PreferencesSetRequest, type PreferencesSetResult } from "./preferences.js";
+import { type Concept, type ConditionConcept, type MedicationConcept, type UnknownConcept } from "./reference.js";
+export { buildSuggestion, DefaultAutocompleteAlgorithm, DefaultAutocorrector, DefaultMatchAlgorithm, FuzzyMatchAlgorithm, ReferenceBundleCache, ReferenceConceptsFacade, ReferenceConditionsFacade, ReferenceFacade, ReferenceMedicationsFacade, } from "./reference/index.js";
+export type { AutocompleteAlgorithm, AutocompleteOptions, AutocorrectAppliedEvent, AutocorrectOptions, Autocorrector, DefaultAutocompleteAlgorithmOptions, DefaultAutocorrectorOptions, DefaultMatchAlgorithmOptions, FuzzyMatchAlgorithmOptions, MatchAlgorithm, ReferenceAdapters, Suggestion, } from "./reference/index.js";
+import { type Clock } from "../core/index.js";
+import { type IsaCredentialState } from "./credentialState.js";
+import { type LicenseActivateRequest, type LicenseActivateResult, type LicenseCheckRequest, type LicenseCheckResult, type LicenseDeactivateRequest, type LicenseDeactivateResult } from "./license.js";
+import { type LogosFetch, type LogosGetOptions } from "./logos.js";
+import { type Transport } from "./transport.js";
 type ClientThunk = () => ZyInsClient;
 /** `isa.zyins.branding` — whitelabel lookup. */
 export declare class BrandingFacade {
@@ -5363,11 +5805,11 @@ export declare class LogosFacade {
  * and returns the typed offer envelope. `'v1'` preserves the legacy
  * contract for callers still wired against the old envelope.
  */
-import type { CredentialStore } from '../core/index.js';
-import type { LicenseRefreshedListener } from './credentialState.js';
-import { type Transport } from './transport.js';
-import { type IsaApiVersion, type IsaApiVersionOverride, type IsaApiSurface, BundledApiVersions, resolveApiVersions } from './bundledApiVersions.js';
-export type { IsaApiVersion, IsaApiVersionOverride, IsaApiSurface };
+import type { CredentialStore } from "../core/index.js";
+import { BundledApiVersions, type IsaApiSurface, type IsaApiVersion, type IsaApiVersionOverride, resolveApiVersions } from "./bundledApiVersions.js";
+import type { LicenseRefreshedListener } from "./credentialState.js";
+import { type Transport } from "./transport.js";
+export type { IsaApiSurface, IsaApiVersion, IsaApiVersionOverride };
 export { BundledApiVersions, resolveApiVersions };
 /**
  * Tagged auth supplier accepted by {@link IsaCreateOptions.auth}. Each
@@ -5375,10 +5817,10 @@ export { BundledApiVersions, resolveApiVersions };
  * dispatch in `Isa.create` picks the correct legacy factory.
  */
 export type IsaAuthSupplier = {
-    readonly kind: 'bearer';
+    readonly kind: "bearer";
     readonly token?: string;
 } | {
-    readonly kind: 'license';
+    readonly kind: "license";
     readonly keycode?: string;
     readonly email?: string;
     readonly orderId?: string;
@@ -5386,10 +5828,10 @@ export type IsaAuthSupplier = {
     readonly credentialStore?: CredentialStore;
     readonly onLicenseRefreshed?: LicenseRefreshedListener;
 } | {
-    readonly kind: 'form';
+    readonly kind: "form";
     readonly formToken: string;
 } | {
-    readonly kind: 'session';
+    readonly kind: "session";
     readonly sessionId: string;
     readonly sessionSecret: string;
 };
@@ -5427,16 +5869,16 @@ export declare const FormAuth: {
  * (and proxyOrigin where applicable).
  */
 export type IsaEngine = {
-    readonly kind: 'remote';
+    readonly kind: "remote";
     readonly baseUrl: string;
 } | {
-    readonly kind: 'local';
+    readonly kind: "local";
     readonly baseUrl: string;
 } | {
-    readonly kind: 'proxy';
+    readonly kind: "proxy";
     readonly proxyOrigin: string;
 } | {
-    readonly kind: 'in_memory';
+    readonly kind: "in_memory";
     readonly transport: Transport;
 };
 /** Production ZyINS endpoint (`https://zyins.isaapi.com`). */
@@ -5498,7 +5940,7 @@ export interface IsaCreateOptions {
      * key as the recall token. Carrier adapters may substitute a portal-
      * backed store; the SDK only sees the {@link CaseStorage} interface.
      */
-    caseStorage?: import('./cases/CaseStorage.js').CaseStorage;
+    caseStorage?: import("./cases/CaseStorage.js").CaseStorage;
 }
 /** Resolved view of `IsaCreateOptions` with defaults applied. */
 export interface ResolvedIsaOptions {
@@ -5512,7 +5954,7 @@ export interface ResolvedIsaOptions {
     readonly transport: Transport | undefined;
     readonly baseUrl: string;
     readonly proxyOrigin: string | undefined;
-    readonly caseStorage: import('./cases/CaseStorage.js').CaseStorage | undefined;
+    readonly caseStorage: import("./cases/CaseStorage.js").CaseStorage | undefined;
 }
 /**
  * Resolve `IsaCreateOptions` into a fully-defaulted view. Pure — no side
@@ -5534,9 +5976,9 @@ export declare function resolveIsaOptions(opts: IsaCreateOptions): ResolvedIsaOp
  * bpp2.0's `useSoftwareActivator.js`, which reads `result.auth.licenseKey`.
  * Only the wire parsing adapts to the v2 envelope shape.
  */
-import { type AuthContext } from './auth.js';
-import { type Transport } from './transport.js';
-import { type Clock } from '../core/index.js';
+import { type Clock } from "../core/index.js";
+import { type AuthContext } from "./auth.js";
+import { type Transport } from "./transport.js";
 /** Mirror of proto `LicenseStatus`. Unknown wire values surface as-is. */
 export type LicenseValidationStatus = string;
 /** Inputs accepted by `license.activate`. */
@@ -5660,7 +6102,7 @@ export declare function redactBody(value: unknown): unknown;
  * are not corrupted; the caller may pass `kind: 'form'` to opt into
  * form-field redaction.
  */
-export declare function redactBodyString(body: string, kind?: 'json' | 'form' | 'unknown'): string;
+export declare function redactBodyString(body: string, kind?: "json" | "form" | "unknown"): string;
 /** Debug logger emitting redacted request/response records to a sink. */
 export interface DebugLogger {
     request(record: {
@@ -5668,7 +6110,7 @@ export interface DebugLogger {
         url: string;
         headers: Record<string, string>;
         body: string;
-        bodyKind?: 'json' | 'form' | 'unknown';
+        bodyKind?: "json" | "form" | "unknown";
         retryAttempt?: number;
     }): void;
     response(record: {
@@ -5677,7 +6119,7 @@ export interface DebugLogger {
         status: number;
         headers: Record<string, string>;
         body: string;
-        bodyKind?: 'json' | 'form' | 'unknown';
+        bodyKind?: "json" | "form" | "unknown";
         retryAttempt?: number;
     }): void;
 }
@@ -5795,8 +6237,82 @@ export declare const MinRank: {
 /** The lowercase wire tokens the server accepts for `min_rank`. */
 export type MinRankValue = (typeof MinRank)[keyof typeof MinRank];
 //# sourceMappingURL=minRank.d.ts.map
+=== dist/zyins/money.d.ts ===
+/**
+ * Display-safe rendering for {@link OfferMoney}.
+ *
+ * `OfferMoney` is a plain data interface (integer minor units + a server-
+ * formatted `display` string), so it cannot carry methods. Rendering the
+ * raw object in JSX throws React error #31 ("objects are not valid as a
+ * React child"), and reaching for `String(money)` yields `[object Object]`.
+ *
+ * {@link formatMoney} is the supported way to turn an `OfferMoney` into a
+ * human string. It prefers the server-provided `display` (already localized
+ * and currency-correct for the offer) and falls back to `Intl.NumberFormat`
+ * over the integer `cents` when no display string is present or the caller
+ * overrides locale/currency.
+ *
+ * Rendering the raw `OfferMoney` object is unsupported; always pass it
+ * through `formatMoney`.
+ */
+import { type OfferMoney } from "./prequalify-v2-types.js";
+/** Options controlling {@link formatMoney} rendering. */
+export interface FormatMoneyOptions {
+    /**
+     * BCP 47 locale tag for number/currency formatting. Defaults to
+     * `'en-US'`. Ignored when the server `display` string is used (pass
+     * {@link FormatMoneyOptions.preferComputed} to force `Intl` formatting).
+     */
+    locale?: string;
+    /**
+     * ISO 4217 currency code. Defaults to `'USD'`. Drives the currency symbol
+     * and minor-unit conversion under `Intl.NumberFormat`.
+     */
+    currency?: string;
+    /**
+     * How the currency is displayed: `'symbol'` (`$1,234.56`), `'code'`
+     * (`USD 1,234.56`), `'name'` (`1,234.56 US dollars`), or `'narrowSymbol'`.
+     * Defaults to `'symbol'`.
+     */
+    currencyDisplay?: "symbol" | "narrowSymbol" | "code" | "name";
+    /**
+     * When `true`, ignore the server-provided `display` string and always
+     * compute the rendering from the integer `cents` via `Intl.NumberFormat`.
+     * Use this when you need a locale/currency that differs from the server's.
+     * Defaults to `false`.
+     */
+    preferComputed?: boolean;
+}
+/**
+ * Render an {@link OfferMoney} as a human-readable currency string.
+ *
+ * Resolution order:
+ * 1. Unless `preferComputed` is set, return the server `display` string when
+ *    it is non-empty — it is already localized for the offer.
+ * 2. Otherwise format the integer `cents` with `Intl.NumberFormat`.
+ *
+ * Never returns `[object Object]`; safe to drop directly into JSX.
+ *
+ * @example
+ * ```tsx
+ * // Server gave us a display string — used verbatim.
+ * formatMoney({ cents: 123456, display: '$1,234.56' }); // "$1,234.56"
+ *
+ * // No display string — computed from cents (default en-US / USD).
+ * formatMoney({ cents: 123456, display: '' });          // "$1,234.56"
+ *
+ * // Explicit locale + currency override.
+ * formatMoney({ cents: 123456, display: '' }, { locale: 'de-DE', currency: 'EUR' });
+ * // "1.234,56 €"
+ *
+ * // In JSX — no React #31 crash:
+ * <span>{formatMoney(offer.premium)}</span>
+ * ```
+ */
+export declare function formatMoney(money: OfferMoney, opts?: FormatMoneyOptions): string;
+//# sourceMappingURL=money.d.ts.map
 === dist/zyins/planInfo.d.ts ===
-import type { OfferPlanInfo, OfferPlanInfoLegacy } from './prequalify-v2-types.js';
+import type { OfferPlanInfo, OfferPlanInfoLegacy } from "./prequalify-v2-types.js";
 type PlanInfoCoercion = {
     array: OfferPlanInfo;
     legacy?: OfferPlanInfoLegacy;
@@ -5837,9 +6353,9 @@ export declare function titleCaseLabel(key: string): string;
  * elevation. When session credentials replace License-HMAC the SDK surface
  * stays unchanged.
  */
-import { type AuthContext } from './auth.js';
-import { type Transport } from './transport.js';
-import { type Clock } from '../core/index.js';
+import { type Clock } from "../core/index.js";
+import { type AuthContext } from "./auth.js";
+import { type Transport } from "./transport.js";
 /** Opaque preferences document. */
 export type PreferencesDocument = Record<string, unknown>;
 export interface PreferencesLookupResult {
@@ -5876,15 +6392,15 @@ export declare function set(request: PreferencesSetRequest, ctx: PreferencesCont
  *  - Top-level envelope metadata follows the `Envelope<T>` camelCase
  *    convention (`requestId`, `idempotencyKey`).
  */
-import { type Applicant } from './applicant.js';
-import { type CoverageInput } from './coverage.js';
-import { type ProductSelection, type ProductClassValue } from './product.js';
-import { type MinRankValue } from './minRank.js';
-import { type AuthContext } from './auth.js';
-import { type Transport } from './transport.js';
-import { type Clock } from '../core/index.js';
+import { type Clock } from "../core/index.js";
+import { type Applicant } from "./applicant.js";
+import { type AuthContext } from "./auth.js";
+import { type CoverageInput } from "./coverage.js";
+import { type MinRankValue } from "./minRank.js";
+import { type ProductClassValue, type ProductSelection } from "./product.js";
+import { type Transport } from "./transport.js";
 /** Eligibility category — closed enum on qualifying offers, `null` otherwise. */
-export type OfferCategory = 'immediate' | 'graded' | 'rop' | null;
+export type OfferCategory = "immediate" | "graded" | "rop" | null;
 /** Qualifies-or-not view for a single offer / tier. */
 export interface OfferEligibility {
     /** True when the applicant qualifies at this category. */
@@ -5998,7 +6514,7 @@ export interface OtherOffer {
 /** One best-offer-per-product entry in the v2 result. */
 export interface PlanOffer {
     /** Discriminator — always `"plan_offer"`. */
-    object: 'plan_offer';
+    object: "plan_offer";
     /** Stable v5-derived UUID for `(carrier_slug, product_slug)`. */
     id: string;
     /** Zero-based engine ordering index — UI should sort by `rank` instead. */
@@ -6098,9 +6614,9 @@ export interface PrequalifyV2Context {
  * Typed value objects live in `prequalify-v2-types.ts`; this file owns the
  * wire serialization, header building, and response parsing.
  */
-import { type PrequalifyV2Context, type PrequalifyV2Request, type PrequalifyV2Result } from './prequalify-v2-types.js';
-export type { OfferCarrier, OfferCategory, OfferEligibility, OfferMoney, OfferPlanInfo, OfferPlanInfoItem, OfferPlanInfoLegacy, OfferPremium, OfferProduct, OtherOffer, PlanOffer, PrequalifyV2Context, PrequalifyV2Request, PrequalifyV2Result, } from './prequalify-v2-types.js';
-export type { OfferDeathBenefit, PrequalifyV2Options, } from './prequalify-v2-types.js';
+import { type PrequalifyV2Context, type PrequalifyV2Request, type PrequalifyV2Result } from "./prequalify-v2-types.js";
+export type { OfferCarrier, OfferCategory, OfferEligibility, OfferMoney, OfferPlanInfo, OfferPlanInfoItem, OfferPlanInfoLegacy, OfferPremium, OfferProduct, OtherOffer, PlanOffer, PrequalifyV2Context, PrequalifyV2Request, PrequalifyV2Result, } from "./prequalify-v2-types.js";
+export type { OfferDeathBenefit, PrequalifyV2Options } from "./prequalify-v2-types.js";
 /**
  * Run a v2 prequalify call. Builds the wire body, derives the idempotency
  * key, signs the request, and parses the envelope into typed offers.
@@ -6123,21 +6639,21 @@ export declare function prequalifyV2(request: PrequalifyV2Request, ctx: Prequali
  * `deathBenefit.amount.cents` and monthly-budget offers off
  * `budget.amount.cents`.
  */
-import type { Applicant } from './applicant.js';
-import type { CoverageInput } from './coverage.js';
-import type { ProductSelection, ProductClassValue } from './product.js';
-import type { MinRankValue } from './minRank.js';
-import type { AuthContext } from './auth.js';
-import type { RequestSigner } from './requestSigner.js';
-import type { Transport } from './transport.js';
-import type { Clock } from '../core/index.js';
-import type { OfferCarrier, OfferProduct, OfferPlanInfo } from './prequalify-v2-types.js';
+import type { Clock } from "../core/index.js";
+import type { Applicant } from "./applicant.js";
+import type { AuthContext } from "./auth.js";
+import type { CoverageInput } from "./coverage.js";
+import type { MinRankValue } from "./minRank.js";
+import type { OfferCarrier, OfferPlanInfo, OfferProduct } from "./prequalify-v2-types.js";
+import type { ProductClassValue, ProductSelection } from "./product.js";
+import type { RequestSigner } from "./requestSigner.js";
+import type { Transport } from "./transport.js";
 /**
  * Underwriting rank bucket. `null` reserved for the unlikely case the
  * server cannot resolve any bucket; closed enum otherwise. This is NOT
  * the carrier rate-class label — that lives on `V3PricingRow.rateClass`.
  */
-export type V3EligibilityCategory = 'immediate' | 'graded' | 'rop' | 'other' | null;
+export type V3EligibilityCategory = "immediate" | "graded" | "rop" | "other" | null;
 /** Eligibility for one row of the pricing table. */
 export interface V3Eligibility {
     /** Underwriting rank bucket (closed enum), `null` when unresolved. */
@@ -6165,7 +6681,7 @@ export interface V3Amount {
  * Recurrence period for a {@link V3Money}. `null` is a one-time / lump-sum
  * amount (a death benefit); the named values are premium billing cycles.
  */
-export type V3Period = 'monthly' | 'quarterly' | 'semiannual' | 'annual' | null;
+export type V3Period = "monthly" | "quarterly" | "semiannual" | "annual" | null;
 /**
  * A monetary value with a recurrence period (the OpenAPI `Money`). Used
  * for `deathBenefit` (`period: null`, a one-time lump sum) and `budget`
@@ -6228,7 +6744,7 @@ export interface V3PricingRow {
  * synthetic rank.
  */
 export interface V3Offer {
-    readonly object: 'plan_offer';
+    readonly object: "plan_offer";
     /**
      * UUID v5 identifying this product-at-a-requested-amount offer. In a
      * multi-amount response the same product appears once per amount, each
@@ -6379,14 +6895,14 @@ export type QuoteV3Context = PrequalifyV3Context;
  * Idempotency: every v3 mutating call requires a UUID v4 in
  * `Idempotency-Key`. We auto-mint when the caller does not supply one.
  */
-import { type Applicant } from './applicant.js';
-import { type CoverageInput } from './coverage.js';
-import { type AuthContext } from './auth.js';
-import { type RequestSigner } from './requestSigner.js';
-import { type Clock } from '../core/index.js';
-import { type PrequalifyV3Context, type PrequalifyV3Request, type PrequalifyV3Result, type V3Offer, type V3PricingRow } from './prequalify-v3-types.js';
-export { byAmount, offerPremium } from './prequalify-v3-types.js';
-export type { PrequalifyV3Context, PrequalifyV3Options, PrequalifyV3Request, PrequalifyV3Result, QuoteV3Context, QuoteV3Options, QuoteV3Request, QuoteV3Result, V3Amount, V3Eligibility, V3EligibilityCategory, V3Money, V3Offer, V3Period, V3Premium, V3PricingRow, } from './prequalify-v3-types.js';
+import { type Clock } from "../core/index.js";
+import { type Applicant } from "./applicant.js";
+import { type AuthContext } from "./auth.js";
+import { type CoverageInput } from "./coverage.js";
+import { type PrequalifyV3Context, type PrequalifyV3Request, type PrequalifyV3Result, type V3Offer, type V3PricingRow } from "./prequalify-v3-types.js";
+import { type RequestSigner } from "./requestSigner.js";
+export { byAmount, offerPremium } from "./prequalify-v3-types.js";
+export type { PrequalifyV3Context, PrequalifyV3Options, PrequalifyV3Request, PrequalifyV3Result, QuoteV3Context, QuoteV3Options, QuoteV3Request, QuoteV3Result, V3Amount, V3Eligibility, V3EligibilityCategory, V3Money, V3Offer, V3Period, V3Premium, V3PricingRow, } from "./prequalify-v3-types.js";
 /**
  * Run a v3 prequalify call. Builds the wire body, mints a UUID v4 for
  * `Idempotency-Key` if the caller did not pass one, signs the request,
@@ -6416,8 +6932,8 @@ export declare function serializeV3PrequalifyBody(request: PrequalifyV3Request):
 export declare function serializeWireBody(request: {
     readonly applicant: Applicant;
     readonly coverage: CoverageInput;
-    readonly products: PrequalifyV3Request['products'];
-    readonly options?: PrequalifyV3Request['options'];
+    readonly products: PrequalifyV3Request["products"];
+    readonly options?: PrequalifyV3Request["options"];
 }): string;
 export declare function buildHeaders(args: {
     readonly auth: AuthContext;
@@ -6464,14 +6980,14 @@ export declare function coerceV3Offer(raw: unknown): V3Offer;
  *  - Server response shape is `{ data: { meta, results: { <amount>: [...] } },
  *    request_id, idempotency_key }`.
  */
-import { type Applicant } from './applicant.js';
-import { type CoverageInput, type CoverageType } from './coverage.js';
-import { type ProductSelection, type Product, type ProductClassValue } from './product.js';
-import { type MinRankValue } from './minRank.js';
-import { type AuthContext } from './auth.js';
-import { type Transport } from './transport.js';
-import { type Clock } from '../core/index.js';
-import type { OfferPlanInfo, OfferPlanInfoLegacy } from './prequalify-v2-types.js';
+import { type Clock } from "../core/index.js";
+import { type Applicant } from "./applicant.js";
+import { type AuthContext } from "./auth.js";
+import { type CoverageInput, type CoverageType } from "./coverage.js";
+import { type MinRankValue } from "./minRank.js";
+import type { OfferPlanInfo, OfferPlanInfoLegacy } from "./prequalify-v2-types.js";
+import { type Product, type ProductClassValue, type ProductSelection } from "./product.js";
+import { type Transport } from "./transport.js";
 /** Optional per-call knobs that map onto the server's filter primitives. */
 export interface PrequalifyOptions {
     /** Restrict to a single product class (server `only_product_class`). */
@@ -6591,7 +7107,7 @@ export interface PrequalifyResultMeta {
 }
 /** Result shape for a single-amount prequalify call. */
 export interface SinglePrequalifyResult {
-    readonly kind: 'single';
+    readonly kind: "single";
     amount: number;
     plans: Plan[];
     meta: PrequalifyResultMeta;
@@ -6602,7 +7118,7 @@ export interface SinglePrequalifyResult {
 }
 /** Result shape for a multi-amount prequalify call. */
 export interface MultiPrequalifyResult {
-    readonly kind: 'multi';
+    readonly kind: "multi";
     amounts: number[];
     byAmount: Map<number, Plan[]>;
     /** Flattened convenience — every plan across every amount. */
@@ -6648,9 +7164,9 @@ export declare function prequalify(request: PrequalifyRequest, ctx: PrequalifyCo
  * reverse lookup (`Products.byId`) live in `src/catalog/productsByType.ts`
  * (re-exported below).
  */
-export { ProductType as ProductClass, type ProductTypeValue as ProductClassValue, type Product, Products, } from '../catalog/productsByType.js';
-import type { Product, ProductTypeValue as ProductClassValue } from '../catalog/productsByType.js';
-export { ProductType } from './productType.js';
+export { type Product, Products, ProductType as ProductClass, type ProductTypeValue as ProductClassValue, } from "../catalog/productsByType.js";
+import type { Product, ProductTypeValue as ProductClassValue } from "../catalog/productsByType.js";
+export { ProductType } from "./productType.js";
 /**
  * One or more products selected for a single prequalify call.
  *
@@ -6692,7 +7208,7 @@ export declare class ProductSelection {
  * `refresh()` is a no-op today; it remains in the surface so future
  * server-driven catalog refresh lands without an API-shape change.
  */
-import { Products, type Product, type ProductClassValue } from './product.js';
+import { type Product, type ProductClassValue, Products } from "./product.js";
 /** `isa.zyins.products` — typed catalog access. */
 export declare class ProductsFacade {
     constructor(_deps?: unknown);
@@ -6730,9 +7246,9 @@ export declare enum ProductType {
  * budgets). Money is the {cents, display} amount paired with a recurrence
  * period; the v2 string-money map is gone in v3.
  */
-import type { QuoteV3Context, QuoteV3Request, QuoteV3Result } from './prequalify-v3-types.js';
-export { byAmount } from './prequalify-v3-types.js';
-export type { QuoteV3Context, QuoteV3Options, QuoteV3Request, QuoteV3Result, V3Offer, } from './prequalify-v3-types.js';
+import type { QuoteV3Context, QuoteV3Request, QuoteV3Result } from "./prequalify-v3-types.js";
+export { byAmount } from "./prequalify-v3-types.js";
+export type { QuoteV3Context, QuoteV3Options, QuoteV3Request, QuoteV3Result, V3Offer } from "./prequalify-v3-types.js";
 export declare function quoteV3(request: QuoteV3Request, ctx: QuoteV3Context): Promise<QuoteV3Result>;
 //# sourceMappingURL=quote-v3.d.ts.map
 === dist/zyins/react/useZyIns.d.ts ===
@@ -6748,11 +7264,11 @@ export declare function quoteV3(request: QuoteV3Request, ctx: QuoteV3Context): P
  * React installed (CLI, Node services) can still depend on the SDK without
  * pulling React into their bundle — they simply do not import this file.
  */
-import { type ReactNode } from 'react';
-import { type AuthContext } from '../auth.js';
-import { ZyInsClient, type ZyInsClientOptions } from '../client.js';
+import { type ReactNode } from "react";
+import { type AuthContext } from "../auth.js";
+import { ZyInsClient, type ZyInsClientOptions } from "../client.js";
 /** Shape carried by the provider. Extends auth with optional client overrides. */
-export interface ZyInsProviderConfig extends Omit<ZyInsClientOptions, 'auth'> {
+export interface ZyInsProviderConfig extends Omit<ZyInsClientOptions, "auth"> {
     auth: AuthContext;
 }
 /**
@@ -6784,12 +7300,12 @@ export declare function useZyIns(): ZyInsClient;
  * New code should use `isa.zyins.reference.medications.match(text)` —
  * the bundle is cached inside the facade.
  */
-import type { DatasetBundleV3 } from './datasets-v3.js';
-import { buildUnknownConcept } from './reference/referenceIndex.js';
-import { _makeKey } from './reference/_makeKey.js';
-import { type Concept, type ConditionConcept, type MedicationConcept, type UnknownConcept } from './reference/Concept.js';
-export { Sort } from './reference/Sort.js';
-export type { Concept, ConceptKind, ConditionConcept, MedicationConcept, UnknownConcept, } from './reference/Concept.js';
+import type { DatasetBundleV3 } from "./datasets-v3.js";
+import { _makeKey } from "./reference/_makeKey.js";
+import { type Concept, type ConditionConcept, type MedicationConcept, type UnknownConcept } from "./reference/Concept.js";
+import { buildUnknownConcept } from "./reference/referenceIndex.js";
+export type { Concept, ConceptKind, ConditionConcept, MedicationConcept, UnknownConcept } from "./reference/Concept.js";
+export { Sort } from "./reference/Sort.js";
 /**
  * Resolve free text against the medication catalog using an explicit
  * bundle. Returns a `MedicationConcept` on a hit; returns an unknown
@@ -6856,9 +7372,9 @@ export declare const __internal: {
  * for (const s of ranked) console.log(s.rank, s.name, s.score);
  * ```
  */
-import type { Concept, ConceptKind } from './Concept.js';
-import { Sort } from './Sort.js';
-import { type Suggestion } from './Suggestion.js';
+import type { Concept, ConceptKind } from "./Concept.js";
+import { Sort } from "./Sort.js";
+import { type Suggestion } from "./Suggestion.js";
 /** Per-call options for {@link AutocompleteAlgorithm.rank}. */
 export interface AutocompleteOptions {
     /** Maximum suggestions to return; default 25, max 250. */
@@ -6989,7 +7505,7 @@ export interface AutocorrectOptions {
      * Typing-state mode. `'keyup'` for live correction during typing;
      * `'submit'` for post-commit (blur, enter, form submit) correction.
      */
-    readonly mode: 'keyup' | 'submit';
+    readonly mode: "keyup" | "submit";
 }
 /** Event emitted by {@link DefaultAutocorrector.onApplied}. */
 export interface AutocorrectAppliedEvent {
@@ -6998,7 +7514,7 @@ export interface AutocorrectAppliedEvent {
     /** Post-correction output. */
     readonly output: string;
     /** Mode the consumer passed. */
-    readonly mode: 'keyup' | 'submit';
+    readonly mode: "keyup" | "submit";
 }
 /** Constructor options for {@link DefaultAutocorrector}. */
 export interface DefaultAutocorrectorOptions {
@@ -7093,9 +7609,9 @@ export declare class DefaultAutocorrector implements Autocorrector {
  * `aliases` is intentionally absent. Aliases are resolved server-side and
  * not surfaced; consumers compare on `id` (use `Concept.equals`).
  */
-import type { Sort } from './Sort.js';
+import type { Sort } from "./Sort.js";
 /** Discriminator on a concept handle. */
-export type ConceptKind = 'medication' | 'condition' | 'unknown';
+export type ConceptKind = "medication" | "condition" | "unknown";
 export interface Concept {
     /**
      * Opaque entity identifier. Today equals the server-side `make_key`
@@ -7138,15 +7654,15 @@ export interface Concept {
 }
 /** A `Concept` whose `kind` is statically known to be `'medication'`. */
 export interface MedicationConcept extends Concept {
-    readonly kind: 'medication';
+    readonly kind: "medication";
 }
 /** A `Concept` whose `kind` is statically known to be `'condition'`. */
 export interface ConditionConcept extends Concept {
-    readonly kind: 'condition';
+    readonly kind: "condition";
 }
 /** A `Concept` whose `kind` is statically known to be `'unknown'`. */
 export interface UnknownConcept extends Concept {
-    readonly kind: 'unknown';
+    readonly kind: "unknown";
     readonly isKnown: false;
     readonly id: null;
 }
@@ -7193,8 +7709,9 @@ export declare const DOUBLE_METAPHONE_VECTORS: readonly DoubleMetaphoneVector[];
  * `check_key`) cannot. The default stays the default; pass this to
  * `Isa.withKeycode({ matchAlgorithm: new FuzzyMatchAlgorithm() })` to opt in.
  *
- * Pipeline — a tiered cascade, ranked by TIER FIRST, then by candidate
- * frequency (Algolia-style successive tie-break, NOT one blended score):
+ * Pipeline — a tiered cascade, ranked by TIER FIRST, then within the winning
+ * tier by lowest edit distance, then highest candidate frequency (Algolia-style
+ * successive tie-break, NOT one blended score):
  *
  *   1. exact      — `make_key` id/name equality (identity-preserving)
  *   2. prefix     — candidate key starts with the query key (or vice versa)
@@ -7206,8 +7723,9 @@ export declare const DOUBLE_METAPHONE_VECTORS: readonly DoubleMetaphoneVector[];
  *                   (today's {@link Concept} does NOT — tier is skipped)
  *
  * The first non-empty tier wins; within it the best candidate is chosen by
- * frequency (higher first), then a deterministic name/id tie-break so the
- * result is reproducible across the Go / PHP / C# / Python ports.
+ * lowest edit distance, then highest frequency, then a deterministic name/id
+ * tie-break so the result is reproducible across the Go / PHP / C# / Python
+ * ports.
  *
  * Frequency is NOT a field on {@link Concept} — it lives in a separate
  * per-id map the catalog builds (`buildFrequencyMap`). Supply it via
@@ -7216,8 +7734,16 @@ export declare const DOUBLE_METAPHONE_VECTORS: readonly DoubleMetaphoneVector[];
  * result deterministically).
  *
  * Parity-hardening rules (the cross-language determinism contract):
- *   1. Both query and every candidate string are NFC-normalized before any
- *      comparison.
+ *   1. The exact / prefix / damerau tiers compare `make_key` output, which
+ *      uppercases then strips every non-ASCII-alphanumeric character. It does
+ *      NOT Unicode-normalize, so NFC and NFD forms of the same accented text
+ *      can produce DIFFERENT keys: NFC `"é"` (U+00E9) uppercases to `"É"` and
+ *      is stripped to `""`, while NFD `"é"` keeps its ASCII `"e"` and
+ *      yields `"E"`. Catalog names and ids are ASCII, so this never bites in
+ *      practice; callers needing NFC/NFD equivalence must normalize before
+ *      calling `match`. The phonetic tier and the final name/id tie-break
+ *      operate on raw characters, so those (and only those) NFC-normalize
+ *      first via `normalizeForCompare`.
  *   2. Lowercasing is locale-invariant. JS `toLowerCase()` is already
  *      locale-independent; the Go/PHP/C#/Python ports MUST use invariant
  *      culture (Go `strings.ToLower`, C# `ToLowerInvariant`, etc.).
@@ -7237,8 +7763,8 @@ export declare const DOUBLE_METAPHONE_VECTORS: readonly DoubleMetaphoneVector[];
  * matcher.match('tylonol', medications).id;    // 'TYLENOL'
  * ```
  */
-import type { Concept, UnknownConcept } from './Concept.js';
-import type { MatchAlgorithm } from './MatchAlgorithm.js';
+import type { Concept, UnknownConcept } from "./Concept.js";
+import type { MatchAlgorithm } from "./MatchAlgorithm.js";
 /** Constructor options for {@link FuzzyMatchAlgorithm}. */
 export interface FuzzyMatchAlgorithmOptions {
     /**
@@ -7303,13 +7829,13 @@ export declare class FuzzyMatchAlgorithm implements MatchAlgorithm {
  * const ranked = await isa.zyins.medications.autocomplete('lisi', { limit: 5 });
  * ```
  */
-import type { DatasetBundleV3 } from '../datasets-v3.js';
-import { ReferenceIndex } from './referenceIndex.js';
-import { type Concept, type ConditionConcept, type MedicationConcept, type UnknownConcept } from './Concept.js';
-import { type Autocorrector } from './Autocorrector.js';
-import { type MatchAlgorithm } from './MatchAlgorithm.js';
-import { type AutocompleteAlgorithm, type AutocompleteOptions } from './AutocompleteAlgorithm.js';
-import { type Suggestion } from './Suggestion.js';
+import type { DatasetBundleV3 } from "../datasets-v3.js";
+import { type AutocompleteAlgorithm, type AutocompleteOptions } from "./AutocompleteAlgorithm.js";
+import { type Autocorrector } from "./Autocorrector.js";
+import { type Concept, type ConditionConcept, type MedicationConcept, type UnknownConcept } from "./Concept.js";
+import { type MatchAlgorithm } from "./MatchAlgorithm.js";
+import { ReferenceIndex } from "./referenceIndex.js";
+import { type Suggestion } from "./Suggestion.js";
 /**
  * Shared bundle cache. One instance per `ZyInsNamespace`; the
  * `DatasetsFacade.getV3()` call writes the latest bundle here, and the
@@ -7425,13 +7951,13 @@ export declare class ReferenceConceptsFacade {
      */
     autocomplete(query: string, options?: Partial<AutocompleteOptions>): Promise<Suggestion[]>;
 }
-export { Sort } from './Sort.js';
-export type { Concept, ConceptKind, ConditionConcept, MedicationConcept, UnknownConcept } from './Concept.js';
-export { type Autocorrector, type AutocorrectOptions, type AutocorrectAppliedEvent, type DefaultAutocorrectorOptions, DefaultAutocorrector } from './Autocorrector.js';
-export { type MatchAlgorithm, type DefaultMatchAlgorithmOptions, DefaultMatchAlgorithm } from './MatchAlgorithm.js';
-export { type FuzzyMatchAlgorithmOptions, FuzzyMatchAlgorithm } from './FuzzyMatchAlgorithm.js';
-export { type AutocompleteAlgorithm, type AutocompleteOptions, type DefaultAutocompleteAlgorithmOptions, DefaultAutocompleteAlgorithm } from './AutocompleteAlgorithm.js';
-export { type Suggestion, buildSuggestion } from './Suggestion.js';
+export { type AutocompleteAlgorithm, type AutocompleteOptions, DefaultAutocompleteAlgorithm, type DefaultAutocompleteAlgorithmOptions, } from "./AutocompleteAlgorithm.js";
+export { type AutocorrectAppliedEvent, type AutocorrectOptions, type Autocorrector, DefaultAutocorrector, type DefaultAutocorrectorOptions, } from "./Autocorrector.js";
+export type { Concept, ConceptKind, ConditionConcept, MedicationConcept, UnknownConcept } from "./Concept.js";
+export { FuzzyMatchAlgorithm, type FuzzyMatchAlgorithmOptions } from "./FuzzyMatchAlgorithm.js";
+export { DefaultMatchAlgorithm, type DefaultMatchAlgorithmOptions, type MatchAlgorithm } from "./MatchAlgorithm.js";
+export { Sort } from "./Sort.js";
+export { buildSuggestion, type Suggestion } from "./Suggestion.js";
 //# sourceMappingURL=index.d.ts.map
 === dist/zyins/reference/MatchAlgorithm.d.ts ===
 /**
@@ -7458,7 +7984,7 @@ export { type Suggestion, buildSuggestion } from './Suggestion.js';
  * });
  * ```
  */
-import type { Concept, UnknownConcept } from './Concept.js';
+import type { Concept, UnknownConcept } from "./Concept.js";
 /**
  * Resolve free text to exactly one `Concept` from a candidate pool.
  *
@@ -7518,8 +8044,8 @@ export declare class DefaultMatchAlgorithm implements MatchAlgorithm {
  * Module-private. Consumers only ever see `Concept` handles via the
  * `ReferenceFacade`.
  */
-import type { DatasetBundleV3 } from '../datasets-v3.js';
-import { type Concept, type ConditionConcept, type MedicationConcept, type UnknownConcept } from './Concept.js';
+import type { DatasetBundleV3 } from "../datasets-v3.js";
+import { type Concept, type ConditionConcept, type MedicationConcept, type UnknownConcept } from "./Concept.js";
 export declare class ReferenceIndex {
     private readonly conditionById;
     private readonly conditionByKey;
@@ -7595,7 +8121,7 @@ export type Sort = (typeof Sort)[keyof typeof Sort];
  * }
  * ```
  */
-import type { Concept } from './Concept.js';
+import type { Concept } from "./Concept.js";
 /**
  * One ranked suggestion produced by an `AutocompleteAlgorithm`.
  *
@@ -7642,9 +8168,9 @@ export declare function buildSuggestion(concept: Concept, meta: {
  * Sorting collapses word order so that prefix / suffix / no-space variants of
  * the same concept resolve identically while severity qualifiers stay
  * distinct (different letter multisets):
- *   - "SEVERE COPD" → "CCDEEOPRSV"  (after expanding from the catalog name)
- *   - "COPD (SEVERE)" → "CCDEEOPRSV"
- *   - "COPD (MILD)" → "CCDDILMOP"   (distinct — collapses with no SEVERE row)
+ *   - "SEVERE COPD" → "CDEEEOPRSV"  (after expanding from the catalog name)
+ *   - "COPD (SEVERE)" → "CDEEEOPRSV"
+ *   - "COPD (MILD)" → "CDDILMOP"    (distinct — collapses with no SEVERE row)
  *
  * Used ONLY for word-order-invariant NAME matching. Opaque catalog ids
  * (e.g. `HIGHBLOODPRESSURE`, `cond_<ULID>`) are never keyed this way —
@@ -7759,8 +8285,8 @@ export declare function _makeKey(text: string): string;
  * auth-mode-agnostic; adding a third mode is a new signer, not a new branch
  * in every call site.
  */
-import { type AuthContext } from './auth.js';
-import { type Clock } from '../core/index.js';
+import { type Clock } from "../core/index.js";
+import { type AuthContext } from "./auth.js";
 /** Inputs a signer needs to bind auth headers to a specific request. */
 export interface SignableRequest {
     /** HTTP method (`POST`, `GET`, …). */
@@ -7808,6 +8334,56 @@ export declare function boolField(r: Record<string, unknown>, key: string): bool
 export declare const SDK_RETRY_ATTEMPTS_HEADER = "x-isa-sdk-retry-attempts";
 export declare function retryAttemptsFromHeaders(headers: Record<string, string>): number;
 //# sourceMappingURL=retryAttempts.d.ts.map
+=== dist/zyins/sessionSigner.d.ts ===
+/**
+ * Session-bootstrap `RequestSigner` — the default signer for
+ * `Isa.withKeycode()` callers, replacing License-HMAC
+ * (`Authorization: License base64(...)`) as the credential that actually
+ * travels on the wire.
+ *
+ * On first use (or when the cached session is within
+ * {@link SESSION_RENEWAL_MARGIN_MS} of expiry) the signer bootstraps a
+ * fresh session at `POST /v1/sessions` on the account service —
+ * HMAC-signed with the license key per `core/internal/auth/bootstrap.ts`
+ * — then signs every subsequent request with the returned session secret
+ * (`core/auth/signRequest.ts`). The license key itself appears on the
+ * wire only for that one bootstrap call; every product call after it
+ * carries a short-lived session credential instead.
+ *
+ * Re-issue is the same endpoint as bootstrap: calling `POST /v1/sessions`
+ * again for the same (keycode, email, deviceId) rotates the secret
+ * server-side, keeping the previous secret valid for a 30-second grace
+ * overlap (see `sessions_bootstrap.go`). Renewing proactively — well
+ * before expiry, not at it — means an in-flight request signed with the
+ * about-to-rotate secret always lands inside that grace window.
+ */
+import { type Clock } from "../core/index.js";
+import { type AuthContext } from "./auth.js";
+import { type RequestSigner } from "./requestSigner.js";
+import { type Transport } from "./transport.js";
+/** Production account service — source of the session-bootstrap endpoint. */
+export declare const DEFAULT_ACCOUNT_BASE_URL = "https://account.isaapi.com";
+/** Constructor inputs for {@link sessionSigner}. */
+export interface SessionSignerOptions {
+    /** BPP keycode. Required by the bootstrap wire contract. */
+    readonly keycode: string;
+    /** Live identity: email, licenseKey (HMAC bootstrap key), deviceId. */
+    readonly auth: AuthContext;
+    /** HTTP facade for the bootstrap call. Reuses the product transport. */
+    readonly transport: Transport;
+    /** Injectable clock; defaults to the system clock. */
+    readonly clock?: Clock;
+    /** Account-service origin override; defaults to {@link DEFAULT_ACCOUNT_BASE_URL}. */
+    readonly accountBaseUrl?: string;
+}
+/**
+ * Build a `RequestSigner` that transparently bootstraps and renews a
+ * session, signing every request with it. Concurrent callers during a
+ * bootstrap/renewal share the same in-flight request rather than each
+ * minting their own session.
+ */
+export declare function sessionSigner(opts: SessionSignerOptions): RequestSigner;
+//# sourceMappingURL=sessionSigner.d.ts.map
 === dist/zyins/transport.d.ts ===
 /**
  * Transport facade for the Tier 3 ZyINS client.
@@ -7825,7 +8401,7 @@ export declare function retryAttemptsFromHeaders(headers: Record<string, string>
  * and Tier 3 is allowed to assume the protocol layer above it is reliable.
  */
 /** Method shape Tier 3 emits. The wire supports more; this is what we use. */
-export type HttpMethod = 'GET' | 'POST' | 'PUT' | 'DELETE';
+export type HttpMethod = "GET" | "POST" | "PUT" | "DELETE";
 /** Inbound request as seen by the transport facade. */
 export interface TransportRequest {
     url: string;
@@ -7853,9 +8429,9 @@ export declare function defaultTransport(fetchImpl?: typeof fetch): Transport;
 //# sourceMappingURL=transport.d.ts.map
 === dist/zyins/v3Coercion.d.ts ===
 /** Shared v3 response coercion helpers for prequalify and quote parsing. */
-import { isRecord } from './response.js';
-import type { OfferCarrier, OfferProduct } from './prequalify-v2-types.js';
-import type { V3Amount, V3Money } from './prequalify-v3-types.js';
+import type { OfferCarrier, OfferProduct } from "./prequalify-v2-types.js";
+import type { V3Amount, V3Money } from "./prequalify-v3-types.js";
+import { isRecord } from "./response.js";
 export { isRecord };
 export declare const toStr: (v: unknown) => string;
 export declare const toNum: (v: unknown) => number;
@@ -7883,11 +8459,11 @@ export declare function coerceMoney(raw: unknown): V3Money;
  * Peer dependency: vue ^3.0. The import is type-only so consumers without
  * Vue installed do not pull it into their bundle.
  */
-import { type InjectionKey } from 'vue';
-import { type AuthContext } from '../auth.js';
-import { ZyInsClient, type ZyInsClientOptions } from '../client.js';
+import { type InjectionKey } from "vue";
+import { type AuthContext } from "../auth.js";
+import { ZyInsClient, type ZyInsClientOptions } from "../client.js";
 /** Provider config shape mirrors the React provider's. */
-export interface ZyInsProviderConfig extends Omit<ZyInsClientOptions, 'auth'> {
+export interface ZyInsProviderConfig extends Omit<ZyInsClientOptions, "auth"> {
     auth: AuthContext;
 }
 /** Symbol-keyed injection slot. */
@@ -7919,7 +8495,7 @@ export declare function useZyIns(): ZyInsClient;
  *   1. `packages/ts/PUBLIC_API.txt` — snapshot of every dist `.d.ts` line.
  *      Captures ANY shape change to ANY exported symbol; regenerated by
  *      `scripts/sdk-public-api.sh regenerate` and diff-gated by CI
- *      (`.github/workflows/sdk-public-api.yml`). Picks up additions
+ *      (`.github/workflows/sdk.yml`). Picks up additions
  *      automatically. The primary surface guard.
  *
  *   2. `packages/ts/tests/conformance/locked-surface.test.ts` — vitest

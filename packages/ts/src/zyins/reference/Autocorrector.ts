@@ -48,7 +48,7 @@ export interface AutocorrectOptions {
    * Typing-state mode. `'keyup'` for live correction during typing;
    * `'submit'` for post-commit (blur, enter, form submit) correction.
    */
-  readonly mode: 'keyup' | 'submit';
+  readonly mode: "keyup" | "submit";
 }
 
 /** Event emitted by {@link DefaultAutocorrector.onApplied}. */
@@ -58,7 +58,7 @@ export interface AutocorrectAppliedEvent {
   /** Post-correction output. */
   readonly output: string;
   /** Mode the consumer passed. */
-  readonly mode: 'keyup' | 'submit';
+  readonly mode: "keyup" | "submit";
 }
 
 /** Constructor options for {@link DefaultAutocorrector}. */
@@ -136,17 +136,17 @@ export class DefaultAutocorrector implements Autocorrector {
   correct(text: string, options: AutocorrectOptions): string {
     if (!text) return text;
 
-    const trailingWhitespace = text.endsWith(' ') ? ' ' : '';
+    const trailingWhitespace = text.endsWith(" ") ? " " : "";
     const upper = text.toUpperCase();
     // Match PHP's PREG_SPLIT_NO_EMPTY / Python's str.split() — drop empty
     // tokens that .split(/\s+/) emits at string boundaries. Otherwise a
     // trailing space produces an empty trailing token that survives all
     // the way to the join and concatenates with `trailingWhitespace` to
     // emit a double space (cross-language SDK contract requires single).
-    const words = upper.split(/\s+/).filter((w) => w !== '');
+    const words = upper.split(/\s+/).filter((w) => w !== "");
     if (words.length === 0) return text;
-    if (this.typoMap.size === 0) return words.join(' ') + trailingWhitespace;
-    const result: (string | undefined)[] = new Array<string | undefined>(words.length);
+    if (this.typoMap.size === 0) return words.join(" ") + trailingWhitespace;
+    const result: (string | undefined)[] = Array.from<string | undefined>({ length: words.length });
     const consumed = new Set<number>();
     let changed = false;
 
@@ -156,16 +156,15 @@ export class DefaultAutocorrector implements Autocorrector {
       for (let i = 0; i < words.length; i++) {
         const ngram = words.slice(i, i + windowSize + 1);
         if (ngram.length !== windowSize + 1) continue;
-        const key = ngram.join(' ');
+        const key = ngram.join(" ");
 
         const correction = this.typoMap.get(key);
         if (correction === undefined) continue;
 
         const correctionUpper = correction.toUpperCase();
-        const shouldCorrect =
-          options.mode === 'keyup'
-            ? !(correctionUpper.includes(key) && correctionUpper.length > key.length)
-            : !containsPhrase(words, correctionUpper);
+        const shouldCorrect = options.mode === "keyup"
+          ? !(correctionUpper.includes(key) && correctionUpper.length > key.length)
+          : !containsPhrase(words, correctionUpper);
 
         if (!shouldCorrect) continue;
         if (result[i] !== undefined) continue;
@@ -191,8 +190,7 @@ export class DefaultAutocorrector implements Autocorrector {
 
     // Filter out the undefineds (positions that were absorbed into a
     // multi-word correction at a lower index) before joining.
-    const joined =
-      result.filter((x): x is string => x !== undefined).join(' ') + trailingWhitespace;
+    const joined = result.filter((x): x is string => x !== undefined).join(" ") + trailingWhitespace;
 
     if (changed && this._onApplied !== undefined) {
       this._onApplied({ input: text, output: joined, mode: options.mode });
@@ -223,7 +221,7 @@ export class DefaultAutocorrector implements Autocorrector {
 }
 
 function containsPhrase(words: readonly string[], phrase: string): boolean {
-  const phraseWords = phrase.split(/\s+/).filter((w) => w !== '');
+  const phraseWords = phrase.split(/\s+/).filter((w) => w !== "");
   if (phraseWords.length === 0 || phraseWords.length > words.length) return false;
   for (let start = 0; start <= words.length - phraseWords.length; start++) {
     const matches = phraseWords.every((word, offset) => words[start + offset] === word);

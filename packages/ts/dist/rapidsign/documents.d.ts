@@ -14,10 +14,10 @@
  * `cancel` throws `NotImplemented` until the matching server endpoint ships
  * (tracked in issue #38). The SDK surface is the product.
  */
-import { type AwaitOpts, type CancelRequest, type Envelope, type SendRequest, type Signature } from './types.js';
-import { type Transport } from './internal/transport.js';
-import { type Decompressor } from './internal/decompress.js';
-import { type Clock, type Sleeper, type UUIDGenerator } from './internal/random.js';
+import { type Decompressor } from "./internal/decompress.js";
+import { type Clock, type Sleeper, type UUIDGenerator } from "./internal/random.js";
+import { type Transport } from "./internal/transport.js";
+import { type AwaitOpts, type CancelRequest, type DownloadOpts, type Envelope, type GetOpts, type SendRequest, type Signature } from "./types.js";
 /** Per-call context the parent client injects. */
 export interface DocumentsContext {
     readonly token: string;
@@ -45,8 +45,13 @@ export declare class DocumentsService {
      * Fetch current state for a signed-or-pending envelope. Returns a
      * Signature when the document has been signed; throws `NotFound` when
      * the sign id is unknown or no signature has been captured yet.
+     *
+     * Pre-1.0 API correction: `sessionId` and `signal` are accepted via a
+     * single options object. The earlier positional `(signId, sessionId,
+     * signal)` shape silently coerced an `AbortSignal` to a string when
+     * callers omitted `sessionId` and passed `signal` second.
      */
-    get(signId: string, sessionId?: string, signal?: AbortSignal): Promise<Signature>;
+    get(signId: string, opts?: GetOpts): Promise<Signature>;
     /**
      * Poll `get` on a jittered exponential backoff until the document is
      * signed, the AbortSignal fires, or the timeout elapses.
@@ -60,8 +65,11 @@ export declare class DocumentsService {
      * Download the signed PDF as a fresh `Buffer`. The wire response is
      * gzip + base64; decompression is transparent. Throws `NotFound` if the
      * sign id is unknown.
+     *
+     * Pre-1.0 API correction: `sessionId` and `signal` are accepted via a
+     * single options object, mirroring `get` so the surface is consistent.
      */
-    download(signId: string, sessionId?: string): Promise<Buffer>;
+    download(signId: string, opts?: DownloadOpts): Promise<Buffer>;
     /**
      * Cancel a pending envelope.
      *

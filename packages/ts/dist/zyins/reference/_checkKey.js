@@ -10,9 +10,9 @@
  * Sorting collapses word order so that prefix / suffix / no-space variants of
  * the same concept resolve identically while severity qualifiers stay
  * distinct (different letter multisets):
- *   - "SEVERE COPD" → "CCDEEOPRSV"  (after expanding from the catalog name)
- *   - "COPD (SEVERE)" → "CCDEEOPRSV"
- *   - "COPD (MILD)" → "CCDDILMOP"   (distinct — collapses with no SEVERE row)
+ *   - "SEVERE COPD" → "CDEEEOPRSV"  (after expanding from the catalog name)
+ *   - "COPD (SEVERE)" → "CDEEEOPRSV"
+ *   - "COPD (MILD)" → "CDDILMOP"    (distinct — collapses with no SEVERE row)
  *
  * Used ONLY for word-order-invariant NAME matching. Opaque catalog ids
  * (e.g. `HIGHBLOODPRESSURE`, `cond_<ULID>`) are never keyed this way —
@@ -21,16 +21,21 @@
  */
 export function _checkKey(text) {
     const upper = text.toUpperCase();
-    const codes = [];
+    // Collect the surviving ASCII characters (all single-code-unit), sort, then
+    // join. Building this list as `String.fromCharCode(...codes)` and spreading
+    // it in one call would throw a RangeError once the argument count exceeds
+    // the engine's max-arguments-per-call limit (not a stack-depth limit),
+    // which violates the matcher contract of never throwing on unknown input.
+    const chars = [];
     for (let i = 0; i < upper.length; i++) {
         const ch = upper.charCodeAt(i);
         const isDigit = ch >= 0x30 && ch <= 0x39;
         const isUpper = ch >= 0x41 && ch <= 0x5a;
         if (isDigit || isUpper) {
-            codes.push(ch);
+            chars.push(upper[i]);
         }
     }
-    codes.sort((a, b) => a - b);
-    return String.fromCharCode(...codes);
+    chars.sort();
+    return chars.join("");
 }
 //# sourceMappingURL=_checkKey.js.map

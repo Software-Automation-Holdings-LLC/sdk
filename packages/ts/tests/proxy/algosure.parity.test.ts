@@ -12,78 +12,78 @@
  * implementations.
  */
 
-import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
-import vectors from './testdata/algosure_vectors.json';
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
-    buildEmbeddedAlgosureHeaders,
-    computeEmbeddedAlgosureHMAC,
-    isEmbeddedSaltIdValid,
-} from '../../src/proxy/algosure/embedded';
+  buildEmbeddedAlgosureHeaders,
+  computeEmbeddedAlgosureHMAC,
+  isEmbeddedSaltIdValid,
+} from "../../src/proxy/algosure/embedded";
+import vectors from "./testdata/algosure_vectors.json";
 
-type VerifierKind = 'pass' | 'reject_timestamp' | 'reject_missing_salt_id' | 'reject_tampered';
+type VerifierKind = "pass" | "reject_timestamp" | "reject_missing_salt_id" | "reject_tampered";
 
 interface ParityVector {
-    name: string;
-    verifier: VerifierKind;
-    inputs: {
-        method: string;
-        path: string;
-        body: string;
-        host: string;
-        session_id: string;
-        salt_id: number;
-        salt_content: string;
-        timestamp_ms: number;
-    };
-    expected: {
-        body_hash_hex: string;
-        bucket: number;
-        simple_key_hex: string;
-        canonical_hex: string;
-        authorization_hex: string;
-        headers: Record<string, string>;
-    };
+  name: string;
+  verifier: VerifierKind;
+  inputs: {
+    method: string;
+    path: string;
+    body: string;
+    host: string;
+    session_id: string;
+    salt_id: number;
+    salt_content: string;
+    timestamp_ms: number;
+  };
+  expected: {
+    body_hash_hex: string;
+    bucket: number;
+    simple_key_hex: string;
+    canonical_hex: string;
+    authorization_hex: string;
+    headers: Record<string, string>;
+  };
 }
 
 const PARITY_VECTORS: ParityVector[] = (vectors as { vectors: ParityVector[] }).vectors;
 
-describe('algosure parity vectors', () => {
-    it('loaded at least the required count', () => {
-        expect(PARITY_VECTORS.length).toBeGreaterThanOrEqual(7);
-    });
+describe("algosure parity vectors", () => {
+  it("loaded at least the required count", () => {
+    expect(PARITY_VECTORS.length).toBeGreaterThanOrEqual(7);
+  });
 });
 
-describe('signer parity (embedded protocol)', () => {
-    for (const v of PARITY_VECTORS) {
-        it(`${v.name}: tag matches vector`, async () => {
-            const [tag, ts] = await computeEmbeddedAlgosureHMAC({
-                salt: v.inputs.salt_content,
-                saltId: v.inputs.salt_id,
-                host: v.inputs.host,
-                method: v.inputs.method,
-                path: v.inputs.path,
-                body: v.inputs.body,
-                sessionId: v.inputs.session_id,
-                time: v.inputs.timestamp_ms,
-            });
-            expect(ts).toBe(v.inputs.timestamp_ms);
-            expect(tag).toBe(v.expected.authorization_hex);
-        });
+describe("signer parity (embedded protocol)", () => {
+  for (const v of PARITY_VECTORS) {
+    it(`${v.name}: tag matches vector`, async () => {
+      const [tag, ts] = await computeEmbeddedAlgosureHMAC({
+        salt: v.inputs.salt_content,
+        saltId: v.inputs.salt_id,
+        host: v.inputs.host,
+        method: v.inputs.method,
+        path: v.inputs.path,
+        body: v.inputs.body,
+        sessionId: v.inputs.session_id,
+        time: v.inputs.timestamp_ms,
+      });
+      expect(ts).toBe(v.inputs.timestamp_ms);
+      expect(tag).toBe(v.expected.authorization_hex);
+    });
 
-        it(`${v.name}: header bag matches vector`, async () => {
-            const headers = await buildEmbeddedAlgosureHeaders({
-                salt: v.inputs.salt_content,
-                saltId: v.inputs.salt_id,
-                host: v.inputs.host,
-                method: v.inputs.method,
-                path: v.inputs.path,
-                body: v.inputs.body,
-                sessionId: v.inputs.session_id,
-                time: v.inputs.timestamp_ms,
-            });
-            expect(headers).toEqual(v.expected.headers);
-        });
-    }
+    it(`${v.name}: header bag matches vector`, async () => {
+      const headers = await buildEmbeddedAlgosureHeaders({
+        salt: v.inputs.salt_content,
+        saltId: v.inputs.salt_id,
+        host: v.inputs.host,
+        method: v.inputs.method,
+        path: v.inputs.path,
+        body: v.inputs.body,
+        sessionId: v.inputs.session_id,
+        time: v.inputs.timestamp_ms,
+      });
+      expect(headers).toEqual(v.expected.headers);
+    });
+  }
 });
 
 // Verifier parity is enforced on the Go side (shared/go/auth/algosure/
@@ -91,68 +91,68 @@ describe('signer parity (embedded protocol)', () => {
 // is the only Algosure verifier in the platform — so the TS parity test
 // exhaustively covers the signer surface that consumes the vectors.
 
-describe('saltId guard', () => {
-    it.each([
-        ['positive integer', 1, true],
-        ['large positive integer', 9_999_999, true],
-        ['digit string', '42', true],
-        ['zero', 0, false],
-        ['negative', -1, false],
-        ['leading-zero string', '0042', false],
-        ['empty string', '', false],
-        ['null', null, false],
-        ['undefined', undefined, false],
-        ['float', 1.5, false],
-    ])('rejects/accepts %s', (_name, value, expected) => {
-        expect(isEmbeddedSaltIdValid(value as never)).toBe(expected);
-    });
+describe("saltId guard", () => {
+  it.each([
+    ["positive integer", 1, true],
+    ["large positive integer", 9_999_999, true],
+    ["digit string", "42", true],
+    ["zero", 0, false],
+    ["negative", -1, false],
+    ["leading-zero string", "0042", false],
+    ["empty string", "", false],
+    ["null", null, false],
+    ["undefined", undefined, false],
+    ["float", 1.5, false],
+  ])("rejects/accepts %s", (_name, value, expected) => {
+    expect(isEmbeddedSaltIdValid(value as never)).toBe(expected);
+  });
 
-    it('throws when buildEmbeddedAlgosureHeaders receives an invalid saltId', async () => {
-        await expect(
-            buildEmbeddedAlgosureHeaders({
-                salt: 'abcdef',
-                saltId: 0 as never,
-                host: 'h',
-                method: 'POST',
-                path: '/v1/x',
-                body: '',
-                sessionId: 's',
-                time: 1_714_000_000_000,
-            }),
-        ).rejects.toThrow(/embedded salt id/);
-    });
+  it("throws when buildEmbeddedAlgosureHeaders receives an invalid saltId", async () => {
+    await expect(
+      buildEmbeddedAlgosureHeaders({
+        salt: "abcdef",
+        saltId: 0 as never,
+        host: "h",
+        method: "POST",
+        path: "/v1/x",
+        body: "",
+        sessionId: "s",
+        time: 1_714_000_000_000,
+      }),
+    ).rejects.toThrow(/embedded salt id/);
+  });
 });
 
 // Clock-mock harness — exercises the default-clock path so a future
 // refactor of computeEmbeddedAlgosureHMAC's `time ?? clock()` resolution
 // still ties out against the vectors.
-describe('clock injection parity', () => {
-    let dateNowSpy: ReturnType<typeof vi.spyOn>;
+describe("clock injection parity", () => {
+  let dateNowSpy: ReturnType<typeof vi.spyOn>;
 
-    beforeEach(() => {
-        dateNowSpy = vi.spyOn(Date, 'now');
-    });
+  beforeEach(() => {
+    dateNowSpy = vi.spyOn(Date, "now");
+  });
 
-    afterEach(() => {
-        dateNowSpy.mockRestore();
-    });
+  afterEach(() => {
+    dateNowSpy.mockRestore();
+  });
 
-    it('uses Date.now when no time is provided', async () => {
-        const v = PARITY_VECTORS[0];
-        if (!v) throw new Error('expected at least one vector');
-        dateNowSpy.mockReturnValue(v.inputs.timestamp_ms);
-        const [tag, ts] = await computeEmbeddedAlgosureHMAC({
-            salt: v.inputs.salt_content,
-            saltId: v.inputs.salt_id,
-            host: v.inputs.host,
-            method: v.inputs.method,
-            path: v.inputs.path,
-            body: v.inputs.body,
-            sessionId: v.inputs.session_id,
-            // No explicit `time`; falls through to the default clock,
-            // which we have pinned via Date.now spy.
-        });
-        expect(ts).toBe(v.inputs.timestamp_ms);
-        expect(tag).toBe(v.expected.authorization_hex);
+  it("uses Date.now when no time is provided", async () => {
+    const v = PARITY_VECTORS[0];
+    if (!v) throw new Error("expected at least one vector");
+    dateNowSpy.mockReturnValue(v.inputs.timestamp_ms);
+    const [tag, ts] = await computeEmbeddedAlgosureHMAC({
+      salt: v.inputs.salt_content,
+      saltId: v.inputs.salt_id,
+      host: v.inputs.host,
+      method: v.inputs.method,
+      path: v.inputs.path,
+      body: v.inputs.body,
+      sessionId: v.inputs.session_id,
+      // No explicit `time`; falls through to the default clock,
+      // which we have pinned via Date.now spy.
     });
+    expect(ts).toBe(v.inputs.timestamp_ms);
+    expect(tag).toBe(v.expected.authorization_hex);
+  });
 });

@@ -16,8 +16,8 @@
  * `code`. This is the "legacy error formats are absorbed" invariant from
  * ADR-035.
  */
-import { type ProblemDetails } from '../core/index.js';
-import { IsaApiError } from './apiError.js';
+import { type ProblemDetails } from "../core/index.js";
+import { IsaApiError } from "./apiError.js";
 /**
  * Parse a raw HTTP response (status + body) into a typed `IsaApiError`.
  *

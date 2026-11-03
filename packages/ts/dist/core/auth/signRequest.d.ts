@@ -4,7 +4,7 @@
  * Produces the four headers required by the ISA Platform session-auth
  * verifier (`shared/go/auth/session/verifier.go`):
  *
- *   Authorization:     Bearer <sessionSecret>
+ *   Authorization:     Session <sessionSecret>
  *   X-Isa-Session-Id:  <sessionId>
  *   X-Isa-Timestamp:   <iso8601_z>
  *   X-Isa-Signature:   hex(HMAC-SHA256(sessionSecret, canonicalString))
@@ -33,7 +33,7 @@ export interface SignRequestInput {
     body: string | Uint8Array;
     /** Session id (`sess_…`). Travels in `X-Isa-Session-Id`. */
     sessionId: string;
-    /** HMAC key. Travels as `Authorization: Bearer <secret>`. */
+    /** HMAC key. Travels as `Authorization: Session <secret>`. */
     sessionSecret: string;
     /** Injectable clock. Defaults to `() => new Date()`. */
     clock?: SignClock;
@@ -43,9 +43,9 @@ export interface SignRequestInput {
 /** Headers emitted by {@link signRequest}. */
 export interface SignRequestHeaders {
     Authorization: string;
-    'X-Isa-Session-Id': string;
-    'X-Isa-Timestamp': string;
-    'X-Isa-Signature': string;
+    "X-Isa-Session-Id": string;
+    "X-Isa-Timestamp": string;
+    "X-Isa-Signature": string;
 }
 /** Output of {@link signRequest}. */
 export interface SignRequestResult {

@@ -5,6 +5,6 @@
  * and synchronous browser `localStorage`, an in-memory default, and the
  * device-id mint+persist helpers.
  */
-export { type CredentialStore, type AsyncStorageLike, type SyncStorageLike, CREDENTIAL_KEYS, inMemoryCredentialStore, fromAsyncStorage, fromLocalStorage, } from './credentialStore.js';
-export { loadOrMintDeviceId, mintDeviceId } from './deviceId.js';
+export { type AsyncStorageLike, CREDENTIAL_KEYS, type CredentialStore, fromAsyncStorage, fromLocalStorage, inMemoryCredentialStore, type SyncStorageLike, } from "./credentialStore.js";
+export { loadOrMintDeviceId, mintDeviceId } from "./deviceId.js";
 //# sourceMappingURL=index.d.ts.map

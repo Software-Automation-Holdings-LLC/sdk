@@ -6,11 +6,11 @@
  * Separated from `isa.ts` to keep that file under the 250-line cap; this
  * module owns only the facade shape, not the unified `Isa` class itself.
  */
-import { assembleLink } from '../account/caseWire.js';
-export { ReferenceFacade, ReferenceMedicationsFacade, ReferenceConditionsFacade, ReferenceConceptsFacade, ReferenceBundleCache, DefaultAutocorrector, DefaultMatchAlgorithm, FuzzyMatchAlgorithm, DefaultAutocompleteAlgorithm, buildSuggestion, } from './reference/index.js';
-import { activate as licenseActivate, check as licenseCheck, deactivate as licenseDeactivate, } from './license.js';
-import { systemClock } from '../core/index.js';
-import { LogosSubClient, } from './logos.js';
+import { assembleLink } from "../account/caseWire.js";
+export { buildSuggestion, DefaultAutocompleteAlgorithm, DefaultAutocorrector, DefaultMatchAlgorithm, FuzzyMatchAlgorithm, ReferenceBundleCache, ReferenceConceptsFacade, ReferenceConditionsFacade, ReferenceFacade, ReferenceMedicationsFacade, } from "./reference/index.js";
+import { systemClock } from "../core/index.js";
+import { activate as licenseActivate, check as licenseCheck, deactivate as licenseDeactivate, } from "./license.js";
+import { LogosSubClient } from "./logos.js";
 /**
  * One-shot deprecation warning helpers. Each surface that has a singular →
  * plural (or method-rename) shim logs a `console.warn` exactly once per
@@ -21,7 +21,7 @@ function warnDeprecatedOnce(scope, message) {
     if (DEPRECATED_WARNED.has(scope))
         return;
     DEPRECATED_WARNED.add(scope);
-    if (typeof console !== 'undefined' && typeof console.warn === 'function') {
+    if (typeof console !== "undefined" && typeof console.warn === "function") {
         console.warn(`[isa-sdk] ${message}`);
     }
 }
@@ -75,7 +75,7 @@ export class DatasetsFacade {
     async get(options) {
         const result = await this.getV3(options);
         if (isNotModifiedMarker(result)) {
-            throw new Error('isa.zyins.datasets.get(): server returned 304 Not Modified for an unconditional fetch — pass no ifNoneMatch, or use getV3() to handle the not-modified case');
+            throw new Error("isa.zyins.datasets.get(): server returned 304 Not Modified for an unconditional fetch — pass no ifNoneMatch, or use getV3() to handle the not-modified case");
         }
         return result;
     }
@@ -183,7 +183,7 @@ export class CasesFacade {
         return this.caseStorageOnce().get(id, recallToken);
     }
     share(arg1, recallToken) {
-        if (typeof arg1 === 'string') {
+        if (typeof arg1 === "string") {
             return assembleShareView(arg1, recallToken, this.caseViewerBaseUrlOnce());
         }
         return this.clientOnce().cases.share(arg1);
@@ -193,7 +193,7 @@ export class CasesFacade {
      * `create()` is a back-compat alias retained until v0.7.0.
      */
     create(request) {
-        warnDeprecatedOnce(this, 'isa.zyins.cases.create is deprecated; use isa.zyins.cases.save. Removed in v0.7.0.');
+        warnDeprecatedOnce(this, "isa.zyins.cases.create is deprecated; use isa.zyins.cases.save. Removed in v0.7.0.");
         return this.clientOnce().cases.share(request);
     }
     /** Email a case PDF/artifact to a recipient. */
@@ -208,8 +208,8 @@ export class CasesFacade {
  * through the carrier's documented channel instead.
  */
 function assembleShareView(id, recallToken, viewerBaseUrl) {
-    if (typeof id !== 'string' || id.length === 0) {
-        throw new Error('isa.zyins.cases.share requires a non-empty id');
+    if (typeof id !== "string" || id.length === 0) {
+        throw new Error("isa.zyins.cases.share requires a non-empty id");
     }
     if (recallToken === undefined || recallToken.length === 0) {
         return { id, recallToken: undefined, link: undefined };
@@ -253,7 +253,7 @@ export class LicenseFacade {
     async activate(request) {
         const filled = this.fillActivate(request);
         const result = await licenseActivate(filled, this.buildContext());
-        if (result.status === 'active' && isOwnLicenseRequest(this.opts.state, filled)) {
+        if (result.status === "active" && isOwnLicenseRequest(this.opts.state, filled)) {
             await this.opts.state.refreshLicenseKey(result.auth.licenseKey);
         }
         return result;
@@ -315,9 +315,9 @@ export class LicenseFacade {
 }
 function isOwnLicenseRequest(state, request) {
     const snap = state.snapshot();
-    return (request.email === snap.email &&
-        request.keycode === snap.keycode &&
-        request.deviceId === snap.deviceId);
+    return (request.email === snap.email
+        && request.keycode === snap.keycode
+        && request.deviceId === snap.deviceId);
 }
 /**
  * `isa.zyins.email` — transactional email enqueue. Today the server

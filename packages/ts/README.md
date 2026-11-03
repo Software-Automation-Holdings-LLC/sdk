@@ -11,50 +11,50 @@ npm install isa-sdk
 ## Hello world
 
 ```ts @no-compile
-import { Isa } from 'isa-sdk';
+import { Isa } from "isa-sdk";
 
-const isa = Isa.withBearer();                   // reads ISA_TOKEN
-const { data } = await isa.zyins.prequalify(req);  // v3 by default
+const isa = Isa.withBearer(); // reads ISA_TOKEN
+const { data } = await isa.zyins.prequalify(req); // v3 by default
 console.log(data.plans[0].carrier.name);
 ```
 
 Three bootstrap factories cover all auth contexts:
 
-| Factory | Audience | Env defaults |
-|---|---|---|
-| `Isa.withBearer()` | Server-to-server | `ISA_TOKEN` |
-| `Isa.withLicense({ deviceId, orderId })` | BPP agent tools | `ISA_LICENSE_KEYCODE`, `ISA_LICENSE_EMAIL` |
-| `Isa.withSession()` | Embedded forms | `ISA_SESSION_ID`, `ISA_SESSION_SECRET` |
+| Factory                                  | Audience         | Env defaults                               |
+| ---------------------------------------- | ---------------- | ------------------------------------------ |
+| `Isa.withBearer()`                       | Server-to-server | `ISA_TOKEN`                                |
+| `Isa.withLicense({ deviceId, orderId })` | BPP agent tools  | `ISA_LICENSE_KEYCODE`, `ISA_LICENSE_EMAIL` |
+| `Isa.withSession()`                      | Embedded forms   | `ISA_SESSION_ID`, `ISA_SESSION_SECRET`     |
 
 ## First call in <15 lines
 
 ```ts
 import {
+  Coverage,
+  Height,
   Isa,
+  NicotineDuration,
+  Products,
+  ProductSelection,
   Sex,
   State,
-  Height,
   Weight,
-  NicotineDuration,
-  Coverage,
-  ProductSelection,
-  Products,
-} from 'isa-sdk';
+} from "isa-sdk";
 
 const isa = await Isa.withKeycode({
-  keycode: 'ABC-123-XYZ',
-  email:   'john.doe@acme-agency.com',
+  keycode: "ABC-123-XYZ",
+  email: "john.doe@acme-agency.com",
 });
 
 // The bare `isa.zyins.prequalify` facade routes to v3 by default and
 // resolves to an envelope; destructure `data` to read the flat plans[].
 const { data } = await isa.zyins.prequalify({
   applicant: {
-    dob:         '1962-04-18',
-    sex:         Sex.Male,
-    state:       State.NorthCarolina,
-    height:      Height.fromFeetInches(5, 10),
-    weight:      Weight.fromPounds(195),
+    dob: "1962-04-18",
+    sex: Sex.Male,
+    state: State.NorthCarolina,
+    height: Height.fromFeetInches(5, 10),
+    weight: Weight.fromPounds(195),
     nicotineUse: { lastUsed: NicotineDuration.Never },
   },
   coverage: Coverage.faceValue(25_000),
@@ -63,7 +63,9 @@ const { data } = await isa.zyins.prequalify({
 
 for (const offer of data.plans) {
   const headline = offer.pricing.find(row => row.primary);
-  console.log(`${offer.carrier.name} ${offer.product.name}: ${headline?.premium?.amount.display}`);
+  console.log(
+    `${offer.carrier.name} ${offer.product.name}: ${headline?.premium?.amount.display}`,
+  );
 }
 ```
 
@@ -75,7 +77,7 @@ ships a frozen `BundledApiVersions` table recording which `/vN` each surface
 targets:
 
 ```ts @no-compile
-import { BundledApiVersions } from 'isa-sdk';
+import { BundledApiVersions } from "isa-sdk";
 
 console.log(BundledApiVersions);
 // {
@@ -94,15 +96,15 @@ To pin a single surface without disturbing the rest, pass a per-surface
 shorthand — resolution is `apiVersion[surface] ?? BundledApiVersions[surface]`:
 
 ```ts
-import { Isa } from 'isa-sdk';
+import { Isa } from "isa-sdk";
 
 const isa = await Isa.withKeycode(
   {
-    keycode: 'ABC-123-XYZ',
-    email:   'john.doe@acme-agency.com',
+    keycode: "ABC-123-XYZ",
+    email: "john.doe@acme-agency.com",
   },
-  undefined,                       // env reader — defaults to process.env
-  { apiVersion: { quote: 'v2' } }, // pin only quote; everything else bundled
+  undefined, // env reader — defaults to process.env
+  { apiVersion: { quote: "v2" } }, // pin only quote; everything else bundled
 );
 ```
 
@@ -123,11 +125,11 @@ Each one has a canonical guide on
 [docs.isaapi.com](https://docs.isaapi.com); the README only shows the
 30-second tour.
 
-| Adapter | Default impl | Guide |
-|---|---|---|
-| `Autocorrector` | `DefaultAutocorrector` (typo-map driven) | [Autocorrect](https://docs.isaapi.com/docs/autocorrect) |
-| `MatchAlgorithm` | `DefaultMatchAlgorithm` (`_makeKey` + exact lookup) | [Match](https://docs.isaapi.com/docs/match) |
-| `AutocompleteAlgorithm` | `DefaultAutocompleteAlgorithm` (6-bucket priority) | [Autocomplete](https://docs.isaapi.com/docs/autocomplete) |
+| Adapter                 | Default impl                                        | Guide                                                     |
+| ----------------------- | --------------------------------------------------- | --------------------------------------------------------- |
+| `Autocorrector`         | `DefaultAutocorrector` (typo-map driven)            | [Autocorrect](https://docs.isaapi.com/docs/autocorrect)   |
+| `MatchAlgorithm`        | `DefaultMatchAlgorithm` (`_makeKey` + exact lookup) | [Match](https://docs.isaapi.com/docs/match)               |
+| `AutocompleteAlgorithm` | `DefaultAutocompleteAlgorithm` (6-bucket priority)  | [Autocomplete](https://docs.isaapi.com/docs/autocomplete) |
 
 Wire-shape reference for the catalog the adapters consume:
 [Reference catalog shape](https://docs.isaapi.com/docs/reference-catalog).
@@ -140,15 +142,15 @@ corrections. The `mode` option chooses between mid-typing guards
 (`keyup`) and anti-duplication guards (`submit`).
 
 ```ts @no-compile
-import { Isa } from 'isa-sdk';
+import { Isa } from "isa-sdk";
 
 const isa = await Isa.withKeycode({
-  keycode: 'ABC-123-XYZ',
-  email:   'john.doe@acme-agency.com',
+  keycode: "ABC-123-XYZ",
+  email: "john.doe@acme-agency.com",
 });
 
-const corrected = isa.zyins.autocorrector.correct('hyprtension and losartn', {
-  mode: 'submit',
+const corrected = isa.zyins.autocorrector.correct("hyprtension and losartn", {
+  mode: "submit",
 });
 // → 'HYPERTENSION and LOSARTAN'
 ```
@@ -157,9 +159,9 @@ For a custom typo corpus, use the generic kernel:
 
 ```ts @no-compile
 const myCorrector = isa.autocorrector.create({
-  typoMap: new Map([['ASMA', 'ASTHMA'], ['DIABEETUS', 'DIABETES']]),
+  typoMap: new Map([["ASMA", "ASTHMA"], ["DIABEETUS", "DIABETES"]]),
 });
-myCorrector.correct('asma flare', { mode: 'submit' });
+myCorrector.correct("asma flare", { mode: "submit" });
 // → 'ASTHMA flare'
 ```
 
@@ -171,11 +173,11 @@ returns an `UnknownConcept` with `inputText` preserved, safe to send
 straight to `/v3/prequalify`.
 
 ```ts @no-compile
-const hbp = isa.zyins.conditions.match('High Blood Pressure');
+const hbp = isa.zyins.conditions.match("High Blood Pressure");
 console.log(hbp.id, hbp.name, hbp.isKnown);
 // cond_01KSR2XVXS8F3PQRJGFG91W51G  High Blood Pressure  true
 
-const novel = isa.zyins.medications.match('NewExperimental XR 2026');
+const novel = isa.zyins.medications.match("NewExperimental XR 2026");
 console.log(novel.isKnown, novel.inputText);
 // false  'NewExperimental XR 2026'
 ```
@@ -188,7 +190,7 @@ with within-bucket frequency boost. `frequencies` and `kinds` come
 from the cached datasets bundle automatically.
 
 ```ts @no-compile
-const suggestions = await isa.zyins.conditions.autocomplete('high b', {
+const suggestions = await isa.zyins.conditions.autocomplete("high b", {
   limit: 5,
 });
 suggestions.forEach(s => console.log(s.bucket, s.concept.name, s.score));
@@ -203,17 +205,17 @@ method plus a `versionTag` getter. Use `clone()` to swap one field
 without restating the others:
 
 ```ts @no-compile
-import { DefaultAutocorrector } from 'isa-sdk';
+import { DefaultAutocorrector } from "isa-sdk";
 
 // Start from the SDK-bundled corrector, override the typo map, keep
 // the rest of the wiring (mode, onApplied sink, etc.) intact:
 const tenant = isa.zyins.autocorrector.clone({
-  typoMap:    new Map([['HBP', 'HIGH BLOOD PRESSURE']]),
-  versionTag: '2026.05.29-acme',
-  onApplied:  (event) => analytics.track('autocorrect', event),
+  typoMap: new Map([["HBP", "HIGH BLOOD PRESSURE"]]),
+  versionTag: "2026.05.29-acme",
+  onApplied: (event) => analytics.track("autocorrect", event),
 });
 
-tenant.versionTag;  // '2026.05.29-acme'  — surfaces stale-corpus detection
+tenant.versionTag; // '2026.05.29-acme'  — surfaces stale-corpus detection
 ```
 
 `DefaultAutocorrector.onApplied` fires once per correction with the input
@@ -230,7 +232,7 @@ hosted-LLM lookup), implement the interface directly and pass it on the
 constructor. The minimal `MatchAlgorithm` is two lines:
 
 ```ts @no-compile
-import type { MatchAlgorithm, Concept } from 'isa-sdk';
+import type { Concept, MatchAlgorithm } from "isa-sdk";
 
 // Exact-string match against `concept.name`, no key normalization.
 class ExactNameMatch implements MatchAlgorithm {
@@ -240,10 +242,10 @@ class ExactNameMatch implements MatchAlgorithm {
 }
 
 const isa = await Isa.withKeycode({
-  keycode: 'ABC-123-XYZ',
-  email:   'john.doe@acme-agency.com',
-  autocorrector:         new MyAutocorrector(),         // Autocorrector
-  matchAlgorithm:        new ExactNameMatch(),          // MatchAlgorithm
+  keycode: "ABC-123-XYZ",
+  email: "john.doe@acme-agency.com",
+  autocorrector: new MyAutocorrector(), // Autocorrector
+  matchAlgorithm: new ExactNameMatch(), // MatchAlgorithm
   autocompleteAlgorithm: new MyAutocompleteAlgorithm(), // AutocompleteAlgorithm
 });
 ```
@@ -259,10 +261,10 @@ The default adapters consume the reference catalog. The `/datasets`
 surface is pinned in [`BundledApiVersions`](https://docs.isaapi.com/docs/api-version-pinning):
 
 ```ts @no-compile
-import { BundledApiVersions } from 'isa-sdk';
+import { BundledApiVersions } from "isa-sdk";
 
-BundledApiVersions.datasets;    // 'v3' as of this SDK release
-BundledApiVersions.prequalify;  // 'v3' as of this SDK release
+BundledApiVersions.datasets; // 'v3' as of this SDK release
+BundledApiVersions.prequalify; // 'v3' as of this SDK release
 ```
 
 Override per-surface via the `apiVersion` map on `Isa.withKeycode`. The
@@ -278,12 +280,12 @@ ID. To plug a carrier-controlled store, pass your adapter at construction:
 ```ts @no-compile
 // `CarrierCaseStorage` is a placeholder for a consumer-supplied
 // implementation of the `CaseStorage` interface — see the cases guide.
-import { Isa, LicenseAuth, type CaseStorage } from 'isa-sdk';
-declare const CarrierCaseStorage: new () => CaseStorage;
+import { type CaseStorage, Isa, LicenseAuth } from "isa-sdk";
+declare const CarrierCaseStorage: new() => CaseStorage;
 
 const isa = await Isa.create({
   auth: LicenseAuth.fromEnv(),
-  caseStorage: new CarrierCaseStorage(),  // optional; default = ZeroKnowledgeCaseStorage
+  caseStorage: new CarrierCaseStorage(), // optional; default = ZeroKnowledgeCaseStorage
 });
 ```
 
@@ -292,23 +294,23 @@ bring-your-own pattern.
 
 ## Sub-namespaces
 
-| Namespace | Access | Status |
-|---|---|---|
-| `isa.zyins.*` | `isa.zyins.prequalify(req)` | Live (license mode) |
+| Namespace         | Access                               | Status                    |
+| ----------------- | ------------------------------------ | ------------------------- |
+| `isa.zyins.*`     | `isa.zyins.prequalify(req)`          | Live (license mode)       |
 | `isa.rapidsign.*` | `isa.rapidsign.webhooks.verify(...)` | Verifier stub (issue #38) |
-| `isa.proxy.*` | internal | Phase 3 |
-| `isa.webhooks.*` | top-level alias | Verifier stub |
+| `isa.proxy.*`     | internal                             | Phase 3                   |
+| `isa.webhooks.*`  | top-level alias                      | Verifier stub             |
 
 ## Raw response variant
 
-Every product method has a `.withRawResponse` sibling returning
+Product methods expose a `*Raw` sibling (e.g. `prequalifyRaw`) returning
 `{ data, response }` with status, headers, and url:
 
 ```ts @no-compile
 // Continued from "First call in <15 lines" — `isa` and `req` are
 // the ones defined there.
 const { data, response } = await isa.zyins.prequalifyRaw(req);
-console.log(response.headers['x-isa-request-id']);
+console.log(response.headers["x-isa-request-id"]);
 ```
 
 ## Debug logging
@@ -345,11 +347,11 @@ License activation, check, and deactivation hang off `isa.zyins.license`
 construct `isa`, so the common call is argument-free:
 
 ```ts
-import { Isa } from 'isa-sdk';
+import { Isa } from "isa-sdk";
 
 const isa = await Isa.withKeycode({
-  keycode: 'ABC-123-XYZ',
-  email:   'john.doe@acme-agency.com',
+  keycode: "ABC-123-XYZ",
+  email: "john.doe@acme-agency.com",
 });
 
 const status = await isa.zyins.license.check();

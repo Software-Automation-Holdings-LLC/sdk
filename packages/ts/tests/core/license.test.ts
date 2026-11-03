@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
-  buildLicenseHMACHeaders,
   buildLicenseHeader,
+  buildLicenseHMACHeaders,
   computeDeviceSignature,
   stripQuotes,
 } from "../../src/core/license/deviceAuth";
@@ -111,20 +111,48 @@ describe("buildLicenseHMACHeaders", () => {
 
   it("produces matching signatures for identical canonical inputs", async () => {
     const h1 = await buildLicenseHMACHeaders(
-      LICENSE, ORDER, EMAIL, "POST", "/v1/a", "body", DEVICE_ID, () => FIXED_TIME,
+      LICENSE,
+      ORDER,
+      EMAIL,
+      "POST",
+      "/v1/a",
+      "body",
+      DEVICE_ID,
+      () => FIXED_TIME,
     );
     const h2 = await buildLicenseHMACHeaders(
-      LICENSE, ORDER, EMAIL, "POST", "/v1/a", "body", DEVICE_ID, () => FIXED_TIME,
+      LICENSE,
+      ORDER,
+      EMAIL,
+      "POST",
+      "/v1/a",
+      "body",
+      DEVICE_ID,
+      () => FIXED_TIME,
     );
     expect(h1["X-Device-Signature"]).toBe(h2["X-Device-Signature"]);
   });
 
   it("produces different signatures when the body changes", async () => {
     const h1 = await buildLicenseHMACHeaders(
-      LICENSE, ORDER, EMAIL, "POST", "/v1/a", "alpha", DEVICE_ID, () => FIXED_TIME,
+      LICENSE,
+      ORDER,
+      EMAIL,
+      "POST",
+      "/v1/a",
+      "alpha",
+      DEVICE_ID,
+      () => FIXED_TIME,
     );
     const h2 = await buildLicenseHMACHeaders(
-      LICENSE, ORDER, EMAIL, "POST", "/v1/a", "beta", DEVICE_ID, () => FIXED_TIME,
+      LICENSE,
+      ORDER,
+      EMAIL,
+      "POST",
+      "/v1/a",
+      "beta",
+      DEVICE_ID,
+      () => FIXED_TIME,
     );
     expect(h1["X-Device-Signature"]).not.toBe(h2["X-Device-Signature"]);
   });
@@ -138,10 +166,24 @@ describe("buildLicenseHMACHeaders", () => {
   // — which matches the server's verification behavior exactly.
   it("does not cover URI in signature (matches current server behavior)", async () => {
     const h1 = await buildLicenseHMACHeaders(
-      LICENSE, ORDER, EMAIL, "POST", "/v1/a", "body", DEVICE_ID, () => FIXED_TIME,
+      LICENSE,
+      ORDER,
+      EMAIL,
+      "POST",
+      "/v1/a",
+      "body",
+      DEVICE_ID,
+      () => FIXED_TIME,
     );
     const h2 = await buildLicenseHMACHeaders(
-      LICENSE, ORDER, EMAIL, "POST", "/v1/b", "body", DEVICE_ID, () => FIXED_TIME,
+      LICENSE,
+      ORDER,
+      EMAIL,
+      "POST",
+      "/v1/b",
+      "body",
+      DEVICE_ID,
+      () => FIXED_TIME,
     );
     expect(h1["X-Device-Signature"]).toBe(h2["X-Device-Signature"]);
   });

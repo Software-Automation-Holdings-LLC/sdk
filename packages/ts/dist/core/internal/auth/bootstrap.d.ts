@@ -54,12 +54,16 @@ export interface BootstrapSignature {
     readonly canonical: string;
     /** Lowercase hex HMAC-SHA256 over canonical, keyed by licenseKey. */
     readonly hex: string;
-    /** `ISA-Signature: t=<ts>,v1=<hex>` — ready to set as a header value. */
-    readonly header: string;
+    /** Header name callers should set. */
+    readonly headerName: "ISA-Signature";
+    /** `t=<ts>,v1=<hex>` — ready to set as the header value. */
+    readonly headerValue: string;
+    /** Complete header line for docs and conformance output. */
+    readonly headerLine: string;
 }
 /**
  * Synchronous Node-only implementation. Used by the conformance test and
- * any server-side code that runs in Node ≥20. Browser callers should use
+ * any server-side code that runs in Node ≥20.16. Browser callers should use
  * {@link buildBootstrapSignatureAsync} which delegates to SubtleCrypto.
  */
 export declare function buildBootstrapSignature(input: BootstrapInput): BootstrapSignature;

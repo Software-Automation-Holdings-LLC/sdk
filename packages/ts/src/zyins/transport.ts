@@ -14,10 +14,10 @@
  * and Tier 3 is allowed to assume the protocol layer above it is reliable.
  */
 
-import { resolveFetch } from '../core/index.js';
+import { resolveFetch } from "../core/index.js";
 
 /** Method shape Tier 3 emits. The wire supports more; this is what we use. */
-export type HttpMethod = 'GET' | 'POST' | 'PUT' | 'DELETE';
+export type HttpMethod = "GET" | "POST" | "PUT" | "DELETE";
 
 /** Inbound request as seen by the transport facade. */
 export interface TransportRequest {
@@ -46,14 +46,14 @@ export type Transport = (request: TransportRequest) => Promise<TransportResponse
  * so tests inject a stub without touching globals.
  */
 export function defaultTransport(fetchImpl?: typeof fetch): Transport {
-  const f = resolveFetch(fetchImpl, 'ZyInsTransport');
+  const f = resolveFetch(fetchImpl, "ZyInsTransport");
   return async (request) => {
     const init: RequestInit = {
       method: request.method,
       headers: request.headers,
       signal: request.signal,
     };
-    if (request.method !== 'GET' && request.method !== 'DELETE') {
+    if (request.method !== "GET" && request.method !== "DELETE") {
       init.body = request.body;
     }
     const response = await f(request.url, init);

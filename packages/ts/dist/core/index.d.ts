@@ -8,15 +8,16 @@
  * workspace protocol during development; the publish workflow pins
  * the workspace dep to a concrete sdk/core/v* tag at publish time.
  */
-export { resolveSubtle, arrayBufferToHex, resolveFetch, base64EncodeUtf8, base64ToBytes, bytesToBase64, bytesToBase64Url, systemRandomBytes, systemClock, } from './internal/crypto.js';
-export type { Clock, RandomBytes } from './internal/crypto.js';
-export * from './license/deviceAuth.js';
-export * from './problem-details/types.js';
-export * from './http/constants.js';
-export * from './http/request.js';
-export * from './transport/index.js';
-export { canonicalString, formatTimestamp, signRequest, type SignClock, type SignRequestHeaders, type SignRequestInput, type SignRequestResult, } from './auth/signRequest.js';
-export * as compression from './compression/gzip.js';
-export * as obfuscation from './obfuscation/xor.js';
-export { type CredentialStore, type AsyncStorageLike, type SyncStorageLike, CREDENTIAL_KEYS, inMemoryCredentialStore, fromAsyncStorage, fromLocalStorage, loadOrMintDeviceId, mintDeviceId, } from './storage/index.js';
+export { arrayBufferToHex, base64EncodeUtf8, base64ToBytes, bytesToBase64, bytesToBase64Url, resolveFetch, resolveSubtle, systemClock, systemRandomBytes, } from "./internal/crypto.js";
+export type { Clock, RandomBytes } from "./internal/crypto.js";
+export { canonicalString, formatTimestamp, type SignClock, signRequest, type SignRequestHeaders, type SignRequestInput, type SignRequestResult, } from "./auth/signRequest.js";
+export * from "./http/constants.js";
+export * from "./http/request.js";
+export { type BootstrapInput, buildBootstrapSignatureAsync } from "./internal/auth/bootstrap.js";
+export * from "./license/deviceAuth.js";
+export * from "./problem-details/types.js";
+export * from "./transport/index.js";
+export * as compression from "./compression/gzip.js";
+export * as obfuscation from "./obfuscation/xor.js";
+export { type AsyncStorageLike, CREDENTIAL_KEYS, type CredentialStore, fromAsyncStorage, fromLocalStorage, inMemoryCredentialStore, loadOrMintDeviceId, mintDeviceId, type SyncStorageLike, } from "./storage/index.js";
 //# sourceMappingURL=index.d.ts.map

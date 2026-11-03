@@ -1,15 +1,15 @@
-import { buildLicenseHMACHeaders } from '../core/index.js';
-import { systemClock } from '../core/index.js';
-import { fromHttpResponse } from './errors.js';
-import { __internal as referenceInternal } from './reference.js';
-const DATASETS_PATH = '/v2/reference-data';
+import { buildLicenseHMACHeaders } from "../core/index.js";
+import { systemClock } from "../core/index.js";
+import { fromHttpResponse } from "./errors.js";
+import { __internal as referenceInternal } from "./reference.js";
+const DATASETS_PATH = "/v2/reference-data";
 export async function getDatasets(options, ctx) {
-    const headers = await buildLicenseHMACHeaders(ctx.auth.licenseKey, ctx.auth.orderId, ctx.auth.email, 'GET', DATASETS_PATH, '', ctx.auth.deviceId, ctx.clock ?? systemClock);
+    const headers = await buildLicenseHMACHeaders(ctx.auth.licenseKey, ctx.auth.orderId, ctx.auth.email, "GET", DATASETS_PATH, "", ctx.auth.deviceId, ctx.clock ?? systemClock);
     const response = await ctx.transport({
         url: `${ctx.baseUrl}${DATASETS_PATH}`,
-        method: 'GET',
+        method: "GET",
         headers: { ...headers },
-        body: '',
+        body: "",
     });
     if (response.status < 200 || response.status >= 300) {
         throw fromHttpResponse(response.status, response.body);
@@ -17,7 +17,7 @@ export async function getDatasets(options, ctx) {
     const bundle = normalize(response.body);
     return options?.include ? pick(bundle, options.include) : bundle;
 }
-const isObject = (v) => v !== null && typeof v === 'object' && !Array.isArray(v);
+const isObject = (v) => v !== null && typeof v === "object" && !Array.isArray(v);
 const safeParse = (body) => {
     try {
         return JSON.parse(body);
@@ -29,53 +29,53 @@ const safeParse = (body) => {
 };
 const readSlice = (ds, key) => {
     const raw = ds[key];
-    return isObject(raw) && 'data' in raw ? raw['data'] : raw;
+    return isObject(raw) && "data" in raw ? raw["data"] : raw;
 };
 const toArray = (v) => (Array.isArray(v) ? v : []);
 const readString = (v, key) => {
     if (!isObject(v))
         return undefined;
     const value = v[key];
-    return typeof value === 'string' ? value : undefined;
+    return typeof value === "string" ? value : undefined;
 };
 const readDatasets = (parsed) => {
     if (!isObject(parsed))
         return {};
-    const payload = isObject(parsed['data']) ? parsed['data'] : parsed;
-    return isObject(payload['datasets']) ? payload['datasets'] : {};
+    const payload = isObject(parsed["data"]) ? parsed["data"] : parsed;
+    return isObject(payload["datasets"]) ? payload["datasets"] : {};
 };
 const normalize = (body) => {
     const parsed = safeParse(body);
     const ds = readDatasets(parsed);
-    const products = readSlice(ds, 'products');
-    const conditions = toArray(readSlice(ds, 'conditions'));
-    const medications = toArray(readSlice(ds, 'medications'));
+    const products = readSlice(ds, "products");
+    const conditions = toArray(readSlice(ds, "conditions"));
+    const medications = toArray(readSlice(ds, "medications"));
     const relationships = relationshipMapsFromMedications(medications);
     return {
-        nicotineOptions: toStringArray(readSlice(ds, 'nicotine_options')),
+        nicotineOptions: toStringArray(readSlice(ds, "nicotine_options")),
         products: extractProductNames(products),
-        discontinuedProducts: toNumberRecord(readSlice(ds, 'discontinued_products')),
-        stateDerivatives: toStringArray(readSlice(ds, 'states')),
-        typos: typosFromCorrections(readSlice(ds, 'corrections')),
-        conditions: conditions.map((c) => ({ name: readString(c, 'name'), details: [] })),
+        discontinuedProducts: toNumberRecord(readSlice(ds, "discontinued_products")),
+        stateDerivatives: toStringArray(readSlice(ds, "states")),
+        typos: typosFromCorrections(readSlice(ds, "corrections")),
+        conditions: conditions.map((c) => ({ name: readString(c, "name"), details: [] })),
         conditionNames: conditions
-            .map((c) => readString(c, 'name'))
-            .filter((name) => typeof name === 'string'),
+            .map((c) => readString(c, "name"))
+            .filter((name) => typeof name === "string"),
         medications: medicationsToLegacy(medications),
         medicationNames: medications
-            .map((m) => readString(m, 'name'))
-            .filter((name) => typeof name === 'string'),
+            .map((m) => readString(m, "name"))
+            .filter((name) => typeof name === "string"),
         medicationsByCondition: relationships.medicationsByCondition,
         frequencyGraphs: relationships.frequencyGraphs,
     };
 };
-const toStringArray = (v) => toArray(v).filter((item) => typeof item === 'string');
+const toStringArray = (v) => toArray(v).filter((item) => typeof item === "string");
 const toNumberRecord = (v) => {
     if (!isObject(v))
         return {};
     const result = {};
     for (const [key, value] of Object.entries(v)) {
-        if (typeof value === 'number')
+        if (typeof value === "number")
             result[key] = value;
     }
     return result;
@@ -90,20 +90,19 @@ const extractProductNames = (productPayload) => {
             continue;
         }
         const first = entries[0];
-        result[type] =
-            isObject(first) && typeof first['name'] === 'string'
-                ? entries
-                    .map((e) => readString(e, 'name'))
-                    .filter((name) => typeof name === 'string')
-                : entries;
+        result[type] = isObject(first) && typeof first["name"] === "string"
+            ? entries
+                .map((e) => readString(e, "name"))
+                .filter((name) => typeof name === "string")
+            : entries;
     }
     return result;
 };
 const typosFromCorrections = (corrections) => {
     const map = {};
     for (const c of toArray(corrections)) {
-        const input = readString(c, 'input');
-        const corrected = readString(c, 'corrected_name');
+        const input = readString(c, "input");
+        const corrected = readString(c, "corrected_name");
         if (input && corrected)
             map[input] = corrected;
     }
@@ -112,30 +111,30 @@ const typosFromCorrections = (corrections) => {
 const medicationsToLegacy = (medications) => {
     const result = {};
     for (const m of medications) {
-        const name = readString(m, 'name');
+        const name = readString(m, "name");
         if (!name)
             continue;
-        const uses = isObject(m) ? toArray(m['uses']) : [];
+        const uses = isObject(m) ? toArray(m["uses"]) : [];
         const details = uses
-            .map((u) => readString(u, 'condition'))
-            .filter((cond) => typeof cond === 'string');
+            .map((u) => readString(u, "condition"))
+            .filter((cond) => typeof cond === "string");
         result[name] = { details };
     }
     return result;
 };
 const conditionNameFromUse = (value) => {
-    if (typeof value === 'string')
+    if (typeof value === "string")
         return value;
-    return readString(value, 'condition');
+    return readString(value, "condition");
 };
 const useFrequency = (value) => {
     if (!isObject(value))
         return 1;
-    const frequency = value['frequency'];
-    if (typeof frequency === 'number' && Number.isFinite(frequency))
+    const frequency = value["frequency"];
+    if (typeof frequency === "number" && Number.isFinite(frequency))
         return frequency;
-    const count = value['count'];
-    return typeof count === 'number' && Number.isFinite(count) ? count : 1;
+    const count = value["count"];
+    return typeof count === "number" && Number.isFinite(count) ? count : 1;
 };
 const appendUnique = (target, key, value) => {
     const existing = target[key] ?? [];
@@ -153,13 +152,13 @@ const relationshipMapsFromMedications = (medications) => {
     const medicationsByCondition = {};
     const useMap = {};
     for (const medication of medications) {
-        const name = readString(medication, 'name');
+        const name = readString(medication, "name");
         if (!name || !isObject(medication))
             continue;
         const medicationID = referenceInternal.makeKey(name);
         if (!medicationID)
             continue;
-        for (const use of toArray(medication['uses'])) {
+        for (const use of toArray(medication["uses"])) {
             const conditionName = conditionNameFromUse(use);
             if (!conditionName)
                 continue;

@@ -6,6 +6,8 @@
  *   - `RapidSignError`    — error base + specific subclasses
  *   - Value types         — `Envelope`, `Signature`, `Recipient`, `PdfSource`,
  *                           `SendRequest`, `CancelRequest`, `AwaitOpts`
+ *   - Voice types         — `VoiceStep`, `VoiceStepKind`, `VoiceScript`,
+ *                           `MintCodeRequest`, `VoiceCode` (see `client.voice`)
  *   - Facade types        — `Transport`, `Clock`, `Sleeper`, `UUIDGenerator`,
  *                           `Decompressor` for tests + advanced usage
  *
@@ -14,56 +16,60 @@
  */
 
 export {
-  RapidSignClient,
+  DEFAULT_MAX_RETRIES,
   DEFAULT_RAPIDSIGN_BASE_URL,
   DEFAULT_USER_AGENT,
-  DEFAULT_MAX_RETRIES,
+  RapidSignClient,
   type RapidSignClientOptions,
-} from './client.js';
+} from "./client.js";
 
 export {
-  RapidSignError,
+  type ErrorCode,
   fromHttpResponse,
   fromProblemDetails,
-  type ErrorCode,
+  RapidSignError,
   type RapidSignErrorInit,
-} from './errors.js';
+} from "./errors.js";
 
 export {
+  type AwaitOpts,
+  type CancelRequest,
+  type DownloadOpts,
   type Envelope,
   type EnvelopeStatus,
-  type Recipient,
+  type GetOpts,
+  type MintCodeRequest,
   type PdfSource,
+  type Recipient,
   type SendRequest,
-  type CancelRequest,
-  type AwaitOpts,
   type Signature,
-} from './types.js';
+  type VoiceCode,
+  type VoiceScript,
+  type VoiceStep,
+  type VoiceStepKind,
+} from "./types.js";
 
-export { DocumentsService, type DocumentsContext } from './documents.js';
-export { WebhooksService, type WebhookEvent } from './webhooks.js';
+export { type DocumentsContext, DocumentsService } from "./documents.js";
+export { VoiceService } from "./voice.js";
+export { type WebhookEvent, WebhooksService } from "./webhooks.js";
 
 export {
   defaultTransport,
+  type HttpMethod,
   type Transport,
   type TransportRequest,
   type TransportResponse,
-  type HttpMethod,
-} from './internal/transport.js';
+} from "./internal/transport.js";
+
+export { decodeGzipBase64, type Decompressor, defaultDecompressor } from "./internal/decompress.js";
 
 export {
-  defaultDecompressor,
-  decodeGzipBase64,
-  type Decompressor,
-} from './internal/decompress.js';
-
-export {
-  defaultUUIDGenerator,
-  defaultSleeper,
-  systemClock,
   type Clock,
+  defaultSleeper,
+  defaultUUIDGenerator,
   type Sleeper,
+  systemClock,
   type UUIDGenerator,
-} from './internal/random.js';
+} from "./internal/random.js";
 
-export { parseDuration, MAX_DURATION_MS } from './internal/duration.js';
+export { MAX_DURATION_MS, parseDuration } from "./internal/duration.js";

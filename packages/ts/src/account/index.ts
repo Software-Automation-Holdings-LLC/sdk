@@ -18,41 +18,33 @@
  * `/tmp/sdk-syntax-proposal.md` post-lock correction #3.
  */
 
-import { type AuthContext } from './auth.js';
-import { type Transport, defaultTransport } from '../zyins/transport.js';
-import { type Clock, systemClock } from '../core/index.js';
+import { type Clock, systemClock } from "../core/index.js";
+import { defaultTransport, type Transport } from "../zyins/transport.js";
+import { type AuthContext } from "./auth.js";
+import { type BrandingDetail, type BrandingLookupRequest, lookup as brandingLookup } from "./branding.js";
 import {
-  lookup as brandingLookup,
-  type BrandingDetail,
-  type BrandingLookupRequest,
-} from './branding.js';
+  type CaseCreateRequest,
+  type CaseCreateResult,
+  type CaseEmailRequest,
+  type CaseEmailResult,
+  type CaseOpenResult,
+  type CaseSummary,
+  create as casesCreate,
+  DEFAULT_CASE_VIEWER_BASE_URL,
+  email as casesEmail,
+  list as casesList,
+  open as casesOpen,
+  type TCaseProduct,
+} from "./cases.js";
+import { type EmailEnqueueRequest, type EmailEnqueueResult, enqueue as emailEnqueue } from "./email.js";
 import {
   lookup as preferencesLookup,
-  set as preferencesSet,
   type PreferencesLookupRequest,
   type PreferencesLookupResult,
   type PreferencesSetRequest,
   type PreferencesSetResult,
-} from './preferences.js';
-import {
-  create as casesCreate,
-  open as casesOpen,
-  list as casesList,
-  email as casesEmail,
-  DEFAULT_CASE_VIEWER_BASE_URL,
-  type CaseCreateRequest,
-  type CaseCreateResult,
-  type CaseOpenResult,
-  type CaseEmailRequest,
-  type CaseEmailResult,
-  type CaseSummary,
-  type TCaseProduct,
-} from './cases.js';
-import {
-  enqueue as emailEnqueue,
-  type EmailEnqueueRequest,
-  type EmailEnqueueResult,
-} from './email.js';
+  set as preferencesSet,
+} from "./preferences.js";
 
 /** Construction options for {@link AccountNamespace}. */
 export interface AccountNamespaceOptions {
@@ -197,17 +189,17 @@ export class AccountEmail {
 export type {
   BrandingDetail,
   BrandingLookupRequest,
+  CaseCreateRequest,
+  CaseCreateResult,
+  CaseEmailRequest,
+  CaseEmailResult,
+  CaseOpenResult,
+  CaseSummary,
+  EmailEnqueueRequest,
+  EmailEnqueueResult,
   PreferencesLookupRequest,
   PreferencesLookupResult,
   PreferencesSetRequest,
   PreferencesSetResult,
-  CaseCreateRequest,
-  CaseCreateResult,
-  CaseOpenResult,
-  CaseEmailRequest,
-  CaseEmailResult,
-  CaseSummary,
   TCaseProduct,
-  EmailEnqueueRequest,
-  EmailEnqueueResult,
 };

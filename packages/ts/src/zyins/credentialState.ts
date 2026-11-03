@@ -15,8 +15,8 @@
  * path.
  */
 
-import { type AuthContext } from './auth.js';
-import { type CredentialStore, CREDENTIAL_KEYS } from '../core/index.js';
+import { CREDENTIAL_KEYS, type CredentialStore } from "../core/index.js";
+import { type AuthContext } from "./auth.js";
 
 /** Snapshot of the credentials needed for one license-mode call. */
 export interface LicenseCredentialSnapshot {
@@ -137,6 +137,6 @@ export class IsaCredentialState {
       // Persistence is best-effort; in-memory state remains authoritative
       // for the active process.
     }
-    this.auth.licenseKey = '';
+    this.auth.licenseKey = "";
   }
 }

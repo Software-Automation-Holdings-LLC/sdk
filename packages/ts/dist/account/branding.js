@@ -12,21 +12,21 @@
  * query parameter when supplied so we don't churn the typed surface when
  * the server lands the extension.
  */
-import { fromHttpResponse } from '../zyins/errors.js';
-import { boolField, firstStringField, isRecord, stringField, unwrapEnvelope } from '../zyins/response.js';
-import { buildLicenseHMACHeaders } from '../core/index.js';
-import { systemClock } from '../core/index.js';
-const BRANDING_PATH = '/v2/branding';
+import { buildLicenseHMACHeaders } from "../core/index.js";
+import { systemClock } from "../core/index.js";
+import { fromHttpResponse } from "../zyins/errors.js";
+import { boolField, firstStringField, isRecord, stringField, unwrapEnvelope } from "../zyins/response.js";
+const BRANDING_PATH = "/v2/branding";
 /** Fetch the whitelabel branding for the caller's license. */
 export async function lookup(request, ctx) {
-    const query = request?.source ? `?source=${encodeURIComponent(request.source)}` : '';
+    const query = request?.source ? `?source=${encodeURIComponent(request.source)}` : "";
     const path = `${BRANDING_PATH}${query}`;
-    const headers = await buildLicenseHMACHeaders(ctx.auth.licenseKey, ctx.auth.orderId, ctx.auth.email, 'GET', path, '', ctx.auth.deviceId, ctx.clock ?? systemClock);
+    const headers = await buildLicenseHMACHeaders(ctx.auth.licenseKey, ctx.auth.orderId, ctx.auth.email, "GET", path, "", ctx.auth.deviceId, ctx.clock ?? systemClock);
     const response = await ctx.transport({
         url: `${ctx.baseUrl}${path}`,
-        method: 'GET',
-        headers: { ...headers, Accept: 'application/json' },
-        body: '',
+        method: "GET",
+        headers: { ...headers, Accept: "application/json" },
+        body: "",
     });
     if (response.status >= 200 && response.status < 300) {
         return parseBrandingResponse(response.body);
@@ -47,32 +47,32 @@ function parseBrandingResponse(body) {
     const unwrapped = unwrapEnvelope(parsed);
     const root = isRecord(unwrapped) ? unwrapped : {};
     return {
-        imoName: stringField(root, 'imo_name'),
-        imoLogo: stringField(root, 'imo_logo'),
-        primaryColor: firstStringField(root, ['primary_color', 'main_color']),
-        navColor: stringField(root, 'nav_color'),
-        bgColor: stringField(root, 'bg_color'),
-        buttonColor: stringField(root, 'button_color'),
-        activeButtonColor: stringField(root, 'active_button_color'),
-        headerTextColor: stringField(root, 'header_text_color'),
-        hideAffiliateLeads: boolField(root, 'hide_affiliate_leads'),
-        preventProductSelection: boolField(root, 'prevent_product_selection'),
-        defaultSettings: stringField(root, 'default_settings'),
+        imoName: stringField(root, "imo_name"),
+        imoLogo: stringField(root, "imo_logo"),
+        primaryColor: firstStringField(root, ["primary_color", "main_color"]),
+        navColor: stringField(root, "nav_color"),
+        bgColor: stringField(root, "bg_color"),
+        buttonColor: stringField(root, "button_color"),
+        activeButtonColor: stringField(root, "active_button_color"),
+        headerTextColor: stringField(root, "header_text_color"),
+        hideAffiliateLeads: boolField(root, "hide_affiliate_leads"),
+        preventProductSelection: boolField(root, "prevent_product_selection"),
+        defaultSettings: stringField(root, "default_settings"),
     };
 }
 function zeroBranding() {
     return {
-        imoName: '',
-        imoLogo: '',
-        primaryColor: '',
-        navColor: '',
-        bgColor: '',
-        buttonColor: '',
-        activeButtonColor: '',
-        headerTextColor: '',
+        imoName: "",
+        imoLogo: "",
+        primaryColor: "",
+        navColor: "",
+        bgColor: "",
+        buttonColor: "",
+        activeButtonColor: "",
+        headerTextColor: "",
         hideAffiliateLeads: false,
         preventProductSelection: false,
-        defaultSettings: '',
+        defaultSettings: "",
     };
 }
 //# sourceMappingURL=branding.js.map

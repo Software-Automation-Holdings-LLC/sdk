@@ -33,15 +33,15 @@ export const stderrSink = {
 };
 /** Header names whose values are always redacted. */
 const REDACT_HEADER_NAMES = new Set([
-    'authorization',
-    'x-device-signature',
-    'x-session-signature',
-    'cookie',
-    'set-cookie',
+    "authorization",
+    "x-device-signature",
+    "x-session-signature",
+    "cookie",
+    "set-cookie",
 ].map((h) => h.toLowerCase()));
 /** Body fields whose values are always redacted. */
-const REDACT_BODY_FIELDS = new Set(['email', 'dob', 'ssn', 'phone']);
-const REDACTED = '[redacted]';
+const REDACT_BODY_FIELDS = new Set(["email", "dob", "ssn", "phone"]);
+const REDACTED = "[redacted]";
 /** Redact sensitive headers in-place safe (returns a new object). */
 export function redactHeaders(headers) {
     const out = {};
@@ -58,7 +58,7 @@ export function redactBody(value) {
     if (Array.isArray(value)) {
         return value.map((entry) => redactBody(entry));
     }
-    if (value !== null && typeof value === 'object') {
+    if (value !== null && typeof value === "object") {
         const out = {};
         for (const [key, child] of Object.entries(value)) {
             out[key] = REDACT_BODY_FIELDS.has(key.toLowerCase()) ? REDACTED : redactBody(child);
@@ -73,11 +73,11 @@ export function redactBody(value) {
  * are not corrupted; the caller may pass `kind: 'form'` to opt into
  * form-field redaction.
  */
-export function redactBodyString(body, kind = 'unknown') {
-    if (kind === 'form' || (kind === 'unknown' && body.includes('=') && !body.startsWith('{'))) {
+export function redactBodyString(body, kind = "unknown") {
+    if (kind === "form" || (kind === "unknown" && body.includes("=") && !body.startsWith("{"))) {
         return redactFormBody(body);
     }
-    if (!body.startsWith('{') && !body.startsWith('['))
+    if (!body.startsWith("{") && !body.startsWith("["))
         return body;
     try {
         const parsed = JSON.parse(body);
@@ -89,9 +89,9 @@ export function redactBodyString(body, kind = 'unknown') {
 }
 function redactFormBody(body) {
     return body
-        .split('&')
+        .split("&")
         .map((pair) => {
-        const eq = pair.indexOf('=');
+        const eq = pair.indexOf("=");
         if (eq < 0)
             return pair;
         const key = pair.slice(0, eq);
@@ -107,12 +107,12 @@ function redactFormBody(body) {
             return `${key}=${REDACTED}`;
         return pair;
     })
-        .join('&');
+        .join("&");
 }
 /** Construct a debug logger from environment configuration. */
 export function debugLoggerFromEnv(env = processEnv, sink = stderrSink) {
-    const level = env.get('ISA_LOG');
-    if (level !== 'debug')
+    const level = env.get("ISA_LOG");
+    if (level !== "debug")
         return undefined;
     return makeLogger(sink);
 }
@@ -122,11 +122,11 @@ export function makeLogger(sink) {
         request({ method, url, headers, body, bodyKind, retryAttempt }) {
             const line = JSON.stringify({
                 ts: new Date().toISOString(),
-                kind: 'request',
+                kind: "request",
                 method,
                 url,
                 headers: redactHeaders(headers),
-                body: redactBodyString(body, bodyKind ?? 'unknown'),
+                body: redactBodyString(body, bodyKind ?? "unknown"),
                 ...(retryAttempt !== undefined && { retryAttempt }),
             });
             sink.write(`isa-sdk ${line}\n`);
@@ -134,12 +134,12 @@ export function makeLogger(sink) {
         response({ method, url, status, headers, body, bodyKind, retryAttempt }) {
             const line = JSON.stringify({
                 ts: new Date().toISOString(),
-                kind: 'response',
+                kind: "response",
                 method,
                 url,
                 status,
                 headers: redactHeaders(headers),
-                body: redactBodyString(body, bodyKind ?? 'unknown'),
+                body: redactBodyString(body, bodyKind ?? "unknown"),
                 ...(retryAttempt !== undefined && { retryAttempt }),
             });
             sink.write(`isa-sdk ${line}\n`);

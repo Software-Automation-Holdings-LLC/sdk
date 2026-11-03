@@ -13,8 +13,8 @@ export type FetchImpl = (input: RequestInfo | URL, init?: RequestInit) => Promis
 
 /** Resolves the bearer credential for the next request. May refresh. */
 export interface TokenSource {
-    /** Returns the bearer token. Throw to fail the request. */
-    token(): Promise<string> | string;
+  /** Returns the bearer token. Throw to fail the request. */
+  token(): Promise<string> | string;
 }
 
 /**
@@ -23,21 +23,21 @@ export interface TokenSource {
  * refreshing implementation that handles token expiry.
  */
 export class StaticToken implements TokenSource {
-    constructor(private readonly value: string) {
-        if (value === '') {
-            throw new Error('transport: StaticToken refuses an empty value');
-        }
+  constructor(private readonly value: string) {
+    if (value === "") {
+      throw new Error("transport: StaticToken refuses an empty value");
     }
-    token(): string {
-        return this.value;
-    }
+  }
+  token(): string {
+    return this.value;
+  }
 }
 
 export interface BearerTransportOptions {
-    /** Token source. Required. */
-    source: TokenSource;
-    /** Underlying fetch. Required (do NOT default to global fetch). */
-    fetch: FetchImpl;
+  /** Token source. Required. */
+  source: TokenSource;
+  /** Underlying fetch. Required (do NOT default to global fetch). */
+  fetch: FetchImpl;
 }
 
 /**
@@ -46,27 +46,27 @@ export interface BearerTransportOptions {
  * is overwritten — matching how AWS SigV4 and Google ADC behave.
  */
 export class BearerTransport {
-    private readonly source: TokenSource;
-    private readonly inner: FetchImpl;
+  private readonly source: TokenSource;
+  private readonly inner: FetchImpl;
 
-    constructor(opts: BearerTransportOptions) {
-        if (!opts.source) {
-            throw new Error('transport: BearerTransport requires a TokenSource');
-        }
-        if (!opts.fetch) {
-            throw new Error('transport: BearerTransport requires a fetch implementation');
-        }
-        this.source = opts.source;
-        this.inner = opts.fetch;
+  constructor(opts: BearerTransportOptions) {
+    if (!opts.source) {
+      throw new Error("transport: BearerTransport requires a TokenSource");
     }
+    if (!opts.fetch) {
+      throw new Error("transport: BearerTransport requires a fetch implementation");
+    }
+    this.source = opts.source;
+    this.inner = opts.fetch;
+  }
 
-    /** Returns a FetchImpl that injects `Authorization: Bearer <token>`. */
-    asFetch(): FetchImpl {
-        return async (input, init) => {
-            const token = await this.source.token();
-            const headers = new Headers(init?.headers);
-            headers.set('Authorization', `Bearer ${token}`);
-            return this.inner(input, { ...init, headers });
-        };
-    }
+  /** Returns a FetchImpl that injects `Authorization: Bearer <token>`. */
+  asFetch(): FetchImpl {
+    return async (input, init) => {
+      const token = await this.source.token();
+      const headers = new Headers(init?.headers);
+      headers.set("Authorization", `Bearer ${token}`);
+      return this.inner(input, { ...init, headers });
+    };
+  }
 }

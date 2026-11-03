@@ -15,12 +15,12 @@
  * (`encryptCase` / `decryptCase` / `signedCaseRequest`) to avoid forking
  * the cryptographic surface.
  */
-import { encryptCase, decryptCase } from '../../account/caseCrypto.js';
-import { parseCreatedId, parseCaseDetail, } from '../../account/caseWire.js';
-import { signedCaseRequest, isSuccess, } from '../../account/caseTransport.js';
-import { fromHttpResponse } from '../errors.js';
+import { decryptCase, encryptCase } from "../../account/caseCrypto.js";
+import { isSuccess, signedCaseRequest } from "../../account/caseTransport.js";
+import { parseCaseDetail, parseCreatedId } from "../../account/caseWire.js";
+import { fromHttpResponse } from "../errors.js";
 /** Wire path for the opaque case store. Versioned by the `cases` surface. */
-const CASE_PATH = '/v1/case';
+const CASE_PATH = "/v1/case";
 /** HTTP status that maps to a `null` record on recall (absent / expired). */
 const HTTP_NOT_FOUND = 404;
 /**
@@ -35,16 +35,16 @@ export class ZeroKnowledgeCaseStorage {
         this.contextOnce = contextOnce;
     }
     async put(record) {
-        if (!record || typeof record.product !== 'string' || record.product.length === 0) {
-            throw new Error('ZeroKnowledgeCaseStorage: put requires a non-empty product');
+        if (!record || typeof record.product !== "string" || record.product.length === 0) {
+            throw new Error("ZeroKnowledgeCaseStorage: put requires a non-empty product");
         }
         if (record.payload === undefined) {
-            throw new Error('ZeroKnowledgeCaseStorage: put requires a payload');
+            throw new Error("ZeroKnowledgeCaseStorage: put requires a payload");
         }
         const ctx = this.contextOnce();
         const { envelope, keyFragment } = await encryptCase(record.product, record.payload);
         const body = JSON.stringify({ product: record.product, ...envelope });
-        const response = await signedCaseRequest({ method: 'POST', path: CASE_PATH, body, idempotencyOp: 'cases_create' }, ctx);
+        const response = await signedCaseRequest({ method: "POST", path: CASE_PATH, body, idempotencyOp: "cases_create" }, ctx);
         if (!isSuccess(response.status)) {
             throw fromHttpResponse(response.status, response.body);
         }
@@ -52,16 +52,16 @@ export class ZeroKnowledgeCaseStorage {
         return { id, recallToken: keyFragment };
     }
     async get(id, recallToken) {
-        if (typeof id !== 'string' || id.length === 0) {
-            throw new Error('ZeroKnowledgeCaseStorage: get requires a non-empty id');
+        if (typeof id !== "string" || id.length === 0) {
+            throw new Error("ZeroKnowledgeCaseStorage: get requires a non-empty id");
         }
-        if (typeof recallToken !== 'string' || recallToken.length === 0) {
-            throw new Error('ZeroKnowledgeCaseStorage: get requires the recallToken returned from put — ' +
-                'records are opaque ciphertext without the per-record key');
+        if (typeof recallToken !== "string" || recallToken.length === 0) {
+            throw new Error("ZeroKnowledgeCaseStorage: get requires the recallToken returned from put — "
+                + "records are opaque ciphertext without the per-record key");
         }
         const ctx = this.contextOnce();
         const path = `${CASE_PATH}/${encodeURIComponent(id)}`;
-        const response = await signedCaseRequest({ method: 'GET', path, body: '' }, ctx);
+        const response = await signedCaseRequest({ method: "GET", path, body: "" }, ctx);
         if (response.status === HTTP_NOT_FOUND)
             return null;
         if (!isSuccess(response.status)) {

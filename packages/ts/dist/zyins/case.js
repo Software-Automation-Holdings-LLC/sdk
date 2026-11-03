@@ -10,10 +10,10 @@
  * attachment do not throw `InvalidCharacterError` (a real bug in older
  * browser `btoa` paths).
  */
-import { fromHttpResponse } from './errors.js';
-import { buildLicenseHMACHeaders } from '../core/index.js';
-import { base64EncodeUtf8, systemClock } from '../core/index.js';
-const EMAIL_PATH = '/v1/email/enqueue';
+import { buildLicenseHMACHeaders } from "../core/index.js";
+import { base64EncodeUtf8, systemClock } from "../core/index.js";
+import { fromHttpResponse } from "./errors.js";
+const EMAIL_PATH = "/v1/email/enqueue";
 /** Email a case to a recipient with a single attachment. */
 export async function email(request, ctx) {
     const body = JSON.stringify({
@@ -25,11 +25,11 @@ export async function email(request, ctx) {
             content_base64: base64EncodeUtf8(request.attachmentContent),
         },
     });
-    const headers = await buildLicenseHMACHeaders(ctx.auth.licenseKey, ctx.auth.orderId, ctx.auth.email, 'POST', EMAIL_PATH, body, ctx.auth.deviceId, ctx.clock ?? systemClock);
+    const headers = await buildLicenseHMACHeaders(ctx.auth.licenseKey, ctx.auth.orderId, ctx.auth.email, "POST", EMAIL_PATH, body, ctx.auth.deviceId, ctx.clock ?? systemClock);
     const response = await ctx.transport({
         url: `${ctx.baseUrl}${EMAIL_PATH}`,
-        method: 'POST',
-        headers: { ...headers, 'Content-Type': 'application/json' },
+        method: "POST",
+        headers: { ...headers, "Content-Type": "application/json" },
         body,
     });
     if (response.status >= 200 && response.status < 300) {
@@ -40,7 +40,7 @@ export async function email(request, ctx) {
 function parseEmailResponse(body) {
     try {
         const parsed = JSON.parse(body);
-        const enqueueId = typeof parsed.enqueue_id === 'string' ? parsed.enqueue_id : '';
+        const enqueueId = typeof parsed.enqueue_id === "string" ? parsed.enqueue_id : "";
         return { enqueueId };
     }
     catch (err) {

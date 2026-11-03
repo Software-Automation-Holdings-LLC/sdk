@@ -11,7 +11,7 @@
  * they exercise the surrounding wire-decoding logic without a live zlib.
  */
 
-import { gunzipSync } from 'node:zlib';
+import { gunzipSync } from "node:zlib";
 
 /** A function that gunzips bytes. Pluggable for tests. */
 export type Decompressor = (gzipped: Uint8Array) => Buffer;
@@ -28,6 +28,6 @@ export function decodeGzipBase64(
   base64: string,
   decompressor: Decompressor = defaultDecompressor,
 ): Buffer {
-  const gzipped = Buffer.from(base64, 'base64');
+  const gzipped = Buffer.from(base64, "base64");
   return decompressor(gzipped);
 }

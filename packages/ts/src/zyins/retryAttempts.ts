@@ -1,4 +1,4 @@
-export const SDK_RETRY_ATTEMPTS_HEADER = 'x-isa-sdk-retry-attempts';
+export const SDK_RETRY_ATTEMPTS_HEADER = "x-isa-sdk-retry-attempts";
 
 export function retryAttemptsFromHeaders(headers: Record<string, string>): number {
   const raw = headers[SDK_RETRY_ATTEMPTS_HEADER];

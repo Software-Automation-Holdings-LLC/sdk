@@ -5,7 +5,7 @@
  * facades defined here. `DocumentsService` receives `clock` and `sleeper`
  * from `RapidSignClient`; error parsing uses `systemClock` for Retry-After.
  */
-import { randomUUID as nodeRandomUUID } from 'node:crypto';
+import { randomUUID as nodeRandomUUID } from "node:crypto";
 /** Default UUIDv4 generator backed by Node's `crypto.randomUUID`. */
 export const defaultUUIDGenerator = () => nodeRandomUUID();
 /** Default clock reads the system time. */
@@ -28,14 +28,14 @@ export const defaultSleeper = (ms, signal) => new Promise((resolve, reject) => {
             clearTimeout(timer);
         reject(abortError(signal));
     };
-    signal?.addEventListener('abort', onAbort, { once: true });
+    signal?.addEventListener("abort", onAbort, { once: true });
     if (signal?.aborted)
         return onAbort();
     timer = setTimeout(() => {
         if (settled)
             return;
         settled = true;
-        signal?.removeEventListener('abort', onAbort);
+        signal?.removeEventListener("abort", onAbort);
         resolve();
     }, ms);
 });
@@ -43,8 +43,8 @@ function abortError(signal) {
     const reason = signal.reason;
     if (reason instanceof Error)
         return reason;
-    const err = new Error('aborted');
-    err.name = 'AbortError';
+    const err = new Error("aborted");
+    err.name = "AbortError";
     return err;
 }
 //# sourceMappingURL=random.js.map

@@ -1,6 +1,6 @@
-import { ZyInsClient } from '../../src/zyins/client';
-import type { Transport, TransportRequest } from '../../src/zyins/transport';
-import { FIXED_CLOCK, TEST_AUTH } from './fixtures';
+import { ZyInsClient } from "../../src/zyins/client";
+import type { Transport, TransportRequest } from "../../src/zyins/transport";
+import { FIXED_CLOCK, TEST_AUTH } from "./fixtures";
 
 export function recordingTransport(
   status: number,
@@ -21,7 +21,7 @@ export function recordingTransport(
 export function client(transport: Transport): ZyInsClient {
   return new ZyInsClient({
     auth: TEST_AUTH,
-    baseUrl: 'https://test.example',
+    baseUrl: "https://test.example",
     transport,
     clock: FIXED_CLOCK,
   });

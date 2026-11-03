@@ -10,8 +10,8 @@
  */
 export const Sort = Object.freeze({
     /** Sort by descending prescription frequency from the v3 frequency graph. */
-    MostCommonFirst: 'most_common_first',
+    MostCommonFirst: "most_common_first",
     /** Sort alphabetically (case-insensitive) by display name. */
-    Alphabetical: 'alphabetical',
+    Alphabetical: "alphabetical",
 });
 //# sourceMappingURL=Sort.js.map

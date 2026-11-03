@@ -19,20 +19,20 @@
  * caller already holds. Downstream consumers (bpp2.0, Phase 3) must scrub
  * `location.hash` before any telemetry call.
  */
-import { encryptCase, decryptCase } from './caseCrypto.js';
-import { assembleLink, parseLink, parseCreatedId, parseCaseDetail, parseCaseList, } from './caseWire.js';
-import { signedCaseRequest, isSuccess } from './caseTransport.js';
-import { fromHttpResponse } from '../zyins/errors.js';
-import { IsaCaseExpiredError } from '../zyins/apiError.js';
-const CASE_PATH = '/v1/case';
-const CASE_LIST_PATH = '/v1/case/list';
+import { IsaCaseExpiredError } from "../zyins/apiError.js";
+import { fromHttpResponse } from "../zyins/errors.js";
+import { decryptCase, encryptCase } from "./caseCrypto.js";
+import { isSuccess, signedCaseRequest } from "./caseTransport.js";
+import { assembleLink, parseCaseDetail, parseCaseList, parseCreatedId, parseLink, } from "./caseWire.js";
+const CASE_PATH = "/v1/case";
+const CASE_LIST_PATH = "/v1/case/list";
 const HTTP_NOT_FOUND = 404;
 /**
  * Default share-link viewer origin. The SDK appends `/<code>#k=<key>`; any
  * product prefix rides inside this base URL so a deployment can point the
  * option at any host without re-encoding the path shape.
  */
-export const DEFAULT_CASE_VIEWER_BASE_URL = 'https://link.isaapi.com';
+export const DEFAULT_CASE_VIEWER_BASE_URL = "https://link.isaapi.com";
 /**
  * Encrypt a payload client-side, store the opaque envelope, and return the
  * fragment-keyed share link. The decryption key never reaches the server.
@@ -47,15 +47,15 @@ export const DEFAULT_CASE_VIEWER_BASE_URL = 'https://link.isaapi.com';
  * ```
  */
 export async function create(request, ctx) {
-    if (!request || typeof request.product !== 'string' || request.product.length === 0) {
-        throw new Error('account: cases.create requires a product');
+    if (!request || typeof request.product !== "string" || request.product.length === 0) {
+        throw new Error("account: cases.create requires a product");
     }
     if (request.payload === undefined) {
-        throw new Error('account: cases.create requires a payload');
+        throw new Error("account: cases.create requires a payload");
     }
     const { envelope, keyFragment } = await encryptCase(request.product, request.payload);
     const body = JSON.stringify({ product: request.product, ...envelope });
-    const response = await signedCaseRequest({ method: 'POST', path: CASE_PATH, body, idempotencyOp: 'cases_create' }, ctx);
+    const response = await signedCaseRequest({ method: "POST", path: CASE_PATH, body, idempotencyOp: "cases_create" }, ctx);
     if (!isSuccess(response.status)) {
         throw fromHttpResponse(response.status, response.body);
     }
@@ -75,7 +75,7 @@ export async function create(request, ctx) {
 export async function open(link, ctx) {
     const { id, keyFragment } = parseLink(link);
     const path = `${CASE_PATH}/${encodeURIComponent(id)}`;
-    const response = await signedCaseRequest({ method: 'GET', path, body: '' }, ctx);
+    const response = await signedCaseRequest({ method: "GET", path, body: "" }, ctx);
     if (response.status === HTTP_NOT_FOUND) {
         throw new IsaCaseExpiredError(id);
     }
@@ -98,7 +98,7 @@ export async function open(link, ctx) {
  * ```
  */
 export async function list(ctx) {
-    const response = await signedCaseRequest({ method: 'POST', path: CASE_LIST_PATH, body: '{}' }, ctx);
+    const response = await signedCaseRequest({ method: "POST", path: CASE_LIST_PATH, body: "{}" }, ctx);
     if (!isSuccess(response.status)) {
         throw fromHttpResponse(response.status, response.body);
     }
@@ -113,15 +113,15 @@ export async function list(ctx) {
  * ```
  */
 export async function email(request, ctx) {
-    if (!request || typeof request.caseId !== 'string' || request.caseId.length === 0) {
-        throw new Error('account: cases.email requires a non-empty caseId');
+    if (!request || typeof request.caseId !== "string" || request.caseId.length === 0) {
+        throw new Error("account: cases.email requires a non-empty caseId");
     }
-    if (typeof request.to !== 'string' || request.to.length === 0) {
-        throw new Error('account: cases.email requires a non-empty to address');
+    if (typeof request.to !== "string" || request.to.length === 0) {
+        throw new Error("account: cases.email requires a non-empty to address");
     }
     const path = `${CASE_PATH}/${encodeURIComponent(request.caseId)}/email`;
     const body = JSON.stringify({ to: request.to });
-    const response = await signedCaseRequest({ method: 'POST', path, body, idempotencyOp: `cases_email:${request.caseId}` }, ctx);
+    const response = await signedCaseRequest({ method: "POST", path, body, idempotencyOp: `cases_email:${request.caseId}` }, ctx);
     if (isSuccess(response.status)) {
         return { queued: true };
     }

@@ -6,8 +6,9 @@
  * `check_key`) cannot. The default stays the default; pass this to
  * `Isa.withKeycode({ matchAlgorithm: new FuzzyMatchAlgorithm() })` to opt in.
  *
- * Pipeline — a tiered cascade, ranked by TIER FIRST, then by candidate
- * frequency (Algolia-style successive tie-break, NOT one blended score):
+ * Pipeline — a tiered cascade, ranked by TIER FIRST, then within the winning
+ * tier by lowest edit distance, then highest candidate frequency (Algolia-style
+ * successive tie-break, NOT one blended score):
  *
  *   1. exact      — `make_key` id/name equality (identity-preserving)
  *   2. prefix     — candidate key starts with the query key (or vice versa)
@@ -19,8 +20,9 @@
  *                   (today's {@link Concept} does NOT — tier is skipped)
  *
  * The first non-empty tier wins; within it the best candidate is chosen by
- * frequency (higher first), then a deterministic name/id tie-break so the
- * result is reproducible across the Go / PHP / C# / Python ports.
+ * lowest edit distance, then highest frequency, then a deterministic name/id
+ * tie-break so the result is reproducible across the Go / PHP / C# / Python
+ * ports.
  *
  * Frequency is NOT a field on {@link Concept} — it lives in a separate
  * per-id map the catalog builds (`buildFrequencyMap`). Supply it via
@@ -29,8 +31,16 @@
  * result deterministically).
  *
  * Parity-hardening rules (the cross-language determinism contract):
- *   1. Both query and every candidate string are NFC-normalized before any
- *      comparison.
+ *   1. The exact / prefix / damerau tiers compare `make_key` output, which
+ *      uppercases then strips every non-ASCII-alphanumeric character. It does
+ *      NOT Unicode-normalize, so NFC and NFD forms of the same accented text
+ *      can produce DIFFERENT keys: NFC `"é"` (U+00E9) uppercases to `"É"` and
+ *      is stripped to `""`, while NFD `"é"` keeps its ASCII `"e"` and
+ *      yields `"E"`. Catalog names and ids are ASCII, so this never bites in
+ *      practice; callers needing NFC/NFD equivalence must normalize before
+ *      calling `match`. The phonetic tier and the final name/id tie-break
+ *      operate on raw characters, so those (and only those) NFC-normalize
+ *      first via `normalizeForCompare`.
  *   2. Lowercasing is locale-invariant. JS `toLowerCase()` is already
  *      locale-independent; the Go/PHP/C#/Python ports MUST use invariant
  *      culture (Go `strings.ToLower`, C# `ToLowerInvariant`, etc.).
@@ -50,19 +60,10 @@
  * matcher.match('tylonol', medications).id;    // 'TYLENOL'
  * ```
  */
-import { _makeKey } from './_makeKey.js';
-import { buildUnknownConcept } from './referenceIndex.js';
-import { doubleMetaphone } from './_doubleMetaphone.js';
-import { fuzzyThresholdForLength, optimalStringAlignmentDistance, } from './_damerauOsa.js';
-/** Ranked cascade tiers. Lower ordinal = stronger match. */
-var Tier;
-(function (Tier) {
-    Tier[Tier["Exact"] = 0] = "Exact";
-    Tier[Tier["Prefix"] = 1] = "Prefix";
-    Tier[Tier["Damerau"] = 2] = "Damerau";
-    Tier[Tier["Phonetic"] = 3] = "Phonetic";
-    Tier[Tier["Synonym"] = 4] = "Synonym";
-})(Tier || (Tier = {}));
+import { fuzzyThresholdForLength, optimalStringAlignmentDistance } from "./_damerauOsa.js";
+import { doubleMetaphone } from "./_doubleMetaphone.js";
+import { _makeKey } from "./_makeKey.js";
+import { buildUnknownConcept } from "./referenceIndex.js";
 export class FuzzyMatchAlgorithm {
     frequencies;
     _versionTag;
@@ -144,7 +145,7 @@ export class FuzzyMatchAlgorithm {
     }
     collectPhonetic(query, candidates) {
         const queryCode = doubleMetaphone(normalizeForCompare(query)).primary;
-        if (queryCode === '')
+        if (queryCode === "")
             return [];
         const codes = this.candidateCodes(candidates);
         const hits = [];
@@ -174,7 +175,7 @@ const EMPTY_FREQUENCIES = new Map();
  * (decomposed) collapse to the same string before any comparison.
  */
 function normalizeForCompare(text) {
-    return text.normalize('NFC').toLowerCase();
+    return text.normalize("NFC").toLowerCase();
 }
 function collectExact(queryKey, candidates) {
     const hits = [];
@@ -206,7 +207,7 @@ function collectDamerau(queryKey, candidates) {
     const hits = [];
     for (const candidate of candidates) {
         const nameKey = _makeKey(candidate.name);
-        if (nameKey === '' || nameKey === queryKey)
+        if (nameKey === "" || nameKey === queryKey)
             continue;
         const distance = optimalStringAlignmentDistance(queryKey, nameKey, threshold);
         if (distance <= threshold)
@@ -245,8 +246,8 @@ function compareForTieBreak(a, b) {
         return -1;
     if (aName > bName)
         return 1;
-    const aId = a.id ?? '￿';
-    const bId = b.id ?? '￿';
+    const aId = a.id ?? "￿";
+    const bId = b.id ?? "￿";
     if (aId < bId)
         return -1;
     if (aId > bId)

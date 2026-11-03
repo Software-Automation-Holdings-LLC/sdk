@@ -16,15 +16,15 @@
  */
 
 export {
-  ProductType as ProductClass,
-  type ProductTypeValue as ProductClassValue,
   type Product,
   Products,
-} from '../catalog/productsByType.js';
+  ProductType as ProductClass,
+  type ProductTypeValue as ProductClassValue,
+} from "../catalog/productsByType.js";
 
-import type { Product, ProductTypeValue as ProductClassValue } from '../catalog/productsByType.js';
+import type { Product, ProductTypeValue as ProductClassValue } from "../catalog/productsByType.js";
 
-export { ProductType } from './productType.js';
+export { ProductType } from "./productType.js";
 
 /**
  * One or more products selected for a single prequalify call.
@@ -52,7 +52,7 @@ export class ProductSelection {
   /** Pick specific products by their typed `Product` object. */
   static of(products: readonly Product[]): ProductSelection {
     if (products.length === 0) {
-      throw new Error('ProductSelection.of: at least one product is required');
+      throw new Error("ProductSelection.of: at least one product is required");
     }
     return new ProductSelection(products, []);
   }
@@ -60,7 +60,7 @@ export class ProductSelection {
   /** Pick all products of one or more types. */
   static byTypes(types: readonly ProductClassValue[]): ProductSelection {
     if (types.length === 0) {
-      throw new Error('ProductSelection.byTypes: at least one type is required');
+      throw new Error("ProductSelection.byTypes: at least one type is required");
     }
     return new ProductSelection([], types);
   }
@@ -74,7 +74,7 @@ export class ProductSelection {
     const p = opts.plus ?? [];
     if (t.length === 0 && p.length === 0) {
       throw new Error(
-        'ProductSelection.fromMix: provide at least one type or product',
+        "ProductSelection.fromMix: provide at least one type or product",
       );
     }
     return new ProductSelection(p, t);

@@ -1,17 +1,10 @@
-import { describe, expect, it } from 'vitest';
-import { ZyInsClient } from '../../src/zyins/client';
-import type { Transport, TransportRequest } from '../../src/zyins/transport';
-import { IsaValidationError, IsaRateLimitError } from '../../src/zyins/apiError';
-import { NicotineDuration, Height, Weight, Sex } from '../../src/zyins/applicant';
-import { Coverage } from '../../src/zyins/coverage';
-import { ProductCatalog, ProductSelection, ProductType } from '../../src/zyins/product';
-import {
-  TEST_APPLICANT,
-  TEST_AUTH,
-  TEST_COVERAGE,
-  TEST_PRODUCTS,
-  FIXED_CLOCK,
-} from './fixtures';
+import { describe, expect, it } from "vitest";
+import { IsaRateLimitError, IsaValidationError } from "../../src/zyins/apiError";
+import { NicotineDuration } from "../../src/zyins/applicant";
+import { ZyInsClient } from "../../src/zyins/client";
+import { Coverage } from "../../src/zyins/coverage";
+import type { Transport, TransportRequest } from "../../src/zyins/transport";
+import { FIXED_CLOCK, TEST_APPLICANT, TEST_AUTH, TEST_COVERAGE, TEST_PRODUCTS } from "./fixtures";
 
 interface CapturedCall {
   request: TransportRequest;
@@ -29,15 +22,37 @@ function recordingTransport(response: { status: number; body: string }): {
   return { transport, calls };
 }
 
-describe('ZyInsClient.prequalify', () => {
-  it('hits /v1/prequalify with the License HMAC headers', async () => {
+describe("ZyInsClient.prequalify", () => {
+  it("hits /v1/prequalify with the License HMAC headers", async () => {
     const { transport, calls } = recordingTransport({
       status: 200,
-      body: JSON.stringify({data:{meta:{amounts:["100000"],processing_time_ms:25,quote_type:"face_amounts",total_products:1},results:{"100000":[{brand:"colonial-penn",name:"Colonial Penn",plan:"PREFERRED",plan_group:null,death_benefit:100000,monthly_price:"$42.00",default_pricing_key:"MONTHLY",id:"fex-colonial-penn",index:0,is_excluded:false,logo_url:"",plan_info:{}}]}},request_id:"req_test_1",idempotency_key:"idem_1"}),
+      body: JSON.stringify({
+        data: {
+          meta: { amounts: ["100000"], processing_time_ms: 25, quote_type: "face_amounts", total_products: 1 },
+          results: {
+            "100000": [{
+              brand: "colonial-penn",
+              name: "Colonial Penn",
+              plan: "PREFERRED",
+              plan_group: null,
+              death_benefit: 100000,
+              monthly_price: "$42.00",
+              default_pricing_key: "MONTHLY",
+              id: "fex-colonial-penn",
+              index: 0,
+              is_excluded: false,
+              logo_url: "",
+              plan_info: {},
+            }],
+          },
+        },
+        request_id: "req_test_1",
+        idempotency_key: "idem_1",
+      }),
     });
     const client = new ZyInsClient({
       auth: TEST_AUTH,
-      baseUrl: 'https://test.example',
+      baseUrl: "https://test.example",
       transport,
       clock: FIXED_CLOCK,
     });
@@ -47,25 +62,25 @@ describe('ZyInsClient.prequalify', () => {
       products: TEST_PRODUCTS,
     });
     expect(result.plans).toHaveLength(1);
-    expect(result.plans[0]?.brand).toBe('colonial-penn');
-    expect(result.requestId).toBe('req_test_1');
+    expect(result.plans[0]?.brand).toBe("colonial-penn");
+    expect(result.requestId).toBe("req_test_1");
     expect(calls).toHaveLength(1);
     const call = calls[0]!;
-    expect(call.request.url).toBe('https://test.example/v1/prequalify');
-    expect(call.request.method).toBe('POST');
-    expect(call.request.headers['X-Device-ID']).toBe('device-xyz-123');
-    expect(call.request.headers['Authorization']).toMatch(/^License /);
-    expect(call.request.headers['Idempotency-Key']).toMatch(/^[0-9a-f]{64}$/);
+    expect(call.request.url).toBe("https://test.example/v1/prequalify");
+    expect(call.request.method).toBe("POST");
+    expect(call.request.headers["X-Device-ID"]).toBe("device-xyz-123");
+    expect(call.request.headers["Authorization"]).toMatch(/^License /);
+    expect(call.request.headers["Idempotency-Key"]).toMatch(/^[0-9a-f]{64}$/);
   });
 
-  it('derives a stable idempotency key for the same logical request', async () => {
+  it("derives a stable idempotency key for the same logical request", async () => {
     const { transport: t1, calls: c1 } = recordingTransport({
       status: 200,
-      body: JSON.stringify({ plans: [], request_id: 'r1' }),
+      body: JSON.stringify({ plans: [], request_id: "r1" }),
     });
     const client1 = new ZyInsClient({
       auth: TEST_AUTH,
-      baseUrl: 'https://test.example',
+      baseUrl: "https://test.example",
       transport: t1,
       clock: FIXED_CLOCK,
     });
@@ -76,11 +91,11 @@ describe('ZyInsClient.prequalify', () => {
     });
     const { transport: t2, calls: c2 } = recordingTransport({
       status: 200,
-      body: JSON.stringify({ plans: [], request_id: 'r2' }),
+      body: JSON.stringify({ plans: [], request_id: "r2" }),
     });
     const client2 = new ZyInsClient({
       auth: TEST_AUTH,
-      baseUrl: 'https://test.example',
+      baseUrl: "https://test.example",
       transport: t2,
       clock: FIXED_CLOCK,
     });
@@ -89,48 +104,48 @@ describe('ZyInsClient.prequalify', () => {
       coverage: TEST_COVERAGE,
       products: TEST_PRODUCTS,
     });
-    expect(c1[0]!.request.headers['Idempotency-Key']).toBe(
-      c2[0]!.request.headers['Idempotency-Key'],
+    expect(c1[0]!.request.headers["Idempotency-Key"]).toBe(
+      c2[0]!.request.headers["Idempotency-Key"],
     );
   });
 
-  it('falls back to a single server amount bucket for one-value multi coverage', async () => {
+  it("falls back to a single server amount bucket for one-value multi coverage", async () => {
     const { transport } = recordingTransport({
       status: 200,
       body: JSON.stringify({
         data: {
           meta: {
-            amounts: ['100001'],
+            amounts: ["100001"],
             processing_time_ms: 25,
-            quote_type: 'face_amounts',
+            quote_type: "face_amounts",
             total_products: 1,
           },
           results: {
-            '100001': [
+            "100001": [
               {
-                brand: 'colonial-penn',
-                name: 'Colonial Penn',
-                plan: 'PREFERRED',
+                brand: "colonial-penn",
+                name: "Colonial Penn",
+                plan: "PREFERRED",
                 plan_group: null,
                 death_benefit: 100001,
-                monthly_price: '$42.00',
-                default_pricing_key: 'MONTHLY',
-                id: 'fex-colonial-penn',
+                monthly_price: "$42.00",
+                default_pricing_key: "MONTHLY",
+                id: "fex-colonial-penn",
                 index: 0,
                 is_excluded: false,
-                logo_url: '',
+                logo_url: "",
                 plan_info: {},
               },
             ],
           },
         },
-        request_id: 'req_test_1',
-        idempotency_key: 'idem_1',
+        request_id: "req_test_1",
+        idempotency_key: "idem_1",
       }),
     });
     const client = new ZyInsClient({
       auth: TEST_AUTH,
-      baseUrl: 'https://test.example',
+      baseUrl: "https://test.example",
       transport,
       clock: FIXED_CLOCK,
     });
@@ -141,27 +156,27 @@ describe('ZyInsClient.prequalify', () => {
       products: TEST_PRODUCTS,
     });
 
-    expect(result.kind).toBe('multi');
-    if (result.kind !== 'multi') return;
+    expect(result.kind).toBe("multi");
+    if (result.kind !== "multi") return;
     expect(result.plans).toHaveLength(1);
     expect(result.forAmount(100_000)).toHaveLength(1);
   });
 
-  it('maps ProblemDetails 400 to IsaValidationError(validation_error)', async () => {
+  it("maps ProblemDetails 400 to IsaValidationError(validation_error)", async () => {
     const { transport } = recordingTransport({
       status: 400,
       body: JSON.stringify({
-        type: 'https://docs.isa.example/errors/validation',
-        title: 'Validation failed',
+        type: "https://docs.isa.example/errors/validation",
+        title: "Validation failed",
         status: 400,
-        code: 'validation_error',
-        detail: 'applicant.dob is required',
-        param: 'applicant.dob',
+        code: "validation_error",
+        detail: "applicant.dob is required",
+        param: "applicant.dob",
       }),
     });
     const client = new ZyInsClient({
       auth: TEST_AUTH,
-      baseUrl: 'https://test.example',
+      baseUrl: "https://test.example",
       transport,
       clock: FIXED_CLOCK,
     });
@@ -174,11 +189,11 @@ describe('ZyInsClient.prequalify', () => {
     ).rejects.toBeInstanceOf(IsaValidationError);
   });
 
-  it('maps 429 to IsaRateLimitError', async () => {
-    const { transport } = recordingTransport({ status: 429, body: 'slow down' });
+  it("maps 429 to IsaRateLimitError", async () => {
+    const { transport } = recordingTransport({ status: 429, body: "slow down" });
     const client = new ZyInsClient({
       auth: TEST_AUTH,
-      baseUrl: 'https://test.example',
+      baseUrl: "https://test.example",
       transport,
       clock: FIXED_CLOCK,
     });
@@ -202,96 +217,126 @@ describe('ZyInsClient.prequalify', () => {
 
 const parseBody = (s: string): unknown => JSON.parse(s);
 const asRecord = (v: unknown): Record<string, unknown> =>
-  v !== null && typeof v === 'object' && !Array.isArray(v)
+  v !== null && typeof v === "object" && !Array.isArray(v)
     ? (v as Record<string, unknown>)
     : {};
 
-describe('prequalify wire body — flat schema conformance', () => {
+describe("prequalify wire body — flat schema conformance", () => {
   const JOHN_DOE_WIRE: Record<string, unknown> = {
-    date_of_birth: '1962-04-18',
-    gender: 'male',
+    date_of_birth: "1962-04-18",
+    gender: "male",
     height: 70,
     weight: 195,
-    state: 'NC',
-    nicotine_usage: { last_used: 'never' },
+    state: "NC",
+    nicotine_usage: { last_used: "never" },
     // TEST_PRODUCTS uses Products.Fex.AetnaAccendo — now serializes product.id
     // instead of wireToken. This is the actual ID from the catalog.
-    products: ['prod_d7b57156-3e83-506b-8936-0692c1193dc7'],
+    products: ["prod_d7b57156-3e83-506b-8936-0692c1193dc7"],
     conditions: [],
     medications: [],
-    quote_options: { amounts: ['100000'], quote_type: 'face_amounts' },
+    quote_options: { amounts: ["100000"], quote_type: "face_amounts" },
   };
 
-  it('emits the exact flat wire body for John Doe NC face-value fixture', async () => {
+  it("emits the exact flat wire body for John Doe NC face-value fixture", async () => {
     const { transport, calls } = recordingTransport({
       status: 200,
-      body: JSON.stringify({ plans: [], request_id: 'req_wire_shape_1' }),
+      body: JSON.stringify({ plans: [], request_id: "req_wire_shape_1" }),
     });
-    const client = new ZyInsClient({ auth: TEST_AUTH, baseUrl: 'https://test.example', transport, clock: FIXED_CLOCK });
+    const client = new ZyInsClient({ auth: TEST_AUTH, baseUrl: "https://test.example", transport, clock: FIXED_CLOCK });
     await client.prequalify({ applicant: TEST_APPLICANT, coverage: TEST_COVERAGE, products: TEST_PRODUCTS });
     expect(parseBody(calls[0]!.request.body)).toEqual(JOHN_DOE_WIRE);
   });
 
-  it('does NOT include license_key, order_id, or email in the body', async () => {
+  it("does NOT include license_key, order_id, or email in the body", async () => {
     const { transport, calls } = recordingTransport({
       status: 200,
-      body: JSON.stringify({ plans: [], request_id: 'req_no_creds' }),
+      body: JSON.stringify({ plans: [], request_id: "req_no_creds" }),
     });
-    const client = new ZyInsClient({ auth: TEST_AUTH, baseUrl: 'https://test.example', transport, clock: FIXED_CLOCK });
+    const client = new ZyInsClient({ auth: TEST_AUTH, baseUrl: "https://test.example", transport, clock: FIXED_CLOCK });
     await client.prequalify({ applicant: TEST_APPLICANT, coverage: TEST_COVERAGE, products: TEST_PRODUCTS });
     const body = asRecord(parseBody(calls[0]!.request.body));
-    expect(body).not.toHaveProperty('license_key');
-    expect(body).not.toHaveProperty('order_id');
-    expect(body).not.toHaveProperty('email');
+    expect(body).not.toHaveProperty("license_key");
+    expect(body).not.toHaveProperty("order_id");
+    expect(body).not.toHaveProperty("email");
   });
 
-  it('emits products as string[] not a joined string', async () => {
+  it("emits products as string[] not a joined string", async () => {
     const { transport, calls } = recordingTransport({
       status: 200,
-      body: JSON.stringify({ plans: [], request_id: 'req_products_array' }),
+      body: JSON.stringify({ plans: [], request_id: "req_products_array" }),
     });
-    const client = new ZyInsClient({ auth: TEST_AUTH, baseUrl: 'https://test.example', transport, clock: FIXED_CLOCK });
+    const client = new ZyInsClient({ auth: TEST_AUTH, baseUrl: "https://test.example", transport, clock: FIXED_CLOCK });
     await client.prequalify({ applicant: TEST_APPLICANT, coverage: TEST_COVERAGE, products: TEST_PRODUCTS });
-    expect(Array.isArray(asRecord(parseBody(calls[0]!.request.body))['products'])).toBe(true);
+    expect(Array.isArray(asRecord(parseBody(calls[0]!.request.body))["products"])).toBe(true);
   });
 
-  it('emits monthly_budget quote_options correctly', async () => {
+  it("emits monthly_budget quote_options correctly", async () => {
     const { transport, calls } = recordingTransport({
       status: 200,
-      body: JSON.stringify({ plans: [], request_id: 'req_budget' }),
+      body: JSON.stringify({ plans: [], request_id: "req_budget" }),
     });
-    const client = new ZyInsClient({ auth: TEST_AUTH, baseUrl: 'https://test.example', transport, clock: FIXED_CLOCK });
-    await client.prequalify({ applicant: TEST_APPLICANT, coverage: Coverage.monthlyBudget(50), products: TEST_PRODUCTS });
-    const opts = asRecord(asRecord(parseBody(calls[0]!.request.body))['quote_options']);
-    expect(opts['quote_type']).toBe('monthly_budget');
-    expect(opts['amounts']).toEqual(['50']);
-  });
-
-  it('maps NicotineDuration.Within12Months with product_usage onto the wire', async () => {
-    const { transport, calls } = recordingTransport({
-      status: 200,
-      body: JSON.stringify({ plans: [], request_id: 'req_nicotine' }),
-    });
-    const client = new ZyInsClient({ auth: TEST_AUTH, baseUrl: 'https://test.example', transport, clock: FIXED_CLOCK });
+    const client = new ZyInsClient({ auth: TEST_AUTH, baseUrl: "https://test.example", transport, clock: FIXED_CLOCK });
     await client.prequalify({
-      applicant: { ...TEST_APPLICANT, nicotineUse: { lastUsed: NicotineDuration.Within12Months, productUsage: [{ type: 'CIGARETTE', frequency: 'DAILY' }] } },
+      applicant: TEST_APPLICANT,
+      coverage: Coverage.monthlyBudget(50),
+      products: TEST_PRODUCTS,
+    });
+    const opts = asRecord(asRecord(parseBody(calls[0]!.request.body))["quote_options"]);
+    expect(opts["quote_type"]).toBe("monthly_budget");
+    expect(opts["amounts"]).toEqual(["50"]);
+  });
+
+  it("maps NicotineDuration.Within12Months with product_usage onto the wire", async () => {
+    const { transport, calls } = recordingTransport({
+      status: 200,
+      body: JSON.stringify({ plans: [], request_id: "req_nicotine" }),
+    });
+    const client = new ZyInsClient({ auth: TEST_AUTH, baseUrl: "https://test.example", transport, clock: FIXED_CLOCK });
+    await client.prequalify({
+      applicant: {
+        ...TEST_APPLICANT,
+        nicotineUse: {
+          lastUsed: NicotineDuration.Within12Months,
+          productUsage: [{ type: "CIGARETTE", frequency: "DAILY" }],
+        },
+      },
       coverage: TEST_COVERAGE,
       products: TEST_PRODUCTS,
     });
-    const nu = asRecord(asRecord(parseBody(calls[0]!.request.body))['nicotine_usage']);
-    expect(nu['last_used']).toBe('within_12_months');
-    expect(nu['product_usage']).toEqual([{ type: 'CIGARETTE', frequency: 'DAILY' }]);
+    const nu = asRecord(asRecord(parseBody(calls[0]!.request.body))["nicotine_usage"]);
+    expect(nu["last_used"]).toBe("within_12_months");
+    expect(nu["product_usage"]).toEqual([{ type: "CIGARETTE", frequency: "DAILY" }]);
   });
 
-  it('includes zip when present and omits it when absent', async () => {
-    const { transport: t1, calls: c1 } = recordingTransport({ status: 200, body: JSON.stringify({ plans: [], request_id: 'req_zip' }) });
-    const client1 = new ZyInsClient({ auth: TEST_AUTH, baseUrl: 'https://test.example', transport: t1, clock: FIXED_CLOCK });
-    await client1.prequalify({ applicant: { ...TEST_APPLICANT, zip: '27545' }, coverage: TEST_COVERAGE, products: TEST_PRODUCTS });
-    expect(asRecord(parseBody(c1[0]!.request.body))['zip']).toBe('27545');
+  it("includes zip when present and omits it when absent", async () => {
+    const { transport: t1, calls: c1 } = recordingTransport({
+      status: 200,
+      body: JSON.stringify({ plans: [], request_id: "req_zip" }),
+    });
+    const client1 = new ZyInsClient({
+      auth: TEST_AUTH,
+      baseUrl: "https://test.example",
+      transport: t1,
+      clock: FIXED_CLOCK,
+    });
+    await client1.prequalify({
+      applicant: { ...TEST_APPLICANT, zip: "27545" },
+      coverage: TEST_COVERAGE,
+      products: TEST_PRODUCTS,
+    });
+    expect(asRecord(parseBody(c1[0]!.request.body))["zip"]).toBe("27545");
 
-    const { transport: t2, calls: c2 } = recordingTransport({ status: 200, body: JSON.stringify({ plans: [], request_id: 'req_nozip' }) });
-    const client2 = new ZyInsClient({ auth: TEST_AUTH, baseUrl: 'https://test.example', transport: t2, clock: FIXED_CLOCK });
+    const { transport: t2, calls: c2 } = recordingTransport({
+      status: 200,
+      body: JSON.stringify({ plans: [], request_id: "req_nozip" }),
+    });
+    const client2 = new ZyInsClient({
+      auth: TEST_AUTH,
+      baseUrl: "https://test.example",
+      transport: t2,
+      clock: FIXED_CLOCK,
+    });
     await client2.prequalify({ applicant: TEST_APPLICANT, coverage: TEST_COVERAGE, products: TEST_PRODUCTS });
-    expect(asRecord(parseBody(c2[0]!.request.body))).not.toHaveProperty('zip');
+    expect(asRecord(parseBody(c2[0]!.request.body))).not.toHaveProperty("zip");
   });
 });

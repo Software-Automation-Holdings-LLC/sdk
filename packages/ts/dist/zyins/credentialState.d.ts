@@ -14,8 +14,8 @@
  * single process so per-call AsyncStorage round-trips stay off the hot
  * path.
  */
-import { type AuthContext } from './auth.js';
-import { type CredentialStore } from '../core/index.js';
+import { type CredentialStore } from "../core/index.js";
+import { type AuthContext } from "./auth.js";
 /** Snapshot of the credentials needed for one license-mode call. */
 export interface LicenseCredentialSnapshot {
     /** BPP keycode (XXX-XXX-XXX). Required at bootstrap. */

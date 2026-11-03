@@ -14,14 +14,14 @@
  *  - Server response shape is `{ data: { meta, results: { <amount>: [...] } },
  *    request_id, idempotency_key }`.
  */
-import { type Applicant } from './applicant.js';
-import { type CoverageInput, type CoverageType } from './coverage.js';
-import { type ProductSelection, type Product, type ProductClassValue } from './product.js';
-import { type MinRankValue } from './minRank.js';
-import { type AuthContext } from './auth.js';
-import { type Transport } from './transport.js';
-import { type Clock } from '../core/index.js';
-import type { OfferPlanInfo, OfferPlanInfoLegacy } from './prequalify-v2-types.js';
+import { type Clock } from "../core/index.js";
+import { type Applicant } from "./applicant.js";
+import { type AuthContext } from "./auth.js";
+import { type CoverageInput, type CoverageType } from "./coverage.js";
+import { type MinRankValue } from "./minRank.js";
+import type { OfferPlanInfo, OfferPlanInfoLegacy } from "./prequalify-v2-types.js";
+import { type Product, type ProductClassValue, type ProductSelection } from "./product.js";
+import { type Transport } from "./transport.js";
 /** Optional per-call knobs that map onto the server's filter primitives. */
 export interface PrequalifyOptions {
     /** Restrict to a single product class (server `only_product_class`). */
@@ -141,7 +141,7 @@ export interface PrequalifyResultMeta {
 }
 /** Result shape for a single-amount prequalify call. */
 export interface SinglePrequalifyResult {
-    readonly kind: 'single';
+    readonly kind: "single";
     amount: number;
     plans: Plan[];
     meta: PrequalifyResultMeta;
@@ -152,7 +152,7 @@ export interface SinglePrequalifyResult {
 }
 /** Result shape for a multi-amount prequalify call. */
 export interface MultiPrequalifyResult {
-    readonly kind: 'multi';
+    readonly kind: "multi";
     amounts: number[];
     byAmount: Map<number, Plan[]>;
     /** Flattened convenience — every plan across every amount. */

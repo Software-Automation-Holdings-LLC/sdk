@@ -24,30 +24,30 @@
  * Persona: SDV-HWH-WDD license activation throwing LicenseLocked.
  */
 
-import { describe, expect, expectTypeOf, it } from 'vitest';
-import { IsaError } from '../../src';
+import { describe, expect, expectTypeOf, it } from "vitest";
+import { IsaError } from "../../src";
 
-describe('IsaError — single tree shape (Flow 1)', () => {
-    it('IsaError exists as a named export', () => {
-        expect(IsaError).toBeDefined();
-    });
+describe("IsaError — single tree shape (Flow 1)", () => {
+  it("IsaError exists as a named export", () => {
+    expect(IsaError).toBeDefined();
+  });
 
-    it('IsaError.match is available as opt-in sugar', () => {
-        // TODO: green after feat/sdk-locked-syntax lands.
-        type Tree = typeof IsaError;
-        expectTypeOf<Tree>().toHaveProperty('match');
-    });
+  it("IsaError.match is available as opt-in sugar", () => {
+    // TODO: green after feat/sdk-locked-syntax lands.
+    type Tree = typeof IsaError;
+    expectTypeOf<Tree>().toHaveProperty("match");
+  });
 
-    it('subclasses live on the IsaError namespace (LicenseLocked / MaxActivationsExceeded / LicenseActiveElsewhere / Network / InternalError / IdempotencyConflict / DeadlineExceeded / SignerDeclined)', () => {
-        // TODO: green after feat/sdk-locked-syntax lands.
-        type Tree = typeof IsaError;
-        expectTypeOf<Tree>().toHaveProperty('LicenseLocked');
-        expectTypeOf<Tree>().toHaveProperty('MaxActivationsExceeded');
-        expectTypeOf<Tree>().toHaveProperty('LicenseActiveElsewhere');
-        expectTypeOf<Tree>().toHaveProperty('Network');
-        expectTypeOf<Tree>().toHaveProperty('InternalError');
-        expectTypeOf<Tree>().toHaveProperty('IdempotencyConflict');
-        expectTypeOf<Tree>().toHaveProperty('DeadlineExceeded');
-        expectTypeOf<Tree>().toHaveProperty('SignerDeclined');
-    });
+  it("subclasses live on the IsaError namespace (LicenseLocked / MaxActivationsExceeded / LicenseActiveElsewhere / Network / InternalError / IdempotencyConflict / DeadlineExceeded / SignerDeclined)", () => {
+    // TODO: green after feat/sdk-locked-syntax lands.
+    type Tree = typeof IsaError;
+    expectTypeOf<Tree>().toHaveProperty("LicenseLocked");
+    expectTypeOf<Tree>().toHaveProperty("MaxActivationsExceeded");
+    expectTypeOf<Tree>().toHaveProperty("LicenseActiveElsewhere");
+    expectTypeOf<Tree>().toHaveProperty("Network");
+    expectTypeOf<Tree>().toHaveProperty("InternalError");
+    expectTypeOf<Tree>().toHaveProperty("IdempotencyConflict");
+    expectTypeOf<Tree>().toHaveProperty("DeadlineExceeded");
+    expectTypeOf<Tree>().toHaveProperty("SignerDeclined");
+  });
 });

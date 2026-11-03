@@ -10,15 +10,15 @@
  *  - Top-level envelope metadata follows the `Envelope<T>` camelCase
  *    convention (`requestId`, `idempotencyKey`).
  */
-import { type Applicant } from './applicant.js';
-import { type CoverageInput } from './coverage.js';
-import { type ProductSelection, type ProductClassValue } from './product.js';
-import { type MinRankValue } from './minRank.js';
-import { type AuthContext } from './auth.js';
-import { type Transport } from './transport.js';
-import { type Clock } from '../core/index.js';
+import { type Clock } from "../core/index.js";
+import { type Applicant } from "./applicant.js";
+import { type AuthContext } from "./auth.js";
+import { type CoverageInput } from "./coverage.js";
+import { type MinRankValue } from "./minRank.js";
+import { type ProductClassValue, type ProductSelection } from "./product.js";
+import { type Transport } from "./transport.js";
 /** Eligibility category — closed enum on qualifying offers, `null` otherwise. */
-export type OfferCategory = 'immediate' | 'graded' | 'rop' | null;
+export type OfferCategory = "immediate" | "graded" | "rop" | null;
 /** Qualifies-or-not view for a single offer / tier. */
 export interface OfferEligibility {
     /** True when the applicant qualifies at this category. */
@@ -132,7 +132,7 @@ export interface OtherOffer {
 /** One best-offer-per-product entry in the v2 result. */
 export interface PlanOffer {
     /** Discriminator — always `"plan_offer"`. */
-    object: 'plan_offer';
+    object: "plan_offer";
     /** Stable v5-derived UUID for `(carrier_slug, product_slug)`. */
     id: string;
     /** Zero-based engine ordering index — UI should sort by `rank` instead. */

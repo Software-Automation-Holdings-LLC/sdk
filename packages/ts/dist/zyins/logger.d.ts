@@ -38,7 +38,7 @@ export declare function redactBody(value: unknown): unknown;
  * are not corrupted; the caller may pass `kind: 'form'` to opt into
  * form-field redaction.
  */
-export declare function redactBodyString(body: string, kind?: 'json' | 'form' | 'unknown'): string;
+export declare function redactBodyString(body: string, kind?: "json" | "form" | "unknown"): string;
 /** Debug logger emitting redacted request/response records to a sink. */
 export interface DebugLogger {
     request(record: {
@@ -46,7 +46,7 @@ export interface DebugLogger {
         url: string;
         headers: Record<string, string>;
         body: string;
-        bodyKind?: 'json' | 'form' | 'unknown';
+        bodyKind?: "json" | "form" | "unknown";
         retryAttempt?: number;
     }): void;
     response(record: {
@@ -55,7 +55,7 @@ export interface DebugLogger {
         status: number;
         headers: Record<string, string>;
         body: string;
-        bodyKind?: 'json' | 'form' | 'unknown';
+        bodyKind?: "json" | "form" | "unknown";
         retryAttempt?: number;
     }): void;
 }

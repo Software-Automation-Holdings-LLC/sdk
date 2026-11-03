@@ -17,16 +17,16 @@
  * ADR-035.
  */
 
-import { isProblemDetails, type ProblemDetails } from '../core/index.js';
+import { isProblemDetails, type ProblemDetails } from "../core/index.js";
 import {
   IsaApiError,
   IsaIdempotencyConflictError,
   IsaLicenseError,
+  type IsaLicenseErrorCode,
   IsaRateLimitError,
   IsaUnauthorizedError,
   IsaValidationError,
-  type IsaLicenseErrorCode,
-} from './apiError.js';
+} from "./apiError.js";
 
 /**
  * Parse a raw HTTP response (status + body) into a typed `IsaApiError`.
@@ -43,19 +43,19 @@ import {
 export function fromHttpResponse(status: number, body: string): IsaApiError {
   const trimmed = body.trim();
   if (status === 429) {
-    return new IsaRateLimitError({ message: trimmed || 'rate limited' });
+    return new IsaRateLimitError({ message: trimmed || "rate limited" });
   }
   const asProblem = tryParseProblemDetails(trimmed);
   if (asProblem) return fromProblemDetails(asProblem);
   const asLegacy = tryParseLegacyErr(status, trimmed);
   if (asLegacy) return asLegacy;
-  return new IsaApiError({ message: trimmed || `HTTP ${status}`, code: 'unknown', status });
+  return new IsaApiError({ message: trimmed || `HTTP ${status}`, code: "unknown", status });
 }
 
 /** Map a parsed ProblemDetails into the right `IsaApiError` subclass. */
 export function fromProblemDetails(problem: ProblemDetails): IsaApiError {
   const message = problem.detail ?? problem.title;
-  if ((problem.code as string) === 'idempotency_conflict') {
+  if ((problem.code as string) === "idempotency_conflict") {
     const raw = problem as ProblemDetails & {
       key?: unknown;
       first_seen_at?: unknown;
@@ -63,26 +63,26 @@ export function fromProblemDetails(problem: ProblemDetails): IsaApiError {
     };
     const ctorOpts: ConstructorParameters<typeof IsaIdempotencyConflictError>[0] = {
       message,
-      key: typeof raw.key === 'string' ? raw.key : '',
-      firstSeenAt: typeof raw.first_seen_at === 'string' ? raw.first_seen_at : '',
+      key: typeof raw.key === "string" ? raw.key : "",
+      firstSeenAt: typeof raw.first_seen_at === "string" ? raw.first_seen_at : "",
       raw: problem,
     };
-    if (typeof raw.request_id === 'string') ctorOpts.requestId = raw.request_id;
+    if (typeof raw.request_id === "string") ctorOpts.requestId = raw.request_id;
     if (problem.doc_url !== undefined) ctorOpts.docUrl = problem.doc_url;
     return new IsaIdempotencyConflictError(ctorOpts);
   }
-  if (problem.code === 'license_locked') {
-    return new IsaLicenseError('locked', message, { status: problem.status, raw: problem });
+  if (problem.code === "license_locked") {
+    return new IsaLicenseError("locked", message, { status: problem.status, raw: problem });
   }
-  if (problem.code === 'unauthorized') {
+  if (problem.code === "unauthorized") {
     return new IsaUnauthorizedError({ message, code: problem.code, raw: problem });
   }
-  if (problem.code === 'validation_error') {
+  if (problem.code === "validation_error") {
     const opts: ConstructorParameters<typeof IsaValidationError>[0] = { message, raw: problem };
     if (problem.param !== undefined) opts.param = problem.param;
     return new IsaValidationError(opts);
   }
-  if (problem.code === 'rate_limit_exceeded' || problem.code === 'rate_limited') {
+  if (problem.code === "rate_limit_exceeded" || problem.code === "rate_limited") {
     return new IsaRateLimitError({ message, code: problem.code, raw: problem });
   }
   const opts: ConstructorParameters<typeof IsaApiError>[0] = {
@@ -96,20 +96,20 @@ export function fromProblemDetails(problem: ProblemDetails): IsaApiError {
   return new IsaApiError(opts);
 }
 
-const INVALID_CREDENTIALS_CODE: IsaLicenseErrorCode = 'invalid_credentials';
+const INVALID_CREDENTIALS_CODE: IsaLicenseErrorCode = "invalid_credentials";
 
 const LEGACY_ERR_MAP: Readonly<Record<string, IsaLicenseErrorCode>> = {
-  ERR_MAX_ACTIVATIONS: 'max_activations',
-  ERR_INACTIVE: 'inactive',
-  ERR_ACTIVE_ELSEWHERE: 'active_elsewhere',
-  ERR_LOCKED: 'locked',
+  ERR_MAX_ACTIVATIONS: "max_activations",
+  ERR_INACTIVE: "inactive",
+  ERR_ACTIVE_ELSEWHERE: "active_elsewhere",
+  ERR_LOCKED: "locked",
   ERR_INVALID_CREDENTIALS: INVALID_CREDENTIALS_CODE,
-  NO_EMAIL: 'no_email',
+  NO_EMAIL: "no_email",
 };
 
 /** Best-effort ProblemDetails parse; returns `undefined` for non-JSON bodies. */
 function tryParseProblemDetails(body: string): ProblemDetails | undefined {
-  if (!body.startsWith('{')) return undefined;
+  if (!body.startsWith("{")) return undefined;
   try {
     const parsed: unknown = JSON.parse(body);
     return isProblemDetails(parsed) ? parsed : undefined;
@@ -126,6 +126,6 @@ function tryParseProblemDetails(body: string): ProblemDetails | undefined {
 function tryParseLegacyErr(status: number, body: string): IsaLicenseError | undefined {
   const mapped = LEGACY_ERR_MAP[body];
   if (mapped) return new IsaLicenseError(mapped, body, { status });
-  if (body.startsWith('ERR_')) return new IsaLicenseError('unknown', body, { status });
+  if (body.startsWith("ERR_")) return new IsaLicenseError("unknown", body, { status });
   return undefined;
 }

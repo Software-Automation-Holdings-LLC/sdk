@@ -8,7 +8,7 @@
  * Header assembly is the caller's responsibility; this facade moves bytes.
  */
 /** Supported HTTP methods. */
-export type HttpMethod = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
+export type HttpMethod = "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
 /** Outbound request as seen by the transport facade. */
 export interface TransportRequest {
     readonly url: string;
