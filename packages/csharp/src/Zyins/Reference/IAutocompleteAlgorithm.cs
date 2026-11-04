@@ -49,17 +49,17 @@ public sealed record AutocompleteOptions(
 /// </example>
 public interface IAutocompleteAlgorithm
 {
-    /// <summary>Rank <paramref name="candidates"/> against
-    /// <paramref name="query"/>. Returns at most <c>options.Limit</c>
-    /// suggestions, sorted highest score first. Empty query → empty
-    /// list (never null).</summary>
-    Task<IReadOnlyList<Suggestion>> Rank(
-        string query,
-        IReadOnlyCollection<IConcept> candidates,
-        AutocompleteOptions options,
-        CancellationToken ct = default);
+  /// <summary>Rank <paramref name="candidates"/> against
+  /// <paramref name="query"/>. Returns at most <c>options.Limit</c>
+  /// suggestions, sorted highest score first. Empty query → empty
+  /// list (never null).</summary>
+  Task<IReadOnlyList<Suggestion>> Rank(
+      string query,
+      IReadOnlyCollection<IConcept> candidates,
+      AutocompleteOptions options,
+      CancellationToken ct = default);
 
-    /// <summary>Dataset version this adapter is bound to. <c>null</c>
-    /// when the adapter is dataset-agnostic.</summary>
-    string? VersionTag { get; }
+  /// <summary>Dataset version this adapter is bound to. <c>null</c>
+  /// when the adapter is dataset-agnostic.</summary>
+  string? VersionTag { get; }
 }

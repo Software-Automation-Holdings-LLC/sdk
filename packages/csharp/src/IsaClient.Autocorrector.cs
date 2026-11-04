@@ -17,28 +17,28 @@ namespace Isa.Sdk;
 
 public sealed partial class IsaClient
 {
-    /// <summary>Static factory namespace for the generic autocorrect
-    /// kernel. Reachable as <c>IsaClient.Autocorrector.Create(typoMap)</c>.</summary>
-    public static class Autocorrector
-    {
-        /// <summary>Create a <see cref="DefaultAutocorrector"/> bound to
-        /// the supplied typoMap. The typoMap should be uppercased ahead
-        /// of time — the default impl expects keys to be uppercase.</summary>
-        /// <param name="typoMap">From → To. Required, non-null.</param>
-        /// <param name="versionTag">Optional catalog version pin.</param>
-        /// <param name="onApplied">Optional telemetry callback.</param>
-        /// <example>
-        /// <code>
-        /// var corrector = IsaClient.Autocorrector.Create(new Dictionary&lt;string,string&gt;
-        /// {
-        ///     ["HYPRTENSION"] = "HYPERTENSION",
-        /// });
-        /// </code>
-        /// </example>
-        public static IAutocorrector Create(
-            IReadOnlyDictionary<string, string> typoMap,
-            string? versionTag = null,
-            Action<AutocorrectorAppliedEvent>? onApplied = null)
-            => new DefaultAutocorrector(typoMap, versionTag, onApplied);
-    }
+  /// <summary>Static factory namespace for the generic autocorrect
+  /// kernel. Reachable as <c>IsaClient.Autocorrector.Create(typoMap)</c>.</summary>
+  public static class Autocorrector
+  {
+    /// <summary>Create a <see cref="DefaultAutocorrector"/> bound to
+    /// the supplied typoMap. The typoMap should be uppercased ahead
+    /// of time — the default impl expects keys to be uppercase.</summary>
+    /// <param name="typoMap">From → To. Required, non-null.</param>
+    /// <param name="versionTag">Optional catalog version pin.</param>
+    /// <param name="onApplied">Optional telemetry callback.</param>
+    /// <example>
+    /// <code>
+    /// var corrector = IsaClient.Autocorrector.Create(new Dictionary&lt;string,string&gt;
+    /// {
+    ///     ["HYPRTENSION"] = "HYPERTENSION",
+    /// });
+    /// </code>
+    /// </example>
+    public static IAutocorrector Create(
+        IReadOnlyDictionary<string, string> typoMap,
+        string? versionTag = null,
+        Action<AutocorrectorAppliedEvent>? onApplied = null)
+        => new DefaultAutocorrector(typoMap, versionTag, onApplied);
+  }
 }

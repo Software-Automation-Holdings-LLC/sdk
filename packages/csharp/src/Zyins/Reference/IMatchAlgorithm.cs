@@ -21,12 +21,12 @@ namespace Isa.Sdk.Zyins.Reference;
 /// </example>
 public interface IMatchAlgorithm
 {
-    /// <summary>Resolve <paramref name="query"/> against the
-    /// <paramref name="candidates"/> set. Returns the matched candidate
-    /// or an unknown handle preserving <paramref name="query"/> verbatim.</summary>
-    IConcept Match(string query, IReadOnlyCollection<IConcept> candidates);
+  /// <summary>Resolve <paramref name="query"/> against the
+  /// <paramref name="candidates"/> set. Returns the matched candidate
+  /// or an unknown handle preserving <paramref name="query"/> verbatim.</summary>
+  IConcept Match(string query, IReadOnlyCollection<IConcept> candidates);
 
-    /// <summary>Dataset version this adapter is bound to. <c>null</c>
-    /// when the adapter is dataset-agnostic.</summary>
-    string? VersionTag { get; }
+  /// <summary>Dataset version this adapter is bound to. <c>null</c>
+  /// when the adapter is dataset-agnostic.</summary>
+  string? VersionTag { get; }
 }

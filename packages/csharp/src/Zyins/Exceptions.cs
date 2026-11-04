@@ -10,19 +10,19 @@ namespace Isa.Sdk.Zyins;
 /// referencing the Core package directly.</summary>
 public class ZyInsException : IsaException
 {
-    /// <inheritdoc cref="IsaException(string,string,string?,int?,Exception?)" />
-    public ZyInsException(string code, string message, string? requestId = null, int? httpStatus = null, Exception? inner = null)
-        : base(code, message, requestId, httpStatus, inner)
-    {
-    }
+  /// <inheritdoc cref="IsaException(string,string,string?,int?,Exception?)" />
+  public ZyInsException(string code, string message, string? requestId = null, int? httpStatus = null, Exception? inner = null)
+      : base(code, message, requestId, httpStatus, inner)
+  {
+  }
 }
 
 /// <summary>The license attached to the token was rejected.</summary>
 public sealed class ZyInsLicenseException : IsaLicenseException
 {
-    /// <inheritdoc cref="IsaLicenseException(string,string,string?,int?,Exception?)" />
-    public ZyInsLicenseException(string code, string message, string? requestId = null, int? httpStatus = null, Exception? inner = null)
-        : base(code, message, requestId, httpStatus, inner)
-    {
-    }
+  /// <inheritdoc cref="IsaLicenseException(string,string,string?,int?,Exception?)" />
+  public ZyInsLicenseException(string code, string message, string? requestId = null, int? httpStatus = null, Exception? inner = null)
+      : base(code, message, requestId, httpStatus, inner)
+  {
+  }
 }

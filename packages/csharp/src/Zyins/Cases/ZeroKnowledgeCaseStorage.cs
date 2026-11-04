@@ -39,34 +39,34 @@ namespace Isa.Sdk.Zyins.Cases;
 /// </summary>
 public sealed class ZeroKnowledgeCaseStorage : ICaseStorage
 {
-    private const int KeyBytes = 32;     // AES-256
-    private const int NonceBytes = 12;   // AES-GCM standard
-    private const int TagBytes = 16;     // AES-GCM standard
+  private const int KeyBytes = 32;     // AES-256
+  private const int NonceBytes = 12;   // AES-GCM standard
+  private const int TagBytes = 16;     // AES-GCM standard
 
-    private readonly ICaseStorageTransport? _transport;
+  private readonly ICaseStorageTransport? _transport;
 
-    private ZeroKnowledgeCaseStorage(ICaseStorageTransport? transport)
-    {
-        _transport = transport;
-    }
+  private ZeroKnowledgeCaseStorage(ICaseStorageTransport? transport)
+  {
+    _transport = transport;
+  }
 
-    /// <summary>
-    /// Process-wide default. Unwired — calling its methods throws
-    /// <see cref="NotSupportedException"/>. The options resolver
-    /// substitutes a wired instance per <see cref="ZyInsClient"/>.
-    /// </summary>
-    public static ZeroKnowledgeCaseStorage Default { get; } = new ZeroKnowledgeCaseStorage(transport: null);
+  /// <summary>
+  /// Process-wide default. Unwired — calling its methods throws
+  /// <see cref="NotSupportedException"/>. The options resolver
+  /// substitutes a wired instance per <see cref="ZyInsClient"/>.
+  /// </summary>
+  public static ZeroKnowledgeCaseStorage Default { get; } = new ZeroKnowledgeCaseStorage(transport: null);
 
-    /// <summary>
-    /// Construct a wired instance backed by <paramref name="transport"/>.
-    /// </summary>
-    public static ZeroKnowledgeCaseStorage WithTransport(ICaseStorageTransport transport)
-    {
-        if (transport is null) throw new ArgumentNullException(nameof(transport));
-        return new ZeroKnowledgeCaseStorage(transport);
-    }
+  /// <summary>
+  /// Construct a wired instance backed by <paramref name="transport"/>.
+  /// </summary>
+  public static ZeroKnowledgeCaseStorage WithTransport(ICaseStorageTransport transport)
+  {
+    if (transport is null) throw new ArgumentNullException(nameof(transport));
+    return new ZeroKnowledgeCaseStorage(transport);
+  }
 
-    /// <inheritdoc />
+  /// <inheritdoc />
 #if NET8_0_OR_GREATER
     public async Task<PutResult> PutAsync(CaseRecord record, CancellationToken ct = default)
     {
@@ -107,15 +107,15 @@ public sealed class ZeroKnowledgeCaseStorage : ICaseStorage
         }
     }
 #else
-    public Task<PutResult> PutAsync(CaseRecord record, CancellationToken ct = default)
-    {
-        if (record is null) throw new ArgumentNullException(nameof(record));
-        _ = RequireTransport();
-        return Task.FromException<PutResult>(NotSupportedOnLegacyTarget());
-    }
+  public Task<PutResult> PutAsync(CaseRecord record, CancellationToken ct = default)
+  {
+    if (record is null) throw new ArgumentNullException(nameof(record));
+    _ = RequireTransport();
+    return Task.FromException<PutResult>(NotSupportedOnLegacyTarget());
+  }
 #endif
 
-    /// <inheritdoc />
+  /// <inheritdoc />
 #if NET8_0_OR_GREATER
     public async Task<CaseRecord?> GetAsync(string id, string? recallToken = null, CancellationToken ct = default)
     {
@@ -171,50 +171,50 @@ public sealed class ZeroKnowledgeCaseStorage : ICaseStorage
         }
     }
 #else
-    public Task<CaseRecord?> GetAsync(string id, string? recallToken = null, CancellationToken ct = default)
+  public Task<CaseRecord?> GetAsync(string id, string? recallToken = null, CancellationToken ct = default)
+  {
+    if (string.IsNullOrWhiteSpace(id))
     {
-        if (string.IsNullOrWhiteSpace(id))
-        {
-            throw new ArgumentException("ZeroKnowledgeCaseStorage.GetAsync: id must be non-empty", nameof(id));
-        }
-        if (string.IsNullOrWhiteSpace(recallToken))
-        {
-            throw new ArgumentException(
-                "ZeroKnowledgeCaseStorage.GetAsync: recallToken is required (the key never leaves the SDK)",
-                nameof(recallToken));
-        }
-        _ = RequireTransport();
-        return Task.FromException<CaseRecord?>(NotSupportedOnLegacyTarget());
+      throw new ArgumentException("ZeroKnowledgeCaseStorage.GetAsync: id must be non-empty", nameof(id));
     }
+    if (string.IsNullOrWhiteSpace(recallToken))
+    {
+      throw new ArgumentException(
+          "ZeroKnowledgeCaseStorage.GetAsync: recallToken is required (the key never leaves the SDK)",
+          nameof(recallToken));
+    }
+    _ = RequireTransport();
+    return Task.FromException<CaseRecord?>(NotSupportedOnLegacyTarget());
+  }
 #endif
 
-    /// <inheritdoc />
-    public Task DeleteAsync(string id, CancellationToken ct = default)
+  /// <inheritdoc />
+  public Task DeleteAsync(string id, CancellationToken ct = default)
+  {
+    if (string.IsNullOrWhiteSpace(id))
     {
-        if (string.IsNullOrWhiteSpace(id))
-        {
-            throw new ArgumentException("ZeroKnowledgeCaseStorage.DeleteAsync: id must be non-empty", nameof(id));
-        }
-        var transport = RequireTransport();
-        return transport.DeleteAsync(id, ct);
+      throw new ArgumentException("ZeroKnowledgeCaseStorage.DeleteAsync: id must be non-empty", nameof(id));
     }
+    var transport = RequireTransport();
+    return transport.DeleteAsync(id, ct);
+  }
 
-    private ICaseStorageTransport RequireTransport()
+  private ICaseStorageTransport RequireTransport()
+  {
+    if (_transport is null)
     {
-        if (_transport is null)
-        {
-            throw new NotSupportedException(
-                "ZeroKnowledgeCaseStorage.Default is unwired. Construct with WithTransport(...) " +
-                "or pass a custom ICaseStorage via IsaOptions.CaseStorage.");
-        }
-        return _transport;
+      throw new NotSupportedException(
+          "ZeroKnowledgeCaseStorage.Default is unwired. Construct with WithTransport(...) " +
+          "or pass a custom ICaseStorage via IsaOptions.CaseStorage.");
     }
+    return _transport;
+  }
 
 #if !NET8_0_OR_GREATER
-    private static PlatformNotSupportedException NotSupportedOnLegacyTarget() =>
-        new PlatformNotSupportedException(
-            "ZeroKnowledgeCaseStorage: AES-GCM is not available on netstandard2.0. " +
-            "Target net6.0+ or supply a custom ICaseStorage via IsaOptions.CaseStorage.");
+  private static PlatformNotSupportedException NotSupportedOnLegacyTarget() =>
+      new PlatformNotSupportedException(
+          "ZeroKnowledgeCaseStorage: AES-GCM is not available on netstandard2.0. " +
+          "Target net6.0+ or supply a custom ICaseStorage via IsaOptions.CaseStorage.");
 #endif
 }
 
@@ -232,34 +232,34 @@ public sealed record CipherEnvelope(string Id, string NonceB64, string Ciphertex
 /// </summary>
 public interface ICaseStorageTransport
 {
-    /// <summary>POST the ciphertext envelope to <c>/v1/case</c>.</summary>
-    Task<CipherEnvelope> PutCiphertextAsync(CipherEnvelope envelope, CancellationToken ct);
-    /// <summary>GET the ciphertext envelope from <c>/v1/case/{id}</c>; null when not found.</summary>
-    Task<CipherEnvelope?> GetCiphertextAsync(string id, CancellationToken ct);
-    /// <summary>DELETE <c>/v1/case/{id}</c>.</summary>
-    Task DeleteAsync(string id, CancellationToken ct);
+  /// <summary>POST the ciphertext envelope to <c>/v1/case</c>.</summary>
+  Task<CipherEnvelope> PutCiphertextAsync(CipherEnvelope envelope, CancellationToken ct);
+  /// <summary>GET the ciphertext envelope from <c>/v1/case/{id}</c>; null when not found.</summary>
+  Task<CipherEnvelope?> GetCiphertextAsync(string id, CancellationToken ct);
+  /// <summary>DELETE <c>/v1/case/{id}</c>.</summary>
+  Task DeleteAsync(string id, CancellationToken ct);
 }
 
 internal static class Base64Url
 {
-    internal static string Encode(byte[] input)
-    {
-        if (input is null) throw new ArgumentNullException(nameof(input));
-        var b64 = Convert.ToBase64String(input);
-        return b64.TrimEnd('=').Replace('+', '-').Replace('/', '_');
-    }
+  internal static string Encode(byte[] input)
+  {
+    if (input is null) throw new ArgumentNullException(nameof(input));
+    var b64 = Convert.ToBase64String(input);
+    return b64.TrimEnd('=').Replace('+', '-').Replace('/', '_');
+  }
 
-    internal static byte[] Decode(string input)
+  internal static byte[] Decode(string input)
+  {
+    if (input is null) throw new ArgumentNullException(nameof(input));
+    var b64 = input.Replace('-', '+').Replace('_', '/');
+    switch (b64.Length % 4)
     {
-        if (input is null) throw new ArgumentNullException(nameof(input));
-        var b64 = input.Replace('-', '+').Replace('_', '/');
-        switch (b64.Length % 4)
-        {
-            case 2: b64 += "=="; break;
-            case 3: b64 += "="; break;
-            case 0: break;
-            default: throw new FormatException("Base64Url.Decode: invalid input length");
-        }
-        return Convert.FromBase64String(b64);
+      case 2: b64 += "=="; break;
+      case 3: b64 += "="; break;
+      case 0: break;
+      default: throw new FormatException("Base64Url.Decode: invalid input length");
     }
+    return Convert.FromBase64String(b64);
+  }
 }

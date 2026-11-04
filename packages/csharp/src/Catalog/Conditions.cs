@@ -19,18 +19,18 @@ public sealed record ConditionCategoryMetadata(
 /// stable category taxonomy; the catalog is intentionally empty today.</summary>
 public static class ConditionCategories
 {
-    private static readonly IReadOnlyDictionary<string, ConditionCategoryMetadata> CATEGORIES =
-        new Dictionary<string, ConditionCategoryMetadata>();
+  private static readonly IReadOnlyDictionary<string, ConditionCategoryMetadata> CATEGORIES =
+      new Dictionary<string, ConditionCategoryMetadata>();
 
-    /// <summary>Every category name. Empty today.</summary>
-    public static IReadOnlyCollection<string> Values() => Array.Empty<string>();
+  /// <summary>Every category name. Empty today.</summary>
+  public static IReadOnlyCollection<string> Values() => Array.Empty<string>();
 
-    /// <summary>Metadata lookup; throws on unknown category.</summary>
-    public static ConditionCategoryMetadata Metadata(string category)
-    {
-        if (category is null) throw new ArgumentNullException(nameof(category));
-        if (!CATEGORIES.TryGetValue(category, out var m))
-            throw new ArgumentException($"ConditionCategories.Metadata: unknown category '{category}'", nameof(category));
-        return m;
-    }
+  /// <summary>Metadata lookup; throws on unknown category.</summary>
+  public static ConditionCategoryMetadata Metadata(string category)
+  {
+    if (category is null) throw new ArgumentNullException(nameof(category));
+    if (!CATEGORIES.TryGetValue(category, out var m))
+      throw new ArgumentException($"ConditionCategories.Metadata: unknown category '{category}'", nameof(category));
+    return m;
+  }
 }
