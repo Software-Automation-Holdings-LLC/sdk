@@ -4,35 +4,36 @@
 // C# catalog code generator. Sibling of packages/ts/scripts/gen-catalog.mjs.
 //
 // Reads source data files (insurance/v2_products.json,
-// insurance/v2_medications.json, isa-platform/shared/schemas/api/isa/v1/common.proto,
+// isa-platform/shared/schemas/api/isa/v1/common.proto,
 // isa-platform/shared/go/events/registry.go) and emits idiomatic C# files
 // under packages/csharp/src/Catalog/.
 //
 // Output is deterministic: same input bytes produce byte-identical output.
 // Regenerate with `node packages/csharp/scripts/gen-catalog.mjs`.
 
-import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'node:fs';
-import { dirname, join, resolve } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { dirname, join, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
-const REPO_CS = resolve(__dirname, '..');
-const CATALOG_DIR = join(REPO_CS, 'src', 'Catalog');
+const REPO_CS = resolve(__dirname, "..");
+const CATALOG_DIR = join(REPO_CS, "src", "Catalog");
 
 const PLATFORM_REPO = process.env.SDK_PLATFORM_REPO
   ? resolve(process.env.SDK_PLATFORM_REPO)
-  : resolve(REPO_CS, '..', '..');
+  : resolve(REPO_CS, "..", "..");
 
 const INSURANCE_REPO = process.env.SDK_INSURANCE_REPO
   ? resolve(process.env.SDK_INSURANCE_REPO)
-  : resolve(PLATFORM_REPO, '..', 'insurance');
+  : resolve(PLATFORM_REPO, "..", "insurance");
 
-const HEADER = (sources) => `// CATALOG-GEN: do not hand-edit; rerun packages/csharp/scripts/gen-catalog.mjs.
+const HEADER = (sources) =>
+  `// CATALOG-GEN: do not hand-edit; rerun packages/csharp/scripts/gen-catalog.mjs.
 //
 // Source data:
-${sources.map((s) => `//   - ${s}`).join('\n')}
+${sources.map((s) => `//   - ${s}`).join("\n")}
 
 `;
 
@@ -41,7 +42,7 @@ const gaps = [];
 function tryReadJson(p) {
   try {
     if (!existsSync(p)) return null;
-    return JSON.parse(readFileSync(p, 'utf8'));
+    return JSON.parse(readFileSync(p, "utf8"));
   } catch (e) {
     process.stderr.write(`gen-catalog: failed to read ${p}: ${e.message}\n`);
     return null;
@@ -51,7 +52,7 @@ function tryReadJson(p) {
 function tryReadText(p) {
   try {
     if (!existsSync(p)) return null;
-    return readFileSync(p, 'utf8');
+    return readFileSync(p, "utf8");
   } catch (e) {
     process.stderr.write(`gen-catalog: failed to read ${p}: ${e.message}\n`);
     return null;
@@ -60,22 +61,22 @@ function tryReadText(p) {
 
 function pascal(s) {
   return s
-    .replace(/[^a-zA-Z0-9]+/g, ' ')
+    .replace(/[^a-zA-Z0-9]+/g, " ")
     .trim()
     .split(/\s+/)
-    .map((w) => (w.length === 0 ? '' : w[0].toUpperCase() + w.slice(1).toLowerCase()))
-    .join('');
+    .map((w) => (w.length === 0 ? "" : w[0].toUpperCase() + w.slice(1).toLowerCase()))
+    .join("");
 }
 
 function slugify(s) {
   return s
     .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '');
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
 }
 
 function csStr(s) {
-  return '"' + String(s).replace(/\\/g, '\\\\').replace(/"/g, '\\"') + '"';
+  return "\"" + String(s).replace(/\\/g, "\\\\").replace(/"/g, "\\\"") + "\"";
 }
 
 function ensureDir(p) {
@@ -89,41 +90,74 @@ function writeFile(name, content) {
 }
 
 const STATES = [
-  ['Alabama', 'AL', false], ['Alaska', 'AK', false], ['Arizona', 'AZ', false],
-  ['Arkansas', 'AR', false], ['California', 'CA', false], ['Colorado', 'CO', false],
-  ['Connecticut', 'CT', false], ['Delaware', 'DE', false], ['Florida', 'FL', false],
-  ['Georgia', 'GA', false], ['Hawaii', 'HI', false], ['Idaho', 'ID', false],
-  ['Illinois', 'IL', false], ['Indiana', 'IN', false], ['Iowa', 'IA', false],
-  ['Kansas', 'KS', false], ['Kentucky', 'KY', false], ['Louisiana', 'LA', false],
-  ['Maine', 'ME', false], ['Maryland', 'MD', false], ['Massachusetts', 'MA', false],
-  ['Michigan', 'MI', false], ['Minnesota', 'MN', false], ['Mississippi', 'MS', false],
-  ['Missouri', 'MO', false], ['Montana', 'MT', false], ['Nebraska', 'NE', false],
-  ['Nevada', 'NV', false], ['New Hampshire', 'NH', false], ['New Jersey', 'NJ', false],
-  ['New Mexico', 'NM', false], ['New York', 'NY', false], ['North Carolina', 'NC', false],
-  ['North Dakota', 'ND', false], ['Ohio', 'OH', false], ['Oklahoma', 'OK', false],
-  ['Oregon', 'OR', false], ['Pennsylvania', 'PA', false], ['Rhode Island', 'RI', false],
-  ['South Carolina', 'SC', false], ['South Dakota', 'SD', false], ['Tennessee', 'TN', false],
-  ['Texas', 'TX', false], ['Utah', 'UT', false], ['Vermont', 'VT', false],
-  ['Virginia', 'VA', false], ['Washington', 'WA', false], ['West Virginia', 'WV', false],
-  ['Wisconsin', 'WI', false], ['Wyoming', 'WY', false], ['District of Columbia', 'DC', false],
-  ['American Samoa', 'AS', true], ['Guam', 'GU', true], ['Northern Mariana Islands', 'MP', true],
-  ['Puerto Rico', 'PR', true], ['United States Virgin Islands', 'VI', true],
+  ["Alabama", "AL", false],
+  ["Alaska", "AK", false],
+  ["Arizona", "AZ", false],
+  ["Arkansas", "AR", false],
+  ["California", "CA", false],
+  ["Colorado", "CO", false],
+  ["Connecticut", "CT", false],
+  ["Delaware", "DE", false],
+  ["Florida", "FL", false],
+  ["Georgia", "GA", false],
+  ["Hawaii", "HI", false],
+  ["Idaho", "ID", false],
+  ["Illinois", "IL", false],
+  ["Indiana", "IN", false],
+  ["Iowa", "IA", false],
+  ["Kansas", "KS", false],
+  ["Kentucky", "KY", false],
+  ["Louisiana", "LA", false],
+  ["Maine", "ME", false],
+  ["Maryland", "MD", false],
+  ["Massachusetts", "MA", false],
+  ["Michigan", "MI", false],
+  ["Minnesota", "MN", false],
+  ["Mississippi", "MS", false],
+  ["Missouri", "MO", false],
+  ["Montana", "MT", false],
+  ["Nebraska", "NE", false],
+  ["Nevada", "NV", false],
+  ["New Hampshire", "NH", false],
+  ["New Jersey", "NJ", false],
+  ["New Mexico", "NM", false],
+  ["New York", "NY", false],
+  ["North Carolina", "NC", false],
+  ["North Dakota", "ND", false],
+  ["Ohio", "OH", false],
+  ["Oklahoma", "OK", false],
+  ["Oregon", "OR", false],
+  ["Pennsylvania", "PA", false],
+  ["Rhode Island", "RI", false],
+  ["South Carolina", "SC", false],
+  ["South Dakota", "SD", false],
+  ["Tennessee", "TN", false],
+  ["Texas", "TX", false],
+  ["Utah", "UT", false],
+  ["Vermont", "VT", false],
+  ["Virginia", "VA", false],
+  ["Washington", "WA", false],
+  ["West Virginia", "WV", false],
+  ["Wisconsin", "WI", false],
+  ["Wyoming", "WY", false],
+  ["District of Columbia", "DC", false],
+  ["American Samoa", "AS", true],
+  ["Guam", "GU", true],
+  ["Northern Mariana Islands", "MP", true],
+  ["Puerto Rico", "PR", true],
+  ["United States Virgin Islands", "VI", true],
 ];
 
 function genStates() {
-  const sources = ['ISO 3166-2:US (50 states + DC + 5 inhabited territories)'];
+  const sources = ["ISO 3166-2:US (50 states + DC + 5 inhabited territories)"];
   const members = STATES.map(([name, abbr]) =>
     `    /// <summary>${name} (${abbr}).</summary>\n    [WireValue("${abbr}")] ${pascal(name)},`
-  ).join('\n');
+  ).join("\n");
   const metaInit = STATES.map(([name, abbr, isTerr]) =>
-    `        ["${abbr}"] = new StateMetadata("${abbr}", ${csStr(name)}, ${isTerr ? 'true' : 'false'}),`
-  ).join('\n');
-  const byName = STATES.map(([name, abbr]) =>
-    `        [${csStr(name.toLowerCase())}] = "${abbr}",`
-  ).join('\n');
-  const byAbbr = STATES.map(([name, abbr]) =>
-    `        ["${abbr}"] = State.${pascal(name)},`
-  ).join('\n');
+    `        ["${abbr}"] = new StateMetadata("${abbr}", ${csStr(name)}, ${isTerr ? "true" : "false"}),`
+  ).join("\n");
+  const byName = STATES.map(([name, abbr]) => `        [${csStr(name.toLowerCase())}] = "${abbr}",`).join("\n");
+  const byAbbr = STATES.map(([name, abbr]) => `        ["${abbr}"] = State.${pascal(name)},`).join("\n");
 
   const content = `${HEADER(sources)}using System;
 using System.Collections.Generic;
@@ -207,7 +241,7 @@ ${byAbbr}
     }
 }
 `;
-  writeFile('States.cs', content);
+  writeFile("States.cs", content);
 }
 
 // When the source JSON is absent (CI runners check out only the platform repo,
@@ -220,10 +254,10 @@ function preserveOrFail(names, label, source) {
   const missing = names.filter((n) => !existsSync(join(CATALOG_DIR, n)));
   if (missing.length > 0) {
     process.stderr.write(
-      `gen-catalog (cs): FATAL: ${label}: ${source} not found AND no committed ` +
-        `catalog to preserve (${missing.join(', ')}). Refusing to emit an empty ` +
-        `catalog. Run where ${join(INSURANCE_REPO, source)} exists, or commit ` +
-        `a populated catalog first.\n`,
+      `gen-catalog (cs): FATAL: ${label}: ${source} not found AND no committed `
+        + `catalog to preserve (${missing.join(", ")}). Refusing to emit an empty `
+        + `catalog. Run where ${join(INSURANCE_REPO, source)} exists, or commit `
+        + `a populated catalog first.\n`,
     );
     process.exit(1);
   }
@@ -234,12 +268,12 @@ function preserveOrFail(names, label, source) {
 }
 
 function genProducts() {
-  const path = join(INSURANCE_REPO, 'v2_products.json');
+  const path = join(INSURANCE_REPO, "v2_products.json");
   const raw = tryReadJson(path);
-  const sources = ['insurance/v2_products.json'];
+  const sources = ["insurance/v2_products.json"];
 
   if (!raw) {
-    preserveOrFail(['Products.cs', 'Carriers.cs'], 'Products', 'v2_products.json');
+    preserveOrFail(["Products.cs", "Carriers.cs"], "Products", "v2_products.json");
     return;
   }
 
@@ -247,21 +281,23 @@ function genProducts() {
   for (const [cls, list] of Object.entries(raw)) {
     if (!Array.isArray(list)) continue;
     for (const p of list) {
-      if (!p || typeof p !== 'object') continue;
-      const identifier = String(p.identifier || '');
+      if (!p || typeof p !== "object") continue;
+      const identifier = String(p.identifier || "");
       if (!identifier) continue;
-      const rawId = String(p.id || '');
+      const rawId = String(p.id || "");
       if (!rawId) {
-        process.stderr.write(`gen-catalog: FATAL: product ${identifier} has no id — refusing to generate idless catalog\n`);
+        process.stderr.write(
+          `gen-catalog: FATAL: product ${identifier} has no id — refusing to generate idless catalog\n`,
+        );
         process.exit(1);
       }
       products.push({
-        id: 'prod_' + rawId,
+        id: "prod_" + rawId,
         slug: identifier,
         productClass: cls,
-        carrierDisplay: String(p.carrier || ''),
-        carrierSlug: slugify(String(p.carrier || '')),
-        displayName: String(p.name || ''),
+        carrierDisplay: String(p.carrier || ""),
+        carrierSlug: slugify(String(p.carrier || "")),
+        displayName: String(p.name || ""),
       });
     }
   }
@@ -278,23 +314,29 @@ function genProducts() {
   // Build nested namespace classes: Fex, Medsup, Preneed, Term.
   const namespaceBlocks = [...byClass.entries()].sort((a, b) => a[0].localeCompare(b[0])).map(([ns, prods]) => {
     const fields = prods.map((p) => {
-      const memberName = pascal(p.slug.replace(/^[a-z]+-/, ''));
-      return `        /// <summary>${p.displayName.replace(/</g,'&lt;').replace(/>/g,'&gt;')}.</summary>\n        public static readonly Product ${memberName} = new Product(${csStr(p.id)}, ${csStr(p.displayName)}, "${p.productClass}", "${p.carrierSlug}");`;
-    }).join('\n');
-    return `    /// <summary>Products in the <c>${prods[0]?.productClass ?? ns.toLowerCase()}</c> family.</summary>\n    public static class ${ns}\n    {\n${fields}\n    }`;
-  }).join('\n\n');
+      const memberName = pascal(p.slug.replace(/^[a-z]+-/, ""));
+      return `        /// <summary>${
+        p.displayName.replace(/</g, "&lt;").replace(/>/g, "&gt;")
+      }.</summary>\n        public static readonly Product ${memberName} = new Product(${csStr(p.id)}, ${
+        csStr(p.displayName)
+      }, "${p.productClass}", "${p.carrierSlug}");`;
+    }).join("\n");
+    return `    /// <summary>Products in the <c>${
+      prods[0]?.productClass ?? ns.toLowerCase()
+    }</c> family.</summary>\n    public static class ${ns}\n    {\n${fields}\n    }`;
+  }).join("\n\n");
 
   const byIdEntries = products.map((p) => {
     const ns = p.productClass.charAt(0).toUpperCase() + p.productClass.slice(1).toLowerCase();
-    const memberName = pascal(p.slug.replace(/^[a-z]+-/, ''));
+    const memberName = pascal(p.slug.replace(/^[a-z]+-/, ""));
     return `        [${csStr(p.id)}] = ${ns}.${memberName},`;
-  }).join('\n');
+  }).join("\n");
 
   const allEntries = products.map((p) => {
     const ns = p.productClass.charAt(0).toUpperCase() + p.productClass.slice(1).toLowerCase();
-    const memberName = pascal(p.slug.replace(/^[a-z]+-/, ''));
+    const memberName = pascal(p.slug.replace(/^[a-z]+-/, ""));
     return `        ${ns}.${memberName},`;
-  }).join('\n');
+  }).join("\n");
 
   const productsContent = `${HEADER(sources)}using System;
 using System.Collections.Generic;
@@ -400,7 +442,7 @@ ${allEntries}
 }
 `;
 
-  writeFile('Products.cs', productsContent);
+  writeFile("Products.cs", productsContent);
 
   const byCarrier = new Map();
   for (const p of products) {
@@ -418,12 +460,12 @@ ${allEntries}
     const productExprs = c.products.map((slug) => {
       const prod = slugToProduct.get(slug);
       const ns = prod.productClass.charAt(0).toUpperCase() + prod.productClass.slice(1).toLowerCase();
-      const memberName = pascal(slug.replace(/^[a-z]+-/, ''));
+      const memberName = pascal(slug.replace(/^[a-z]+-/, ""));
       return `Products.${ns}.${memberName}`;
-    }).join(', ');
-    const productList = c.products.length === 0 ? 'Array.Empty<Product>()' : `new[] { ${productExprs} }`;
+    }).join(", ");
+    const productList = c.products.length === 0 ? "Array.Empty<Product>()" : `new[] { ${productExprs} }`;
     return `        ["${c.slug}"] = new ProductCarrierMetadata(${csStr(c.displayName)}, ${productList}),`;
-  }).join('\n');
+  }).join("\n");
 
   const carriersContent = `${HEADER(sources)}using System;
 using System.Collections.Generic;
@@ -459,13 +501,11 @@ ${carrierEntries}
     }
 }
 `;
-  writeFile('Carriers.cs', carriersContent);
+  writeFile("Carriers.cs", carriersContent);
 }
 
-function genConditionsAndMedicationUses() {
-  const medPath = join(INSURANCE_REPO, 'v2_medications.json');
-  const meds = tryReadJson(medPath);
-  const sources = ['insurance/v2_conditions.json', 'insurance/v2_medications.json'];
+function genConditions() {
+  const sources = ["insurance/v2_conditions.json"];
 
   const condContent = `${HEADER(sources)}using System;
 using System.Collections.Generic;
@@ -498,118 +538,55 @@ public static class ConditionCategories
     }
 }
 `;
-  writeFile('Conditions.cs', condContent);
-
-  if (!Array.isArray(meds)) {
-    // Same contract as Products: the committed Medications.cs is the published
-    // source of truth (~1865 uses) and CI does not check out the engine repo,
-    // so preserve it instead of clobbering it with an empty catalog. Fail loud
-    // only when there is nothing committed to preserve.
-    preserveOrFail(['Medications.cs'], 'MedicationUses', 'v2_medications.json');
-    return;
-  }
-
-  const useToMeds = new Map();
-  for (const m of meds) {
-    if (!m || typeof m !== 'object') continue;
-    const name = String(m.name || '');
-    const uses = Array.isArray(m.uses) ? m.uses : [];
-    for (const u of uses) {
-      if (!u || typeof u !== 'object') continue;
-      const cond = String(u.condition || '');
-      if (!cond || !name) continue;
-      let set = useToMeds.get(cond);
-      if (!set) { set = new Set(); useToMeds.set(cond, set); }
-      set.add(name);
-    }
-  }
-
-  const useNames = [...useToMeds.keys()].sort();
-  const initLines = useNames.map((u) => {
-    const list = [...useToMeds.get(u)].sort();
-    const arr = list.map(csStr).join(', ');
-    return `        [${csStr(u)}] = new MedicationUseMetadata(${csStr(u)}, new[] { ${arr} }),`;
-  }).join('\n');
-
-  const medsContent = `${HEADER(sources)}using System;
-using System.Collections.Generic;
-using System.Collections.ObjectModel;
-using System.Linq;
-
-namespace Isa.Sdk.Catalog;
-
-/// <summary>Public metadata for a single medication use (indication).</summary>
-public sealed record MedicationUseMetadata(
-    string DisplayName,
-    IReadOnlyList<string> Medications);
-
-/// <summary>Catalog API for medication uses.</summary>
-public static class MedicationUses
-{
-    private static readonly IReadOnlyDictionary<string, MedicationUseMetadata> USES = new ReadOnlyDictionary<string, MedicationUseMetadata>(new Dictionary<string, MedicationUseMetadata>
-    {
-${initLines}
-    });
-
-    private static readonly string[] ALL = USES.Keys.OrderBy(k => k, StringComparer.Ordinal).ToArray();
-
-    /// <summary>Every use name, sorted alphabetically.</summary>
-    public static IReadOnlyList<string> Values() => ALL;
-
-    /// <summary>Metadata lookup; throws on unknown use.</summary>
-    public static MedicationUseMetadata Metadata(string use)
-    {
-        if (use is null) throw new ArgumentNullException(nameof(use));
-        if (!USES.TryGetValue(use, out var m))
-            throw new ArgumentException($"MedicationUses.Metadata: unknown use '{use}'", nameof(use));
-        return m;
-    }
-}
-`;
-  writeFile('Medications.cs', medsContent);
+  writeFile("Conditions.cs", condContent);
 }
 
 function genScopes() {
-  const protoPath = join(PLATFORM_REPO, 'shared', 'schemas', 'api', 'isa', 'v1', 'common.proto');
+  const protoPath = join(PLATFORM_REPO, "shared", "schemas", "api", "isa", "v1", "common.proto");
   const text = tryReadText(protoPath);
-  const sources = ['isa-platform/shared/schemas/api/isa/v1/common.proto'];
+  const sources = ["isa-platform/shared/schemas/api/isa/v1/common.proto"];
 
   const scopes = [];
   if (text) {
     const block = text.match(/enum Scope \{([\s\S]*?)\}\s*$/m);
     if (block) {
-      const lines = block[1].split('\n');
-      let pendingComment = '';
+      const lines = block[1].split("\n");
+      let pendingComment = "";
       for (const line of lines) {
         const trimmed = line.trim();
-        if (trimmed.startsWith('//')) {
-          pendingComment += ' ' + trimmed.replace(/^\/\/\s?/, '');
+        if (trimmed.startsWith("//")) {
+          pendingComment += " " + trimmed.replace(/^\/\/\s?/, "");
           continue;
         }
         const m = trimmed.match(/^(SCOPE_[A-Z0-9_]+)\s*=\s*\d+;/);
         if (m) {
           const symbol = m[1];
-          if (symbol === 'SCOPE_UNSPECIFIED') { pendingComment = ''; continue; }
+          if (symbol === "SCOPE_UNSPECIFIED") {
+            pendingComment = "";
+            continue;
+          }
           const wireMatch = pendingComment.match(/`([^`]+)`/);
-          if (!wireMatch) { pendingComment = ''; continue; }
+          if (!wireMatch) {
+            pendingComment = "";
+            continue;
+          }
           const wire = wireMatch[1];
-          const doc = pendingComment.replace(/`[^`]+`\s*—?\s*/, '').trim();
-          const enumName = wire.split(/[:\-]/).map((p) => p.charAt(0).toUpperCase() + p.slice(1).toLowerCase()).join('');
+          const doc = pendingComment.replace(/`[^`]+`\s*—?\s*/, "").trim();
+          const enumName = wire.split(/[:-]/).map((p) => p.charAt(0).toUpperCase() + p.slice(1).toLowerCase()).join("");
           scopes.push({ enumName, wire, doc });
-          pendingComment = '';
-        } else if (trimmed === '') {
-          pendingComment = '';
+          pendingComment = "";
+        } else if (trimmed === "") {
+          pendingComment = "";
         }
       }
     }
   }
-  if (scopes.length === 0) gaps.push('Scope: failed to parse common.proto Scope enum.');
+  if (scopes.length === 0) gaps.push("Scope: failed to parse common.proto Scope enum.");
   scopes.sort((a, b) => a.wire.localeCompare(b.wire));
 
-  const members = scopes.map((s) =>
-    `    /// <summary>${s.doc}</summary>\n    [WireValue("${s.wire}")] ${s.enumName},`
-  ).join('\n');
-  const descLines = scopes.map((s) => `        [Scope.${s.enumName}] = ${csStr(s.doc)},`).join('\n');
+  const members = scopes.map((s) => `    /// <summary>${s.doc}</summary>\n    [WireValue("${s.wire}")] ${s.enumName},`)
+    .join("\n");
+  const descLines = scopes.map((s) => `        [Scope.${s.enumName}] = ${csStr(s.doc)},`).join("\n");
 
   const content = `${HEADER(sources)}using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -634,13 +611,13 @@ ${descLines}
     public static string Get(Scope s) => MAP.TryGetValue(s, out var v) ? v : string.Empty;
 }
 `;
-  writeFile('Scopes.cs', content);
+  writeFile("Scopes.cs", content);
 }
 
 function genSignEvents() {
-  const path = join(PLATFORM_REPO, 'shared', 'go', 'events', 'registry.go');
+  const path = join(PLATFORM_REPO, "shared", "go", "events", "registry.go");
   const text = tryReadText(path);
-  const sources = ['isa-platform/shared/go/events/registry.go'];
+  const sources = ["isa-platform/shared/go/events/registry.go"];
 
   const events = [];
   if (text) {
@@ -649,15 +626,15 @@ function genSignEvents() {
     while ((m = re.exec(text)) !== null) {
       const wire = m[1];
       if (!/^(document|signer)\./.test(wire)) continue;
-      const enumName = wire.split('.').map((p) => p.charAt(0).toUpperCase() + p.slice(1).toLowerCase()).join('');
+      const enumName = wire.split(".").map((p) => p.charAt(0).toUpperCase() + p.slice(1).toLowerCase()).join("");
       events.push({ enumName, wire });
     }
   }
-  if (events.length === 0) gaps.push('SignEvent: no rapidsign-domain events parsed.');
+  if (events.length === 0) gaps.push("SignEvent: no rapidsign-domain events parsed.");
   events.sort((a, b) => a.wire.localeCompare(b.wire));
 
-  const members = events.map((e) => `    [WireValue("${e.wire}")] ${e.enumName},`).join('\n');
-  const labels = events.map((e) => `        [SignEvent.${e.enumName}] = "${e.enumName}",`).join('\n');
+  const members = events.map((e) => `    [WireValue("${e.wire}")] ${e.enumName},`).join("\n");
+  const labels = events.map((e) => `        [SignEvent.${e.enumName}] = "${e.enumName}",`).join("\n");
 
   const content = `${HEADER(sources)}using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -682,67 +659,76 @@ ${labels}
     public static string Get(SignEvent e) => MAP.TryGetValue(e, out var v) ? v : string.Empty;
 }
 `;
-  writeFile('SignEvents.cs', content);
+  writeFile("SignEvents.cs", content);
 }
 
 function genErrors() {
-  const protoPath = join(PLATFORM_REPO, 'shared', 'schemas', 'api', 'isa', 'v1', 'common.proto');
+  const protoPath = join(PLATFORM_REPO, "shared", "schemas", "api", "isa", "v1", "common.proto");
   const text = tryReadText(protoPath);
-  const sources = ['isa-platform/shared/schemas/api/isa/v1/common.proto'];
+  const sources = ["isa-platform/shared/schemas/api/isa/v1/common.proto"];
 
   const codes = [];
   if (text) {
     const block = text.match(/enum ErrorCode \{([\s\S]*?)\}/m);
     if (block) {
-      const lines = block[1].split('\n');
-      let pendingComment = '';
+      const lines = block[1].split("\n");
+      let pendingComment = "";
       for (const line of lines) {
         const trimmed = line.trim();
-        if (trimmed.startsWith('//')) {
-          pendingComment += ' ' + trimmed.replace(/^\/\/\s?/, '');
+        if (trimmed.startsWith("//")) {
+          pendingComment += " " + trimmed.replace(/^\/\/\s?/, "");
           continue;
         }
         const m = trimmed.match(/^ERROR_CODE_([A-Z0-9_]+)\s*=\s*\d+;/);
         if (m) {
           const symbol = m[1];
-          if (symbol === 'UNSPECIFIED') { pendingComment = ''; continue; }
+          if (symbol === "UNSPECIFIED") {
+            pendingComment = "";
+            continue;
+          }
           const wire = symbol.toLowerCase();
-          const enumName = symbol.split('_').map((p) => p.charAt(0).toUpperCase() + p.slice(1).toLowerCase()).join('');
+          const enumName = symbol.split("_").map((p) => p.charAt(0).toUpperCase() + p.slice(1).toLowerCase()).join("");
           codes.push({ enumName, wire, doc: pendingComment.trim() });
-          pendingComment = '';
-        } else if (trimmed === '') {
-          pendingComment = '';
+          pendingComment = "";
+        } else if (trimmed === "") {
+          pendingComment = "";
         }
       }
     }
   }
-  if (codes.length === 0) gaps.push('ErrorCode: failed to parse common.proto ErrorCode enum.');
+  if (codes.length === 0) gaps.push("ErrorCode: failed to parse common.proto ErrorCode enum.");
   codes.sort((a, b) => a.wire.localeCompare(b.wire));
 
   const ADVICE = new Map([
-    ['validation_error', 'fix_request_body'],
-    ['idempotency_conflict', 'retry_with_new_key'],
-    ['rate_limit_exceeded', 'wait_and_retry'],
-    ['token_expired', 'refresh_session'],
-    ['invalid_token', 'reissue_session'],
-    ['license_locked', 'contact_support'],
-    ['forbidden', 'check_scopes'],
-    ['not_found', 'verify_resource_id'],
-    ['method_not_allowed', 'check_http_method'],
-    ['conflict', 'reconcile_state'],
-    ['unauthorized', 'authenticate_caller'],
-    ['internal_error', 'retry_or_contact_support'],
-    ['bad_gateway', 'retry_with_backoff'],
-    ['gateway_timeout', 'retry_with_backoff'],
-    ['service_unavailable', 'retry_with_backoff'],
-    ['not_implemented', 'check_feature_availability'],
+    ["validation_error", "fix_request_body"],
+    ["idempotency_conflict", "retry_with_new_key"],
+    ["rate_limit_exceeded", "wait_and_retry"],
+    ["token_expired", "refresh_session"],
+    ["invalid_token", "reissue_session"],
+    ["license_locked", "contact_support"],
+    ["forbidden", "check_scopes"],
+    ["not_found", "verify_resource_id"],
+    ["method_not_allowed", "check_http_method"],
+    ["conflict", "reconcile_state"],
+    ["unauthorized", "authenticate_caller"],
+    ["internal_error", "retry_or_contact_support"],
+    ["bad_gateway", "retry_with_backoff"],
+    ["gateway_timeout", "retry_with_backoff"],
+    ["service_unavailable", "retry_with_backoff"],
+    ["not_implemented", "check_feature_availability"],
   ]);
 
   const members = codes.map((c) =>
-    `    /// <summary>${(c.doc || c.wire).replace(/</g,'&lt;').replace(/>/g,'&gt;')}</summary>\n    [WireValue("${c.wire}")] ${c.enumName},`
-  ).join('\n');
-  const adviceLines = codes.map((c) => `        [CatalogErrorCode.${c.enumName}] = "${ADVICE.get(c.wire) || 'see_docs'}",`).join('\n');
-  const docLines = codes.map((c) => `        [CatalogErrorCode.${c.enumName}] = "https://docs.isaapi.com/errors/${c.wire}",`).join('\n');
+    `    /// <summary>${
+      (c.doc || c.wire).replace(/</g, "&lt;").replace(/>/g, "&gt;")
+    }</summary>\n    [WireValue("${c.wire}")] ${c.enumName},`
+  ).join("\n");
+  const adviceLines = codes.map((c) =>
+    `        [CatalogErrorCode.${c.enumName}] = "${ADVICE.get(c.wire) || "see_docs"}",`
+  ).join("\n");
+  const docLines = codes.map((c) =>
+    `        [CatalogErrorCode.${c.enumName}] = "https://docs.isaapi.com/errors/${c.wire}",`
+  ).join("\n");
 
   const content = `${HEADER(sources)}using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -781,19 +767,19 @@ ${docLines}
     public static string Get(CatalogErrorCode code) => MAP.TryGetValue(code, out var v) ? v : "https://docs.isaapi.com/errors";
 }
 `;
-  writeFile('Errors.cs', content);
+  writeFile("Errors.cs", content);
 }
 
 ensureDir(CATALOG_DIR);
 genStates();
 genProducts();
-genConditionsAndMedicationUses();
+genConditions();
 genScopes();
 genSignEvents();
 genErrors();
 
 if (gaps.length > 0) {
-  process.stderr.write('\ngen-catalog (cs): data-source gaps:\n');
+  process.stderr.write("\ngen-catalog (cs): data-source gaps:\n");
   for (const g of gaps) process.stderr.write(`  - ${g}\n`);
 }
-process.stderr.write('\ngen-catalog (cs): done\n');
+process.stderr.write("\ngen-catalog (cs): done\n");

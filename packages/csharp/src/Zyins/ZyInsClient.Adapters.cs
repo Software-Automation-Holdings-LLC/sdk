@@ -23,52 +23,61 @@ namespace Isa.Sdk.Zyins;
 
 public sealed partial class ZyInsClient
 {
-    private IAutocorrector? _customAutocorrector;
-    private IMatchAlgorithm? _customMatchAlgorithm;
-    private IAutocompleteAlgorithm? _customAutocompleteAlgorithm;
-    private LazyTypoMapAutocorrector? _defaultAutocorrector;
-    private DefaultMatchAlgorithm? _defaultMatchAlgorithm;
-    private DefaultAutocompleteAlgorithm? _defaultAutocompleteAlgorithm;
+  private IAutocorrector? _customAutocorrector;
+  private IMatchAlgorithm? _customMatchAlgorithm;
+  private IAutocompleteAlgorithm? _customAutocompleteAlgorithm;
+  private LazyTypoMapAutocorrector? _defaultAutocorrector;
+  private DefaultMatchAlgorithm? _defaultMatchAlgorithm;
+  private DefaultAutocompleteAlgorithm? _defaultAutocompleteAlgorithm;
 
-    /// <summary>Active <see cref="IAutocorrector"/>. Defaults to a
-    /// <see cref="DefaultAutocorrector"/> bound to the zyins
-    /// <c>spelling_corrections</c> dataset (lazily loaded). Override via
-    /// <see cref="IsaBuilder.WithAutocorrector(IAutocorrector)"/>.</summary>
-    public IAutocorrector Autocorrector =>
-        _customAutocorrector ?? (_defaultAutocorrector ??=
-            new LazyTypoMapAutocorrector(GetOrCreateBundleCache()));
+  /// <summary>Active <see cref="IAutocorrector"/>. Defaults to a
+  /// <see cref="DefaultAutocorrector"/> bound to the zyins
+  /// <c>spelling_corrections</c> dataset (lazily loaded). Override via
+  /// <see cref="IsaBuilder.WithAutocorrector(IAutocorrector)"/>.</summary>
+  public IAutocorrector Autocorrector =>
+      _customAutocorrector ?? (_defaultAutocorrector ??=
+          new LazyTypoMapAutocorrector(GetOrCreateBundleCache()));
 
-    /// <summary>Active <see cref="IMatchAlgorithm"/>. Defaults to
-    /// <see cref="DefaultMatchAlgorithm"/>; override via
-    /// <see cref="IsaBuilder.WithMatchAlgorithm(IMatchAlgorithm)"/>.</summary>
-    public IMatchAlgorithm Matcher =>
-        _customMatchAlgorithm ?? (_defaultMatchAlgorithm ??= new DefaultMatchAlgorithm());
+  /// <summary>Active <see cref="IMatchAlgorithm"/>. Defaults to
+  /// <see cref="DefaultMatchAlgorithm"/>; override via
+  /// <see cref="IsaBuilder.WithMatchAlgorithm(IMatchAlgorithm)"/>.</summary>
+  public IMatchAlgorithm Matcher =>
+      _customMatchAlgorithm ?? (_defaultMatchAlgorithm ??= new DefaultMatchAlgorithm());
 
-    /// <summary>Active <see cref="IAutocompleteAlgorithm"/>. Defaults
-    /// to <see cref="DefaultAutocompleteAlgorithm"/>; override via
-    /// <see cref="IsaBuilder.WithAutocompleteAlgorithm(IAutocompleteAlgorithm)"/>.</summary>
-    public IAutocompleteAlgorithm AutocompleteAlgorithm =>
-        _customAutocompleteAlgorithm ?? (_defaultAutocompleteAlgorithm ??= new DefaultAutocompleteAlgorithm());
+  /// <summary>Active <see cref="IAutocompleteAlgorithm"/>. Defaults
+  /// to <see cref="DefaultAutocompleteAlgorithm"/>; override via
+  /// <see cref="IsaBuilder.WithAutocompleteAlgorithm(IAutocompleteAlgorithm)"/>.</summary>
+  public IAutocompleteAlgorithm AutocompleteAlgorithm =>
+      _customAutocompleteAlgorithm ?? (_defaultAutocompleteAlgorithm ??= new DefaultAutocompleteAlgorithm());
 
-    internal void AttachAdapters(
-        IAutocorrector? autocorrector,
-        IMatchAlgorithm? matchAlgorithm,
-        IAutocompleteAlgorithm? autocompleteAlgorithm)
-    {
-        _customAutocorrector = autocorrector;
-        _customMatchAlgorithm = matchAlgorithm;
-        _customAutocompleteAlgorithm = autocompleteAlgorithm;
-    }
+  internal void AttachAdapters(
+      IAutocorrector? autocorrector,
+      IMatchAlgorithm? matchAlgorithm,
+      IAutocompleteAlgorithm? autocompleteAlgorithm)
+  {
+    _customAutocorrector = autocorrector;
+    _customMatchAlgorithm = matchAlgorithm;
+    _customAutocompleteAlgorithm = autocompleteAlgorithm;
+  }
 
-    private BundleCache? _sharedBundleCache;
+  private BundleCache? _sharedBundleCache;
+  private IDatasetSource? _datasetSource;
 
-    internal BundleCache GetOrCreateBundleCache()
-    {
-        // The cache-backed namespace types each already own a BundleCache;
-        // expose the same instance via the underlying resolver so the
-        // autocorrector shares the fetch.
-        return _sharedBundleCache ??= new BundleCache(new DatasetsV3BundleResolver(DatasetsV3));
-    }
+  internal BundleCache GetOrCreateBundleCache()
+  {
+    // The cache-backed namespace types each already own a BundleCache;
+    // expose the same instance via the underlying resolver so the
+    // autocorrector shares the fetch.
+    return _sharedBundleCache ??= new BundleCache(BuildBundleResolver(_datasetSource, DatasetsV3));
+  }
+
+  // BuildBundleResolver picks the bundle warmer: a configured local
+  // DatasetSource (offline file / chain) wins; with none set the API
+  // path (DatasetsV3.GetAsync) is used — the unchanged default.
+  private static IBundleResolver BuildBundleResolver(IDatasetSource? source, DatasetsV3SubClient datasets)
+      => source is not null
+          ? new DatasetSourceBundleResolver(source)
+          : new DatasetsV3BundleResolver(datasets);
 }
 
 /// <summary>Default-impl autocorrector that lazily projects the
@@ -77,60 +86,60 @@ public sealed partial class ZyInsClient
 /// share a single fetch.</summary>
 internal sealed class LazyTypoMapAutocorrector : IAutocorrector
 {
-    private readonly BundleCache _cache;
-    private readonly SemaphoreSlim _gate = new(initialCount: 1, maxCount: 1);
-    private DefaultAutocorrector? _bound;
+  private readonly BundleCache _cache;
+  private readonly SemaphoreSlim _gate = new(initialCount: 1, maxCount: 1);
+  private DefaultAutocorrector? _bound;
 
-    public LazyTypoMapAutocorrector(BundleCache cache)
+  public LazyTypoMapAutocorrector(BundleCache cache)
+  {
+    _cache = cache ?? throw new ArgumentNullException(nameof(cache));
+  }
+
+  public string? VersionTag => _bound?.VersionTag;
+
+  public string Correct(string text, AutocorrectOptions? options = null)
+  {
+    if (string.IsNullOrEmpty(text)) return text ?? string.Empty;
+    var bound = Volatile.Read(ref _bound);
+    if (bound is null)
     {
-        _cache = cache ?? throw new ArgumentNullException(nameof(cache));
+      bound = Resolve().GetAwaiter().GetResult();
     }
+    return bound.Correct(text, options);
+  }
 
-    public string? VersionTag => _bound?.VersionTag;
-
-    public string Correct(string text, AutocorrectOptions? options = null)
+  /// <summary>Async-safe resolution. Production callers can drive the
+  /// projection up front via this method to avoid the sync-over-async
+  /// path in <see cref="Correct"/>.</summary>
+  public async Task<DefaultAutocorrector> Resolve(CancellationToken ct = default)
+  {
+    var snapshot = Volatile.Read(ref _bound);
+    if (snapshot is not null) return snapshot;
+    await _gate.WaitAsync(ct).ConfigureAwait(false);
+    try
     {
-        if (string.IsNullOrEmpty(text)) return text ?? string.Empty;
-        var bound = Volatile.Read(ref _bound);
-        if (bound is null)
-        {
-            bound = Resolve().GetAwaiter().GetResult();
-        }
-        return bound.Correct(text, options);
+      snapshot = Volatile.Read(ref _bound);
+      if (snapshot is not null) return snapshot;
+      var bundle = await _cache.GetAsync(ct).ConfigureAwait(false);
+      var map = ProjectTypoMap(bundle);
+      var fresh = new DefaultAutocorrector(map, versionTag: bundle.CatalogVersion);
+      Volatile.Write(ref _bound, fresh);
+      return fresh;
     }
-
-    /// <summary>Async-safe resolution. Production callers can drive the
-    /// projection up front via this method to avoid the sync-over-async
-    /// path in <see cref="Correct"/>.</summary>
-    public async Task<DefaultAutocorrector> Resolve(CancellationToken ct = default)
+    finally
     {
-        var snapshot = Volatile.Read(ref _bound);
-        if (snapshot is not null) return snapshot;
-        await _gate.WaitAsync(ct).ConfigureAwait(false);
-        try
-        {
-            snapshot = Volatile.Read(ref _bound);
-            if (snapshot is not null) return snapshot;
-            var bundle = await _cache.GetAsync(ct).ConfigureAwait(false);
-            var map = ProjectTypoMap(bundle);
-            var fresh = new DefaultAutocorrector(map, versionTag: bundle.CatalogVersion);
-            Volatile.Write(ref _bound, fresh);
-            return fresh;
-        }
-        finally
-        {
-            _gate.Release();
-        }
+      _gate.Release();
     }
+  }
 
-    private static IReadOnlyDictionary<string, string> ProjectTypoMap(DatasetBundleV3 bundle)
+  private static IReadOnlyDictionary<string, string> ProjectTypoMap(DatasetBundleV3 bundle)
+  {
+    var rows = bundle.SpellingCorrections.Items;
+    var map = new Dictionary<string, string>(rows.Count, StringComparer.Ordinal);
+    foreach (var row in rows)
     {
-        var rows = bundle.SpellingCorrections.Items;
-        var map = new Dictionary<string, string>(rows.Count, StringComparer.Ordinal);
-        foreach (var row in rows)
-        {
-            map[row.From.ToUpperInvariant()] = row.To.ToUpperInvariant();
-        }
-        return map;
+      map[row.From.ToUpperInvariant()] = row.To.ToUpperInvariant();
     }
+    return map;
+  }
 }

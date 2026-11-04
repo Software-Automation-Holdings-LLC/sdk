@@ -24,12 +24,12 @@ namespace Isa.Sdk.Account;
 /// <c>TCaseEnvelope</c> wire shape.</summary>
 public sealed record CaseEnvelope
 {
-    /// <summary>Std-base64 AES-GCM ciphertext with the auth tag stripped.</summary>
-    public string Ciphertext { get; init; } = string.Empty;
-    /// <summary>Std-base64 AES-GCM nonce.</summary>
-    public string Iv { get; init; } = string.Empty;
-    /// <summary>Std-base64 AES-GCM authentication tag.</summary>
-    public string Tag { get; init; } = string.Empty;
+  /// <summary>Std-base64 AES-GCM ciphertext with the auth tag stripped.</summary>
+  public string Ciphertext { get; init; } = string.Empty;
+  /// <summary>Std-base64 AES-GCM nonce.</summary>
+  public string Iv { get; init; } = string.Empty;
+  /// <summary>Std-base64 AES-GCM authentication tag.</summary>
+  public string Tag { get; init; } = string.Empty;
 }
 
 /// <summary>Result of <see cref="CaseCrypto.Encrypt"/>: the wire envelope plus
@@ -37,10 +37,10 @@ public sealed record CaseEnvelope
 /// fragment.</summary>
 public sealed record EncryptedCase
 {
-    /// <summary>The base64 fields posted to /v1/case.</summary>
-    public CaseEnvelope Envelope { get; init; } = new();
-    /// <summary>The data key, base64url-encoded (no padding), for the link.</summary>
-    public string KeyFragment { get; init; } = string.Empty;
+  /// <summary>The base64 fields posted to /v1/case.</summary>
+  public CaseEnvelope Envelope { get; init; } = new();
+  /// <summary>The data key, base64url-encoded (no padding), for the link.</summary>
+  public string KeyFragment { get; init; } = string.Empty;
 }
 
 /// <summary>Raised when a case envelope fails AES-GCM authentication: a
@@ -48,11 +48,11 @@ public sealed record EncryptedCase
 /// The recipient cannot recover the plaintext; treat it as terminal.</summary>
 public sealed class CaseDecryptException : Exception
 {
-    /// <summary>Construct with a human-readable message.</summary>
-    public CaseDecryptException(string message) : base(message) { }
+  /// <summary>Construct with a human-readable message.</summary>
+  public CaseDecryptException(string message) : base(message) { }
 
-    /// <summary>Construct with a message and an inner authentication failure.</summary>
-    public CaseDecryptException(string message, Exception inner) : base(message, inner) { }
+  /// <summary>Construct with a message and an inner authentication failure.</summary>
+  public CaseDecryptException(string message, Exception inner) : base(message, inner) { }
 }
 
 /// <summary>CSPRNG facade for case-key and nonce generation, so
@@ -60,8 +60,8 @@ public sealed class CaseDecryptException : Exception
 /// inject a deterministic source.</summary>
 public interface IRandomBytes
 {
-    /// <summary>Return <paramref name="length"/> cryptographically random bytes.</summary>
-    byte[] Next(int length);
+  /// <summary>Return <paramref name="length"/> cryptographically random bytes.</summary>
+  byte[] Next(int length);
 }
 
 /// <summary>Default <see cref="IRandomBytes"/> backed by
@@ -69,38 +69,38 @@ public interface IRandomBytes
 /// case-crypto path.</summary>
 public sealed class SystemRandomBytes : IRandomBytes
 {
-    /// <inheritdoc/>
-    public byte[] Next(int length)
-    {
-        if (length < 1) throw new ArgumentOutOfRangeException(nameof(length));
-        var buffer = new byte[length];
-        using var rng = RandomNumberGenerator.Create();
-        rng.GetBytes(buffer);
-        return buffer;
-    }
+  /// <inheritdoc/>
+  public byte[] Next(int length)
+  {
+    if (length < 1) throw new ArgumentOutOfRangeException(nameof(length));
+    var buffer = new byte[length];
+    using var rng = RandomNumberGenerator.Create();
+    rng.GetBytes(buffer);
+    return buffer;
+  }
 }
 
 /// <summary>Zero-knowledge case AES-GCM envelope, parity-identical to the
 /// TypeScript SDK.</summary>
 public sealed class CaseCrypto
 {
-    // AES-128 data-key length for fresh case keys. Decrypt is length-agnostic
-    // (AesGcm picks 128/192/256 by key length), so 256-bit keys from earlier
-    // envelopes still open; this governs generation only.
-    private const int KeyBytes = 16;
-    // AES-GCM nonce length (96-bit, the GCM-recommended size).
-    private const int IvBytes = 12;
-    // AES-GCM authentication-tag length (128-bit).
-    private const int TagBytes = 16;
+  // AES-128 data-key length for fresh case keys. Decrypt is length-agnostic
+  // (AesGcm picks 128/192/256 by key length), so 256-bit keys from earlier
+  // envelopes still open; this governs generation only.
+  private const int KeyBytes = 16;
+  // AES-GCM nonce length (96-bit, the GCM-recommended size).
+  private const int IvBytes = 12;
+  // AES-GCM authentication-tag length (128-bit).
+  private const int TagBytes = 16;
 
-    private readonly IRandomBytes _random;
+  private readonly IRandomBytes _random;
 
-    /// <summary>Construct with the default system CSPRNG.</summary>
-    public CaseCrypto() : this(new SystemRandomBytes()) { }
+  /// <summary>Construct with the default system CSPRNG.</summary>
+  public CaseCrypto() : this(new SystemRandomBytes()) { }
 
-    /// <summary>Construct with an injected CSPRNG (tests use a deterministic one).</summary>
-    public CaseCrypto(IRandomBytes random) =>
-        _random = random ?? throw new ArgumentNullException(nameof(random));
+  /// <summary>Construct with an injected CSPRNG (tests use a deterministic one).</summary>
+  public CaseCrypto(IRandomBytes random) =>
+      _random = random ?? throw new ArgumentNullException(nameof(random));
 
 #if NET8_0_OR_GREATER
     /// <summary>Encrypt a JSON-serializable payload under a fresh 128-bit key,
@@ -172,30 +172,30 @@ public sealed class CaseCrypto
         }
     }
 #else
-    /// <summary>Not supported on netstandard2.0 — AES-GCM is unavailable. Target
-    /// net8.0+.</summary>
-    public EncryptedCase Encrypt(string product, object? payload) => throw NotSupportedOnLegacyTarget();
+  /// <summary>Not supported on netstandard2.0 — AES-GCM is unavailable. Target
+  /// net8.0+.</summary>
+  public EncryptedCase Encrypt(string product, object? payload) => throw NotSupportedOnLegacyTarget();
 
-    /// <summary>Not supported on netstandard2.0 — AES-GCM is unavailable. Target
-    /// net8.0+.</summary>
-    public JsonElement Decrypt(string product, CaseEnvelope envelope, string keyFragment) => throw NotSupportedOnLegacyTarget();
+  /// <summary>Not supported on netstandard2.0 — AES-GCM is unavailable. Target
+  /// net8.0+.</summary>
+  public JsonElement Decrypt(string product, CaseEnvelope envelope, string keyFragment) => throw NotSupportedOnLegacyTarget();
 
-    private static PlatformNotSupportedException NotSupportedOnLegacyTarget() =>
-        new PlatformNotSupportedException(
-            "CaseCrypto: AES-GCM is not available on netstandard2.0. Target net8.0+.");
+  private static PlatformNotSupportedException NotSupportedOnLegacyTarget() =>
+      new PlatformNotSupportedException(
+          "CaseCrypto: AES-GCM is not available on netstandard2.0. Target net8.0+.");
 #endif
 
-    private static string BytesToBase64Url(byte[] bytes) =>
-        Convert.ToBase64String(bytes).Replace('+', '-').Replace('/', '_').TrimEnd('=');
+  private static string BytesToBase64Url(byte[] bytes) =>
+      Convert.ToBase64String(bytes).Replace('+', '-').Replace('/', '_').TrimEnd('=');
 
-    // Decode a fragment key. Accepts the base64url share-link form (with or
-    // without padding) and standard base64, mirroring the TS decoder that
-    // normalizes the URL-safe alphabet before decoding.
-    private static byte[] DecodeFragmentKey(string fragment)
-    {
-        var normalized = fragment.Replace('-', '+').Replace('_', '/');
-        var padding = normalized.Length % 4;
-        if (padding > 0) normalized += new string('=', 4 - padding);
-        return Convert.FromBase64String(normalized);
-    }
+  // Decode a fragment key. Accepts the base64url share-link form (with or
+  // without padding) and standard base64, mirroring the TS decoder that
+  // normalizes the URL-safe alphabet before decoding.
+  private static byte[] DecodeFragmentKey(string fragment)
+  {
+    var normalized = fragment.Replace('-', '+').Replace('_', '/');
+    var padding = normalized.Length % 4;
+    if (padding > 0) normalized += new string('=', 4 - padding);
+    return Convert.FromBase64String(normalized);
+  }
 }

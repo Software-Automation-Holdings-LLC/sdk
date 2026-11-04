@@ -18,12 +18,12 @@ namespace Isa.Sdk.Zyins.Reference;
 [JsonConverter(typeof(SortJsonConverter))]
 public enum Sort
 {
-    /// <summary>Descending prescription frequency from
-    /// <c>frequency_graphs.use_map</c>. Default.</summary>
-    MostCommonFirst = 0,
+  /// <summary>Descending prescription frequency from
+  /// <c>frequency_graphs.use_map</c>. Default.</summary>
+  MostCommonFirst = 0,
 
-    /// <summary>Alphabetical (invariant culture) by display name.</summary>
-    Alphabetical = 1,
+  /// <summary>Alphabetical (invariant culture) by display name.</summary>
+  Alphabetical = 1,
 }
 
 /// <summary>String-backed converter so JSON emits
@@ -32,31 +32,31 @@ public enum Sort
 /// SDKs.</summary>
 internal sealed class SortJsonConverter : JsonConverter<Sort>
 {
-    private const string MostCommonFirstWire = "most_common_first";
-    private const string AlphabeticalWire = "alphabetical";
+  private const string MostCommonFirstWire = "most_common_first";
+  private const string AlphabeticalWire = "alphabetical";
 
-    public override Sort Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
+  public override Sort Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
+  {
+    if (reader.TokenType != JsonTokenType.String)
     {
-        if (reader.TokenType != JsonTokenType.String)
-        {
-            throw new JsonException($"Sort: expected string token, got {reader.TokenType}");
-        }
-        var value = reader.GetString();
-        return value switch
-        {
-            MostCommonFirstWire => Sort.MostCommonFirst,
-            AlphabeticalWire => Sort.Alphabetical,
-            _ => throw new JsonException($"Sort: unknown wire value '{value}'"),
-        };
+      throw new JsonException($"Sort: expected string token, got {reader.TokenType}");
     }
+    var value = reader.GetString();
+    return value switch
+    {
+      MostCommonFirstWire => Sort.MostCommonFirst,
+      AlphabeticalWire => Sort.Alphabetical,
+      _ => throw new JsonException($"Sort: unknown wire value '{value}'"),
+    };
+  }
 
-    public override void Write(Utf8JsonWriter writer, Sort value, JsonSerializerOptions options)
+  public override void Write(Utf8JsonWriter writer, Sort value, JsonSerializerOptions options)
+  {
+    writer.WriteStringValue(value switch
     {
-        writer.WriteStringValue(value switch
-        {
-            Sort.MostCommonFirst => MostCommonFirstWire,
-            Sort.Alphabetical => AlphabeticalWire,
-            _ => throw new JsonException($"Sort: unmapped enum value {(int)value}"),
-        });
-    }
+      Sort.MostCommonFirst => MostCommonFirstWire,
+      Sort.Alphabetical => AlphabeticalWire,
+      _ => throw new JsonException($"Sort: unmapped enum value {(int)value}"),
+    });
+  }
 }

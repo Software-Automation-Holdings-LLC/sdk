@@ -11,9 +11,9 @@
 // variants of one concept resolve identically, while severity qualifiers
 // stay distinct (MILD vs SEVERE differ in letter multiset):
 //
-//   "SEVERE COPD"   → "CCDEEOPRSV"
-//   "COPD (SEVERE)" → "CCDEEOPRSV"
-//   "COPD (MILD)"   → "CCDDILMOP"
+//   "SEVERE COPD"   → "CDEEEOPRSV"
+//   "COPD (SEVERE)" → "CDEEEOPRSV"
+//   "COPD (MILD)"   → "CDDILMOP"
 //
 // Used ONLY for word-order-invariant NAME matching. Opaque catalog ids
 // (e.g. HIGHBLOODPRESSURE, cond_<ULID>) are never keyed this way — sorting
@@ -26,30 +26,30 @@ namespace Isa.Sdk.Zyins.Reference;
 
 internal static class CheckKey
 {
-    /// <summary>Normalize free text to the engine's sorted condition
-    /// check-key.</summary>
-    public static string Normalize(string? text)
+  /// <summary>Normalize free text to the engine's sorted condition
+  /// check-key.</summary>
+  public static string Normalize(string? text)
+  {
+    if (string.IsNullOrEmpty(text))
     {
-        if (string.IsNullOrEmpty(text))
-        {
-            return string.Empty;
-        }
-        var upper = text!.ToUpperInvariant();
-        var buf = new char[upper.Length];
-        var n = 0;
-        for (var i = 0; i < upper.Length; i++)
-        {
-            var ch = upper[i];
-            if ((ch >= '0' && ch <= '9') || (ch >= 'A' && ch <= 'Z'))
-            {
-                buf[n++] = ch;
-            }
-        }
-        if (n == 0)
-        {
-            return string.Empty;
-        }
-        Array.Sort(buf, 0, n);
-        return new string(buf, 0, n);
+      return string.Empty;
     }
+    var upper = text!.ToUpperInvariant();
+    var buf = new char[upper.Length];
+    var n = 0;
+    for (var i = 0; i < upper.Length; i++)
+    {
+      var ch = upper[i];
+      if ((ch >= '0' && ch <= '9') || (ch >= 'A' && ch <= 'Z'))
+      {
+        buf[n++] = ch;
+      }
+    }
+    if (n == 0)
+    {
+      return string.Empty;
+    }
+    Array.Sort(buf, 0, n);
+    return new string(buf, 0, n);
+  }
 }

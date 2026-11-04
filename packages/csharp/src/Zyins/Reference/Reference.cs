@@ -28,37 +28,37 @@ namespace Isa.Sdk.Zyins.Reference;
 /// or either). Never throws on a miss.</summary>
 public interface IConceptMatcher
 {
-    /// <summary>Resolve <paramref name="text"/> against the catalog. On a
-    /// miss returns an unknown handle (<see cref="IConcept.IsKnown"/> =
-    /// <c>false</c>, <see cref="IConcept.Id"/> = <c>null</c>,
-    /// <see cref="IConcept.InputText"/> preserved verbatim).</summary>
-    IConcept Match(string text, DatasetBundleV3 bundle);
+  /// <summary>Resolve <paramref name="text"/> against the catalog. On a
+  /// miss returns an unknown handle (<see cref="IConcept.IsKnown"/> =
+  /// <c>false</c>, <see cref="IConcept.Id"/> = <c>null</c>,
+  /// <see cref="IConcept.InputText"/> preserved verbatim).</summary>
+  IConcept Match(string text, DatasetBundleV3 bundle);
 }
 
 /// <summary>Matcher specialized to the medication catalog.</summary>
 public interface IMedicationMatcher : IConceptMatcher
 {
-    /// <summary>List every medication in the catalog as a typed handle,
-    /// in server-supplied order. Tier-3 sugar.</summary>
-    IReadOnlyList<IMedicationConcept> List(DatasetBundleV3 bundle);
+  /// <summary>List every medication in the catalog as a typed handle,
+  /// in server-supplied order. Tier-3 sugar.</summary>
+  IReadOnlyList<IMedicationConcept> List(DatasetBundleV3 bundle);
 }
 
 /// <summary>Matcher specialized to the condition catalog.</summary>
 public interface IConditionMatcher : IConceptMatcher
 {
-    /// <summary>List every condition in the catalog as a typed handle,
-    /// in server-supplied order. Tier-3 sugar.</summary>
-    IReadOnlyList<IConditionConcept> List(DatasetBundleV3 bundle);
+  /// <summary>List every condition in the catalog as a typed handle,
+  /// in server-supplied order. Tier-3 sugar.</summary>
+  IReadOnlyList<IConditionConcept> List(DatasetBundleV3 bundle);
 }
 
 /// <summary>Matcher across both catalog axes (conditions first, then
 /// medications — the typical "user typed a symptom" case).</summary>
 public interface IAnyConceptMatcher : IConceptMatcher
 {
-    /// <summary>Bulk match. Each text resolves independently; unknown
-    /// texts produce unknown handles inline so positional alignment
-    /// with the input list is preserved. Tier-3 sugar.</summary>
-    IReadOnlyList<IConcept> MatchMany(IEnumerable<string> texts, DatasetBundleV3 bundle);
+  /// <summary>Bulk match. Each text resolves independently; unknown
+  /// texts produce unknown handles inline so positional alignment
+  /// with the input list is preserved. Tier-3 sugar.</summary>
+  IReadOnlyList<IConcept> MatchMany(IEnumerable<string> texts, DatasetBundleV3 bundle);
 }
 
 /// <summary>Instance-shaped view of the <see cref="Reference"/> static
@@ -67,21 +67,21 @@ public interface IAnyConceptMatcher : IConceptMatcher
 /// without reaching into a static class.</summary>
 public interface IReferenceFacade
 {
-    /// <summary>Free-text → medication concept.</summary>
-    IMedicationMatcher Medications { get; }
-    /// <summary>Free-text → condition concept.</summary>
-    IConditionMatcher Conditions { get; }
-    /// <summary>Free-text → concept across both axes.</summary>
-    IAnyConceptMatcher Concepts { get; }
+  /// <summary>Free-text → medication concept.</summary>
+  IMedicationMatcher Medications { get; }
+  /// <summary>Free-text → condition concept.</summary>
+  IConditionMatcher Conditions { get; }
+  /// <summary>Free-text → concept across both axes.</summary>
+  IAnyConceptMatcher Concepts { get; }
 }
 
 internal sealed class ReferenceFacade : IReferenceFacade
 {
-    public static readonly IReferenceFacade Instance = new ReferenceFacade();
-    private ReferenceFacade() { }
-    public IMedicationMatcher Medications => Reference.Medications;
-    public IConditionMatcher Conditions => Reference.Conditions;
-    public IAnyConceptMatcher Concepts => Reference.Concepts;
+  public static readonly IReferenceFacade Instance = new ReferenceFacade();
+  private ReferenceFacade() { }
+  public IMedicationMatcher Medications => Reference.Medications;
+  public IConditionMatcher Conditions => Reference.Conditions;
+  public IAnyConceptMatcher Concepts => Reference.Concepts;
 }
 
 /// <summary>The `isa.zyins.reference` namespace. Static facade — every
@@ -91,15 +91,15 @@ internal sealed class ReferenceFacade : IReferenceFacade
 /// cost is paid once per dataset version.</summary>
 public static class Reference
 {
-    /// <summary>Free-text → <see cref="IMedicationConcept"/>.</summary>
-    public static IMedicationMatcher Medications { get; } = new MedicationsMatcher();
+  /// <summary>Free-text → <see cref="IMedicationConcept"/>.</summary>
+  public static IMedicationMatcher Medications { get; } = new MedicationsMatcher();
 
-    /// <summary>Free-text → <see cref="IConditionConcept"/>.</summary>
-    public static IConditionMatcher Conditions { get; } = new ConditionsMatcher();
+  /// <summary>Free-text → <see cref="IConditionConcept"/>.</summary>
+  public static IConditionMatcher Conditions { get; } = new ConditionsMatcher();
 
-    /// <summary>Free-text → <see cref="IConcept"/> across both axes
-    /// (conditions tried first).</summary>
-    public static IAnyConceptMatcher Concepts { get; } = new AnyConceptMatcher();
+  /// <summary>Free-text → <see cref="IConcept"/> across both axes
+  /// (conditions tried first).</summary>
+  public static IAnyConceptMatcher Concepts { get; } = new AnyConceptMatcher();
 }
 
 // ────────────────────────────────────────────────────────────────────────
@@ -108,83 +108,83 @@ public static class Reference
 
 internal sealed class MedicationsMatcher : IMedicationMatcher
 {
-    public IConcept Match(string text, DatasetBundleV3 bundle)
+  public IConcept Match(string text, DatasetBundleV3 bundle)
+  {
+    if (text is null) throw new ArgumentNullException(nameof(text));
+    if (bundle is null) throw new ArgumentNullException(nameof(bundle));
+    var index = ReferenceIndex.ForBundle(bundle);
+    if (index.ResolveMedication(text) is { } id)
     {
-        if (text is null) throw new ArgumentNullException(nameof(text));
-        if (bundle is null) throw new ArgumentNullException(nameof(bundle));
-        var index = ReferenceIndex.ForBundle(bundle);
-        if (index.ResolveMedication(text) is { } id)
-        {
-            return Concept.Medication(index, id, text);
-        }
-        return Concept.Unknown(text);
+      return Concept.Medication(index, id, text);
     }
+    return Concept.Unknown(text);
+  }
 
-    public IReadOnlyList<IMedicationConcept> List(DatasetBundleV3 bundle)
+  public IReadOnlyList<IMedicationConcept> List(DatasetBundleV3 bundle)
+  {
+    if (bundle is null) throw new ArgumentNullException(nameof(bundle));
+    var index = ReferenceIndex.ForBundle(bundle);
+    var items = bundle.Medications.Items;
+    var built = new List<IMedicationConcept>(items.Count);
+    foreach (var row in items)
     {
-        if (bundle is null) throw new ArgumentNullException(nameof(bundle));
-        var index = ReferenceIndex.ForBundle(bundle);
-        var items = bundle.Medications.Items;
-        var built = new List<IMedicationConcept>(items.Count);
-        foreach (var row in items)
-        {
-            built.Add(Concept.Medication(index, row.Id, row.Name));
-        }
-        return built;
+      built.Add(Concept.Medication(index, row.Id, row.Name));
     }
+    return built;
+  }
 }
 
 internal sealed class ConditionsMatcher : IConditionMatcher
 {
-    public IConcept Match(string text, DatasetBundleV3 bundle)
+  public IConcept Match(string text, DatasetBundleV3 bundle)
+  {
+    if (text is null) throw new ArgumentNullException(nameof(text));
+    if (bundle is null) throw new ArgumentNullException(nameof(bundle));
+    var index = ReferenceIndex.ForBundle(bundle);
+    if (index.ResolveCondition(text) is { } id)
     {
-        if (text is null) throw new ArgumentNullException(nameof(text));
-        if (bundle is null) throw new ArgumentNullException(nameof(bundle));
-        var index = ReferenceIndex.ForBundle(bundle);
-        if (index.ResolveCondition(text) is { } id)
-        {
-            return Concept.Condition(index, id, text);
-        }
-        return Concept.Unknown(text);
+      return Concept.Condition(index, id, text);
     }
+    return Concept.Unknown(text);
+  }
 
-    public IReadOnlyList<IConditionConcept> List(DatasetBundleV3 bundle)
+  public IReadOnlyList<IConditionConcept> List(DatasetBundleV3 bundle)
+  {
+    if (bundle is null) throw new ArgumentNullException(nameof(bundle));
+    var index = ReferenceIndex.ForBundle(bundle);
+    var items = bundle.Conditions.Items;
+    var built = new List<IConditionConcept>(items.Count);
+    foreach (var row in items)
     {
-        if (bundle is null) throw new ArgumentNullException(nameof(bundle));
-        var index = ReferenceIndex.ForBundle(bundle);
-        var items = bundle.Conditions.Items;
-        var built = new List<IConditionConcept>(items.Count);
-        foreach (var row in items)
-        {
-            built.Add(Concept.Condition(index, row.Id, row.Name));
-        }
-        return built;
+      built.Add(Concept.Condition(index, row.Id, row.Name));
     }
+    return built;
+  }
 }
 
 internal sealed class AnyConceptMatcher : IAnyConceptMatcher
 {
-    public IConcept Match(string text, DatasetBundleV3 bundle)
-    {
-        if (text is null) throw new ArgumentNullException(nameof(text));
-        if (bundle is null) throw new ArgumentNullException(nameof(bundle));
-        var index = ReferenceIndex.ForBundle(bundle);
-        if (index.ResolveCondition(text) is { } condId) return Concept.Condition(index, condId, text);
-        if (index.ResolveMedication(text) is { } medId) return Concept.Medication(index, medId, text);
-        return Concept.Unknown(text);
-    }
+  public IConcept Match(string text, DatasetBundleV3 bundle)
+  {
+    if (text is null) throw new ArgumentNullException(nameof(text));
+    if (bundle is null) throw new ArgumentNullException(nameof(bundle));
+    var index = ReferenceIndex.ForBundle(bundle);
+    if (index.ResolveCondition(text) is { } condId) return Concept.Condition(index, condId, text);
+    if (index.ResolveMedication(text) is { } medId) return Concept.Medication(index, medId, text);
+    return Concept.Unknown(text);
+  }
 
-    public IReadOnlyList<IConcept> MatchMany(IEnumerable<string> texts, DatasetBundleV3 bundle)
+  public IReadOnlyList<IConcept> MatchMany(IEnumerable<string> texts, DatasetBundleV3 bundle)
+  {
+    if (texts is null) throw new ArgumentNullException(nameof(texts));
+    if (bundle is null) throw new ArgumentNullException(nameof(bundle));
+    var built = new List<IConcept>();
+    foreach (var t in texts)
     {
-        if (texts is null) throw new ArgumentNullException(nameof(texts));
-        if (bundle is null) throw new ArgumentNullException(nameof(bundle));
-        var built = new List<IConcept>();
-        foreach (var t in texts)
-        {
-            built.Add(Match(t ?? string.Empty, bundle));
-        }
-        return built;
+      built.Add(Match(t ?? string.Empty, bundle));
     }
+    return built;
+  }
 }
 
 // ────────────────────────────────────────────────────────────────────────
@@ -197,175 +197,175 @@ internal sealed class AnyConceptMatcher : IAnyConceptMatcher
 
 internal abstract class Concept : IConcept
 {
-    private static readonly IReadOnlyList<IConditionConcept> EmptyConditions =
-        Array.Empty<IConditionConcept>();
-    private static readonly IReadOnlyList<IMedicationConcept> EmptyMedications =
-        Array.Empty<IMedicationConcept>();
+  private static readonly IReadOnlyList<IConditionConcept> EmptyConditions =
+      Array.Empty<IConditionConcept>();
+  private static readonly IReadOnlyList<IMedicationConcept> EmptyMedications =
+      Array.Empty<IMedicationConcept>();
 
-    protected Concept(string? id, string name, ConceptKind kind, bool isKnown, string inputText)
+  protected Concept(string? id, string name, ConceptKind kind, bool isKnown, string inputText)
+  {
+    Id = id;
+    Name = name;
+    Kind = kind;
+    IsKnown = isKnown;
+    InputText = inputText;
+  }
+
+  public string? Id { get; }
+  public string Name { get; }
+  public ConceptKind Kind { get; }
+  public bool IsKnown { get; }
+  public string InputText { get; }
+
+  public virtual IReadOnlyList<IConditionConcept> Conditions(Sort sort = Sort.MostCommonFirst)
+      => EmptyConditions;
+
+  public virtual IReadOnlyList<IMedicationConcept> Medications(Sort sort = Sort.MostCommonFirst)
+      => EmptyMedications;
+
+  public bool Equals(IConcept? other)
+  {
+    if (other is null) return false;
+    if (Kind != other.Kind) return false;
+    if (IsKnown != other.IsKnown) return false;
+    if (!IsKnown)
     {
-        Id = id;
-        Name = name;
-        Kind = kind;
-        IsKnown = isKnown;
-        InputText = inputText;
+      // Two unknown handles equate only when their input text is
+      // identical — there's no opaque id to compare on.
+      return string.Equals(InputText, other.InputText, StringComparison.Ordinal);
     }
+    return string.Equals(Id, other.Id, StringComparison.Ordinal);
+  }
 
-    public string? Id { get; }
-    public string Name { get; }
-    public ConceptKind Kind { get; }
-    public bool IsKnown { get; }
-    public string InputText { get; }
+  public override bool Equals(object? obj) => obj is IConcept other && Equals(other);
 
-    public virtual IReadOnlyList<IConditionConcept> Conditions(Sort sort = Sort.MostCommonFirst)
-        => EmptyConditions;
-
-    public virtual IReadOnlyList<IMedicationConcept> Medications(Sort sort = Sort.MostCommonFirst)
-        => EmptyMedications;
-
-    public bool Equals(IConcept? other)
+  public override int GetHashCode()
+  {
+    unchecked
     {
-        if (other is null) return false;
-        if (Kind != other.Kind) return false;
-        if (IsKnown != other.IsKnown) return false;
-        if (!IsKnown)
-        {
-            // Two unknown handles equate only when their input text is
-            // identical — there's no opaque id to compare on.
-            return string.Equals(InputText, other.InputText, StringComparison.Ordinal);
-        }
-        return string.Equals(Id, other.Id, StringComparison.Ordinal);
+      var h = (int)Kind * 397;
+      h ^= IsKnown ? 1 : 0;
+      h = (h * 397) ^ (IsKnown ? (Id?.GetHashCode() ?? 0) : (InputText?.GetHashCode() ?? 0));
+      return h;
     }
+  }
 
-    public override bool Equals(object? obj) => obj is IConcept other && Equals(other);
+  public static IMedicationConcept Medication(ReferenceIndex index, string id, string inputText)
+      => new MedicationConcept(index, id, inputText);
 
-    public override int GetHashCode()
+  public static IConditionConcept Condition(ReferenceIndex index, string id, string inputText)
+      => new ConditionConcept(index, id, inputText);
+
+  public static IConcept Unknown(string inputText) => new UnknownConcept(inputText);
+
+  // ── Internal sort helpers — pure functions over the id list. ────────
+
+  protected static List<string> OrderByFrequency(
+      IReadOnlyList<string> ids,
+      Func<string, int> frequency)
+  {
+    // Stable: tie-break by original input index (server display order).
+    var indexed = new (string Id, int Index, int Freq)[ids.Count];
+    for (var i = 0; i < ids.Count; i++)
     {
-        unchecked
-        {
-            var h = (int)Kind * 397;
-            h ^= IsKnown ? 1 : 0;
-            h = (h * 397) ^ (IsKnown ? (Id?.GetHashCode() ?? 0) : (InputText?.GetHashCode() ?? 0));
-            return h;
-        }
+      indexed[i] = (ids[i], i, frequency(ids[i]));
     }
-
-    public static IMedicationConcept Medication(ReferenceIndex index, string id, string inputText)
-        => new MedicationConcept(index, id, inputText);
-
-    public static IConditionConcept Condition(ReferenceIndex index, string id, string inputText)
-        => new ConditionConcept(index, id, inputText);
-
-    public static IConcept Unknown(string inputText) => new UnknownConcept(inputText);
-
-    // ── Internal sort helpers — pure functions over the id list. ────────
-
-    protected static List<string> OrderByFrequency(
-        IReadOnlyList<string> ids,
-        Func<string, int> frequency)
+    Array.Sort(indexed, (a, b) =>
     {
-        // Stable: tie-break by original input index (server display order).
-        var indexed = new (string Id, int Index, int Freq)[ids.Count];
-        for (var i = 0; i < ids.Count; i++)
-        {
-            indexed[i] = (ids[i], i, frequency(ids[i]));
-        }
-        Array.Sort(indexed, (a, b) =>
-        {
-            var cmp = b.Freq.CompareTo(a.Freq);
-            return cmp != 0 ? cmp : a.Index.CompareTo(b.Index);
-        });
-        var result = new List<string>(ids.Count);
-        for (var i = 0; i < indexed.Length; i++) result.Add(indexed[i].Id);
-        return result;
-    }
+      var cmp = b.Freq.CompareTo(a.Freq);
+      return cmp != 0 ? cmp : a.Index.CompareTo(b.Index);
+    });
+    var result = new List<string>(ids.Count);
+    for (var i = 0; i < indexed.Length; i++) result.Add(indexed[i].Id);
+    return result;
+  }
 
-    protected static List<string> OrderByName(
-        IReadOnlyList<string> ids,
-        Func<string, string?> nameOf)
+  protected static List<string> OrderByName(
+      IReadOnlyList<string> ids,
+      Func<string, string?> nameOf)
+  {
+    var indexed = new (string Id, int Index, string Name)[ids.Count];
+    for (var i = 0; i < ids.Count; i++)
     {
-        var indexed = new (string Id, int Index, string Name)[ids.Count];
-        for (var i = 0; i < ids.Count; i++)
-        {
-            indexed[i] = (ids[i], i, nameOf(ids[i]) ?? ids[i]);
-        }
-        Array.Sort(indexed, (a, b) =>
-        {
-            var cmp = string.Compare(a.Name, b.Name, StringComparison.InvariantCulture);
-            return cmp != 0 ? cmp : a.Index.CompareTo(b.Index);
-        });
-        var result = new List<string>(ids.Count);
-        for (var i = 0; i < indexed.Length; i++) result.Add(indexed[i].Id);
-        return result;
+      indexed[i] = (ids[i], i, nameOf(ids[i]) ?? ids[i]);
     }
+    Array.Sort(indexed, (a, b) =>
+    {
+      var cmp = string.Compare(a.Name, b.Name, StringComparison.InvariantCulture);
+      return cmp != 0 ? cmp : a.Index.CompareTo(b.Index);
+    });
+    var result = new List<string>(ids.Count);
+    for (var i = 0; i < indexed.Length; i++) result.Add(indexed[i].Id);
+    return result;
+  }
 }
 
 internal sealed class MedicationConcept : Concept, IMedicationConcept
 {
-    private readonly ReferenceIndex _index;
-    private readonly string _id;
-    private readonly string _inputText;
+  private readonly ReferenceIndex _index;
+  private readonly string _id;
+  private readonly string _inputText;
 
-    public MedicationConcept(ReferenceIndex index, string id, string inputText)
-        : base(id, index.MedicationName(id) ?? inputText, ConceptKind.Medication, isKnown: true, inputText)
-    {
-        _index = index;
-        _id = id;
-        _inputText = inputText;
-    }
+  public MedicationConcept(ReferenceIndex index, string id, string inputText)
+      : base(id, index.MedicationName(id) ?? inputText, ConceptKind.Medication, isKnown: true, inputText)
+  {
+    _index = index;
+    _id = id;
+    _inputText = inputText;
+  }
 
-    public override IReadOnlyList<IConditionConcept> Conditions(Sort sort = Sort.MostCommonFirst)
+  public override IReadOnlyList<IConditionConcept> Conditions(Sort sort = Sort.MostCommonFirst)
+  {
+    var ids = _index.ConditionsForMedication(_id);
+    if (ids.Count == 0) return Array.Empty<IConditionConcept>();
+    var ordered = sort == Sort.Alphabetical
+        ? OrderByName(ids, cid => _index.ConditionName(cid))
+        : OrderByFrequency(ids, cid => _index.ConditionFrequencyForMedication(_id, cid));
+    var built = new List<IConditionConcept>(ordered.Count);
+    foreach (var cid in ordered)
     {
-        var ids = _index.ConditionsForMedication(_id);
-        if (ids.Count == 0) return Array.Empty<IConditionConcept>();
-        var ordered = sort == Sort.Alphabetical
-            ? OrderByName(ids, cid => _index.ConditionName(cid))
-            : OrderByFrequency(ids, cid => _index.ConditionFrequencyForMedication(_id, cid));
-        var built = new List<IConditionConcept>(ordered.Count);
-        foreach (var cid in ordered)
-        {
-            if (!_index.HasCondition(cid)) continue;
-            built.Add(new ConditionConcept(_index, cid, _inputText));
-        }
-        return built;
+      if (!_index.HasCondition(cid)) continue;
+      built.Add(new ConditionConcept(_index, cid, _inputText));
     }
+    return built;
+  }
 }
 
 internal sealed class ConditionConcept : Concept, IConditionConcept
 {
-    private readonly ReferenceIndex _index;
-    private readonly string _id;
-    private readonly string _inputText;
+  private readonly ReferenceIndex _index;
+  private readonly string _id;
+  private readonly string _inputText;
 
-    public ConditionConcept(ReferenceIndex index, string id, string inputText)
-        : base(id, index.ConditionName(id) ?? inputText, ConceptKind.Condition, isKnown: true, inputText)
-    {
-        _index = index;
-        _id = id;
-        _inputText = inputText;
-    }
+  public ConditionConcept(ReferenceIndex index, string id, string inputText)
+      : base(id, index.ConditionName(id) ?? inputText, ConceptKind.Condition, isKnown: true, inputText)
+  {
+    _index = index;
+    _id = id;
+    _inputText = inputText;
+  }
 
-    public override IReadOnlyList<IMedicationConcept> Medications(Sort sort = Sort.MostCommonFirst)
+  public override IReadOnlyList<IMedicationConcept> Medications(Sort sort = Sort.MostCommonFirst)
+  {
+    var ids = _index.MedicationsForCondition(_id);
+    if (ids.Count == 0) return Array.Empty<IMedicationConcept>();
+    var ordered = sort == Sort.Alphabetical
+        ? OrderByName(ids, mid => _index.MedicationName(mid))
+        : OrderByFrequency(ids, mid => _index.ConditionFrequencyForMedication(mid, _id));
+    var built = new List<IMedicationConcept>(ordered.Count);
+    foreach (var mid in ordered)
     {
-        var ids = _index.MedicationsForCondition(_id);
-        if (ids.Count == 0) return Array.Empty<IMedicationConcept>();
-        var ordered = sort == Sort.Alphabetical
-            ? OrderByName(ids, mid => _index.MedicationName(mid))
-            : OrderByFrequency(ids, mid => _index.ConditionFrequencyForMedication(mid, _id));
-        var built = new List<IMedicationConcept>(ordered.Count);
-        foreach (var mid in ordered)
-        {
-            if (!_index.HasMedication(mid)) continue;
-            built.Add(new MedicationConcept(_index, mid, _inputText));
-        }
-        return built;
+      if (!_index.HasMedication(mid)) continue;
+      built.Add(new MedicationConcept(_index, mid, _inputText));
     }
+    return built;
+  }
 }
 
 internal sealed class UnknownConcept : Concept
 {
-    public UnknownConcept(string inputText)
-        : base(id: null, name: inputText, kind: ConceptKind.Unknown, isKnown: false, inputText)
-    {
-    }
+  public UnknownConcept(string inputText)
+      : base(id: null, name: inputText, kind: ConceptKind.Unknown, isKnown: false, inputText)
+  {
+  }
 }

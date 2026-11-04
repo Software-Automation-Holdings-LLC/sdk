@@ -21,50 +21,50 @@ namespace Isa.Sdk.Zyins.Reference;
 /// </summary>
 public sealed class DefaultMatchAlgorithm : IMatchAlgorithm
 {
-    /// <summary>Construct with an optional version tag pinning the
-    /// adapter to a specific catalog revision.</summary>
-    public DefaultMatchAlgorithm(string? versionTag = null)
+  /// <summary>Construct with an optional version tag pinning the
+  /// adapter to a specific catalog revision.</summary>
+  public DefaultMatchAlgorithm(string? versionTag = null)
+  {
+    VersionTag = versionTag;
+  }
+
+  /// <inheritdoc/>
+  public string? VersionTag { get; }
+
+  /// <summary>Return a clone with selected fields overridden.</summary>
+  public DefaultMatchAlgorithm Clone(string? versionTag = null) =>
+      new(versionTag ?? VersionTag);
+
+  /// <inheritdoc/>
+  public IConcept Match(string query, IReadOnlyCollection<IConcept> candidates)
+  {
+    if (query is null) throw new ArgumentNullException(nameof(query));
+    if (candidates is null) throw new ArgumentNullException(nameof(candidates));
+    var key = MakeKey.Normalize(query);
+    if (key.Length == 0) return Concept.Unknown(query);
+    // First pass: exact id key. Identity-preserving — the sorted
+    // fallback never reroutes a query that already matched here.
+    foreach (var candidate in candidates)
     {
-        VersionTag = versionTag;
+      if (candidate.Id is { } id && string.Equals(id, key, StringComparison.Ordinal))
+      {
+        return candidate;
+      }
     }
-
-    /// <inheritdoc/>
-    public string? VersionTag { get; }
-
-    /// <summary>Return a clone with selected fields overridden.</summary>
-    public DefaultMatchAlgorithm Clone(string? versionTag = null) =>
-        new(versionTag ?? VersionTag);
-
-    /// <inheritdoc/>
-    public IConcept Match(string query, IReadOnlyCollection<IConcept> candidates)
+    // Second pass: word-order-invariant name match via the engine sorted
+    // check-key. A strict superset; first candidate wins. Severity
+    // qualifiers stay distinct (different letter multisets).
+    var checkKey = CheckKey.Normalize(query);
+    if (checkKey.Length != 0)
     {
-        if (query is null) throw new ArgumentNullException(nameof(query));
-        if (candidates is null) throw new ArgumentNullException(nameof(candidates));
-        var key = MakeKey.Normalize(query);
-        if (key.Length == 0) return Concept.Unknown(query);
-        // First pass: exact id key. Identity-preserving — the sorted
-        // fallback never reroutes a query that already matched here.
-        foreach (var candidate in candidates)
+      foreach (var candidate in candidates)
+      {
+        if (string.Equals(CheckKey.Normalize(candidate.Name), checkKey, StringComparison.Ordinal))
         {
-            if (candidate.Id is { } id && string.Equals(id, key, StringComparison.Ordinal))
-            {
-                return candidate;
-            }
+          return candidate;
         }
-        // Second pass: word-order-invariant name match via the engine sorted
-        // check-key. A strict superset; first candidate wins. Severity
-        // qualifiers stay distinct (different letter multisets).
-        var checkKey = CheckKey.Normalize(query);
-        if (checkKey.Length != 0)
-        {
-            foreach (var candidate in candidates)
-            {
-                if (string.Equals(CheckKey.Normalize(candidate.Name), checkKey, StringComparison.Ordinal))
-                {
-                    return candidate;
-                }
-            }
-        }
-        return Concept.Unknown(query);
+      }
     }
+    return Concept.Unknown(query);
+  }
 }

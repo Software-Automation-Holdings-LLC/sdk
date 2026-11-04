@@ -50,224 +50,224 @@ internal sealed record QuoteOptionsWire(
 
 internal static class PrequalifyWireBuilder
 {
-    private static readonly string[] NicotineDurationWire =
-    [
-        "never", "within_12_months", "12_to_24_months", "24_to_36_months",
+  private static readonly string[] NicotineDurationWire =
+  [
+      "never", "within_12_months", "12_to_24_months", "24_to_36_months",
         "36_to_48_months", "48_to_60_months", "over_60_months",
     ];
 
-    internal static PrequalifyWireBody Build(PrequalifyInput input)
-    {
-        var applicant = input.Applicant;
-        var nicotine = ResolveNicotine(applicant);
-        var quoteType = input.Coverage.MonthlyBudget.HasValue ? "monthly_budget" : "face_amounts";
-        var amount = (input.Coverage.FaceValue ?? input.Coverage.MonthlyBudget ?? 0).ToString();
+  internal static PrequalifyWireBody Build(PrequalifyInput input)
+  {
+    var applicant = input.Applicant;
+    var nicotine = ResolveNicotine(applicant);
+    var quoteType = input.Coverage.MonthlyBudget.HasValue ? "monthly_budget" : "face_amounts";
+    var amount = (input.Coverage.FaceValue ?? input.Coverage.MonthlyBudget ?? 0).ToString();
 
-        return new PrequalifyWireBody(
-            DateOfBirth:    applicant.Dob,
-            Gender:         applicant.Sex == Sex.Male ? "male" : "female",
-            Height:         applicant.HeightInches,
-            Weight:         applicant.WeightPounds,
-            State:          applicant.State,
-            NicotineUsage:  nicotine,
-            Products:       input.Products.Select(p => p.Id).ToArray(),
-            Conditions:     applicant.Conditions.Select(c => new ConditionWire(c.Name, c.WasDiagnosed, c.LastTreatment)).ToArray(),
-            Medications:    applicant.Medications.Select(m => new MedicationWire(m.Name, m.Use, m.FirstFill, m.LastFill)).ToArray(),
-            QuoteOptions:   new QuoteOptionsWire([amount], quoteType),
-            Zip:            applicant.Zip);
+    return new PrequalifyWireBody(
+        DateOfBirth: applicant.Dob,
+        Gender: applicant.Sex == Sex.Male ? "male" : "female",
+        Height: applicant.HeightInches,
+        Weight: applicant.WeightPounds,
+        State: applicant.State,
+        NicotineUsage: nicotine,
+        Products: input.Products.Select(p => p.Id).ToArray(),
+        Conditions: applicant.Conditions.Select(c => new ConditionWire(c.Name, c.WasDiagnosed, c.LastTreatment)).ToArray(),
+        Medications: applicant.Medications.Select(m => new MedicationWire(m.Name, m.Use, m.FirstFill, m.LastFill)).ToArray(),
+        QuoteOptions: new QuoteOptionsWire([amount], quoteType),
+        Zip: applicant.Zip);
+  }
+
+  private static NicotineUsageWire ResolveNicotine(Applicant applicant)
+  {
+    if (applicant.NicotineUse is { } input)
+    {
+      var lastUsed = NicotineDurationWire[(int)input.LastUsed];
+      var productUsage = input.ProductUsage.Count > 0
+          ? input.ProductUsage.Select(p => new NicotineProductUsageWire(p.Type, p.Frequency)).ToArray()
+          : null;
+      return new NicotineUsageWire(lastUsed, productUsage);
     }
-
-    private static NicotineUsageWire ResolveNicotine(Applicant applicant)
-    {
-        if (applicant.NicotineUse is { } input)
-        {
-            var lastUsed = NicotineDurationWire[(int)input.LastUsed];
-            var productUsage = input.ProductUsage.Count > 0
-                ? input.ProductUsage.Select(p => new NicotineProductUsageWire(p.Type, p.Frequency)).ToArray()
-                : null;
-            return new NicotineUsageWire(lastUsed, productUsage);
-        }
 #pragma warning disable CS0618
-        var bucket = applicant.NicotineUseLegacy switch
-        {
-            NicotineUsage.None    => "never",
-            NicotineUsage.Current => "within_12_months",
-            NicotineUsage.Former  => "12_to_24_months",
-            _                     => "never",
-        };
+    var bucket = applicant.NicotineUseLegacy switch
+    {
+      NicotineUsage.None => "never",
+      NicotineUsage.Current => "within_12_months",
+      NicotineUsage.Former => "12_to_24_months",
+      _ => "never",
+    };
 #pragma warning restore CS0618
-        return new NicotineUsageWire(bucket);
-    }
+    return new NicotineUsageWire(bucket);
+  }
 }
 
 /// <summary>Sub-client for prequalification operations.</summary>
 public sealed class PrequalifySubClient
 {
-    private const string Path = "/v1/prequalify";
-    private readonly OperationContext _ctx;
+  private const string Path = "/v1/prequalify";
+  private readonly OperationContext _ctx;
 
-    internal PrequalifySubClient(OperationContext ctx) => _ctx = ctx;
+  internal PrequalifySubClient(OperationContext ctx) => _ctx = ctx;
 
-    /// <summary>
-    /// Run the prequalify decision for an applicant against the available products.
-    /// Builds the wire body, derives the idempotency key, signs the request,
-    /// and parses the response into typed plans.
-    /// </summary>
-    /// <param name="input">Applicant demographics, coverage shape, products to evaluate.</param>
-    /// <param name="ct">Cancellation token.</param>
-    /// <returns>
-    /// A <see cref="PrequalifyResult"/> containing the qualifying plans, the engine
-    /// request id, the SDK-derived idempotency key, and the retry-attempts count.
-    /// </returns>
-    /// <exception cref="ZyInsException">on 4xx/5xx wire responses (typed by code).</exception>
-    /// <example>
-    /// <code>
-    /// var result = await isa.Prequalify.RunAsync(new PrequalifyInput
-    /// {
-    ///     Applicant = new Applicant
-    ///     {
-    ///         Name         = "John Doe",
-    ///         Dob          = "1962-04-18",
-    ///         Sex          = Sex.Male,
-    ///         State        = "NC",
-    ///         HeightInches = 70,
-    ///         WeightLbs    = 195,
-    ///         NicotineUse  = NicotineUsage.None,
-    ///     },
-    ///     Coverage   = Coverage.FaceValue(25_000),
-    ///     Products   = new[] { "senior-life" },
-    /// });
-    /// </code>
-    /// </example>
-    /// <seealso href="https://docs.isaapi.com/zyins/prequalify"/>
-    public Task<PrequalifyResult> RunAsync(PrequalifyInput input, CancellationToken ct = default)
+  /// <summary>
+  /// Run the prequalify decision for an applicant against the available products.
+  /// Builds the wire body, derives the idempotency key, signs the request,
+  /// and parses the response into typed plans.
+  /// </summary>
+  /// <param name="input">Applicant demographics, coverage shape, products to evaluate.</param>
+  /// <param name="ct">Cancellation token.</param>
+  /// <returns>
+  /// A <see cref="PrequalifyResult"/> containing the qualifying plans, the engine
+  /// request id, the SDK-derived idempotency key, and the retry-attempts count.
+  /// </returns>
+  /// <exception cref="ZyInsException">on 4xx/5xx wire responses (typed by code).</exception>
+  /// <example>
+  /// <code>
+  /// var result = await isa.Prequalify.RunAsync(new PrequalifyInput
+  /// {
+  ///     Applicant = new Applicant
+  ///     {
+  ///         Name         = "John Doe",
+  ///         Dob          = "1962-04-18",
+  ///         Sex          = Sex.Male,
+  ///         State        = "NC",
+  ///         HeightInches = 70,
+  ///         WeightLbs    = 195,
+  ///         NicotineUse  = NicotineUsage.None,
+  ///     },
+  ///     Coverage   = Coverage.FaceValue(25_000),
+  ///     Products   = new[] { "senior-life" },
+  /// });
+  /// </code>
+  /// </example>
+  /// <seealso href="https://docs.isaapi.com/zyins/prequalify"/>
+  public Task<PrequalifyResult> RunAsync(PrequalifyInput input, CancellationToken ct = default)
+  {
+    if (input is null) throw new ArgumentNullException(nameof(input));
+    var wire = PrequalifyWireBuilder.Build(input);
+    return HttpDispatcher.PostJsonAsync<PrequalifyWireBody, PrequalifyResult>(_ctx, Path, wire, ct);
+  }
+
+  /// <summary>Run prequalify and return the full JSON envelope.</summary>
+  public Task<JsonObject> RunEnvelopeAsync(PrequalifyInput input, CancellationToken ct = default)
+  {
+    if (input is null) throw new ArgumentNullException(nameof(input));
+    var useLegacyWire = LegacyWire.Enabled;
+    if (useLegacyWire)
     {
-        if (input is null) throw new ArgumentNullException(nameof(input));
-        var wire = PrequalifyWireBuilder.Build(input);
-        return HttpDispatcher.PostJsonAsync<PrequalifyWireBody, PrequalifyResult>(_ctx, Path, wire, ct);
+      var body = LegacyWire.PrequalifyBodyFromApplicant(
+          input.Applicant,
+          LegacyWire.FaceAmountFromCoverage(input.Coverage));
+      return HttpDispatcher.PostEnvelopeAsync(_ctx, Path, body, ct);
     }
 
-    /// <summary>Run prequalify and return the full JSON envelope.</summary>
-    public Task<JsonObject> RunEnvelopeAsync(PrequalifyInput input, CancellationToken ct = default)
-    {
-        if (input is null) throw new ArgumentNullException(nameof(input));
-        var useLegacyWire = LegacyWire.Enabled;
-        if (useLegacyWire)
-        {
-            var body = LegacyWire.PrequalifyBodyFromApplicant(
-                input.Applicant,
-                LegacyWire.FaceAmountFromCoverage(input.Coverage));
-            return HttpDispatcher.PostEnvelopeAsync(_ctx, Path, body, ct);
-        }
+    var wire = PrequalifyWireBuilder.Build(input);
+    return HttpDispatcher.PostEnvelopeAsync(_ctx, Path, wire, ct);
+  }
 
-        var wire = PrequalifyWireBuilder.Build(input);
-        return HttpDispatcher.PostEnvelopeAsync(_ctx, Path, wire, ct);
-    }
-
-    /// <summary>Run a prequalify call and return the raw HTTP response alongside the parsed body.
-    /// Useful for inspecting headers (e.g. <c>X-Isa-Request-Id</c>, rate-limit headers).</summary>
-    public async Task<(PrequalifyResult Data, RawResponse Response)> WithRawResponseAsync(PrequalifyInput input, CancellationToken ct = default)
-    {
-        if (input is null) throw new ArgumentNullException(nameof(input));
-        var wire = PrequalifyWireBuilder.Build(input);
-        var (data, raw) = await HttpDispatcher.PostJsonRawAsync<PrequalifyWireBody, PrequalifyResult>(_ctx, Path, wire, ct).ConfigureAwait(false);
-        return (data, RawResponse.FromTransport(raw, new Uri(_ctx.BaseUrl, Path)));
-    }
+  /// <summary>Run a prequalify call and return the raw HTTP response alongside the parsed body.
+  /// Useful for inspecting headers (e.g. <c>X-Isa-Request-Id</c>, rate-limit headers).</summary>
+  public async Task<(PrequalifyResult Data, RawResponse Response)> WithRawResponseAsync(PrequalifyInput input, CancellationToken ct = default)
+  {
+    if (input is null) throw new ArgumentNullException(nameof(input));
+    var wire = PrequalifyWireBuilder.Build(input);
+    var (data, raw) = await HttpDispatcher.PostJsonRawAsync<PrequalifyWireBody, PrequalifyResult>(_ctx, Path, wire, ct).ConfigureAwait(false);
+    return (data, RawResponse.FromTransport(raw, new Uri(_ctx.BaseUrl, Path)));
+  }
 }
 
 /// <summary>Sub-client for quoting operations.</summary>
 public sealed class QuoteSubClient
 {
-    private const string Path = "/v1/quote";
-    private const string LegacyPath = "/v2/quote";
-    private readonly OperationContext _ctx;
+  private const string Path = "/v1/quote";
+  private const string LegacyPath = "/v2/quote";
+  private readonly OperationContext _ctx;
 
-    internal QuoteSubClient(OperationContext ctx) => _ctx = ctx;
+  internal QuoteSubClient(OperationContext ctx) => _ctx = ctx;
 
-    /// <summary>Run a quote call.</summary>
-    public Task<QuoteResult> RunAsync(QuoteInput input, CancellationToken ct = default)
+  /// <summary>Run a quote call.</summary>
+  public Task<QuoteResult> RunAsync(QuoteInput input, CancellationToken ct = default)
+  {
+    if (input is null) throw new ArgumentNullException(nameof(input));
+    return HttpDispatcher.PostJsonAsync<QuoteInput, QuoteResult>(_ctx, Path, input, ct);
+  }
+
+  /// <summary>Run quote and return the full JSON envelope.</summary>
+  public Task<JsonObject> RunEnvelopeAsync(QuoteInput input, CancellationToken ct = default)
+  {
+    if (input is null) throw new ArgumentNullException(nameof(input));
+    var useLegacyWire = LegacyWire.Enabled;
+    if (useLegacyWire)
     {
-        if (input is null) throw new ArgumentNullException(nameof(input));
-        return HttpDispatcher.PostJsonAsync<QuoteInput, QuoteResult>(_ctx, Path, input, ct);
+      var body = LegacyWire.QuoteBodyFromApplicant(
+          input.Applicant,
+          LegacyWire.FaceAmountFromCoverage(input.Coverage));
+      return HttpDispatcher.PostEnvelopeAsync(_ctx, LegacyPath, body, ct);
     }
 
-    /// <summary>Run quote and return the full JSON envelope.</summary>
-    public Task<JsonObject> RunEnvelopeAsync(QuoteInput input, CancellationToken ct = default)
-    {
-        if (input is null) throw new ArgumentNullException(nameof(input));
-        var useLegacyWire = LegacyWire.Enabled;
-        if (useLegacyWire)
-        {
-            var body = LegacyWire.QuoteBodyFromApplicant(
-                input.Applicant,
-                LegacyWire.FaceAmountFromCoverage(input.Coverage));
-            return HttpDispatcher.PostEnvelopeAsync(_ctx, LegacyPath, body, ct);
-        }
+    return HttpDispatcher.PostEnvelopeAsync(_ctx, Path, input, ct);
+  }
 
-        return HttpDispatcher.PostEnvelopeAsync(_ctx, Path, input, ct);
-    }
-
-    /// <summary>Run a quote call and return the raw HTTP response alongside the parsed body.</summary>
-    public async Task<(QuoteResult Data, RawResponse Response)> WithRawResponseAsync(QuoteInput input, CancellationToken ct = default)
-    {
-        if (input is null) throw new ArgumentNullException(nameof(input));
-        var (data, raw) = await HttpDispatcher.PostJsonRawAsync<QuoteInput, QuoteResult>(_ctx, Path, input, ct).ConfigureAwait(false);
-        return (data, RawResponse.FromTransport(raw, new Uri(_ctx.BaseUrl, Path)));
-    }
+  /// <summary>Run a quote call and return the raw HTTP response alongside the parsed body.</summary>
+  public async Task<(QuoteResult Data, RawResponse Response)> WithRawResponseAsync(QuoteInput input, CancellationToken ct = default)
+  {
+    if (input is null) throw new ArgumentNullException(nameof(input));
+    var (data, raw) = await HttpDispatcher.PostJsonRawAsync<QuoteInput, QuoteResult>(_ctx, Path, input, ct).ConfigureAwait(false);
+    return (data, RawResponse.FromTransport(raw, new Uri(_ctx.BaseUrl, Path)));
+  }
 }
 
 /// <summary>Sub-client for dataset discovery and retrieval.</summary>
 public sealed class DatasetsSubClient
 {
-    private const string ListPath = "/v1/datasets";
-    private readonly OperationContext _ctx;
+  private const string ListPath = "/v1/datasets";
+  private readonly OperationContext _ctx;
 
-    internal DatasetsSubClient(OperationContext ctx) => _ctx = ctx;
+  internal DatasetsSubClient(OperationContext ctx) => _ctx = ctx;
 
-    /// <summary>List all available datasets for this account.</summary>
-    public Task<IReadOnlyList<DatasetSummary>> ListAsync(CancellationToken ct = default) =>
-        HttpDispatcher.GetAsync<IReadOnlyList<DatasetSummary>>(_ctx, ListPath, ct: ct);
+  /// <summary>List all available datasets for this account.</summary>
+  public Task<IReadOnlyList<DatasetSummary>> ListAsync(CancellationToken ct = default) =>
+      HttpDispatcher.GetAsync<IReadOnlyList<DatasetSummary>>(_ctx, ListPath, ct: ct);
 
-    /// <summary>Retrieve a dataset by id.</summary>
-    public Task<Dataset> GetAsync(string id, CancellationToken ct = default)
-    {
-        if (string.IsNullOrWhiteSpace(id))
-            throw new ArgumentException("id must be non-empty", nameof(id));
-        return HttpDispatcher.GetAsync<Dataset>(_ctx, $"{ListPath}/{Uri.EscapeDataString(id)}", ct: ct);
-    }
+  /// <summary>Retrieve a dataset by id.</summary>
+  public Task<Dataset> GetAsync(string id, CancellationToken ct = default)
+  {
+    if (string.IsNullOrWhiteSpace(id))
+      throw new ArgumentException("id must be non-empty", nameof(id));
+    return HttpDispatcher.GetAsync<Dataset>(_ctx, $"{ListPath}/{Uri.EscapeDataString(id)}", ct: ct);
+  }
 }
 
 /// <summary>Sub-client for reference data (conditions, medications, products, ...).</summary>
 public sealed class ReferenceDataSubClient
 {
-    private const string PathBase = "/v1/reference-data";
-    private readonly OperationContext _ctx;
+  private const string PathBase = "/v1/reference-data";
+  private readonly OperationContext _ctx;
 
-    internal ReferenceDataSubClient(OperationContext ctx) => _ctx = ctx;
+  internal ReferenceDataSubClient(OperationContext ctx) => _ctx = ctx;
 
-    /// <summary>Fetch a reference-data block by kind (e.g. <c>conditions</c>, <c>medications</c>).</summary>
-    public Task<ReferenceDataResponse> GetAsync(string kind, CancellationToken ct = default)
-    {
-        if (string.IsNullOrWhiteSpace(kind))
-            throw new ArgumentException("kind must be non-empty", nameof(kind));
-        return HttpDispatcher.GetAsync<ReferenceDataResponse>(_ctx, $"{PathBase}/{Uri.EscapeDataString(kind)}", ct: ct);
-    }
+  /// <summary>Fetch a reference-data block by kind (e.g. <c>conditions</c>, <c>medications</c>).</summary>
+  public Task<ReferenceDataResponse> GetAsync(string kind, CancellationToken ct = default)
+  {
+    if (string.IsNullOrWhiteSpace(kind))
+      throw new ArgumentException("kind must be non-empty", nameof(kind));
+    return HttpDispatcher.GetAsync<ReferenceDataResponse>(_ctx, $"{PathBase}/{Uri.EscapeDataString(kind)}", ct: ct);
+  }
 }
 
 /// <summary>Sub-client for usage / billing.</summary>
 public sealed class UsageSubClient
 {
-    private const string Path = "/v1/usage";
-    private readonly OperationContext _ctx;
+  private const string Path = "/v1/usage";
+  private readonly OperationContext _ctx;
 
-    internal UsageSubClient(OperationContext ctx) => _ctx = ctx;
+  internal UsageSubClient(OperationContext ctx) => _ctx = ctx;
 
-    /// <summary>Get the usage summary for a billing period (e.g. <c>2026-05</c>).</summary>
-    public Task<UsageSummary> SummaryAsync(string period, CancellationToken ct = default)
-    {
-        if (string.IsNullOrWhiteSpace(period))
-            throw new ArgumentException("period must be non-empty", nameof(period));
-        var q = new Dictionary<string, string?> { ["period"] = period };
-        return HttpDispatcher.GetAsync<UsageSummary>(_ctx, Path, q, ct);
-    }
+  /// <summary>Get the usage summary for a billing period (e.g. <c>2026-05</c>).</summary>
+  public Task<UsageSummary> SummaryAsync(string period, CancellationToken ct = default)
+  {
+    if (string.IsNullOrWhiteSpace(period))
+      throw new ArgumentException("period must be non-empty", nameof(period));
+    var q = new Dictionary<string, string?> { ["period"] = period };
+    return HttpDispatcher.GetAsync<UsageSummary>(_ctx, Path, q, ct);
+  }
 }

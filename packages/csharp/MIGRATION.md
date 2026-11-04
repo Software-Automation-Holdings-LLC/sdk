@@ -1,6 +1,6 @@
 # Migration — 0.x → 1.0.0-rc.1 (C#)
 
-The cross-language guide at [`../../MIGRATION.md`](../../MIGRATION.md)
+The cross-language guide at [`../../docs/sdk/MIGRATION.md`](../../docs/sdk/MIGRATION.md)
 covers the full cut (constructor rename, per-surface `ApiVersion`
 resolution, v3 wire-shape, `CaseStorage` adapter, bundleless
 `Reference.MatchAsync`). C#-specific notes:
@@ -23,8 +23,8 @@ resolution, v3 wire-shape, `CaseStorage` adapter, bundleless
 - **Constructor:** `Isa.Create(...)` → `Isa.WithKeycode(...)`. The
   `DeviceId` option is removed (internal SDK detail).
 - **ApiVersion:** single pinned string → `BundledApiVersions` table
-  + `ResolveApiVersion(surface)`. Per-surface overrides on the
-  options bag.
+  - `ResolveApiVersion(surface)`. Per-surface overrides on the
+    options bag.
 - **Cases:** `Cases.SaveAsync` accepts `{ Product, Payload }` only;
   default storage is `ZeroKnowledgeCaseStorage` (AES-GCM on net8+).
 - **Reference:** new `Reference` namespace on `ZyInsClient`. Top-level
@@ -36,13 +36,13 @@ resolution, v3 wire-shape, `CaseStorage` adapter, bundleless
 
 ---
 
-# Historical: Sah.Sdk C# migration (v0.2.x → v0.3.0)
+## Historical: Sah.Sdk C# migration (v0.2.x → v0.3.0)
 
 The C# SDK has consolidated from four packages (`IsaSdk.Core`, `IsaSdk.ZyINS`,
 `IsaSdk.RapidSign`, `IsaSdk.Proxy`) into **one** package: **`Sah.Sdk`**. See
 `docs/SDK_DESIGN.md` §0 for the rationale.
 
-## 1. Package reference
+### 1. Package reference
 
 ```diff
 -<PackageReference Include="IsaSdk.Core"      Version="0.2.*" />
@@ -52,7 +52,7 @@ The C# SDK has consolidated from four packages (`IsaSdk.Core`, `IsaSdk.ZyINS`,
 +<PackageReference Include="Sah.Sdk"          Version="0.3.*" />
 ```
 
-## 2. Namespaces
+### 2. Namespaces
 
 | Before             | After               |
 | ------------------ | ------------------- |
@@ -65,7 +65,7 @@ Project-wide string-replace works for the four-namespace map above. A Roslyn
 codemod (`tools/codemod/Sah.Sdk.Codemod.csproj`) ships in v0.3.x to handle the
 rename plus the `Isa` factory-shape change below.
 
-## 3. Public surface
+### 3. Public surface
 
 The top-level entry point is now a class (was four static classes):
 
@@ -82,7 +82,7 @@ The top-level entry point is now a class (was four static classes):
 mirror the cross-language async license-exchange contract. `Isa.WithSession`
 remains synchronous.
 
-## 4. Behavior preserved across the rename
+### 4. Behavior preserved across the rename
 
 - `IsaConfigException` still throws when env vars are unset.
 - `IsaIdempotencyConflictException` shape (`Key`, `FirstSeenAt`) unchanged.
@@ -96,9 +96,9 @@ remains synchronous.
 - `System.Text.Json` conditional `PackageReference` preserved for
   netstandard2.0.
 
-## 5. Codemod (preview)
+### 5. Codemod (preview)
 
-```
+```bash
 dotnet tool install --global Sah.Sdk.Codemod --version 0.3.*
 sah-sdk-codemod migrate --project MyApp.csproj
 ```
