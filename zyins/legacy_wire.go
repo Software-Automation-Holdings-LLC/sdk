@@ -14,64 +14,76 @@ func legacyWireEnabled() bool {
 	return strings.TrimSpace(os.Getenv("ZYINS_LEGACY_WIRE")) == "1"
 }
 
-// legacyEngineBodyFromApplicant builds the flat JSON body the live
-// engine still accepts on /v1/prequalify and /v1/quote.
-func legacyEngineBodyFromApplicant(a Applicant) map[string]any {
+// legacyNicotine is the flat nicotine object the live engine reads.
+type legacyNicotine struct {
+	IsNicotineUser bool `json:"is_nicotine_user"`
+}
+
+// legacyPrequalifyQuoteOptions is quote_options for /v1/prequalify.
+type legacyPrequalifyQuoteOptions struct {
+	QuoteType string   `json:"quote_type"`
+	Amounts   []string `json:"amounts"`
+}
+
+// legacyQuoteQuoteOptions is quote_options for the legacy quote path.
+type legacyQuoteQuoteOptions struct {
+	FaceAmounts  []int    `json:"face_amounts"`
+	PricingModes []string `json:"pricing_modes"`
+}
+
+// legacyFlatBody is the flat JSON body the live engine still accepts.
+// Fields are struct fields, not a map, so the encoded key order matches
+// the HTTP reference and the PHP and C# legacy encoders. A map is sorted
+// alphabetically and the live prequalify matrix then diverges on the
+// declined-risk persona (one tied plan flips).
+type legacyFlatBody struct {
+	DateOfBirth   string         `json:"date_of_birth"`
+	Gender        string         `json:"gender"`
+	State         State          `json:"state"`
+	Height        int            `json:"height"`
+	Weight        int            `json:"weight"`
+	NicotineUsage legacyNicotine `json:"nicotine_usage"`
+	Conditions    []Condition    `json:"conditions,omitempty"`
+	Medications   []Medication   `json:"medications,omitempty"`
+	QuoteOptions  any            `json:"quote_options,omitempty"`
+}
+
+// legacyEngineBodyFromApplicant builds the shared applicant block.
+func legacyEngineBodyFromApplicant(a Applicant) legacyFlatBody {
 	sex := "male"
 	if a.Sex == SexFemale {
 		sex = "female"
 	}
 	nicotine := a.resolveNicotineUsageInput().LastUsed == NicotineWithin12Months
-	body := map[string]any{
-		"date_of_birth": a.DOB,
-		"gender":        sex,
-		"state":         a.State,
-		"height":        a.Height.TotalInches,
-		"weight":        a.Weight.Pounds,
-		"nicotine_usage": map[string]any{
-			"is_nicotine_user": nicotine,
+	body := legacyFlatBody{
+		DateOfBirth: a.DOB,
+		Gender:      sex,
+		State:       a.State,
+		Height:      a.Height.TotalInches,
+		Weight:      a.Weight.Pounds,
+		NicotineUsage: legacyNicotine{
+			IsNicotineUser: nicotine,
 		},
-	}
-	if len(a.Conditions) > 0 {
-		conds := make([]map[string]any, 0, len(a.Conditions))
-		for _, c := range a.Conditions {
-			conds = append(conds, map[string]any{
-				"name":           c.Name,
-				"was_diagnosed":  c.WasDiagnosed,
-				"last_treatment": c.LastTreatment,
-			})
-		}
-		body["conditions"] = conds
-	}
-	if len(a.Medications) > 0 {
-		meds := make([]map[string]any, 0, len(a.Medications))
-		for _, m := range a.Medications {
-			meds = append(meds, map[string]any{
-				"name":       m.Name,
-				"use":        m.Use,
-				"first_fill": m.FirstFill,
-				"last_fill":  m.LastFill,
-			})
-		}
-		body["medications"] = meds
+		Conditions:  a.Conditions,
+		Medications: a.Medications,
 	}
 	return body
 }
 
-func legacyPrequalifyBodyFromApplicant(a Applicant, faceValue int) map[string]any {
+func legacyPrequalifyBodyFromApplicant(a Applicant, faceValue int) legacyFlatBody {
 	body := legacyEngineBodyFromApplicant(a)
-	body["quote_options"] = map[string]any{
-		"quote_type": "face_amounts",
-		"amounts":    []string{strconv.Itoa(faceValue)},
+	body.QuoteOptions = legacyPrequalifyQuoteOptions{
+		QuoteType: "face_amounts",
+		Amounts:   []string{strconv.Itoa(faceValue)},
 	}
 	return body
 }
 
-func legacyQuoteBodyFromApplicant(a Applicant, faceValue int) map[string]any {
+func legacyQuoteBodyFromApplicant(a Applicant, faceValue int) legacyFlatBody {
 	body := legacyEngineBodyFromApplicant(a)
-	body["quote_options"] = map[string]any{
-		"face_amounts":  []int{faceValue},
-		"pricing_modes": []string{"MONTHLY-EFT"},
+	body.QuoteOptions = legacyQuoteQuoteOptions{
+		FaceAmounts:  []int{faceValue},
+		PricingModes: []string{"MONTHLY-EFT"},
 	}
 	return body
 }
