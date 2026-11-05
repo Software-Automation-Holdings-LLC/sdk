@@ -12,7 +12,7 @@
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
     <RootNamespace>Isa.Sdk</RootNamespace>
     <!-- Version is rewritten at publish time by sdk-pin-csharp-deps.py. -->
-    <Version>1.1.1-next.354.ec7e76b</Version>
+    <Version>1.1.1-next.355.442828c</Version>
     <PackageId>Sah.Sdk</PackageId>
     <Authors>Software Automation Holdings, LLC</Authors>
     <Company>Software Automation Holdings, LLC</Company>
