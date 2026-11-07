@@ -11,6 +11,7 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
     <RootNamespace>Isa.Sdk</RootNamespace>
+    <RestorePackagesWithLockFile>true</RestorePackagesWithLockFile>
     <!-- Version is rewritten at publish time by sdk-pin-csharp-deps.py. -->
     <Version>1.1.1-next.369.688cd15</Version>
     <PackageId>Sah.Sdk</PackageId>
@@ -52,7 +53,7 @@
     </AssemblyAttribute>
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="Google.Protobuf" Version="3.28.3" />
+    <PackageReference Include="Google.Protobuf" Version="3.36.2" />
     <!-- google.api.* messages referenced by buf-generated wire types
          are runtime types from Google.Api.CommonProtos. -->
     <PackageReference Include="Google.Api.CommonProtos" Version="2.16.0" />
