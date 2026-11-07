@@ -4,9 +4,7 @@
 # Tooling / platform contract
 !/.github/
 !/.gitignore
-!/.trunk/
 !/docs/
-!/lefthook.yml
 !/mise.toml
 !/renovate.json
 
@@ -35,7 +33,3 @@
 !/rapidsign/
 !/scripts/
 !/zyins/
-
-# Trunk keeps only its checked-in config; ignore its caches.
-/.trunk/*
-!/.trunk/trunk.yaml

@@ -50,7 +50,7 @@ The repo's disposition under SDK policy (`SAH_DEVOPS_STRATEGY.md` §12) is there
   repo boundary by a generator-bot path-lock ruleset (see Consequences — requires an
   org-admin action). The regeneration-diff gate ("re-run the generator, fail on diff")
   runs in `isa-platform`'s `sdk-publish.yml`, where `buf` and the proto registry live.
-- **Central config** consumed from `dev-config@v1` (lefthook, trunk, Renovate preset);
+- **Central config** consumed from `dev-config@v1` (Renovate preset);
   managed files are thin pointers, not hand-edited copies.
 - **The self-policing reusables cannot run on this PUBLIC repo (structural).** `sdk` is
   the one **public** SDK mirror (so `go get github.com/Software-Automation-Holdings-LLC/sdk`
@@ -66,7 +66,7 @@ The repo's disposition under SDK policy (`SAH_DEVOPS_STRATEGY.md` §12) is there
   **push protection** are enabled (the at-rest + at-push secret gate), CodeQL code
   scanning runs (the `Analyze` jobs), and `mise run scan` runs `govulncheck`. This
   covers secrets + SAST + dependency vulns without the un-callable private reusable.
-- **Git hooks** owned by `lefthook.yml`. **Dependencies** via Renovate (no Dependabot).
+- **Git hooks** are global (`hk`); formatting is `dprint`. **Dependencies** via Renovate (no Dependabot).
 
 ## Consequences
 
@@ -102,5 +102,5 @@ The repo's disposition under SDK policy (`SAH_DEVOPS_STRATEGY.md` §12) is there
   it lands, immutability rests on the `@generated` banners plus the next-publish
   overwrite; the ruleset makes hand-edits structurally impossible.
 - Because this repo is a published mirror, the durable home for any change to the
-  *content* is `isa-platform`; this PR governs only the platform-contract surface
+  _content_ is `isa-platform`; this PR governs only the platform-contract surface
   (`mise.toml`, pointers, workflows, ADR), which the publish step preserves.
