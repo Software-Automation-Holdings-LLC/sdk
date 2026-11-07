@@ -1,6 +1,7 @@
 <?xml version='1.0' encoding='utf-8'?>
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
+    <RestorePackagesWithLockFile>true</RestorePackagesWithLockFile>
     <!-- Dual-target: netstandard2.0 for .NET Framework / Unity / older
          consumers, net8.0 for modern. The sdk-pin-csharp-deps.py
          publish-time script re-asserts this; locally we ship the dual
@@ -52,7 +53,7 @@
     </AssemblyAttribute>
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="Google.Protobuf" Version="3.28.3" />
+    <PackageReference Include="Google.Protobuf" Version="3.36.2" />
     <!-- google.api.* messages referenced by buf-generated wire types
          are runtime types from Google.Api.CommonProtos. -->
     <PackageReference Include="Google.Api.CommonProtos" Version="2.16.0" />
