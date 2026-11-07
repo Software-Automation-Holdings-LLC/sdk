@@ -4,13 +4,6 @@ All notable changes to the unified C# SDK. Until v1.0.0 ships to
 public NuGet, every release is a pre-release and the API may change
 in incompatible ways.
 
-## Unreleased
-
-### Fixed
-
-- Commit the NuGet dependency graph for Google.Protobuf 3.36.2 on both target
-  frameworks, with runner-managed locked restore and build tasks.
-
 ## 1.0.0-rc.2 — 2026-05-30
 
 Reference-facade consumer-gap fixes so bpp2.0 can drop its bypasses.
