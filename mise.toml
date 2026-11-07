@@ -18,6 +18,7 @@
 
 [tools]
 go = "1.26.4"
+dotnet = "8.0.427"
 
 [tasks.setup]
 description = "Download module dependencies."
@@ -61,3 +62,12 @@ echo "platform contract OK"
 [tasks.ci]
 description = "The full mirror gate: build-correctness (lint) + tree-compiles (test) + importability (build) + vuln scan + generated-marker guard."
 depends = ["lint", "test", "build", "scan", "generated-guard"]
+
+[tasks.csharp-restore-locked]
+description = "Restore the published C# project without changing its committed NuGet dependency graph."
+run = "dotnet restore packages/csharp/Isa.Sdk.csproj --locked-mode"
+
+[tasks.csharp-build]
+description = "Compile both published C# target frameworks against the committed NuGet graph."
+depends = ["csharp-restore-locked"]
+run = "dotnet build packages/csharp/Isa.Sdk.csproj --no-restore --configuration Release"
