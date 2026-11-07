@@ -10,20 +10,6 @@ The NuGet package is `IsaSdk`; the C# namespace you import is `Isa.Sdk`. The two
 dotnet add package IsaSdk
 ```
 
-## Dependency maintenance
-
-The repository pins .NET SDK 8 in `mise.toml`. Install it with `mise install`,
-then run `mise run csharp-restore-locked` to restore the committed
-`packages.lock.json` for both `netstandard2.0` and `net8.0`.
-`mise run csharp-build` restores in locked mode and compiles both targets.
-These tasks target the published project directly; the mirrored solution's
-upstream test project is not included in this repository.
-
-After changing a `PackageReference`, regenerate the lockfile with
-`mise exec -- dotnet restore packages/csharp/Isa.Sdk.csproj --force-evaluate`,
-then commit the project and lockfile together. Normal restore/build commands
-remain supported; locked mode is explicit in the verification task.
-
 ## Hello world
 
 ```csharp @no-compile
