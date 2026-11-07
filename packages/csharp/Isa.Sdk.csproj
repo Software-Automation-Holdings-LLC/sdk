@@ -1,7 +1,6 @@
 <?xml version='1.0' encoding='utf-8'?>
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <RestorePackagesWithLockFile>true</RestorePackagesWithLockFile>
     <!-- Dual-target: netstandard2.0 for .NET Framework / Unity / older
          consumers, net8.0 for modern. The sdk-pin-csharp-deps.py
          publish-time script re-asserts this; locally we ship the dual
@@ -13,7 +12,7 @@
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
     <RootNamespace>Isa.Sdk</RootNamespace>
     <!-- Version is rewritten at publish time by sdk-pin-csharp-deps.py. -->
-    <Version>1.1.1-next.363.6bada42</Version>
+    <Version>1.1.1-next.364.93a3d1b</Version>
     <PackageId>Sah.Sdk</PackageId>
     <Authors>Software Automation Holdings, LLC</Authors>
     <Company>Software Automation Holdings, LLC</Company>
@@ -53,7 +52,7 @@
     </AssemblyAttribute>
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="Google.Protobuf" Version="3.36.2" />
+    <PackageReference Include="Google.Protobuf" Version="3.28.3" />
     <!-- google.api.* messages referenced by buf-generated wire types
          are runtime types from Google.Api.CommonProtos. -->
     <PackageReference Include="Google.Api.CommonProtos" Version="2.16.0" />
