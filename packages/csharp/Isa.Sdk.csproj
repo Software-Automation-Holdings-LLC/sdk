@@ -52,7 +52,7 @@
     </AssemblyAttribute>
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="Google.Protobuf" Version="3.28.3" />
+    <PackageReference Include="Google.Protobuf" Version="3.36.2" />
     <!-- google.api.* messages referenced by buf-generated wire types
          are runtime types from Google.Api.CommonProtos. -->
     <PackageReference Include="Google.Api.CommonProtos" Version="2.16.0" />
