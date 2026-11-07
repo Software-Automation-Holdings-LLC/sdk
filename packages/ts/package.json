@@ -1,6 +1,6 @@
 {
   "name": "@software-automation-holdings-llc/sdk",
-  "version": "1.1.1-next.365.9a5cdf3",
+  "version": "1.1.1-next.366.8cef08c",
   "description": "Unified TypeScript SDK for the ISA platform APIs (zyins, rapidsign, proxy).",
   "repository": {
     "type": "git",
