@@ -27,7 +27,7 @@
     "psr/http-message": "2.0",
     "psr/log": "3.0.2",
     "guzzlehttp/guzzle": "7.15.5",
-    "guzzlehttp/psr7": "2.13.1",
+    "guzzlehttp/psr7": "2.13.2",
     "ramsey/uuid": "4.9.3"
   },
   "require-dev": {
