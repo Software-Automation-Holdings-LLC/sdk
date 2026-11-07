@@ -40,7 +40,7 @@ depends = ["setup"]
 run = "go build ./..."
 
 [tasks.scan]
-description = "Go vulnerability scan. Advisories route to Linear via security-scan.yml on the remediation-SLA model (§7); secret-blocking is lefthook at commit plus GitHub push protection."
+description = "Go vulnerability scan. Advisories route to Linear via security-scan.yml on the remediation-SLA model (§7); secret-blocking is the global hk hook at commit plus GitHub push protection."
 depends = ["setup"]
 run = "go run golang.org/x/vuln/cmd/govulncheck@latest ./... || true"
 
