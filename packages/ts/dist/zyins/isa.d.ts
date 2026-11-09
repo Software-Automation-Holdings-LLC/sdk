@@ -318,6 +318,17 @@ export declare class Isa {
         autocompleteAlgorithm?: AutocompleteAlgorithm;
     }, env?: EnvReader, options?: IsaFactoryOptions): Promise<Isa>;
     /**
+     * Construct from an already-minted session (id, secret) — the credential
+     * an embedded app is handed after the embed host redeems its launch code.
+     * Product calls are signed with that session as-is; the SDK never mints,
+     * renews, or persists it. External consumers reach this through
+     * `Isa.create({ auth: SessionAuth.fromSession(...) })`.
+     */
+    static withSession(args?: {
+        sessionId?: string;
+        sessionSecret?: string;
+    }, env?: EnvReader, options?: IsaFactoryOptions): Promise<Isa>;
+    /**
      * Construct from a one-shot form token (embedded eApp forms). The SDK
      * POSTs the token to {@link SESSIONS_PATH} (`POST /v1/sessions`) with
      * `Authorization: FormToken <token>`, receives a session
@@ -328,15 +339,14 @@ export declare class Isa {
      * `Authorization: Session <secret>` + `X-Isa-Session-Id` — FormToken is
      * mint-only (account ADR-037).
      *
-     * Note: the resulting `Isa` is session-mode — `zyins`/`account` product
-     * methods throw `IsaConfigError` until bearer/session product wiring
-     * lands (see {@link ZyInsNamespace}); only `isa.identity` is usable today.
+     * Note: the resulting `Isa` is session-mode — `zyins` product calls are
+     * signed with the minted session as-is (see {@link Isa.withSession}); the
+     * session is not renewed.
      *
      * @example
      * ```ts
      * const formToken = form.metadata._isa_form_token;
      * const isa = await Isa.forForm({ formToken });
-     * // isa.zyins / isa.account throw IsaConfigError until product wiring lands
      * ```
      */
     static forForm(args: {

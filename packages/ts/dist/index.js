@@ -67,7 +67,7 @@ FuzzyMatchAlgorithm, platformFileReader, ReferenceSort, ResolvingDatasetSource, 
 export { formatMoney } from "./zyins/money.js";
 export { byAmount, offerPremium, } from "./zyins/prequalify-v3.js";
 export { ZeroKnowledgeCaseStorage } from "./zyins/cases/ZeroKnowledgeCaseStorage.js";
-export { BearerAuth, BundledApiVersions, DEFAULT_TIMEOUT_MS, FormAuth, InMemoryEngine, inMemoryEngineWith, LicenseAuth, LocalEngine, ProxyEngine, RemoteEngine, resolveApiVersions, resolveIsaOptions, } from "./zyins/isaOptions.js";
+export { BearerAuth, BundledApiVersions, DEFAULT_TIMEOUT_MS, FormAuth, InMemoryEngine, inMemoryEngineWith, LicenseAuth, LocalEngine, ProxyEngine, RemoteEngine, resolveApiVersions, resolveIsaOptions, SessionAuth, } from "./zyins/isaOptions.js";
 // --- Generated catalogs -------------------------------------------------
 // Every name in this block is produced by `scripts/gen-catalog.mjs`. See
 // `src/catalog/` for the source modules and `docs/SDK_DESIGN.md` §5.1

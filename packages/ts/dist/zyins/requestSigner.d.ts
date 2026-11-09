@@ -48,4 +48,15 @@ export declare function licenseSigner(auth: AuthContext, clock?: Clock): Request
  * test/live mode from it.
  */
 export declare function bearerSigner(token: string): RequestSigner;
+/**
+ * Fixed-session signer. Signs each request with an already-minted session —
+ * the credential an embedded app is handed once its launch code is redeemed.
+ * Unlike {@link sessionSigner} it never bootstraps or renews: the session is
+ * the caller's whole identity, so when it expires the server refuses the
+ * request and the host decides how to re-authenticate.
+ */
+export declare function sessionCredentialSigner(session: {
+    sessionId: string;
+    sessionSecret: string;
+}): RequestSigner;
 //# sourceMappingURL=requestSigner.d.ts.map
