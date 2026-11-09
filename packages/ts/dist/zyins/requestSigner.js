@@ -14,7 +14,7 @@
  * auth-mode-agnostic; adding a third mode is a new signer, not a new branch
  * in every call site.
  */
-import { buildLicenseHMACHeaders, systemClock } from "../core/index.js";
+import { buildLicenseHMACHeaders, signRequest, systemClock } from "../core/index.js";
 /**
  * License-HMAC signer. Wraps {@link buildLicenseHMACHeaders}, binding the
  * `(licenseKey, orderId, email, deviceId)` identity to each request via
@@ -46,6 +46,29 @@ export function bearerSigner(token) {
     return {
         async signHeaders() {
             return { Authorization: header };
+        },
+    };
+}
+/**
+ * Fixed-session signer. Signs each request with an already-minted session —
+ * the credential an embedded app is handed once its launch code is redeemed.
+ * Unlike {@link sessionSigner} it never bootstraps or renews: the session is
+ * the caller's whole identity, so when it expires the server refuses the
+ * request and the host decides how to re-authenticate.
+ */
+export function sessionCredentialSigner(session) {
+    return {
+        async signHeaders(request) {
+            const { headers } = await signRequest({
+                method: request.method,
+                path: request.path,
+                body: request.body,
+                sessionId: session.sessionId,
+                sessionSecret: session.sessionSecret,
+            });
+            // The verifier's replay cache is keyed on (sessionId, X-Isa-Request-Id):
+            // without a fresh id per call every request after the first is rejected.
+            return { ...headers, "X-Isa-Request-Id": globalThis.crypto.randomUUID() };
         },
     };
 }

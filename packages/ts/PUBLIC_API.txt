@@ -1972,7 +1972,7 @@ export { formatMoney, type FormatMoneyOptions } from "./zyins/money.js";
 export { byAmount, offerPremium, type PrequalifyV3Options, type PrequalifyV3Request, type PrequalifyV3Result, type V3Amount, type V3Eligibility, type V3EligibilityCategory, type V3Money, type V3Offer, type V3Period, type V3Premium, type V3PricingRow, } from "./zyins/prequalify-v3.js";
 export type { CaseRecord, CaseStorage, CaseStoragePutResult } from "./zyins/cases/CaseStorage.js";
 export { ZeroKnowledgeCaseStorage } from "./zyins/cases/ZeroKnowledgeCaseStorage.js";
-export { BearerAuth, BundledApiVersions, DEFAULT_TIMEOUT_MS, FormAuth, InMemoryEngine, inMemoryEngineWith, type IsaApiSurface, type IsaApiVersion, type IsaApiVersionOverride, type IsaAuthSupplier, type IsaCreateOptions, type IsaEngine, LicenseAuth, LocalEngine, ProxyEngine, RemoteEngine, resolveApiVersions, type ResolvedIsaOptions, resolveIsaOptions, } from "./zyins/isaOptions.js";
+export { BearerAuth, BundledApiVersions, DEFAULT_TIMEOUT_MS, FormAuth, InMemoryEngine, inMemoryEngineWith, type IsaApiSurface, type IsaApiVersion, type IsaApiVersionOverride, type IsaAuthSupplier, type IsaCreateOptions, type IsaEngine, LicenseAuth, LocalEngine, ProxyEngine, RemoteEngine, resolveApiVersions, type ResolvedIsaOptions, resolveIsaOptions, SessionAuth, } from "./zyins/isaOptions.js";
 export { type LogosFetch, type LogosGetOptions, type LogosResponse } from "./zyins/logos.js";
 export { ConditionCategories, type ConditionCategoryMetadata, ErrorAdviceCodes, ErrorCode, ErrorDocUrls, Product as ProductSlug, type ProductCarrierMetadata, ProductCarriers, type ProductMetadata, Products as ProductSlugs, Scope, ScopeDescriptions, SignEvent, SignEventLabels, State, type StateMetadata, States, } from "./catalog/index.js";
 export { type DebugLogger, debugLoggerFromEnv, type EnvReader, type LogSink, makeLogger, processEnv, redactBody, redactBodyString, redactHeaders, stderrSink, } from "./zyins/logger.js";
@@ -4752,7 +4752,7 @@ export { type Concept, type ConceptKind, type ConditionConcept, matchConcept, ma
 export { type AutocompleteAlgorithm, type AutocompleteOptions, type AutocorrectAppliedEvent, type AutocorrectOptions, type Autocorrector, buildSuggestion, DefaultAutocompleteAlgorithm, type DefaultAutocompleteAlgorithmOptions, DefaultAutocorrector, type DefaultAutocorrectorOptions, DefaultMatchAlgorithm, type DefaultMatchAlgorithmOptions, FuzzyMatchAlgorithm, type FuzzyMatchAlgorithmOptions, type MatchAlgorithm, type ReferenceAdapters, type Suggestion, } from "./reference/index.js";
 export type { CaseRecord, CaseStorage, CaseStoragePutResult } from "./cases/CaseStorage.js";
 export { ZeroKnowledgeCaseStorage } from "./cases/ZeroKnowledgeCaseStorage.js";
-export { BearerAuth, BundledApiVersions, DEFAULT_TIMEOUT_MS, FormAuth, InMemoryEngine, inMemoryEngineWith, type IsaApiSurface, type IsaApiVersion, type IsaApiVersionOverride, type IsaAuthSupplier, type IsaCreateOptions, type IsaEngine, LicenseAuth, LocalEngine, ProxyEngine, RemoteEngine, resolveApiVersions, type ResolvedIsaOptions, resolveIsaOptions, } from "./isaOptions.js";
+export { BearerAuth, BundledApiVersions, DEFAULT_TIMEOUT_MS, FormAuth, InMemoryEngine, inMemoryEngineWith, type IsaApiSurface, type IsaApiVersion, type IsaApiVersionOverride, type IsaAuthSupplier, type IsaCreateOptions, type IsaEngine, LicenseAuth, LocalEngine, ProxyEngine, RemoteEngine, resolveApiVersions, type ResolvedIsaOptions, resolveIsaOptions, SessionAuth, } from "./isaOptions.js";
 export { type ClientVersionListener, type ClientVersionStatus } from "./clientVersion.js";
 export { type LicenseActivateAuth, type LicenseActivateRequest, type LicenseActivateResult, type LicenseCheckRequest, type LicenseCheckResult, type LicenseDeactivateRequest, type LicenseDeactivateResult, type LicenseValidationStatus, } from "./license.js";
 export { getReadiness, type HealthContext, type ProbeResult, type ReadinessResult, type ServingStatus, } from "./health.js";
@@ -5087,6 +5087,17 @@ export declare class Isa {
         autocompleteAlgorithm?: AutocompleteAlgorithm;
     }, env?: EnvReader, options?: IsaFactoryOptions): Promise<Isa>;
     /**
+     * Construct from an already-minted session (id, secret) — the credential
+     * an embedded app is handed after the embed host redeems its launch code.
+     * Product calls are signed with that session as-is; the SDK never mints,
+     * renews, or persists it. External consumers reach this through
+     * `Isa.create({ auth: SessionAuth.fromSession(...) })`.
+     */
+    static withSession(args?: {
+        sessionId?: string;
+        sessionSecret?: string;
+    }, env?: EnvReader, options?: IsaFactoryOptions): Promise<Isa>;
+    /**
      * Construct from a one-shot form token (embedded eApp forms). The SDK
      * POSTs the token to {@link SESSIONS_PATH} (`POST /v1/sessions`) with
      * `Authorization: FormToken <token>`, receives a session
@@ -5097,15 +5108,14 @@ export declare class Isa {
      * `Authorization: Session <secret>` + `X-Isa-Session-Id` — FormToken is
      * mint-only (account ADR-037).
      *
-     * Note: the resulting `Isa` is session-mode — `zyins`/`account` product
-     * methods throw `IsaConfigError` until bearer/session product wiring
-     * lands (see {@link ZyInsNamespace}); only `isa.identity` is usable today.
+     * Note: the resulting `Isa` is session-mode — `zyins` product calls are
+     * signed with the minted session as-is (see {@link Isa.withSession}); the
+     * session is not renewed.
      *
      * @example
      * ```ts
      * const formToken = form.metadata._isa_form_token;
      * const isa = await Isa.forForm({ formToken });
-     * // isa.zyins / isa.account throw IsaConfigError until product wiring lands
      * ```
      */
     static forForm(args: {
@@ -5863,6 +5873,18 @@ export declare const FormAuth: {
     readonly fromToken: (formToken: string) => IsaAuthSupplier;
 };
 /**
+ * Session auth supplier factory (embedded apps). The session is already
+ * minted — typically a launch code redeemed server-side by the embed host —
+ * and is held by the caller in memory; the SDK signs with it as-is and never
+ * persists or renews it.
+ */
+export declare const SessionAuth: {
+    readonly fromSession: (session: {
+        sessionId: string;
+        sessionSecret: string;
+    }) => IsaAuthSupplier;
+};
+/**
  * Tagged engine selector — every variant exposes the same product API
  * surface so consumer code stays identical when targeting different
  * deployments. Values are interpreted by `Isa.create` to set `baseUrl`
@@ -5915,7 +5937,7 @@ export declare const DEFAULT_TIMEOUT_MS = 30000;
  * `auth`; defaults match the production posture.
  */
 export interface IsaCreateOptions {
-    /** Auth supplier. See {@link BearerAuth}, {@link LicenseAuth}, {@link FormAuth}. */
+    /** Auth supplier. See {@link BearerAuth}, {@link LicenseAuth}, {@link FormAuth}, {@link SessionAuth}. */
     auth: IsaAuthSupplier;
     /** Engine selector. Defaults to {@link RemoteEngine.default}. */
     engine?: IsaEngine;
@@ -8319,6 +8341,17 @@ export declare function licenseSigner(auth: AuthContext, clock?: Clock): Request
  * test/live mode from it.
  */
 export declare function bearerSigner(token: string): RequestSigner;
+/**
+ * Fixed-session signer. Signs each request with an already-minted session —
+ * the credential an embedded app is handed once its launch code is redeemed.
+ * Unlike {@link sessionSigner} it never bootstraps or renews: the session is
+ * the caller's whole identity, so when it expires the server refuses the
+ * request and the host decides how to re-authenticate.
+ */
+export declare function sessionCredentialSigner(session: {
+    sessionId: string;
+    sessionSecret: string;
+}): RequestSigner;
 //# sourceMappingURL=requestSigner.d.ts.map
 === dist/zyins/response.d.ts ===
 /** Shared response parsing helpers for ZyINS JSON endpoints. */

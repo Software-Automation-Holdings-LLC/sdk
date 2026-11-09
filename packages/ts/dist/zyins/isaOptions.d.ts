@@ -78,6 +78,18 @@ export declare const FormAuth: {
     readonly fromToken: (formToken: string) => IsaAuthSupplier;
 };
 /**
+ * Session auth supplier factory (embedded apps). The session is already
+ * minted — typically a launch code redeemed server-side by the embed host —
+ * and is held by the caller in memory; the SDK signs with it as-is and never
+ * persists or renews it.
+ */
+export declare const SessionAuth: {
+    readonly fromSession: (session: {
+        sessionId: string;
+        sessionSecret: string;
+    }) => IsaAuthSupplier;
+};
+/**
  * Tagged engine selector — every variant exposes the same product API
  * surface so consumer code stays identical when targeting different
  * deployments. Values are interpreted by `Isa.create` to set `baseUrl`
@@ -130,7 +142,7 @@ export declare const DEFAULT_TIMEOUT_MS = 30000;
  * `auth`; defaults match the production posture.
  */
 export interface IsaCreateOptions {
-    /** Auth supplier. See {@link BearerAuth}, {@link LicenseAuth}, {@link FormAuth}. */
+    /** Auth supplier. See {@link BearerAuth}, {@link LicenseAuth}, {@link FormAuth}, {@link SessionAuth}. */
     auth: IsaAuthSupplier;
     /** Engine selector. Defaults to {@link RemoteEngine.default}. */
     engine?: IsaEngine;

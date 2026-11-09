@@ -57,6 +57,23 @@ export const FormAuth = {
         return { kind: "form", formToken };
     },
 };
+/**
+ * Session auth supplier factory (embedded apps). The session is already
+ * minted — typically a launch code redeemed server-side by the embed host —
+ * and is held by the caller in memory; the SDK signs with it as-is and never
+ * persists or renews it.
+ */
+export const SessionAuth = {
+    fromSession(session) {
+        if (session.sessionId.trim() === "") {
+            throw new Error("SessionAuth.fromSession: sessionId is required");
+        }
+        if (session.sessionSecret.trim() === "") {
+            throw new Error("SessionAuth.fromSession: sessionSecret is required");
+        }
+        return { kind: "session", sessionId: session.sessionId, sessionSecret: session.sessionSecret };
+    },
+};
 const PRODUCTION_REMOTE_ORIGIN = "https://zyins.isaapi.com";
 const PRODUCTION_PROXY_ORIGIN = "https://proxy.isaapi.com";
 const IN_MEMORY_TRANSPORT_ERROR = "InMemoryEngine requires inMemoryEngineWith(transport) before product calls";

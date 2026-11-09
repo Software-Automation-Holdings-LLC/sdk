@@ -194,6 +194,7 @@ export {
   resolveApiVersions,
   type ResolvedIsaOptions,
   resolveIsaOptions,
+  SessionAuth,
 } from "./isaOptions.js";
 
 export { type ClientVersionListener, type ClientVersionStatus } from "./clientVersion.js";

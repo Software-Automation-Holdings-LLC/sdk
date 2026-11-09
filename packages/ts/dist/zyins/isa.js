@@ -37,7 +37,7 @@ import { BrandingFacade, CasesFacade, DatasetsFacade, DefaultAutocorrector, Emai
 import { DEFAULT_TIMEOUT_MS, resolveApiVersions, resolveIsaOptions, } from "./isaOptions.js";
 import { debugLoggerFromEnv, processEnv, stderrSink, } from "./logger.js";
 import { ProductsFacade } from "./products.js";
-import { bearerSigner } from "./requestSigner.js";
+import { bearerSigner, sessionCredentialSigner } from "./requestSigner.js";
 import { SDK_RETRY_ATTEMPTS_HEADER } from "./retryAttempts.js";
 import { sessionSigner } from "./sessionSigner.js";
 import { defaultTransport } from "./transport.js";
@@ -273,15 +273,11 @@ export class Isa {
         return isa;
     }
     /**
-     * Construct from a session (id, secret).
-     *
-     * @internal
-     *
-     * Sessions are SDK-internal refresh state minted from a keycode or a
-     * form-token; external consumers reach this code path via
-     * {@link Isa.withKeycode} or {@link Isa.forForm}. The static method
-     * remains so internal factories can compose it cleanly, but it is not
-     * part of the public surface and is omitted from the package barrel.
+     * Construct from an already-minted session (id, secret) — the credential
+     * an embedded app is handed after the embed host redeems its launch code.
+     * Product calls are signed with that session as-is; the SDK never mints,
+     * renews, or persists it. External consumers reach this through
+     * `Isa.create({ auth: SessionAuth.fromSession(...) })`.
      */
     static async withSession(args, env = processEnv, options = {}) {
         const isa = new Isa({ identity: resolveSessionIdentity(args, env), ...options });
@@ -299,15 +295,14 @@ export class Isa {
      * `Authorization: Session <secret>` + `X-Isa-Session-Id` — FormToken is
      * mint-only (account ADR-037).
      *
-     * Note: the resulting `Isa` is session-mode — `zyins`/`account` product
-     * methods throw `IsaConfigError` until bearer/session product wiring
-     * lands (see {@link ZyInsNamespace}); only `isa.identity` is usable today.
+     * Note: the resulting `Isa` is session-mode — `zyins` product calls are
+     * signed with the minted session as-is (see {@link Isa.withSession}); the
+     * session is not renewed.
      *
      * @example
      * ```ts
      * const formToken = form.metadata._isa_form_token;
      * const isa = await Isa.forForm({ formToken });
-     * // isa.zyins / isa.account throw IsaConfigError until product wiring lands
      * ```
      */
     static async forForm(args, options = {}) {
@@ -876,8 +871,8 @@ function synthesizeRawResponse(requestId) {
  * License mode signs each v3 request with a transparently-bootstrapped
  * session (see {@link sessionSigner}), never the raw license key; bearer
  * mode attaches `Authorization: Bearer <token>` (API-licensing customers
- * reaching `/v3` server-to-server). Session-mode product calls are not
- * yet wired and throw `IsaConfigError` describing what's missing.
+ * reaching `/v3` server-to-server); session mode signs with the supplied
+ * session as-is (an embedded app's redeemed launch session).
  */
 function buildZyInsClient(opts) {
     switch (opts.identity.mode) {
@@ -886,7 +881,7 @@ function buildZyInsClient(opts) {
         case "bearer":
             return buildBearerClient(opts, opts.identity.token);
         case "session":
-            throw new IsaConfigError(`isa.zyins.* product methods do not yet support Isa.withSession() — session transport wiring lands in a follow-up. Use Isa.withBearer() or Isa.withKeycode().`);
+            return buildSignerClient(opts, sessionCredentialSigner(opts.identity));
     }
 }
 /**
@@ -931,17 +926,23 @@ function buildLicenseClient(opts) {
     return new ZyInsClient(clientOpts);
 }
 /**
- * Build the bearer-mode `ZyInsClient`. The bearer signer supplies every v3
- * request's `Authorization` header, so the `auth` field is an unused
- * placeholder — bearer callers carry no License-HMAC identity. Unlike the
- * license path there is no activation gate: the token is the credential and
- * the server resolves scope and test/live mode from it.
+ * Build the bearer-mode `ZyInsClient`: the token is the credential and the
+ * server resolves scope and test/live mode from it.
  */
 function buildBearerClient(opts, token) {
+    return buildSignerClient(opts, bearerSigner(token));
+}
+/**
+ * Build a `ZyInsClient` whose signer supplies every v3 request's auth
+ * headers, so the `auth` field is an unused placeholder — bearer and session
+ * callers carry no License-HMAC identity. Unlike the license path there is no
+ * activation gate: the signer's credential is all the server needs.
+ */
+function buildSignerClient(opts, signer) {
     const clientOpts = {
-        auth: BEARER_PLACEHOLDER_AUTH,
+        auth: SIGNER_OWNED_PLACEHOLDER_AUTH,
         baseUrl: opts.baseUrl ?? DEFAULT_ZYINS_BASE_URL,
-        signer: bearerSigner(token),
+        signer,
     };
     if (opts.caseViewerBaseUrl !== undefined)
         clientOpts.caseViewerBaseUrl = opts.caseViewerBaseUrl;
@@ -954,13 +955,13 @@ function buildBearerClient(opts, token) {
     return new ZyInsClient(clientOpts);
 }
 /**
- * Placeholder {@link AuthContext} for bearer-mode clients. The bearer signer
- * overrides auth-header production for every v3 operation, so these fields
- * are never read; they exist only to satisfy the `ZyInsClient` constructor
- * shape. The empty strings would be rejected by `isAuthContext` — by design,
- * since no License-HMAC request is ever signed in bearer mode.
+ * Placeholder {@link AuthContext} for bearer- and session-mode clients. Their
+ * signer overrides auth-header production for every v3 operation, so these
+ * fields are never read; they exist only to satisfy the `ZyInsClient`
+ * constructor shape. The empty strings would be rejected by `isAuthContext` —
+ * by design, since no License-HMAC request is ever signed in these modes.
  */
-const BEARER_PLACEHOLDER_AUTH = {
+const SIGNER_OWNED_PLACEHOLDER_AUTH = {
     licenseKey: "",
     orderId: "",
     email: "",

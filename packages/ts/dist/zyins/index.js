@@ -24,7 +24,7 @@ export { quoteV3, } from "./quote-v3.js";
 export { matchConcept, matchCondition, matchMedication, Sort as ReferenceSort, } from "./reference.js";
 export { buildSuggestion, DefaultAutocompleteAlgorithm, DefaultAutocorrector, DefaultMatchAlgorithm, FuzzyMatchAlgorithm, } from "./reference/index.js";
 export { ZeroKnowledgeCaseStorage } from "./cases/ZeroKnowledgeCaseStorage.js";
-export { BearerAuth, BundledApiVersions, DEFAULT_TIMEOUT_MS, FormAuth, InMemoryEngine, inMemoryEngineWith, LicenseAuth, LocalEngine, ProxyEngine, RemoteEngine, resolveApiVersions, resolveIsaOptions, } from "./isaOptions.js";
+export { BearerAuth, BundledApiVersions, DEFAULT_TIMEOUT_MS, FormAuth, InMemoryEngine, inMemoryEngineWith, LicenseAuth, LocalEngine, ProxyEngine, RemoteEngine, resolveApiVersions, resolveIsaOptions, SessionAuth, } from "./isaOptions.js";
 export { getReadiness, } from "./health.js";
 export { defaultTransport, } from "./transport.js";
 // --- Phase 1+2 additions (SDK_DESIGN.md §§3,4,5,6,7,10) -------------------

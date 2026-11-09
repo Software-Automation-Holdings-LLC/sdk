@@ -281,6 +281,7 @@ export {
   resolveApiVersions,
   type ResolvedIsaOptions,
   resolveIsaOptions,
+  SessionAuth,
 } from "./zyins/isaOptions.js";
 
 // --- Logos (public images; no auth) ------------------------------------
