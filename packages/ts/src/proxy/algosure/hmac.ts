@@ -154,10 +154,10 @@ async function fetchSaltContent(cfg: SaltFetchConfig): Promise<string> {
   const url = cfg.proxyUrl ?? DEFAULT_SALT_PROXY_URL;
   const { signal, cancel } = buildSaltSignal(cfg.signal, cfg.timeoutMs);
   try {
-    const response = await f(url, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ Target: cfg.host, Return: "Text", RequestType: "GET" }),
+    const saltUrl = new URL(url);
+    saltUrl.searchParams.set("load", cfg.host);
+    const response = await f(saltUrl.toString(), {
+      method: "GET",
       ...(signal ? { signal } : {}),
     });
     if (!response.ok) {

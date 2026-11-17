@@ -39,6 +39,8 @@ export { IsaApiError, IsaCaseExpiredError, IsaConfigError, IsaError, IsaIdempote
 export { decryptCase, encryptCase, IsaCaseDecryptError, } from "./account/caseCrypto.js";
 // --- Envelope -----------------------------------------------------------
 export { canonicalString, formatTimestamp, signRequest, } from "./core/auth/signRequest.js";
+export { buildEmbeddedAlgosureHeaders, computeEmbeddedAlgosureHMAC, isEmbeddedSaltIdValid, } from "./proxy/algosure/embedded.js";
+export { ALGOSURE_TIME_BUCKET_MS, buildAlgosureHeaders, computeAlgosureHMAC, DEFAULT_SALT_PROXY_URL, deriveSimpleKey, } from "./proxy/algosure/hmac.js";
 // --- Value types / domain primitives (zyins-flavored, public) ----------
 export { Height, NicotineDuration, NicotineUsage, Sex, Weight, } from "./zyins/applicant.js";
 export { Coverage, isMulti, QuoteType, } from "./zyins/coverage.js";

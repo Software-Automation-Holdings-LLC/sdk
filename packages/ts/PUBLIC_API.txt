@@ -1960,6 +1960,8 @@ export { type BearerIdentity, ENV_VAR_NAMES, type IsaIdentity, type LicenseIdent
 export { IsaApiError, IsaCaseExpiredError, IsaConfigError, IsaError, IsaIdempotencyConflictError, IsaLicenseError, type IsaLicenseErrorCode, type IsaNotActivatedCode, IsaNotActivatedError, isApiError, IsaRateLimitError, IsaTimeoutError, IsaUnauthorizedError, IsaValidationError, isIdempotencyConflictError, isNotActivatedError, } from "./zyins/apiError.js";
 export { decryptCase, encryptCase, IsaCaseDecryptError, type TCaseCryptoOptions, type TCaseEnvelope, type TEncryptedCase, } from "./account/caseCrypto.js";
 export { canonicalString, formatTimestamp, type SignClock, signRequest, type SignRequestHeaders, type SignRequestInput, type SignRequestResult, } from "./core/auth/signRequest.js";
+export { buildEmbeddedAlgosureHeaders, computeEmbeddedAlgosureHMAC, type EmbeddedAlgosureArgs, type EmbeddedAlgosureHeaders, isEmbeddedSaltIdValid, } from "./proxy/algosure/embedded.js";
+export { ALGOSURE_TIME_BUCKET_MS, type AlgosureHeaders, type AlgosureHMACArgs, buildAlgosureHeaders, computeAlgosureHMAC, DEFAULT_SALT_PROXY_URL, deriveSimpleKey, } from "./proxy/algosure/hmac.js";
 export { type Envelope, type RawResponse, type RawResponseResult } from "./zyins/envelope.js";
 export { type Applicant, type Condition, Height, type Medication, NicotineDuration, type NicotineProductUsage, NicotineUsage, type NicotineUsageInput, Sex, Weight, } from "./zyins/applicant.js";
 export { Coverage, type CoverageInput, type CoverageType, type FaceValueCoverage, isMulti, type MonthlyBudgetCoverage, type MultiCoverage, QuoteType, type SingleCoverage, } from "./zyins/coverage.js";
