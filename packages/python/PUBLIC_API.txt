@@ -305,6 +305,8 @@ class SessionStore
     def bootstrap(self) -> Session
     def invalidate(self) -> None
     def on_activity(self) -> None
+    def has_exchange_credentials(self) -> bool
+    def refresh_exchange_input(self, exchange_input: ExchangeInput) -> None
 class SessionInterceptor
     def request(self, method: str, url: str, *, headers: dict[str, str], body: str | None) -> TransportResponse
 
@@ -384,9 +386,6 @@ class SessionBinding
     proxy_origin: str
 def call(binding: SessionBinding, *, integration_uuid: str | None, integration_id: int | None, params: Any, method: str, idempotency_key: str | None, clock: SignClock | None, uuid_factory: Callable[[], str] | None, transport: Transport | None, timeout: float) -> Any
 def require_session_binding(session_id: str | None, session_secret: str | None, *, proxy_origin: str) -> SessionBinding
-
-=== rapidsign/__init__.py ===
-class RapidsignNamespace
 
 === webhooks.py ===
 class WebhooksNamespace

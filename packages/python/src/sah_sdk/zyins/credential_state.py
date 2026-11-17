@@ -137,9 +137,23 @@ class IsaCredentialState:
                 listener(event)
 
     def clear_license_key(self) -> None:
-        """Clear the stashed license key (post-deactivate)."""
+        """Clear the stashed license key (post-deactivate).
+
+        Subscribers hear about the cleared state on the same channel as a
+        refresh, so a session minted under the old key is dropped instead of
+        signing requests that can no longer be accepted.
+        """
         self._license_key = ""
         self._store.remove(CREDENTIAL_KEYS.LICENSE_KEY)
+        event = LicenseRefreshedEvent(
+            license_key="",
+            device_id=self._device_id,
+            email=self._email,
+            order_id=self._order_id,
+        )
+        for listener in tuple(self._listeners):
+            with contextlib.suppress(Exception):
+                listener(event)
 
 
 def mint_device_id() -> str:

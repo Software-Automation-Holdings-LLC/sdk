@@ -32,7 +32,6 @@ _SUBMODULE_ALIASES = (
     "catalog",
     "core",
     "proxy",
-    "rapidsign",
     "webhooks",
     "zyins",
 )

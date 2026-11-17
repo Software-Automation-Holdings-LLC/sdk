@@ -93,15 +93,16 @@ class SessionStore:
     ) -> None:
         if not base_url:
             raise ValueError("SessionStore: base_url must be a non-empty string")
+        # The license key is the one input that may arrive later: a client
+        # built from a keycode activates first, and only then can it mint a
+        # session. Requiring it here would force callers to construct after
+        # activation, which the Isa factories cannot do.
         if not (
-            exchange_input.keycode
-            and exchange_input.email
-            and exchange_input.license_key
-            and exchange_input.device_id
+            exchange_input.keycode and exchange_input.email and exchange_input.device_id
         ):
             raise ValueError(
                 "SessionStore: ExchangeInput requires non-empty keycode, "
-                "email, license_key, device_id"
+                "email, device_id"
             )
         self._transport = transport
         self._base_url = base_url.rstrip("/")
@@ -186,6 +187,34 @@ class SessionStore:
                 self._raise_recent_exchange_error(now)
                 self._exchange_locked(now)
 
+    def has_exchange_credentials(self) -> bool:
+        """Whether a session can be minted right now.
+
+        False until activation issues a license key. The interceptor forwards
+        such requests unauthenticated rather than raising, so an SDK used
+        before activation still reaches the unauthenticated endpoints.
+        """
+        with self._lock:
+            return bool(
+                self._input.keycode
+                and self._input.email
+                and self._input.license_key
+                and self._input.device_id
+            )
+
+    def refresh_exchange_input(self, exchange_input: ExchangeInput) -> None:
+        """Adopt freshly issued credentials and drop the cached session.
+
+        Called when ``/v1/licenses/activate`` returns a new license key: the
+        signatures derived from the previous key are no longer valid, so the
+        next request bootstraps against the new one.
+        """
+        with self._lock:
+            self._input = exchange_input
+            self._current = None
+            self._exchange_blocked_until = None
+            self._last_exchange_error = None
+
     def _exchange_locked(self, now: datetime) -> Session:
         try:
             sess = self._do_exchange()
@@ -208,6 +237,11 @@ class SessionStore:
             raise self._last_exchange_error
 
     def _do_exchange(self) -> Session:
+        if not self._input.license_key:
+            raise SessionExchangeError(
+                "POST /v1/sessions requires a license key: call "
+                "licenses.activate first, or construct with a stored key"
+            )
         ts = int(self._clock().timestamp())
         sig = build_bootstrap_signature(
             BootstrapInput(
@@ -247,8 +281,8 @@ class SessionStore:
 class SessionInterceptor:
     """Transparent :class:`Transport` wrapper.
 
-    Sits between product namespaces (``zyins``, ``account``, ``rapidsign``,
-    ``proxy``) and the underlying :class:`HttpTransport`. Wiring at the
+    Sits between product namespaces (``zyins``, ``account``, ``proxy``)
+    and the underlying :class:`HttpTransport`.
     transport seam means every existing product method inherits
     auto-refresh without per-method changes.
 
@@ -277,7 +311,17 @@ class SessionInterceptor:
         headers: dict[str, str],
         body: str | None = None,
     ) -> TransportResponse:
-        resp, session = self._sign_and_send(method, url, headers, body)
+        if not self._store.has_exchange_credentials():
+            return self._inner.request(method, url, headers=headers, body=body)
+        try:
+            resp, session = self._sign_and_send(method, url, headers, body)
+        except SessionExchangeError:
+            # A deactivation can clear the key between the check above and the
+            # exchange; the request is simply unauthenticated, not an error. A
+            # genuine exchange failure still propagates.
+            if self._store.has_exchange_credentials():
+                raise
+            return self._inner.request(method, url, headers=headers, body=body)
         code = _auth_error_code(resp)
         if not self._should_refresh(code):
             return resp

@@ -175,7 +175,7 @@ def test_close_releases_owned_account_transport(
     created: list[ClosingTransport] = []
 
     class AccountTransport(ClosingTransport):
-        def __init__(self) -> None:
+        def __init__(self, **_kwargs: object) -> None:
             super().__init__()
             created.append(self)
 
