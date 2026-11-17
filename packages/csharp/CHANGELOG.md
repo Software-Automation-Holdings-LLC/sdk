@@ -4,6 +4,12 @@ All notable changes to the unified C# SDK. Until v1.0.0 ships to
 public NuGet, every release is a pre-release and the API may change
 in incompatible ways.
 
+## Unreleased
+
+### Fixed — license signer tuple
+
+- **License signer emits `key:orderid:email`.** `Authorization: License` was `base64(keycode:email)`. Production verifies `base64(key:orderid:email)`. The signer now reads the live license key, order id, and email from credential state.
+
 ## 1.0.0-rc.2 — 2026-05-30
 
 Reference-facade consumer-gap fixes so bpp2.0 can drop its bypasses.
