@@ -160,10 +160,14 @@ export async function signRequest(
   }
   const clock = input.clock ?? systemSignClock;
   const timestamp = formatTimestamp(clock());
+  const method = input.method.toUpperCase();
+  // GET and HEAD carry no body. Signing the caller's string here would
+  // hash bytes the proxy never sees, so every signature would fail.
+  const body = method === "GET" || method === "HEAD" ? "" : input.body;
   const canonical = await canonicalString(
-    input.method,
+    method,
     input.path,
-    input.body,
+    body,
     timestamp,
     input.sessionId,
     input.subtle,

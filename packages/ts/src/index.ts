@@ -116,6 +116,22 @@ export {
   type SignRequestInput,
   type SignRequestResult,
 } from "./core/auth/signRequest.js";
+export {
+  buildEmbeddedAlgosureHeaders,
+  computeEmbeddedAlgosureHMAC,
+  type EmbeddedAlgosureArgs,
+  type EmbeddedAlgosureHeaders,
+  isEmbeddedSaltIdValid,
+} from "./proxy/algosure/embedded.js";
+export {
+  ALGOSURE_TIME_BUCKET_MS,
+  type AlgosureHeaders,
+  type AlgosureHMACArgs,
+  buildAlgosureHeaders,
+  computeAlgosureHMAC,
+  DEFAULT_SALT_PROXY_URL,
+  deriveSimpleKey,
+} from "./proxy/algosure/hmac.js";
 export { type Envelope, type RawResponse, type RawResponseResult } from "./zyins/envelope.js";
 
 // --- Value types / domain primitives (zyins-flavored, public) ----------
