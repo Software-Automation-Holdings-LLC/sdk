@@ -198,7 +198,7 @@ internal static class ZyinsFactory
         deviceId: resolvedDeviceId,
         licenseKey: licenseKey,
         store: resolvedStore);
-    var signer = new LicenseSigner(keycode!, email!, resolvedDeviceId, resolvedSecret!);
+    var signer = new LicenseSigner(state, resolvedSecret!);
     return new ZyInsClient(opts, signer, state);
   }
 

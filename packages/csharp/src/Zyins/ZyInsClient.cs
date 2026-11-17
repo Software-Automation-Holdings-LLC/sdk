@@ -31,8 +31,9 @@ internal sealed class BearerTokenRequestSigner : IRequestSigner
   public TransportRequest Sign(TransportRequest request) => _signer.Sign(request);
 }
 
-/// <summary>Apply <c>Authorization: License &lt;base64(keycode:email)&gt;</c> + <c>X-Device-ID</c>
-/// + <c>X-Device-Signature</c> headers. The device-signature primitive is implemented in the
+/// <summary>Apply <c>Authorization: License &lt;base64(key:orderid:email)&gt;</c> + <c>X-Device-ID</c>
+/// + <c>X-Device-Signature</c> headers. Production verifies the three-part tuple
+/// (license key, order id, email). The device-signature primitive is implemented in the
 /// shared Core transport-helpers package; this signer wires it into the request pipeline.</summary>
 internal sealed class LicenseSigner : IRequestSigner
 {
@@ -41,25 +42,49 @@ internal sealed class LicenseSigner : IRequestSigner
   private const string DeviceSigHeader = "X-Device-Signature";
   private const string LicensePrefix = "License ";
 
-  private readonly string _credential;
+  private readonly IsaCredentialState? _state;
+  private readonly string? _licenseKey;
+  private readonly string? _orderId;
+  private readonly string? _email;
   private readonly string _deviceId;
   private readonly string _signingSecret;
 
-  public LicenseSigner(string keycode, string email, string deviceId, string signingSecret)
+  public LicenseSigner(IsaCredentialState state, string signingSecret)
   {
-    if (string.IsNullOrWhiteSpace(keycode)) throw new ArgumentException("keycode must be non-empty", nameof(keycode));
+    if (state is null) throw new ArgumentNullException(nameof(state));
+    if (string.IsNullOrWhiteSpace(state.OrderId)) throw new ArgumentException("orderId must be non-empty", nameof(state));
+    if (string.IsNullOrWhiteSpace(state.Email)) throw new ArgumentException("email must be non-empty", nameof(state));
+    if (string.IsNullOrWhiteSpace(state.DeviceId)) throw new ArgumentException("deviceId must be non-empty", nameof(state));
+    if (signingSecret is null) throw new ArgumentNullException(nameof(signingSecret));
+    _state = state;
+    _deviceId = state.DeviceId;
+    _signingSecret = signingSecret;
+  }
+
+  /// <summary>Tuple seam for tests that supply the three production fields directly.
+  /// <paramref name="licenseKey"/> is the key, <paramref name="orderId"/> the order id.</summary>
+  public LicenseSigner(string licenseKey, string orderId, string email, string deviceId, string signingSecret)
+  {
+    if (licenseKey is null) throw new ArgumentNullException(nameof(licenseKey));
+    if (string.IsNullOrWhiteSpace(orderId)) throw new ArgumentException("orderId must be non-empty", nameof(orderId));
     if (string.IsNullOrWhiteSpace(email)) throw new ArgumentException("email must be non-empty", nameof(email));
     if (string.IsNullOrWhiteSpace(deviceId)) throw new ArgumentException("deviceId must be non-empty", nameof(deviceId));
     if (signingSecret is null) throw new ArgumentNullException(nameof(signingSecret));
-    _credential = Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes($"{keycode}:{email}"));
+    _licenseKey = licenseKey;
+    _orderId = orderId;
+    _email = email;
     _deviceId = deviceId;
     _signingSecret = signingSecret;
   }
 
+  private string Credential =>
+      Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(
+          $"{_state?.LicenseKey ?? _licenseKey}:{_state?.OrderId ?? _orderId}:{_state?.Email ?? _email}"));
+
   public TransportRequest Sign(TransportRequest request)
   {
     var headers = CompatHeaders.Copy(request.Headers);
-    headers[AuthorizationHeader] = LicensePrefix + _credential;
+    headers[AuthorizationHeader] = LicensePrefix + Credential;
     headers[DeviceIdHeader] = _deviceId;
     headers[DeviceSigHeader] = ComputeSignature(request);
     return request with { Headers = headers };
