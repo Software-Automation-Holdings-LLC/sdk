@@ -40,6 +40,7 @@ from .core.debug import DebugLogger
 from .core.env import EnvReader, IsaConfigError, default_env, require_env
 from .core.envelope import Envelope, RawResponse, extract_envelope_fields
 from .core.license_hmac import LicenseClock, system_license_clock
+from .core.session import ExchangeInput, SessionInterceptor, SessionStore
 from .core.transport import HttpTransport, Transport
 from .zyins.applicant import Applicant  # re-export convenience
 from .zyins.bundled_api_versions import resolve_api_version
@@ -201,10 +202,8 @@ class Isa:
         self._dataset_bundle_fetcher = dataset_bundle_fetcher
         self.zyins = ZyinsNamespace(self)
         from .proxy import ProxyNamespace
-        from .rapidsign import RapidsignNamespace
         from .webhooks import WebhooksNamespace
 
-        self.rapidsign = RapidsignNamespace(self)
         self.proxy = ProxyNamespace(self)
         self.webhooks = WebhooksNamespace(self)
         # ``isa.autocorrector`` — top-level kernel factory per the
@@ -312,20 +311,55 @@ class Isa:
             order_id=resolved_keycode,
         )
         state = IsaCredentialState(snapshot, store)
-        token = _license_bootstrap_token(resolved_keycode, resolved_email)
+        # Do not invent a bearer. Production rejects isa_test_license_*
+        # placeholders. A stored license key signs product calls through
+        # SessionInterceptor (Authorization: Session <secret>).
+        # Always install the session interceptor: a client built from a
+        # keycode has no license key yet, and activating is what issues one.
+        # The store adopts the key through the refresh event below, so the
+        # first product call after activation authenticates.
+        inner = transport or HttpTransport(timeout=timeout)
+        session_store = SessionStore(
+            transport=inner,
+            base_url=base_url,
+            exchange_input=ExchangeInput(
+                keycode=resolved_keycode,
+                email=resolved_email,
+                license_key=persisted_license_key,
+                device_id=device_id,
+            ),
+        )
+        state.on_license_refreshed(
+            lambda event: session_store.refresh_exchange_input(
+                ExchangeInput(
+                    keycode=state.snapshot().keycode,
+                    email=event.email,
+                    license_key=event.license_key,
+                    device_id=event.device_id,
+                )
+            )
+        )
+        wire: Transport | None = SessionInterceptor(store=session_store, inner=inner)
         client = ZyInsClient(
-            token, base_url=base_url, timeout=timeout, transport=transport
+            "",
+            base_url=base_url,
+            timeout=timeout,
+            transport=wire,
+            auth=False,
         )
         instance = cls(
             client=client,
             debug=DebugLogger(env=reader),
             base_url=base_url,
-            transport=transport,
+            # The one transport this instance uses. Passing the same object
+            # keeps close() pointed at the sockets the calls actually open.
+            transport=inner,
             license_clock=license_clock,
             case_storage=case_storage,
             dataset_bundle_fetcher=dataset_bundle_fetcher,
         )
         instance._license_keycode = resolved_keycode
+        instance._owns_transport = transport is None
         instance._license_email = resolved_email
         instance._credential_state = state
         _validate_api_version_override(api_version)
@@ -902,15 +936,8 @@ def _resolve_bearer_token_or_offline(
         return token
     if offline:
         env_token = reader.get("ISA_TOKEN")
-        return env_token if env_token else _OFFLINE_BEARER_TOKEN
+        return env_token or _OFFLINE_BEARER_TOKEN
     return require_env(reader, "ISA_TOKEN", factory_name="Isa.with_bearer")
-
-
-def _license_bootstrap_token(keycode: str, email: str) -> str:
-    import hashlib
-
-    digest = hashlib.sha256(f"{keycode}|{email}".encode()).hexdigest()[:20]
-    return f"isa_test_license_{digest}"
 
 
 def _form_bootstrap_token(form_token: str) -> str:

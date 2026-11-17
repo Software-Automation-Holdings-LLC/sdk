@@ -104,8 +104,17 @@ class ZyInsClient:
         timeout: float = DEFAULT_TIMEOUT_SECONDS,
         version: str = DEFAULT_VERSION_HEADER,
         transport: Transport | None = None,
+        auth: bool = True,
     ) -> None:
-        self._auth = BearerAuth(token)
+        # Declared optional: auth=False constructs the client without a bearer so
+        # a keycode exchange can supply it per request.
+        self._auth: BearerAuth | None
+        if auth:
+            if not token:
+                raise ValueError("ZyInsClient: token must be a non-empty string")
+            self._auth = BearerAuth(token)
+        else:
+            self._auth = None
         self._base_url = base_url.rstrip("/")
         self._version = version
         self._transport: Transport = transport or HttpTransport(timeout=timeout)
@@ -196,7 +205,7 @@ class ZyInsClient:
             "Accept": _JSON_CONTENT_TYPE,
             "Version": version or self._version,
         }
-        if auth:
+        if auth and self._auth is not None:
             headers.update(self._auth.headers())
         if body is not None:
             headers["Content-Type"] = _JSON_CONTENT_TYPE

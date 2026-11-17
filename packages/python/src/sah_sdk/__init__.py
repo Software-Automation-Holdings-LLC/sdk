@@ -3,7 +3,6 @@
 One package, three product namespaces:
 
 * ``isa.zyins`` — underwriting (prequalify, quote, datasets).
-* ``isa.rapidsign`` — signature workflow (scaffolded; lands in a follow-up phase).
 * ``isa.proxy`` — proxy passthrough (scaffolded; lands in a follow-up phase).
 * ``isa.webhooks`` — signature verification helpers.
 
