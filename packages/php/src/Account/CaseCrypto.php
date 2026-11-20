@@ -88,13 +88,18 @@ final readonly class CaseCrypto
      * Decrypt a wire envelope with the fragment key, verifying the `$product`
      * AEAD binding, and return the parsed JSON payload. Throws
      * {@see CaseDecryptException} on any authentication failure.
+     *
+     * The IV and tag must be exactly the lengths {@see encrypt} produces.
+     * OpenSSL authenticates only as many tag bytes as it is handed, so a
+     * shortened tag from the storage service would let a forged ciphertext
+     * pass after a handful of guesses.
      */
     public function decrypt(string $product, CaseEnvelope $envelope, string $keyFragment): mixed
     {
         $rawKey = self::decodeFragmentKey($keyFragment);
-        $iv = self::b64Decode($envelope->iv, 'iv');
+        $iv = self::b64DecodeExact($envelope->iv, 'iv', self::IV_BYTES);
         $ciphertext = self::b64Decode($envelope->ciphertext, 'ciphertext');
-        $tag = self::b64Decode($envelope->tag, 'tag');
+        $tag = self::b64DecodeExact($envelope->tag, 'tag', self::TAG_BYTES);
         $plaintext = openssl_decrypt(
             $ciphertext,
             self::cipherForKey($rawKey),
@@ -161,6 +166,18 @@ final readonly class CaseCrypto
         $raw = base64_decode($value, strict: true);
         if ($raw === false) {
             throw new InvalidArgumentException("account: CaseCrypto envelope {$field} is not valid base64");
+        }
+        return $raw;
+    }
+
+    private static function b64DecodeExact(string $value, string $field, int $bytes): string
+    {
+        $raw = self::b64Decode($value, $field);
+        if (strlen($raw) !== $bytes) {
+            throw new CaseDecryptException(
+                "account: case envelope {$field} is " . strlen($raw) . " bytes (want {$bytes}): "
+                . 'tampered or corrupt envelope',
+            );
         }
         return $raw;
     }
