@@ -17,6 +17,7 @@ using System.Collections.Generic;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
+using Isa.Sdk.Core;
 using Isa.Sdk.Zyins;
 
 namespace Isa.Sdk.Account;
@@ -77,7 +78,7 @@ public sealed class AccountReferenceData
     {
       if (string.IsNullOrWhiteSpace(request.Dataset))
         throw new ArgumentException("account: referenceData.get(scope=dataset) requires a dataset name", nameof(request));
-      var path = $"{DatasetPrefix}{Uri.EscapeDataString(request.Dataset)}";
+      var path = $"{DatasetPrefix}{PathSegment.Encode(request.Dataset, nameof(request))}";
       return HttpDispatcher.GetAsync<ReferenceDataResult>(op, path, ct: ct);
     }
     var wire = new Dictionary<string, object?>();

@@ -3,6 +3,7 @@
 // owns request building, signing, and error mapping.
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using Isa.Sdk.Core;
 using Product = global::Isa.Sdk.Catalog.Product;
 
 namespace Isa.Sdk.Zyins;
@@ -233,7 +234,7 @@ public sealed class DatasetsSubClient
   {
     if (string.IsNullOrWhiteSpace(id))
       throw new ArgumentException("id must be non-empty", nameof(id));
-    return HttpDispatcher.GetAsync<Dataset>(_ctx, $"{ListPath}/{Uri.EscapeDataString(id)}", ct: ct);
+    return HttpDispatcher.GetAsync<Dataset>(_ctx, $"{ListPath}/{PathSegment.Encode(id, nameof(id))}", ct: ct);
   }
 }
 
@@ -250,7 +251,7 @@ public sealed class ReferenceDataSubClient
   {
     if (string.IsNullOrWhiteSpace(kind))
       throw new ArgumentException("kind must be non-empty", nameof(kind));
-    return HttpDispatcher.GetAsync<ReferenceDataResponse>(_ctx, $"{PathBase}/{Uri.EscapeDataString(kind)}", ct: ct);
+    return HttpDispatcher.GetAsync<ReferenceDataResponse>(_ctx, $"{PathBase}/{PathSegment.Encode(kind, nameof(kind))}", ct: ct);
   }
 }
 
