@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Isa\Sdk\Account;
 
 use InvalidArgumentException;
+use Isa\Sdk\Core\PathSegment;
 
 /**
  * `$isa->account->cases` — shareable case create / get / list / email.
@@ -169,7 +170,7 @@ final readonly class CasesClient
     public function open(string $link): CaseOpenResult
     {
         $parsed = CaseLink::parse($link);
-        $path = '/v1/case/' . rawurlencode($parsed->code);
+        $path = '/v1/case/' . PathSegment::encode($parsed->code);
         $data = $this->http->getRawEnvelope($path);
         $product = is_string($data['product'] ?? null) ? (string) $data['product'] : '';
         if ($product === '') {
