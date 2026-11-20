@@ -15,6 +15,7 @@
  * (tracked in issue #38). The SDK surface is the product.
  */
 
+import { pathSegment } from "../core/http/pathSegment.js";
 import { fromHttpResponse, RapidSignError } from "./errors.js";
 import { decodeGzipBase64, type Decompressor } from "./internal/decompress.js";
 import { isIso8601Duration, MAX_DURATION_MS, parseDuration } from "./internal/duration.js";
@@ -49,10 +50,10 @@ export interface DocumentsContext {
 /** Path prefixes (a single source of truth for routing). */
 const PATH = {
   documents: "/v1/documents",
-  document: (signId: string): string => `/v1/documents/${encodeURIComponent(signId)}`,
-  notify: (signId: string): string => `/v1/documents/${encodeURIComponent(signId)}/notify`,
-  download: (signId: string): string => `/v1/documents/${encodeURIComponent(signId)}/download`,
-  cancel: (signId: string): string => `/v1/documents/${encodeURIComponent(signId)}/cancel`,
+  document: (signId: string): string => `/v1/documents/${pathSegment(signId)}`,
+  notify: (signId: string): string => `/v1/documents/${pathSegment(signId)}/notify`,
+  download: (signId: string): string => `/v1/documents/${pathSegment(signId)}/download`,
+  cancel: (signId: string): string => `/v1/documents/${pathSegment(signId)}/cancel`,
 } as const;
 
 /** Default poll interval and cap for awaitSignature. */

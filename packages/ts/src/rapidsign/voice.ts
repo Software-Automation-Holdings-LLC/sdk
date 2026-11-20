@@ -12,13 +12,14 @@
  * Wire-mirrors the Go client's `Voice` (packages/go/rapidsign/voice.go).
  */
 
+import { pathSegment } from "../core/http/pathSegment.js";
 import { type DocumentsContext } from "./documents.js";
 import { fromHttpResponse, RapidSignError } from "./errors.js";
 import { type MintCodeRequest, type VoiceCode, type VoiceScript } from "./types.js";
 
 /** Path prefixes (a single source of truth for routing). */
 const PATH = {
-  voiceCode: (signId: string): string => `/v1/documents/${encodeURIComponent(signId)}/voice-code`,
+  voiceCode: (signId: string): string => `/v1/documents/${pathSegment(signId)}/voice-code`,
 } as const;
 
 /** Wire body for `POST /v1/documents/{sign_id}/voice-code`. */
