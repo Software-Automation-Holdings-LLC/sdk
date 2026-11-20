@@ -18,8 +18,8 @@ from __future__ import annotations
 import json
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any
-from urllib.parse import quote as urlquote
 
+from ..core.path_segment import path_segment
 from ._op import dispatch, parse_json_object, unwrap_envelope
 from .case_crypto import CaseEnvelope, decrypt_case, encrypt_case
 from .case_link import assemble_link, parse_link
@@ -129,7 +129,7 @@ class AccountCases:
     def get(self, case_id: str) -> CaseSummary:
         if not case_id:
             raise ValueError("account: cases.get requires a non-empty case id")
-        path = f"{_PATH}/{urlquote(case_id, safe='')}"
+        path = f"{_PATH}/{path_segment(case_id)}"
         raw = dispatch(self._ctx, method="GET", path=path)
         return _parse_summary_body(raw)
 
@@ -142,7 +142,7 @@ class AccountCases:
             raise ValueError("account: cases.email requires a non-empty case_id")
         if not request.to:
             raise ValueError("account: cases.email requires a non-empty to address")
-        path = f"{_PATH}/{urlquote(request.case_id, safe='')}/email"
+        path = f"{_PATH}/{path_segment(request.case_id)}/email"
         body = json.dumps({"to": request.to}, separators=(",", ":"))
         dispatch(self._ctx, method="POST", path=path, body=body)
         return CaseEmailResult(queued=True)
@@ -180,7 +180,7 @@ class AccountCases:
         opaque envelope via ``GET /v1/case/{code}``, and decrypt locally. The
         key comes only from the link the caller already holds."""
         parsed = parse_link(link)
-        path = f"{_PATH}/{urlquote(parsed.code, safe='')}"
+        path = f"{_PATH}/{path_segment(parsed.code)}"
         raw = dispatch(self._ctx, method="GET", path=path)
         root = parse_json_object(raw, context="account.cases.open")
         product = _str(root, "product")
