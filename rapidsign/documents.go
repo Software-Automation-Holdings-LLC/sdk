@@ -324,10 +324,25 @@ type downloadDocumentResponse struct {
 // (decompressed) bytes. The on-wire payload is gzipped+base64; both
 // layers are stripped here so callers can write the result directly to
 // disk or hand it to a PDF library.
+//
+// A document larger than Options.MaxDocumentBytes fails with an error
+// that matches ErrDocumentTooLarge via errors.Is. The server's
+// size_bytes field is not trusted to raise or lower that ceiling.
 func (d *Documents) Download(ctx context.Context, signID string) ([]byte, error) {
 	if signID == "" {
 		return nil, errors.New("rapidsign: Documents.Download requires a non-empty sign id")
 	}
+	pdf, err := d.download(ctx, signID)
+	if errors.Is(err, ErrDocumentTooLarge) {
+		return nil, fmt.Errorf(
+			"rapidsign: Documents.Download sign_id=%s is larger than Options.MaxDocumentBytes (%d bytes); raise it to accept this document: %w",
+			signID, d.c.maxDocument, err,
+		)
+	}
+	return pdf, err
+}
+
+func (d *Documents) download(ctx context.Context, signID string) ([]byte, error) {
 	url := fmt.Sprintf("%s/v1/documents/%s/download", d.c.baseURL, signID)
 	resp, err := internal.JSONRequest(ctx, d.c.doer, http.MethodGet, url, nil, internal.RequestOptions{
 		Headers: map[string]string{"User-Agent": d.c.userAgent},
@@ -338,21 +353,27 @@ func (d *Documents) Download(ctx context.Context, signID string) ([]byte, error)
 	if resp.StatusCode >= 400 {
 		return nil, parseErrorResponse(resp, d.c.clock())
 	}
-	defer func() { _, _ = io.Copy(io.Discard, resp.Body); _ = resp.Body.Close() }()
+	// net/http may have inflated a gzip Content-Encoding already, so the
+	// body is bounded before decoding, and so is the drain.
+	body := d.c.maxDocument.Wire().Reader(resp.Body)
+	defer func() { _, _ = io.Copy(io.Discard, body); _ = resp.Body.Close() }()
 
 	var payload downloadDocumentResponse
-	if err := decodeEnvelope(resp.Body, &payload); err != nil {
+	if err := decodeEnvelope(body, &payload); err != nil {
 		return nil, err
 	}
 	if payload.PDFGzipBase64 == "" {
 		return nil, fmt.Errorf("rapidsign: Documents.Download received empty payload for sign_id=%s", signID)
 	}
-	if !payload.Compressed {
-		// Reserved-for-future per proto; if a server ever emits
-		// uncompressed, treat the base64 as direct PDF bytes.
-		return decodeBase64Signature(payload.PDFGzipBase64)
+	if payload.Compressed {
+		return d.c.maxDocument.DecodeGzippedBase64(payload.PDFGzipBase64)
 	}
-	return internal.DecodeGzippedBase64(payload.PDFGzipBase64)
+	// Reserved-for-future per proto; if a server ever emits
+	// uncompressed, treat the base64 as direct PDF bytes.
+	if !d.c.maxDocument.AdmitsBase64(payload.PDFGzipBase64) {
+		return nil, ErrDocumentTooLarge
+	}
+	return decodeBase64Signature(payload.PDFGzipBase64)
 }
 
 // Cancel is reserved for the future server-side cancel endpoint

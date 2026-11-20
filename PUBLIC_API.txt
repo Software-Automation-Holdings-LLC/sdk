@@ -3179,6 +3179,18 @@ const DefaultBaseURL = "https://rapidsign.isaapi.com"
     Options.BaseURL for staging, sandbox, or local-dev pointing at a fixture
     server.
 
+const DefaultMaxDocumentBytes = int64(internal.DefaultCeiling)
+    DefaultMaxDocumentBytes (4 MiB) is the largest signed PDF Documents.Download
+    accepts when Options.MaxDocumentBytes is zero.
+
+
+VARIABLES
+
+var ErrDocumentTooLarge = internal.ErrDocumentTooLarge
+    ErrDocumentTooLarge reports a Documents.Download response that would hold
+    more than Options.MaxDocumentBytes of document in memory. The read stops at
+    the ceiling, so the surplus is never allocated.
+
 
 TYPES
 
@@ -3278,6 +3290,10 @@ func (d *Documents) Download(ctx context.Context, signID string) ([]byte, error)
     (decompressed) bytes. The on-wire payload is gzipped+base64; both layers are
     stripped here so callers can write the result directly to disk or hand it to
     a PDF library.
+
+    A document larger than Options.MaxDocumentBytes fails with an error that
+    matches ErrDocumentTooLarge via errors.Is. The server's size_bytes field is
+    not trusted to raise or lower that ceiling.
 
 func (d *Documents) Get(ctx context.Context, signID string) (*Signature, error)
     Get returns the current state of a signing envelope. When the envelope has
@@ -3422,6 +3438,12 @@ type Options struct {
 	// MaxAttempts caps total request attempts including the first.
 	// Zero falls back to coretransport.DefaultMaxAttempts.
 	MaxAttempts int
+	// MaxDocumentBytes is the largest signed PDF Documents.Download will
+	// hold in memory. The compressed payload is held to it as well, and
+	// the response body to a bound derived from it, so a response that
+	// is small on the wire cannot inflate past it. Zero selects
+	// DefaultMaxDocumentBytes; negative is rejected by New.
+	MaxDocumentBytes int64
 
 	// Has unexported fields.
 }
