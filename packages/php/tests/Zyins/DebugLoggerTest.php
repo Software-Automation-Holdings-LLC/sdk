@@ -79,24 +79,26 @@ final class DebugLoggerTest extends TestCase
         self::assertSame(['[redacted]'], $headers['X-Device-Signature']);
         self::assertSame(['application/json'], $headers['Content-Type']);
 
-        /** @var array{applicant: array{email: string, dob: string}} $body */
-        $body = $record['context']['body'];
-        self::assertIsArray($body);
-        self::assertSame('[redacted]', $body['applicant']['email']);
-        self::assertSame('[redacted]', $body['applicant']['dob']);
+        self::assertSame(['bytes' => strlen($bodyJson)], $record['context']['body']);
+        $logged = json_encode($captured->records, JSON_THROW_ON_ERROR);
+        self::assertStringNotContainsString('john@example.com', $logged);
+        self::assertStringNotContainsString('1962-04-18', $logged);
     }
 
-    public function testRedactsResponseBody(): void
+    public function testResponseBodyKeepsOnlyEnvelopeMetadata(): void
     {
         $captured = new InMemoryLogger();
         $logger = new DebugLogger($captured);
 
         $request = new Request('POST', 'https://api.isaapi.com/v1/sessions');
         $respBody = json_encode([
+            'object' => 'session',
+            'request_id' => 'req_123',
+            'code' => ['nested' => 'withheld-envelope-value'],
             'data' => [
-                'licenseKey' => 'isa_license_SECRET',
+                'licenseKey' => 'isa_license_PLACEHOLDER',
                 'phone' => '+15555550100',
-                'safe' => 'value',
+                'unlisted_field' => 'unlisted-value',
                 'ssn' => '123-45-6789',
             ],
         ], JSON_THROW_ON_ERROR);
@@ -104,12 +106,24 @@ final class DebugLoggerTest extends TestCase
 
         $logger->logResponse($response, $request);
 
-        /** @var array{data: array{licenseKey: string, ssn: string, phone: string, safe: string}} $body */
-        $body = $captured->records[0]['context']['body'];
-        self::assertSame('[redacted]', $body['data']['licenseKey']);
-        self::assertSame('[redacted]', $body['data']['ssn']);
-        self::assertSame('[redacted]', $body['data']['phone']);
-        self::assertSame('value', $body['data']['safe']);
+        self::assertSame(
+            ['bytes' => strlen($respBody), 'object' => 'session', 'request_id' => 'req_123'],
+            $captured->records[0]['context']['body'],
+        );
+    }
+
+    public function testNonJsonBodyIsSummarizedByLength(): void
+    {
+        $captured = new InMemoryLogger();
+        $logger = new DebugLogger($captured);
+
+        $request = new Request('POST', 'https://api.isaapi.com/v1/prequalify');
+        $text = 'upstream echoed date_of_birth=1962-04-18';
+        $response = new Response(502, ['Content-Type' => 'text/plain'], $text);
+
+        $logger->logResponse($response, $request);
+
+        self::assertSame(['bytes' => strlen($text)], $captured->records[0]['context']['body']);
     }
 
     public function testStderrEmissionDoesNotTouchStdout(): void

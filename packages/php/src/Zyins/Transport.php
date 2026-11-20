@@ -27,8 +27,8 @@ use Isa\Sdk\Zyins\Logging\DebugLogger;
  * different PSR-18 instance.
  *
  * The DebugLogger (set via `ISA_LOG=debug` or a PSR-3 logger on the
- * client) dumps every request/response pair to stderr with secrets
- * and PII redacted.
+ * client) records every request/response pair with credential headers
+ * redacted and bodies reduced to a summary that omits applicant data.
  */
 final readonly class Transport
 {
