@@ -17,6 +17,8 @@ namespace Isa\Sdk\Zyins\Reference;
  */
 final class MakeKey
 {
+    private const ALPHANUMERIC = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz';
+
     /**
      * Normalize free text into the canonical catalog key.
      *
@@ -24,19 +26,37 @@ final class MakeKey
      */
     public static function normalize(string $text): string
     {
-        $upper = strtoupper($text);
-        $out = '';
-        $len = strlen($upper);
-        for ($i = 0; $i < $len; $i++) {
-            $ch = $upper[$i];
-            $code = ord($ch);
-            $isDigit = $code >= 0x30 && $code <= 0x39;
-            $isUpper = $code >= 0x41 && $code <= 0x5A;
-            if ($isDigit || $isUpper) {
-                $out .= $ch;
-            }
+        return self::collect($text, strlen($text));
+    }
+
+    /**
+     * The key of `$text`, or null when it is longer than `$maxLength`.
+     *
+     * Allocates at most `$maxLength + 1` bytes however long `$text` is,
+     * so a matcher bounded by its longest catalog key spends no more on
+     * text that cannot match than on text that can.
+     *
+     * @internal
+     */
+    public static function within(string $text, int $maxLength): ?string
+    {
+        $key = self::collect($text, $maxLength + 1);
+        return strlen($key) > $maxLength ? null : $key;
+    }
+
+    /** The first `$limit` alphanumerics of `$text`, uppercased. */
+    private static function collect(string $text, int $limit): string
+    {
+        $key = '';
+        $length = strlen($text);
+        $offset = strcspn($text, self::ALPHANUMERIC);
+        while ($offset < $length && strlen($key) < $limit) {
+            $run = strspn($text, self::ALPHANUMERIC, $offset, $limit - strlen($key));
+            $key .= substr($text, $offset, $run);
+            $offset += $run;
+            $offset += strcspn($text, self::ALPHANUMERIC, $offset);
         }
-        return $out;
+        return strtoupper($key);
     }
 
     private function __construct()

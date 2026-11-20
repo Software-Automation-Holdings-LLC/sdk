@@ -33,6 +33,12 @@ final class ReferenceIndex
     /** @var array<string,string> name check-key → medication id (first-write-wins) */
     private array $medicationIdByCheckKey = [];
 
+    /** Length of the longest condition id or name key; no longer text can resolve. */
+    private int $longestConditionKey = 0;
+
+    /** Length of the longest medication id or name key; no longer text can resolve. */
+    private int $longestMedicationKey = 0;
+
     /** @var array<string,list<string>> */
     private array $medsByCondition = [];
 
@@ -56,7 +62,7 @@ final class ReferenceIndex
 
         foreach ($bundle->conditions as $row) {
             $this->conditionNames[$row->id] = $row->name;
-            $this->indexCheckKey($this->conditionIdByCheckKey, $row->name, $row->id);
+            $this->indexKeys($this->conditionIdByCheckKey, $this->longestConditionKey, $row->id, $row->name);
             $medIds = [];
             foreach ($row->treatedWith as $rel) {
                 $medIds[] = $rel->id;
@@ -70,7 +76,7 @@ final class ReferenceIndex
         }
         foreach ($bundle->medications as $row) {
             $this->medicationNames[$row->id] = $row->name;
-            $this->indexCheckKey($this->medicationIdByCheckKey, $row->name, $row->id);
+            $this->indexKeys($this->medicationIdByCheckKey, $this->longestMedicationKey, $row->id, $row->name);
             $condIds = [];
             foreach ($row->usedFor as $rel) {
                 $condIds[] = $rel->id;
@@ -129,14 +135,7 @@ final class ReferenceIndex
      */
     public function resolveCondition(string $text): ?string
     {
-        $key = MakeKey::normalize($text);
-        if ($key === '') {
-            return null;
-        }
-        if (isset($this->conditionNames[$key])) {
-            return $key;
-        }
-        return $this->conditionIdByCheckKey[CheckKey::normalize($text)] ?? null;
+        return self::resolve($text, $this->conditionNames, $this->conditionIdByCheckKey, $this->longestConditionKey);
     }
 
     /**
@@ -145,30 +144,43 @@ final class ReferenceIndex
      */
     public function resolveMedication(string $text): ?string
     {
-        $key = MakeKey::normalize($text);
-        if ($key === '') {
+        return self::resolve($text, $this->medicationNames, $this->medicationIdByCheckKey, $this->longestMedicationKey);
+    }
+
+    /**
+     * Both lookups compare whole keys, so text whose key outgrows every
+     * catalog key is a miss and is read no further than that length.
+     *
+     * @param array<string,string> $namesById
+     * @param array<string,string> $idByCheckKey
+     */
+    private static function resolve(string $text, array $namesById, array $idByCheckKey, int $longestKey): ?string
+    {
+        $key = MakeKey::within($text, $longestKey);
+        if ($key === null || $key === '') {
             return null;
         }
-        if (isset($this->medicationNames[$key])) {
+        if (isset($namesById[$key])) {
             return $key;
         }
-        return $this->medicationIdByCheckKey[CheckKey::normalize($text)] ?? null;
+        return $idByCheckKey[CheckKey::normalize($key)] ?? null;
     }
 
     /**
      * Record an entity under its name's sorted check key, first-write-wins
      * so a name-multiset collision resolves to the earliest catalog entry
-     * rather than letting a later row shadow it (engine-determinism parity).
+     * rather than letting a later row shadow it (engine-determinism parity),
+     * and widen `$longestKey` to cover its id and name key.
      *
-     * @param array<string,string> $map
+     * @param array<string,string> $idByCheckKey
      */
-    private function indexCheckKey(array &$map, string $name, string $id): void
+    private function indexKeys(array &$idByCheckKey, int &$longestKey, string $id, string $name): void
     {
-        $key = CheckKey::normalize($name);
-        if ($key === '' || isset($map[$key])) {
-            return;
+        $checkKey = CheckKey::normalize($name);
+        $longestKey = max($longestKey, strlen($id), strlen($checkKey));
+        if ($checkKey !== '' && ! isset($idByCheckKey[$checkKey])) {
+            $idByCheckKey[$checkKey] = $id;
         }
-        $map[$key] = $id;
     }
 
     /** @return list<string> */

@@ -35,23 +35,21 @@ final class CheckKey
     /**
      * Normalize free text into the engine's sorted condition check-key.
      *
+     * A key holds at most 36 distinct bytes, so tallying them and
+     * replaying the tally in byte order sorts it in constant extra
+     * memory, where sorting the bytes themselves needs a slot per byte.
+     *
      * @internal
      */
     public static function normalize(string $text): string
     {
-        $upper = strtoupper($text);
-        $bytes = [];
-        $len = strlen($upper);
-        for ($i = 0; $i < $len; $i++) {
-            $code = ord($upper[$i]);
-            $isDigit = $code >= 0x30 && $code <= 0x39;
-            $isUpper = $code >= 0x41 && $code <= 0x5A;
-            if ($isDigit || $isUpper) {
-                $bytes[] = $upper[$i];
-            }
+        /** @var array<int,int> $tally byte → occurrences, ascending by byte */
+        $tally = count_chars(MakeKey::normalize($text), 1);
+        $sorted = '';
+        foreach ($tally as $byte => $count) {
+            $sorted .= str_repeat(chr($byte), $count);
         }
-        sort($bytes, SORT_STRING);
-        return implode('', $bytes);
+        return $sorted;
     }
 
     private function __construct()
