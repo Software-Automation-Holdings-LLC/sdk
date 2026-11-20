@@ -8,7 +8,14 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/Software-Automation-Holdings-LLC/sdk/rapidsign/internal"
 )
+
+// ErrDocumentTooLarge reports a Documents.Download response that would
+// hold more than Options.MaxDocumentBytes of document in memory. The
+// read stops at the ceiling, so the surplus is never allocated.
+var ErrDocumentTooLarge = internal.ErrDocumentTooLarge
 
 // ErrorCode is the stable wire enum from api.isa.v1.ErrorCode. Clients
 // switch on these values rather than HTTP status because the server's

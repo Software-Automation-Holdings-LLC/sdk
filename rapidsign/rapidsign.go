@@ -17,6 +17,10 @@ import (
 // fixture server.
 const DefaultBaseURL = "https://rapidsign.isaapi.com"
 
+// DefaultMaxDocumentBytes (4 MiB) is the largest signed PDF
+// Documents.Download accepts when Options.MaxDocumentBytes is zero.
+const DefaultMaxDocumentBytes = int64(internal.DefaultCeiling)
+
 // Default polling cadence for Documents.AwaitSignature. Jittered
 // exponential backoff starting at PollInitialInterval, doubling each
 // iteration up to PollMaxInterval.
@@ -42,6 +46,12 @@ type Options struct {
 	// MaxAttempts caps total request attempts including the first.
 	// Zero falls back to coretransport.DefaultMaxAttempts.
 	MaxAttempts int
+	// MaxDocumentBytes is the largest signed PDF Documents.Download will
+	// hold in memory. The compressed payload is held to it as well, and
+	// the response body to a bound derived from it, so a response that
+	// is small on the wire cannot inflate past it. Zero selects
+	// DefaultMaxDocumentBytes; negative is rejected by New.
+	MaxDocumentBytes int64
 
 	// clock, ids, and sleeper are test seams. Production callers leave
 	// them nil and the constructor wires the real implementations.
@@ -53,12 +63,13 @@ type Options struct {
 // Client is the top-level RapidSign API client. Construct one with
 // New and reuse it across requests; it is safe for concurrent use.
 type Client struct {
-	baseURL   string
-	userAgent string
-	doer      internal.Doer
-	clock     internal.Clock
-	ids       *internal.IDSource
-	sleeper   internal.Sleeper
+	baseURL     string
+	userAgent   string
+	doer        internal.Doer
+	clock       internal.Clock
+	ids         *internal.IDSource
+	sleeper     internal.Sleeper
+	maxDocument internal.Ceiling
 
 	// Documents groups the document-lifecycle operations. Always non-
 	// nil on a Client returned from New.
@@ -91,6 +102,10 @@ func New(token string, opts ...Options) (*Client, error) {
 	}
 
 	baseURL, err := normalizeBaseURL(o.BaseURL)
+	if err != nil {
+		return nil, err
+	}
+	maxDocument, err := documentCeiling(o.MaxDocumentBytes)
 	if err != nil {
 		return nil, err
 	}
@@ -132,12 +147,13 @@ func New(token string, opts ...Options) (*Client, error) {
 	}
 
 	c := &Client{
-		baseURL:   baseURL,
-		userAgent: defaultUserAgent(o.UserAgent),
-		doer:      doer,
-		clock:     clock,
-		ids:       ids,
-		sleeper:   sleeper,
+		baseURL:     baseURL,
+		userAgent:   defaultUserAgent(o.UserAgent),
+		doer:        doer,
+		clock:       clock,
+		ids:         ids,
+		sleeper:     sleeper,
+		maxDocument: maxDocument,
 	}
 	c.Documents = &Documents{c: c}
 	c.Webhooks = &Webhooks{c: c}
@@ -164,6 +180,18 @@ func normalizeBaseURL(raw string) (string, error) {
 		return "", fmt.Errorf("rapidsign: invalid Options.BaseURL %q: host is required", raw)
 	}
 	return withoutSlash, nil
+}
+
+// documentCeiling resolves Options.MaxDocumentBytes, selecting
+// DefaultMaxDocumentBytes for zero.
+func documentCeiling(maxBytes int64) (internal.Ceiling, error) {
+	switch {
+	case maxBytes < 0:
+		return 0, fmt.Errorf("rapidsign: invalid Options.MaxDocumentBytes %d: must not be negative", maxBytes)
+	case maxBytes == 0:
+		return internal.DefaultCeiling, nil
+	}
+	return internal.Ceiling(maxBytes), nil
 }
 
 // defaultUserAgent returns the supplied UA or a versioned SDK string.
