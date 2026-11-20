@@ -6,7 +6,8 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
-	"net/url"
+
+	"github.com/Software-Automation-Holdings-LLC/sdk/core/urlpath"
 )
 
 const (
@@ -74,7 +75,11 @@ func (s *ReferenceDataService) getDataset(ctx context.Context, in ReferenceDataI
 	if in.Dataset == "" {
 		return nil, errors.New("account: ReferenceData.Get requires Dataset when Scope is 'dataset'")
 	}
-	path := datasetPrefix + url.PathEscape(in.Dataset)
+	segment, err := urlpath.Segment(in.Dataset)
+	if err != nil {
+		return nil, fmt.Errorf("account: ReferenceData.Get Dataset: %w", err)
+	}
+	path := datasetPrefix + segment
 	body, err := s.client.signedDo(ctx, callArgs{method: http.MethodGet, path: path})
 	if err != nil {
 		return nil, fmt.Errorf("account: ReferenceData.Get dataset: %w", err)

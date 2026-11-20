@@ -126,7 +126,10 @@ func (v *Voice) MintCode(ctx context.Context, signID string, req *MintCodeReques
 		VoiceScript: req.Script,
 	}
 
-	url := fmt.Sprintf("%s/v1/documents/%s/voice-code", v.c.baseURL, signID)
+	url, err := v.c.documentURL(signID, "voice-code")
+	if err != nil {
+		return nil, err
+	}
 	resp, err := internal.JSONRequest(ctx, v.c.doer, http.MethodPost, url, body, internal.RequestOptions{
 		Headers: map[string]string{"User-Agent": v.c.userAgent},
 	})

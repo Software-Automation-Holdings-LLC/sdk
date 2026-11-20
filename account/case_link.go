@@ -8,6 +8,8 @@ import (
 	"net/url"
 	"slices"
 	"strings"
+
+	"github.com/Software-Automation-Holdings-LLC/sdk/core/urlpath"
 )
 
 // Zero-knowledge case share-link assembly + parsing, byte-compatible with the
@@ -150,7 +152,11 @@ func (s *CasesService) Open(ctx context.Context, link string) (*OpenResult, erro
 	if err != nil {
 		return nil, err
 	}
-	path := casesPath + "/" + url.PathEscape(parsed.Code)
+	segment, err := urlpath.Segment(parsed.Code)
+	if err != nil {
+		return nil, fmt.Errorf("account: Cases.Open link case id: %w", err)
+	}
+	path := casesPath + "/" + segment
 	respBody, err := s.client.signedDo(ctx, callArgs{method: http.MethodGet, path: path})
 	if err != nil {
 		return nil, fmt.Errorf("account: Cases.Open: %w", err)
