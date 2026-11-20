@@ -25,12 +25,14 @@ use Psr\Log\LoggerInterface;
  *
  *  - Headers `Authorization`, `X-Device-Signature`, `X-Session-Signature`,
  *    `X-Isa-Signature`, `Cookie`, `Set-Cookie` → "[redacted]".
- *  - JSON body fields named `email`, `dob`, `ssn`, `phone`, `password`,
- *    `token`, `secret`, `license_key`, `licenseKey` → "[redacted]"
- *    (recursive, case-insensitive).
+ *  - Bodies are never written. Each is summarized as its byte length
+ *    plus the top-level envelope fields the server assigns (`object`,
+ *    `request_id`, `idempotency_key`, `code`, `param`).
  *
- * The logger is the only diagnostic surface that can see decoded
- * bodies, so redaction lives here, never in the transport.
+ * Bodies carry the applicant's underwriting record (birth date, build,
+ * location, conditions, medications) under wire names that change with
+ * every API version, so the summary names what may be kept rather than
+ * what must be hidden: a field nobody listed is withheld, not leaked.
  */
 final class DebugLogger
 {
@@ -49,19 +51,13 @@ final class DebugLogger
         'set-cookie',
     ];
 
-    /** @var array<int,string> Body field names compared case-insensitively. */
-    private const REDACTED_BODY_FIELDS = [
-        'email',
-        'dob',
-        'ssn',
-        'phone',
-        'password',
-        'token',
-        'secret',
-        'session_secret',
-        'license_key',
-        'licensekey',
-        'keycode',
+    /** @var array<int,string> Server-assigned envelope fields; every other body value is withheld. */
+    private const ENVELOPE_FIELDS = [
+        'object',
+        'request_id',
+        'idempotency_key',
+        'code',
+        'param',
     ];
 
     public function __construct(private readonly ?LoggerInterface $logger = null)
@@ -96,7 +92,7 @@ final class DebugLogger
             'uri' => (string) $request->getUri(),
             'attempt' => $attempt,
             'headers' => self::redactHeaders($request->getHeaders()),
-            'body' => self::redactBody((string) $request->getBody()),
+            'body' => self::summarizeBody((string) $request->getBody()),
         ];
         $this->emit('isa-sdk request', $payload);
     }
@@ -113,7 +109,7 @@ final class DebugLogger
             'status' => $response->getStatusCode(),
             'attempt' => $attempt,
             'headers' => self::redactHeaders($response->getHeaders()),
-            'body' => self::redactBody((string) $response->getBody()),
+            'body' => self::summarizeBody((string) $response->getBody()),
         ];
         $this->emit('isa-sdk response', $payload);
     }
@@ -154,45 +150,34 @@ final class DebugLogger
     }
 
     /**
-     * Best-effort redaction of a JSON body. Non-JSON bodies pass through
-     * unchanged (the redaction targets are PII fields that only appear
-     * in structured payloads).
+     * Only scalar envelope values survive: an envelope name holding an
+     * object or list is withheld like any other body value.
+     *
+     * @return array<string,int|string|bool>
      */
-    private static function redactBody(string $raw): mixed
+    private static function summarizeBody(string $raw): array
     {
-        if ($raw === '') {
-            return '';
+        $summary = ['bytes' => strlen($raw)];
+        $envelope = self::decodeObject($raw);
+        foreach (self::ENVELOPE_FIELDS as $field) {
+            $value = $envelope[$field] ?? null;
+            if (is_string($value) || is_int($value) || is_bool($value)) {
+                $summary[$field] = $value;
+            }
         }
-        $trimmed = ltrim($raw);
-        if ($trimmed === '' || ($trimmed[0] !== '{' && $trimmed[0] !== '[')) {
-            return $raw;
-        }
-        try {
-            $decoded = json_decode($raw, associative: true, flags: JSON_THROW_ON_ERROR);
-        } catch (\JsonException) {
-            return $raw;
-        }
-        if (! is_array($decoded)) {
-            return $raw;
-        }
-        return self::redactArray($decoded);
+        return $summary;
     }
 
     /**
-     * @param array<mixed> $data
      * @return array<mixed>
      */
-    private static function redactArray(array $data): array
+    private static function decodeObject(string $raw): array
     {
-        foreach ($data as $key => $value) {
-            if (is_string($key) && in_array(strtolower($key), self::REDACTED_BODY_FIELDS, true)) {
-                $data[$key] = self::REDACTED;
-                continue;
-            }
-            if (is_array($value)) {
-                $data[$key] = self::redactArray($value);
-            }
+        try {
+            $decoded = json_decode($raw, associative: true, flags: JSON_THROW_ON_ERROR);
+        } catch (\JsonException) {
+            return [];
         }
-        return $data;
+        return is_array($decoded) ? $decoded : [];
     }
 }
