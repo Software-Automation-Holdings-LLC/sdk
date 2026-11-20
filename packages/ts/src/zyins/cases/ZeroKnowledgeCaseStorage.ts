@@ -19,6 +19,7 @@
 import { decryptCase, encryptCase } from "../../account/caseCrypto.js";
 import { isSuccess, signedCaseRequest, type TCaseRequestContext } from "../../account/caseTransport.js";
 import { parseCaseDetail, parseCreatedId } from "../../account/caseWire.js";
+import { pathSegment } from "../../core/http/pathSegment.js";
 import { fromHttpResponse } from "../errors.js";
 import type { CaseRecord, CaseStorage, CaseStoragePutResult } from "./CaseStorage.js";
 
@@ -76,7 +77,7 @@ export class ZeroKnowledgeCaseStorage implements CaseStorage {
       );
     }
     const ctx = this.contextOnce();
-    const path = `${CASE_PATH}/${encodeURIComponent(id)}`;
+    const path = `${CASE_PATH}/${pathSegment(id)}`;
     const response = await signedCaseRequest({ method: "GET", path, body: "" }, ctx);
     if (response.status === HTTP_NOT_FOUND) return null;
     if (!isSuccess(response.status)) {

@@ -25,9 +25,9 @@ import json
 import os
 import secrets
 from typing import TYPE_CHECKING, Any, Protocol
-from urllib.parse import quote as urlquote
 
 from ...core.errors import ISAError
+from ...core.path_segment import path_segment
 from .storage import CaseRecord, CaseStorage, PutResult
 
 if TYPE_CHECKING:
@@ -112,7 +112,7 @@ class ZeroKnowledgeCaseStorage(CaseStorage):
             raise ValueError(
                 "ZeroKnowledgeCaseStorage.get: recall_token is required to decrypt"
             )
-        path = f"{_CASE_PATH}/{urlquote(id, safe='')}"
+        path = f"{_CASE_PATH}/{path_segment(id)}"
         # _dispatch raises a typed ISAError on any non-2xx (it calls
         # raise_for_status), so a 404 surfaces as an exception — it never
         # returns a response object with status 404. Catch the not-found
@@ -135,7 +135,7 @@ class ZeroKnowledgeCaseStorage(CaseStorage):
     def delete(self, id: str) -> None:
         if not id:
             raise ValueError("ZeroKnowledgeCaseStorage.delete: id is required")
-        path = f"{_CASE_PATH}/{urlquote(id, safe='')}"
+        path = f"{_CASE_PATH}/{path_segment(id)}"
         self._client._dispatch(
             method="DELETE", path=path, body="", idempotency_key=None
         )

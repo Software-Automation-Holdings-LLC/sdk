@@ -11,6 +11,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/Software-Automation-Holdings-LLC/sdk/core/urlpath"
 	"github.com/Software-Automation-Holdings-LLC/sdk/rapidsign/internal"
 )
 
@@ -23,6 +24,24 @@ import (
 // shaped.
 type Documents struct {
 	c *Client
+}
+
+// documentsPath is the document collection every signing route lives under.
+const documentsPath = "/v1/documents"
+
+// documentURL addresses the document signID, or one of its action
+// routes when action is non-empty. The request carries the client's
+// bearer token wherever it lands, so signID must stay one path segment.
+func (c *Client) documentURL(signID, action string) (string, error) {
+	segment, err := urlpath.Segment(signID)
+	if err != nil {
+		return "", fmt.Errorf("rapidsign: sign id: %w", err)
+	}
+	target := c.baseURL + documentsPath + "/" + segment
+	if action != "" {
+		target += "/" + action
+	}
+	return target, nil
 }
 
 // SendOptions overrides the auto-generated request metadata. Production
@@ -148,7 +167,7 @@ func (d *Documents) create(ctx context.Context, req *SendRequest, sessionID, ide
 		Metadata:         req.Metadata,
 	}
 
-	resp, err := internal.JSONRequest(ctx, d.c.doer, http.MethodPost, d.c.baseURL+"/v1/documents", body, internal.RequestOptions{
+	resp, err := internal.JSONRequest(ctx, d.c.doer, http.MethodPost, d.c.baseURL+documentsPath, body, internal.RequestOptions{
 		IdempotencyKey: idempotencyKey,
 		Headers:        map[string]string{"User-Agent": d.c.userAgent},
 	})
@@ -235,7 +254,10 @@ func (d *Documents) notify(ctx context.Context, signID, sessionID, to, formID st
 		FormID:            formID,
 		IncludeCodeInLink: includeCodeInLink,
 	}
-	url := fmt.Sprintf("%s/v1/documents/%s/notify", d.c.baseURL, signID)
+	url, err := d.c.documentURL(signID, "notify")
+	if err != nil {
+		return err
+	}
 	resp, err := internal.JSONRequest(ctx, d.c.doer, http.MethodPost, url, body, internal.RequestOptions{
 		IdempotencyKey: idempotencyKey,
 		Headers:        map[string]string{"User-Agent": d.c.userAgent},
@@ -272,7 +294,10 @@ func (d *Documents) Get(ctx context.Context, signID string) (*Signature, error) 
 	if signID == "" {
 		return nil, errors.New("rapidsign: Documents.Get requires a non-empty sign id")
 	}
-	url := fmt.Sprintf("%s/v1/documents/%s", d.c.baseURL, signID)
+	url, err := d.c.documentURL(signID, "")
+	if err != nil {
+		return nil, err
+	}
 	resp, err := internal.JSONRequest(ctx, d.c.doer, http.MethodGet, url, nil, internal.RequestOptions{
 		Headers: map[string]string{"User-Agent": d.c.userAgent},
 	})
@@ -328,7 +353,10 @@ func (d *Documents) Download(ctx context.Context, signID string) ([]byte, error)
 	if signID == "" {
 		return nil, errors.New("rapidsign: Documents.Download requires a non-empty sign id")
 	}
-	url := fmt.Sprintf("%s/v1/documents/%s/download", d.c.baseURL, signID)
+	url, err := d.c.documentURL(signID, "download")
+	if err != nil {
+		return nil, err
+	}
 	resp, err := internal.JSONRequest(ctx, d.c.doer, http.MethodGet, url, nil, internal.RequestOptions{
 		Headers: map[string]string{"User-Agent": d.c.userAgent},
 	})

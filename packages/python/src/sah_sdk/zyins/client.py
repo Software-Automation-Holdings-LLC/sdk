@@ -25,11 +25,12 @@ from __future__ import annotations
 from collections.abc import Mapping
 from dataclasses import dataclass
 from typing import Any, cast
-from urllib.parse import quote, urlencode
+from urllib.parse import urlencode
 
 from ..core.auth import BearerAuth
 from ..core.debug import DebugLogger
 from ..core.idempotency import generate_idempotency_key
+from ..core.path_segment import path_segment
 from ..core.transport import HttpTransport, Transport, raise_for_status
 from .account_namespaces import (
     BrandingSubClient,
@@ -290,7 +291,7 @@ class DatasetsSubClient:
     def get(self, id: str) -> Dataset:
         if not id:
             raise ValueError("datasets.get: id must be a non-empty string")
-        raw = self._client._request("GET", f"{self._PATH}/{quote(id, safe='')}")
+        raw = self._client._request("GET", f"{self._PATH}/{path_segment(id)}")
         return parse_dataset(raw)
 
 
@@ -308,7 +309,7 @@ class ReferenceDataSubClient:
         # Reference-data queries take their key in the path, with optional
         # query params for sub-selection. The server hands back the
         # canonical shape; we preserve it as a dict.
-        path = f"{self._PATH}/{quote(kind, safe='')}"
+        path = f"{self._PATH}/{path_segment(kind)}"
         if params:
             query = urlencode(sorted(params.items()))
             path = f"{path}?{query}"

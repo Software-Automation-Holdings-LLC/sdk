@@ -20,6 +20,7 @@
  * `location.hash` before any telemetry call.
  */
 
+import { pathSegment } from "../core/http/pathSegment.js";
 import { IsaCaseExpiredError } from "../zyins/apiError.js";
 import { fromHttpResponse } from "../zyins/errors.js";
 import { decryptCase, encryptCase } from "./caseCrypto.js";
@@ -142,7 +143,7 @@ export async function create(
  */
 export async function open(link: string, ctx: CasesContext): Promise<CaseOpenResult> {
   const { id, keyFragment } = parseLink(link);
-  const path = `${CASE_PATH}/${encodeURIComponent(id)}`;
+  const path = `${CASE_PATH}/${pathSegment(id)}`;
   const response = await signedCaseRequest({ method: "GET", path, body: "" }, ctx);
   if (response.status === HTTP_NOT_FOUND) {
     throw new IsaCaseExpiredError(id);
@@ -195,7 +196,7 @@ export async function email(
   if (typeof request.to !== "string" || request.to.length === 0) {
     throw new Error("account: cases.email requires a non-empty to address");
   }
-  const path = `${CASE_PATH}/${encodeURIComponent(request.caseId)}/email`;
+  const path = `${CASE_PATH}/${pathSegment(request.caseId)}/email`;
   const body = JSON.stringify({ to: request.to });
   const response = await signedCaseRequest(
     { method: "POST", path, body, idempotencyOp: `cases_email:${request.caseId}` },

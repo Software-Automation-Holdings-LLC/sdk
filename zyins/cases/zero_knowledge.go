@@ -11,6 +11,8 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+
+	"github.com/Software-Automation-Holdings-LLC/sdk/core/urlpath"
 )
 
 // dataKeyBytes is the AES-256-GCM data-key length in bytes.
@@ -26,7 +28,7 @@ const gcmNonceBytes = 12
 // per-surface APIVersion map.
 const (
 	casesPutPath = "/v1/cases"
-	casesGetPath = "/v1/cases/" // id appended at call time
+	casesGetPath = "/v1/cases/" // one urlpath.Segment appended at call time
 )
 
 // putWireBody is the JSON shape POSTed to /v1/cases. The platform
@@ -131,13 +133,19 @@ func (s *ZeroKnowledgeCaseStorage) Put(ctx context.Context, record CaseRecord) (
 
 // Get fetches the envelope identified by id and decrypts it with the
 // supplied recall token. Returns [ErrNotFound] on a 404 or when the
-// recall token does not authenticate the ciphertext.
+// recall token does not authenticate the ciphertext, and
+// [urlpath.ErrNotSegment], before any request, when id cannot address
+// exactly one case.
 func (s *ZeroKnowledgeCaseStorage) Get(ctx context.Context, id, recallToken string) (CaseRecord, error) {
 	if s.doer == nil {
 		return CaseRecord{}, errors.New("cases: ZeroKnowledgeCaseStorage missing transport")
 	}
 	if id == "" {
 		return CaseRecord{}, errors.New("cases: Get requires a non-empty id")
+	}
+	segment, err := urlpath.Segment(id)
+	if err != nil {
+		return CaseRecord{}, fmt.Errorf("cases: Get id: %w", err)
 	}
 	if recallToken == "" {
 		return CaseRecord{}, errors.New("cases: Get requires a non-empty recall token")
@@ -146,12 +154,13 @@ func (s *ZeroKnowledgeCaseStorage) Get(ctx context.Context, id, recallToken stri
 	if err != nil {
 		return CaseRecord{}, fmt.Errorf("cases: decode recall token: %w", err)
 	}
-	raw, err := s.doer.Get(ctx, casesGetPath+id)
+	path := casesGetPath + segment
+	raw, err := s.doer.Get(ctx, path)
 	if err != nil {
 		if isNotFound(err) {
 			return CaseRecord{}, ErrNotFound
 		}
-		return CaseRecord{}, fmt.Errorf("cases: GET %s%s: %w", casesGetPath, id, err)
+		return CaseRecord{}, fmt.Errorf("cases: GET %s: %w", path, err)
 	}
 	var decoded getWireResponse
 	if err := json.Unmarshal(raw, &decoded); err != nil {

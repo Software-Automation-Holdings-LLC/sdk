@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Isa\Sdk\RapidSign\Documents;
 
 use DateTimeImmutable;
+use Isa\Sdk\Core\PathSegment;
 use Psr\Http\Message\ResponseInterface;
 use Isa\Sdk\RapidSign\Clock;
 use Isa\Sdk\RapidSign\Exception\DeadlineExceededException;
@@ -85,7 +86,7 @@ final readonly class Service
         }
         $this->callJson(
             'POST',
-            self::PATH_DOCUMENTS . '/' . rawurlencode($resolvedSignId) . '/notify',
+            self::PATH_DOCUMENTS . '/' . PathSegment::encode($resolvedSignId) . '/notify',
             $notifyBody,
             $this->transport->idempotency->next(),
         );
@@ -102,7 +103,7 @@ final readonly class Service
     public function get(string $signId, ?string $sessionId = null, ?int $deadlineMs = null): Signature
     {
         $this->requireSignId($signId);
-        $path = self::PATH_DOCUMENTS . '/' . rawurlencode($signId);
+        $path = self::PATH_DOCUMENTS . '/' . PathSegment::encode($signId);
         $query = $this->querystring(['session_id' => $sessionId]);
         $url = $this->transport->baseUrl . $path . $query;
 
@@ -178,7 +179,7 @@ final readonly class Service
     public function download(string $signId, ?string $sessionId = null): string
     {
         $this->requireSignId($signId);
-        $path = self::PATH_DOCUMENTS . '/' . rawurlencode($signId) . '/download';
+        $path = self::PATH_DOCUMENTS . '/' . PathSegment::encode($signId) . '/download';
         $url = $this->transport->baseUrl . $path . $this->querystring(['session_id' => $sessionId]);
 
         $attempt = 0;
@@ -476,7 +477,7 @@ final readonly class Service
      */
     private function probeStoredDocumentSafely(string $signId): ?bool
     {
-        $url = $this->transport->baseUrl . self::PATH_DOCUMENTS . '/' . rawurlencode($signId) . '/download';
+        $url = $this->transport->baseUrl . self::PATH_DOCUMENTS . '/' . PathSegment::encode($signId) . '/download';
         try {
             $response = $this->transport->send('GET', $url, [], '');
         } catch (UnknownException) {

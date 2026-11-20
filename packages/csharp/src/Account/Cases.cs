@@ -10,6 +10,7 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Threading;
 using System.Threading.Tasks;
+using Isa.Sdk.Core;
 using Isa.Sdk.Zyins;
 
 namespace Isa.Sdk.Account;
@@ -168,7 +169,7 @@ public sealed class AccountCases
     if (string.IsNullOrWhiteSpace(caseId))
       throw new ArgumentException("account: cases.get requires a non-empty caseId", nameof(caseId));
     var op = _ctx.RequireOp();
-    return HttpDispatcher.GetAsync<CaseSummary>(op, $"{CasesPath}/{Uri.EscapeDataString(caseId)}", ct: ct);
+    return HttpDispatcher.GetAsync<CaseSummary>(op, $"{CasesPath}/{PathSegment.Encode(caseId, nameof(caseId))}", ct: ct);
   }
 
   /// <summary>List all cases visible to the caller.</summary>
@@ -187,7 +188,7 @@ public sealed class AccountCases
     if (string.IsNullOrWhiteSpace(request.To))
       throw new ArgumentException("account: cases.email requires a non-empty to address", nameof(request));
     var op = _ctx.RequireOp();
-    var path = $"{CasesPath}/{Uri.EscapeDataString(request.CaseId)}/email";
+    var path = $"{CasesPath}/{PathSegment.Encode(request.CaseId, nameof(request))}/email";
     return HttpDispatcher.PostJsonEnvelopeAsync<CaseEmailRequest, CaseEmailResult>(
         op, path, request, "cases.email", ct);
   }
@@ -232,7 +233,7 @@ public sealed class AccountCases
     var parsed = CaseLink.Parse(link);
     var op = _ctx.RequireOp();
     var detail = await HttpDispatcher
-        .GetAsync<CaseDetailWire>(op, $"{CasesPath}/{Uri.EscapeDataString(parsed.Code)}", ct: ct)
+        .GetAsync<CaseDetailWire>(op, $"{CasesPath}/{PathSegment.Encode(parsed.Code, nameof(link))}", ct: ct)
         .ConfigureAwait(false);
     if (string.IsNullOrEmpty(detail.Product))
       throw new InvalidOperationException("account: cases.open response missing product");

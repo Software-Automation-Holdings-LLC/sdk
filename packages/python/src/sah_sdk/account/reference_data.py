@@ -25,8 +25,8 @@ from __future__ import annotations
 import json
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any
-from urllib.parse import quote as urlquote
 
+from ..core.path_segment import path_segment
 from ._op import dispatch, unwrap_envelope
 
 if TYPE_CHECKING:
@@ -83,7 +83,7 @@ class AccountReferenceData:
             raise ValueError(
                 "account: reference_data.get(scope='dataset') requires a dataset name"
             )
-        path = f"{_DATASET_PREFIX}{urlquote(dataset, safe='')}"
+        path = f"{_DATASET_PREFIX}{path_segment(dataset)}"
         body = dispatch(self._ctx, method="GET", path=path)
         return _parse(body)
 

@@ -6,7 +6,8 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
-	"net/url"
+
+	"github.com/Software-Automation-Holdings-LLC/sdk/core/urlpath"
 )
 
 const casesPath = "/v1/case"
@@ -96,7 +97,11 @@ func (s *CasesService) Get(ctx context.Context, caseID string) (*CaseSummary, er
 	if caseID == "" {
 		return nil, errors.New("account: Cases.Get requires a non-empty caseID")
 	}
-	path := casesPath + "/" + url.PathEscape(caseID)
+	segment, err := urlpath.Segment(caseID)
+	if err != nil {
+		return nil, fmt.Errorf("account: Cases.Get caseID: %w", err)
+	}
+	path := casesPath + "/" + segment
 	body, err := s.client.signedDo(ctx, callArgs{method: http.MethodGet, path: path})
 	if err != nil {
 		return nil, fmt.Errorf("account: Cases.Get: %w", err)
@@ -148,7 +153,11 @@ func (s *CasesService) Email(ctx context.Context, in CaseEmailInput, opts ...Cal
 	if in.To == "" {
 		return false, errors.New("account: Cases.Email requires a non-empty To")
 	}
-	path := casesPath + "/" + url.PathEscape(in.CaseID) + "/email"
+	segment, err := urlpath.Segment(in.CaseID)
+	if err != nil {
+		return false, fmt.Errorf("account: Cases.Email CaseID: %w", err)
+	}
+	path := casesPath + "/" + segment + "/email"
 	bodyBytes, err := json.Marshal(map[string]string{"to": in.To})
 	if err != nil {
 		return false, fmt.Errorf("account: Cases.Email marshal: %w", err)

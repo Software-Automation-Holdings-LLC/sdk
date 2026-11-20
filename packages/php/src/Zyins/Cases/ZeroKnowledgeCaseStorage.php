@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Isa\Sdk\Zyins\Cases;
 
+use Isa\Sdk\Core\PathSegment;
 use Isa\Sdk\Zyins\Exception\IsaException;
 use Isa\Sdk\Zyins\RequestOptions;
 use Isa\Sdk\Zyins\Transport;
@@ -67,7 +68,7 @@ final class ZeroKnowledgeCaseStorage implements CaseStorage
                 'ZeroKnowledgeCaseStorage::get: id must be non-empty',
             );
         }
-        $path = self::CASE_PATH . '/' . rawurlencode($id);
+        $path = self::CASE_PATH . '/' . PathSegment::encode($id);
         // `sendRaw` bypasses the 4xx/5xx exception funnel so a 404 can
         // map cleanly to `null` (absent/expired — by design no
         // distinction); any other non-2xx is re-thrown through the
