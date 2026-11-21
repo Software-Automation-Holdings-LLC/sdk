@@ -55,7 +55,7 @@
     <PackageReference Include="Google.Protobuf" Version="3.28.3" />
     <!-- google.api.* messages referenced by buf-generated wire types
          are runtime types from Google.Api.CommonProtos. -->
-    <PackageReference Include="Google.Api.CommonProtos" Version="2.16.0" />
+    <PackageReference Include="Google.Api.CommonProtos" Version="2.17.0" />
   </ItemGroup>
   <!-- System.Text.Json is in-box on net6.0+. On netstandard2.0 we must
        pull it in explicitly, which also brings Nodes + Serialization. -->
