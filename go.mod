@@ -27,6 +27,6 @@ require golang.org/x/sync v0.22.0
 require (
 	connectrpc.com/connect v1.21.1
 	golang.org/x/text v0.41.0
-	google.golang.org/genproto/googleapis/api v0.0.0-20261118221215-c8830f628b3f
+	google.golang.org/genproto/googleapis/api v0.0.0-20261123191846-1e707ab9fbc2
 	google.golang.org/protobuf v1.36.12
 )
