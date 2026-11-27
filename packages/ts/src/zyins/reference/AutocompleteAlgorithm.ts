@@ -174,6 +174,15 @@ const MAX_LIMIT = 250;
 const FUZZY_FALLBACK_THRESHOLD = 1;
 
 /**
+ * Typeahead query bounds. Ranking work grows with query words × candidate
+ * tokens, so a query past either bound is not typeahead input and yields no
+ * suggestions. Length is measured in UTF-16 code units, words after
+ * tokenizing. Mirrors the Go, Python, PHP, and C# ports.
+ */
+const MAX_QUERY_LENGTH = 128;
+const MAX_QUERY_WORDS = 16;
+
+/**
  * Edit-distance ceiling for the autocomplete fuzzy band, by query-unit
  * length. Deliberately one wider than {@link FuzzyMatchAlgorithm}'s
  * single-result band in the medium range: autocomplete shows a RANKED LIST
@@ -198,7 +207,7 @@ function rankSync(
   fuzzy: boolean,
 ): Suggestion[] {
   const limit = Math.min(options.limit, MAX_LIMIT);
-  if (limit <= 0) return [];
+  if (limit <= 0 || query.length > MAX_QUERY_LENGTH) return [];
   // make_key form: uppercase, strip ALL non-alphanumeric. This is what the
   // engine matches on server-side, so `crohns` must reach `Crohn's Disease`
   // — the literal `(`-only strip below leaves the apostrophe in and breaks it.
@@ -216,6 +225,7 @@ function rankSync(
   const queryUpper = query.toUpperCase();
   const queryClean = queryUpper.replace(/\(/g, "");
   const queryTokens = tokenize(query);
+  if (queryTokens.length > MAX_QUERY_WORDS) return [];
 
   const kindFilter = options.kinds.length > 0 ? new Set(options.kinds) : undefined;
   const inKind = (c: Concept): boolean => !kindFilter || kindFilter.has(c.kind);
@@ -398,7 +408,7 @@ function collectFuzzy(
   // A single-token query fuzzes on its make_key form; a multi-word query
   // fuzzes each word independently and accepts on any single word hit.
   const queryUnits = queryTokens.length > 1 ? queryTokens : [queryKey];
-  const queryCodes = queryUnits.map((u) => doubleMetaphone(u).primary);
+  const queryCodes = new Set(queryUnits.map((u) => doubleMetaphone(u).primary).filter(Boolean));
   const hits: Concept[] = [];
   for (const c of candidates) {
     if (!inKind(c)) continue;
@@ -409,21 +419,22 @@ function collectFuzzy(
   return hits;
 }
 
+/**
+ * Encodes each candidate token once and tests it against the whole
+ * query-code set, so phonetic work scales with candidate tokens, not
+ * candidate tokens × query units.
+ */
 function fuzzyMatchesAnyToken(
   queryUnits: readonly string[],
-  queryCodes: readonly string[],
+  queryCodes: ReadonlySet<string>,
   candidateTokens: readonly string[],
 ): boolean {
-  for (let u = 0; u < queryUnits.length; u++) {
-    const unit = queryUnits[u] ?? "";
-    if (unit.length === 0) continue;
-    const threshold = autocompleteFuzzyThreshold(unit.length);
-    const code = queryCodes[u] ?? "";
-    for (const token of candidateTokens) {
-      if (token.length === 0) continue;
+  for (const token of candidateTokens) {
+    for (const unit of queryUnits) {
+      const threshold = autocompleteFuzzyThreshold(unit.length);
       if (optimalStringAlignmentDistance(unit, token, threshold) <= threshold) return true;
-      if (code.length > 0 && doubleMetaphone(token).primary === code) return true;
     }
+    if (queryCodes.size > 0 && queryCodes.has(doubleMetaphone(token).primary)) return true;
   }
   return false;
 }

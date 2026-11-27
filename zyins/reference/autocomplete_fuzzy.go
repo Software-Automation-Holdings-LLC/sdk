@@ -1,5 +1,7 @@
 package reference
 
+import "context"
+
 // fuzzyFallbackThreshold is the substring-hit count at or below which the
 // typo-tolerant fallback fires. Mirrors the TS reference: a typo-recovery
 // pass only earns its keep when literal matching comes up nearly empty.
@@ -24,8 +26,9 @@ func autocompleteFuzzyThreshold(unitLength int) int {
 // unit — Damerau-OSA within the length band OR Double-Metaphone equality.
 // Per-token matching keeps a short query ("chrons") from being swamped by the
 // edit distance of a long name ("CROHNSDISEASE"). Reuses the same primitives
-// as FuzzyMatchAlgorithm for cross-language parity.
-func collectFuzzyAutocomplete(queryKey string, wordsInInput []string, candidates, alreadyMatched []CandidateConcept) []CandidateConcept {
+// as FuzzyMatchAlgorithm for cross-language parity. Stops between candidates
+// once ctx is done; the caller discards the partial result.
+func collectFuzzyAutocomplete(ctx context.Context, queryKey string, wordsInInput []string, candidates, alreadyMatched []CandidateConcept) []CandidateConcept {
 	if len(queryKey) == 0 {
 		return nil
 	}
@@ -37,12 +40,17 @@ func collectFuzzyAutocomplete(queryKey string, wordsInInput []string, candidates
 	if len(wordsInInput) <= 1 {
 		queryUnits = []string{queryKey}
 	}
-	queryCodes := make([]string, len(queryUnits))
-	for i, u := range queryUnits {
-		queryCodes[i] = doubleMetaphone(u).primary
+	queryCodes := make(map[string]struct{}, len(queryUnits))
+	for _, u := range queryUnits {
+		if code := doubleMetaphone(u).primary; code != "" {
+			queryCodes[code] = struct{}{}
+		}
 	}
 	out := make([]CandidateConcept, 0)
 	for _, c := range candidates {
+		if ctx.Err() != nil {
+			return nil
+		}
 		if _, ok := matched[autocompleteScoreKey(c)]; ok {
 			continue
 		}
@@ -53,23 +61,22 @@ func collectFuzzyAutocomplete(queryKey string, wordsInInput []string, candidates
 	return out
 }
 
-func fuzzyMatchesAnyToken(queryUnits, queryCodes, candidateTokens []string) bool {
-	for u, unit := range queryUnits {
-		if len(unit) == 0 {
-			continue
-		}
-		threshold := autocompleteFuzzyThreshold(len(unit))
-		code := queryCodes[u]
-		for _, token := range candidateTokens {
-			if len(token) == 0 {
-				continue
-			}
+// fuzzyMatchesAnyToken encodes each candidate token once and tests it against
+// the whole query-code set, so phonetic work scales with candidate tokens,
+// not candidate tokens × query units.
+func fuzzyMatchesAnyToken(queryUnits []string, queryCodes map[string]struct{}, candidateTokens []string) bool {
+	for _, token := range candidateTokens {
+		for _, unit := range queryUnits {
+			threshold := autocompleteFuzzyThreshold(len(unit))
 			if optimalStringAlignmentDistance(unit, token, threshold) <= threshold {
 				return true
 			}
-			if len(code) > 0 && doubleMetaphone(token).primary == code {
-				return true
-			}
+		}
+		if len(queryCodes) == 0 {
+			continue
+		}
+		if _, ok := queryCodes[doubleMetaphone(token).primary]; ok {
+			return true
 		}
 	}
 	return false

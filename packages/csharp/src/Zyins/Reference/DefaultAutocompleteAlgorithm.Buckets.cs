@@ -8,6 +8,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 
 namespace Isa.Sdk.Zyins.Reference;
 
@@ -263,21 +264,26 @@ internal static class AutocompleteFuzzy
   /// Per-token matching keeps a short query ("chrons") from being swamped by
   /// the edit distance of a long name ("CROHNSDISEASE"). Reuses the same
   /// primitives as <see cref="FuzzyMatchAlgorithm"/> for cross-language
-  /// parity.</summary>
+  /// parity. Stops between candidates once <paramref name="ct"/> is
+  /// cancelled; the caller discards the partial result.</summary>
   public static List<IConcept> Collect(
       string queryKey,
       IReadOnlyList<string> queryWords,
       IReadOnlyCollection<IConcept> pool,
-      IReadOnlyList<IConcept> alreadyMatched)
+      IReadOnlyList<IConcept> alreadyMatched,
+      CancellationToken ct)
   {
     if (queryKey.Length == 0) return new List<IConcept>();
     var matched = new HashSet<string>(
         alreadyMatched.Select(AutocompleteFrequency.ScoreKey), StringComparer.Ordinal);
     var queryUnits = queryWords.Count > 1 ? queryWords : new List<string> { queryKey };
-    var queryCodes = queryUnits.Select(u => DoubleMetaphone.Encode(u).Primary).ToList();
+    var queryCodes = new HashSet<string>(
+        queryUnits.Select(u => DoubleMetaphone.Encode(u).Primary).Where(code => code.Length > 0),
+        StringComparer.Ordinal);
     var hits = new List<IConcept>();
     foreach (var candidate in pool)
     {
+      if (ct.IsCancellationRequested) break;
       if (matched.Contains(AutocompleteFrequency.ScoreKey(candidate))) continue;
       var tokens = AutocompleteTokens.Tokenize(candidate.Name ?? string.Empty);
       if (MatchesAnyToken(queryUnits, queryCodes, tokens)) hits.Add(candidate);
@@ -285,23 +291,22 @@ internal static class AutocompleteFuzzy
     return hits;
   }
 
+  /// <summary>Encodes each candidate token once and tests it against the
+  /// whole query-code set, so phonetic work scales with candidate tokens,
+  /// not candidate tokens × query units.</summary>
   private static bool MatchesAnyToken(
       IReadOnlyList<string> queryUnits,
-      IReadOnlyList<string> queryCodes,
+      HashSet<string> queryCodes,
       IReadOnlyList<string> candidateTokens)
   {
-    for (var u = 0; u < queryUnits.Count; u++)
+    foreach (var token in candidateTokens)
     {
-      var unit = queryUnits[u];
-      if (unit.Length == 0) continue;
-      var threshold = ThresholdForLength(unit.Length);
-      var code = queryCodes[u];
-      foreach (var token in candidateTokens)
+      foreach (var unit in queryUnits)
       {
-        if (token.Length == 0) continue;
+        var threshold = ThresholdForLength(unit.Length);
         if (DamerauOsa.Distance(unit, token, threshold) <= threshold) return true;
-        if (code.Length > 0 && DoubleMetaphone.Encode(token).Primary == code) return true;
       }
+      if (queryCodes.Count > 0 && queryCodes.Contains(DoubleMetaphone.Encode(token).Primary)) return true;
     }
     return false;
   }
