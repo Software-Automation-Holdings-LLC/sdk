@@ -63,6 +63,12 @@ _FUZZY_FALLBACK_THRESHOLD = 1
 # slightly looser net is safe and catches double-edit transpositions the
 # match path rejects ("chrons" -> "crohns" is OSA distance 2).
 _AUTOCOMPLETE_FUZZY_MAX_DISTANCE = 2
+# Typeahead query bounds. Ranking work grows with query words x candidate
+# tokens, so a query past either bound is not typeahead input and yields no
+# suggestions. Length is measured in code points, words after tokenizing.
+# Mirrors the TS, Go, PHP, and C# ports.
+_MAX_QUERY_LENGTH = 128
+_MAX_QUERY_WORDS = 16
 
 
 def _tokenize(text: str) -> list[str]:
@@ -197,7 +203,15 @@ class DefaultAutocompleteAlgorithm:
         without changing the public surface; the default body never
         ``await``s.
         """
-        if not query.strip() or not candidates or options.limit <= 0:
+        if (
+            len(query) > _MAX_QUERY_LENGTH
+            or not query.strip()
+            or not candidates
+            or options.limit <= 0
+        ):
+            return []
+        words_in_input = _tokenize(query)
+        if not words_in_input or len(words_in_input) > _MAX_QUERY_WORDS:
             return []
 
         wanted_kinds = set(options.kinds) if options.kinds else None
@@ -209,9 +223,6 @@ class DefaultAutocompleteAlgorithm:
         if not filtered:
             return []
 
-        words_in_input = _tokenize(query)
-        if not words_in_input:
-            return []
         start_input = " ".join(words_in_input)
         # make_key form: uppercase, strip ALL non-alphanumeric. This is what
         # the engine matches on server-side, so a correctly-spelled "crohns"
@@ -461,7 +472,7 @@ def _autocomplete_fuzzy_threshold(unit_length: int) -> int:
 
 def _fuzzy_matches_any_token(
     query_units: Sequence[str],
-    query_codes: Sequence[str],
+    query_codes: frozenset[str],
     candidate_tokens: Sequence[str],
 ) -> bool:
     """True when any candidate token clears the fuzzy bar for any query unit.
@@ -469,18 +480,16 @@ def _fuzzy_matches_any_token(
     A unit matches a token by Damerau-OSA distance within its length band OR
     Double-Metaphone primary-code equality. Per-token matching keeps a short
     query ("chrons") from being swamped by the edit distance of a long name.
+    Each token is encoded once and tested against the whole query-code set,
+    so phonetic work scales with candidate tokens, not tokens x query units.
     """
-    for unit, code in zip(query_units, query_codes, strict=True):
-        if not unit:
-            continue
-        threshold = _autocomplete_fuzzy_threshold(len(unit))
-        for token in candidate_tokens:
-            if not token:
-                continue
+    for token in candidate_tokens:
+        for unit in query_units:
+            threshold = _autocomplete_fuzzy_threshold(len(unit))
             if optimal_string_alignment_distance(unit, token, threshold) <= threshold:
                 return True
-            if code and double_metaphone(token).primary == code:
-                return True
+        if query_codes and double_metaphone(token).primary in query_codes:
+            return True
     return False
 
 
@@ -501,7 +510,9 @@ def _collect_fuzzy(
         return []
     matched = {c.id or f"_unk:{c.name}" for c in already_matched}
     query_units = list(words_in_input) if len(words_in_input) > 1 else [query_key]
-    query_codes = [double_metaphone(u).primary for u in query_units]
+    query_codes = frozenset(
+        code for code in (double_metaphone(u).primary for u in query_units) if code
+    )
     hits: list[Concept] = []
     for candidate in candidates:
         if (candidate.id or f"_unk:{candidate.name}") in matched:

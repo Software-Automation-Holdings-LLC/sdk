@@ -23,7 +23,15 @@ namespace Isa.Sdk.Zyins.Reference;
 /// <see cref="IAutocompleteAlgorithm"/>. Stateless and thread-safe.</summary>
 public sealed class DefaultAutocompleteAlgorithm : IAutocompleteAlgorithm
 {
-  private static readonly char[] Whitespace = new[] { ' ', '\t', '\n', '\r' };
+  // Typeahead query bounds. Ranking work grows with query words × candidate
+  // tokens, so a query past either bound is not typeahead input and yields no
+  // suggestions. Length is measured in UTF-16 code units, words after
+  // tokenizing. Mirrors the TS, Go, Python, and PHP ports.
+  private const int MaxQueryLength = 128;
+  private const int MaxQueryWords = 16;
+
+  private static readonly Task<IReadOnlyList<Suggestion>> NoSuggestions =
+      Task.FromResult<IReadOnlyList<Suggestion>>(Array.Empty<Suggestion>());
 
   /// <summary>Construct with an optional version tag pinning the adapter to
   /// a specific catalog revision. <paramref name="fuzzy"/> toggles the
@@ -58,10 +66,13 @@ public sealed class DefaultAutocompleteAlgorithm : IAutocompleteAlgorithm
     if (query is null) throw new ArgumentNullException(nameof(query));
     if (candidates is null) throw new ArgumentNullException(nameof(candidates));
     if (options is null) throw new ArgumentNullException(nameof(options));
-    if (query.Length == 0 || candidates.Count == 0)
+    if (query.Length == 0 || query.Length > MaxQueryLength || candidates.Count == 0
+        || ct.IsCancellationRequested)
     {
-      return Task.FromResult<IReadOnlyList<Suggestion>>(Array.Empty<Suggestion>());
+      return NoSuggestions;
     }
+    var queryWords = AutocompleteTokens.Tokenize(query);
+    if (queryWords.Count > MaxQueryWords) return NoSuggestions;
 
     var kinds = options.Kinds;
     var pool = kinds is null
@@ -69,7 +80,6 @@ public sealed class DefaultAutocompleteAlgorithm : IAutocompleteAlgorithm
         : candidates.Where(c => kinds.Contains(c.Kind)).ToList();
 
     var queryUpper = query.ToUpperInvariant();
-    var queryWords = AutocompleteTokens.Tokenize(query);
     // make_key form: uppercase, strip ALL non-alphanumeric — what the
     // engine matches on server-side, so a correctly-spelled "crohns"
     // reaches "Crohn's Disease".
@@ -83,7 +93,8 @@ public sealed class DefaultAutocompleteAlgorithm : IAutocompleteAlgorithm
     // strict lowest bucket. Default ON; fuzzy:false skips it.
     if (Fuzzy && filtered.Count <= AutocompleteFuzzy.FallbackThreshold)
     {
-      var fuzzyHits = AutocompleteFuzzy.Collect(queryKey, queryWords, pool, filtered);
+      var fuzzyHits = AutocompleteFuzzy.Collect(queryKey, queryWords, pool, filtered, ct);
+      if (ct.IsCancellationRequested) return NoSuggestions;
       if (fuzzyHits.Count > 0) grouped.Add(fuzzyHits);
     }
     // Alphabetical collapses every bucket into one A→Z group (the relevance

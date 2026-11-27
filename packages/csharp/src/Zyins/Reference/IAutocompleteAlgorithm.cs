@@ -51,8 +51,8 @@ public interface IAutocompleteAlgorithm
 {
   /// <summary>Rank <paramref name="candidates"/> against
   /// <paramref name="query"/>. Returns at most <c>options.Limit</c>
-  /// suggestions, sorted highest score first. Empty query → empty
-  /// list (never null).</summary>
+  /// suggestions, sorted highest score first. Empty query or cancelled
+  /// <paramref name="ct"/> → empty list (never null).</summary>
   Task<IReadOnlyList<Suggestion>> Rank(
       string query,
       IReadOnlyCollection<IConcept> candidates,

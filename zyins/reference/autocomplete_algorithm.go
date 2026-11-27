@@ -29,12 +29,18 @@ type AutocompleteOptions struct {
 // AutocompleteAlgorithm ranks candidates against a free-text query.
 // Implementations MUST be safe for concurrent use.
 type AutocompleteAlgorithm interface {
-	// Rank returns suggestions in descending score order. The ctx is
-	// honored only by implementations that perform I/O; the default
-	// implementation ignores it. Never returns an error — ranking is
-	// pure CPU.
+	// Rank returns suggestions in descending score order. A done ctx
+	// yields no suggestions. Never returns an error — ranking is pure CPU.
 	Rank(ctx context.Context, query string, candidates []CandidateConcept, opts AutocompleteOptions) []Suggestion
 }
+
+// Typeahead query bounds. Ranking work grows with query words × candidate
+// tokens, so a query past either bound is not typeahead input and yields no
+// suggestions. Length is measured in bytes, words after tokenizing.
+const (
+	maxAutocompleteQueryLength = 128
+	maxAutocompleteQueryWords  = 16
+)
 
 // AutocompleteAlgorithmOption configures a
 // [DefaultAutocompleteAlgorithm].
@@ -102,15 +108,18 @@ func (a *DefaultAutocompleteAlgorithm) Clone(opts ...AutocompleteAlgorithmOption
 }
 
 // Rank implements [AutocompleteAlgorithm].
-func (a *DefaultAutocompleteAlgorithm) Rank(_ context.Context, query string, candidates []CandidateConcept, opts AutocompleteOptions) []Suggestion {
-	if query == "" || len(candidates) == 0 {
+func (a *DefaultAutocompleteAlgorithm) Rank(ctx context.Context, query string, candidates []CandidateConcept, opts AutocompleteOptions) []Suggestion {
+	if query == "" || len(query) > maxAutocompleteQueryLength || len(candidates) == 0 || ctx.Err() != nil {
+		return nil
+	}
+	wordsInInput := tokenizeAutocomplete(query)
+	if len(wordsInInput) > maxAutocompleteQueryWords {
 		return nil
 	}
 	filtered := filterCandidatesByKind(candidates, opts.Kinds)
 	if len(filtered) == 0 {
 		return nil
 	}
-	wordsInInput := tokenizeAutocomplete(query)
 	upperInput := strings.ToUpper(query)
 
 	prefilter := prefilterByWordOverlap(filtered, wordsInInput, upperInput)
@@ -122,7 +131,10 @@ func (a *DefaultAutocompleteAlgorithm) Rank(_ context.Context, query string, can
 	// → Diabetes, "tylonol" → Tylenol). Fuzzy hits occupy the strict lowest
 	// bucket. Default ON; WithAutocompleteFuzzy(false) skips it.
 	if a.fuzzy && len(prefilter) <= fuzzyFallbackThreshold {
-		fuzzyHits := collectFuzzyAutocomplete(makeKey(query), wordsInInput, filtered, prefilter)
+		fuzzyHits := collectFuzzyAutocomplete(ctx, makeKey(query), wordsInInput, filtered, prefilter)
+		if ctx.Err() != nil {
+			return nil
+		}
 		if len(fuzzyHits) > 0 {
 			grouped = append(grouped, fuzzyHits)
 		}

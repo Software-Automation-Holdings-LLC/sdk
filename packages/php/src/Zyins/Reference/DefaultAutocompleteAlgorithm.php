@@ -57,6 +57,16 @@ final class DefaultAutocompleteAlgorithm implements AutocompleteAlgorithmInterfa
     private const AUTOCOMPLETE_FUZZY_MAX_DISTANCE = 2;
 
     /**
+     * Typeahead query bounds. Ranking work grows with query words × candidate
+     * tokens, so a query past either bound is not typeahead input and yields
+     * no suggestions. Length is measured in bytes, words after tokenizing.
+     * Mirrors the TS, Go, Python, and C# ports.
+     */
+    private const MAX_QUERY_LENGTH = 128;
+
+    private const MAX_QUERY_WORDS = 16;
+
+    /**
      * @param bool $fuzzy When true (default), a query the substring filter
      *                     cannot place falls back to a token-aware fuzzy pass.
      *                     Pass false to restore substring-only behaviour.
@@ -70,7 +80,11 @@ final class DefaultAutocompleteAlgorithm implements AutocompleteAlgorithmInterfa
     public function rank(string $query, array $candidates, AutocompleteOptions $options): array
     {
         $trimmed = trim($query);
-        if ($trimmed === '' || $candidates === []) {
+        if ($trimmed === '' || strlen($query) > self::MAX_QUERY_LENGTH || $candidates === []) {
+            return [];
+        }
+        $wordsInInput = self::tokenize($trimmed);
+        if (count($wordsInInput) > self::MAX_QUERY_WORDS) {
             return [];
         }
 
@@ -85,7 +99,6 @@ final class DefaultAutocompleteAlgorithm implements AutocompleteAlgorithmInterfa
             }
         }
 
-        $wordsInInput = self::tokenize($trimmed);
         $upperInput = strtoupper($trimmed);
         // make_key form: uppercase, strip ALL non-alphanumeric — what the
         // engine matches on server-side, so a correctly-spelled `crohns`
@@ -249,7 +262,13 @@ final class DefaultAutocompleteAlgorithm implements AutocompleteAlgorithmInterfa
             $matched[$c->id() ?? $c->name()] = true;
         }
         $queryUnits = count($wordsInInput) > 1 ? $wordsInInput : [$queryKey];
-        $queryCodes = array_map(static fn (string $u): string => DoubleMetaphone::encode($u)[0], $queryUnits);
+        $queryCodes = [];
+        foreach ($queryUnits as $unit) {
+            $code = DoubleMetaphone::encode($unit)[0];
+            if ($code !== '') {
+                $queryCodes[$code] = true;
+            }
+        }
         $hits = [];
         foreach ($candidates as $option) {
             if (isset($matched[$option->id() ?? $option->name()])) {
@@ -263,28 +282,25 @@ final class DefaultAutocompleteAlgorithm implements AutocompleteAlgorithmInterfa
     }
 
     /**
-     * @param list<string> $queryUnits
-     * @param list<string> $queryCodes
-     * @param list<string> $candidateTokens
+     * Encodes each candidate token once and tests it against the whole
+     * query-code set, so phonetic work scales with candidate tokens, not
+     * candidate tokens × query units.
+     *
+     * @param list<string>        $queryUnits
+     * @param array<string, true> $queryCodes
+     * @param list<string>        $candidateTokens
      */
     private static function fuzzyMatchesAnyToken(array $queryUnits, array $queryCodes, array $candidateTokens): bool
     {
-        foreach ($queryUnits as $i => $unit) {
-            if ($unit === '') {
-                continue;
-            }
-            $threshold = strlen($unit) < DamerauOsa::FUZZY_SHORT_LEN ? 1 : self::AUTOCOMPLETE_FUZZY_MAX_DISTANCE;
-            $code = $queryCodes[$i];
-            foreach ($candidateTokens as $token) {
-                if ($token === '') {
-                    continue;
-                }
+        foreach ($candidateTokens as $token) {
+            foreach ($queryUnits as $unit) {
+                $threshold = strlen($unit) < DamerauOsa::FUZZY_SHORT_LEN ? 1 : self::AUTOCOMPLETE_FUZZY_MAX_DISTANCE;
                 if (DamerauOsa::distance($unit, $token, $threshold) <= $threshold) {
                     return true;
                 }
-                if ($code !== '' && DoubleMetaphone::encode($token)[0] === $code) {
-                    return true;
-                }
+            }
+            if ($queryCodes !== [] && isset($queryCodes[DoubleMetaphone::encode($token)[0]])) {
+                return true;
             }
         }
         return false;
